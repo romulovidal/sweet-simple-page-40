@@ -108,10 +108,10 @@ const Index = () => {
         </div>
         <div className="relative max-w-3xl mx-auto text-center text-secondary-foreground">
           <p className="text-2xl md:text-4xl font-heading font-light italic leading-relaxed">
-            "Porque a palavra de Deus é viva, e eficaz, e mais penetrante do que qualquer espada de dois gumes."
+            "Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho."
           </p>
           <span className="block mt-8 text-accent text-sm font-medium tracking-widest uppercase">
-            Hebreus 4:12
+            Salmos 119:105
           </span>
         </div>
       </section>

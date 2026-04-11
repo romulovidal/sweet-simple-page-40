@@ -255,6 +255,15 @@ const BiblePage = () => {
             </div>
           )}
         </div>
+
+        {imageVerse && (
+          <VerseImageGenerator
+            text={imageVerse.text}
+            reference={imageVerse.reference}
+            open={!!imageVerse}
+            onClose={() => setImageVerse(null)}
+          />
+        )}
       </div>
     );
   }

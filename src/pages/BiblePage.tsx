@@ -72,7 +72,7 @@ const BiblePage = () => {
 
   const handleShareVerse = async (verse: BibleVerse) => {
     const reference = `${selectedBook!.name} ${selectedChapter}:${verse.number}`;
-    const shareText = `"${verse.text}" — ${reference} (ACF)`;
+    const shareText = `"${verse.text}" — ${reference} (ARC)`;
     if (navigator.share) {
       await navigator.share({ title: reference, text: shareText }).catch(() => {});
     } else {
@@ -100,7 +100,7 @@ const BiblePage = () => {
           <h1 className="text-lg font-bold">
             {selectedBook.name} {selectedChapter}
           </h1>
-          <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto">ACF</span>
+          <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto">ARC</span>
         </header>
 
         <div className="px-5 py-4">

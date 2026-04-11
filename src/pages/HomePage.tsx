@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Loader2 } from "lucide-react";
+import { Search, Bell, Loader2, Play, Heart, BookOpen, FileText, Megaphone } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse, readingPlans, bibleBooks } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData } from "@/hooks/useLocalStorage";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -53,6 +57,19 @@ const HomePage = () => {
       .finally(() => setVerseLoading(false));
   }, []);
 
+  // Fetch admin posts from database
+  const [adminPosts, setAdminPosts] = useState<AdminPost[]>([]);
+  useEffect(() => {
+    supabase
+      .from("admin_posts")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data) setAdminPosts(data);
+      });
+  }, []);
+
   // Navigate to continue reading with correct book/chapter
   const handleContinueReading = () => {
     if (progress) {
@@ -60,6 +77,26 @@ const HomePage = () => {
     } else {
       navigate(`/biblia?book=gn&chapter=1`);
     }
+  };
+
+  const getYoutubeEmbedUrl = (url: string) => {
+    const match = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  };
+
+  const postIcon = (type: string) => {
+    switch (type) {
+      case "versiculo": return BookOpen;
+      case "oracao": return Heart;
+      case "video": return Play;
+      case "anuncio": return Megaphone;
+      default: return FileText;
+    }
+  };
+
+  const POST_TYPES_LABELS: Record<string, string> = {
+    versiculo: "Versículo", oracao: "Oração", video: "Vídeo",
+    devocional: "Devocional", anuncio: "Anúncio",
   };
 
   return (
@@ -124,7 +161,46 @@ const HomePage = () => {
               )}
             </div>
 
-            {/* Continue Reading */}
+            {/* Admin Posts Feed */}
+            {adminPosts.length > 0 && (
+              <div className="space-y-3">
+                {adminPosts.map((post) => {
+                  const Icon = postIcon(post.type);
+                  const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
+                  return (
+                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden">
+                      {/* YouTube embed */}
+                      {post.type === "video" && embedUrl && (
+                        <div className="aspect-video">
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full"
+                            allowFullScreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            title={post.title}
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="w-4 h-4 text-primary" />
+                          <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">
+                            {POST_TYPES_LABELS[post.type] || post.type}
+                          </span>
+                          {post.bible_reference && (
+                            <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto">{post.bible_reference}</span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-sm mb-1">{post.title}</h3>
+                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed">{post.content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+
             <div>
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Continuar lendo

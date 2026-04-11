@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,9 +9,30 @@ import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
+import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+
+  return (
+    <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/biblia" element={<BiblePage />} />
+        <Route path="/planos" element={<PlansPage />} />
+        <Route path="/descubra" element={<DiscoverPage />} />
+        <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      {!isAdmin && <BottomNav />}
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -19,17 +40,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="max-w-lg mx-auto relative min-h-screen">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/biblia" element={<BiblePage />} />
-            <Route path="/planos" element={<PlansPage />} />
-            <Route path="/descubra" element={<DiscoverPage />} />
-            <Route path="/perfil" element={<ProfilePage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <BottomNav />
-        </div>
+        <AppContent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

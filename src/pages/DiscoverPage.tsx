@@ -1,8 +1,19 @@
-import { Search, Loader2 } from "lucide-react";
-import { useState, useCallback } from "react";
-import { searchVerses } from "@/services/bibleApi";
-
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2, Search, Sparkles } from "lucide-react";
+import { searchVerses } from "@/services/bibleApi";
+import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
+
+type DiscoverResult = {
+  id: string;
+  type: "referencia" | "tema" | "versiculo";
+  title: string;
+  subtitle: string;
+  excerpt: string;
+  bookAbbrev: string;
+  chapter: number;
+  verse?: number;
+};
 
 const categories = [
   { emoji: "🙏", label: "Oração", query: "oração" },
@@ -10,73 +21,209 @@ const categories = [
   { emoji: "❤️", label: "Amor", query: "amor" },
   { emoji: "😌", label: "Paz", query: "paz" },
   { emoji: "📖", label: "Sabedoria", query: "sabedoria" },
-  { emoji: "🎵", label: "Louvor", query: "louvor" },
-  { emoji: "👨‍👩‍👧‍👦", label: "Família", query: "família" },
-  { emoji: "✨", label: "Graça", query: "graça" },
+  { emoji: "🛡️", label: "Proteção", query: "proteção" },
+  { emoji: "✨", label: "Propósito", query: "propósito" },
+  { emoji: "🔥", label: "Coragem", query: "coragem" },
 ];
 
 const popularVerses = [
-  { ref: "João 3:16", bookAbbrev: "jo", chapter: 3 },
+  { ref: "João 3:16", bookAbbrev: "jo", chapter: 3, verse: 16 },
   { ref: "Salmos 23", bookAbbrev: "sl", chapter: 23 },
-  { ref: "Filipenses 4:13", bookAbbrev: "fp", chapter: 4 },
-  { ref: "Romanos 8:28", bookAbbrev: "rm", chapter: 8 },
-  { ref: "Isaías 41:10", bookAbbrev: "is", chapter: 41 },
-  { ref: "Josué 1:9", bookAbbrev: "js", chapter: 1 },
+  { ref: "Filipenses 4:6", bookAbbrev: "fp", chapter: 4, verse: 6 },
+  { ref: "Romanos 8:28", bookAbbrev: "rm", chapter: 8, verse: 28 },
+  { ref: "Isaías 41:10", bookAbbrev: "is", chapter: 41, verse: 10 },
+  { ref: "Josué 1:9", bookAbbrev: "js", chapter: 1, verse: 9 },
 ];
+
+const quickPrompts = ["joão 3:16", "salmos 23", "ansiedade", "cura", "propósito"];
+
+const dedupeResults = (items: DiscoverResult[]) =>
+  items.filter(
+    (item, index, array) =>
+      array.findIndex(
+        (candidate) =>
+          candidate.bookAbbrev === item.bookAbbrev &&
+          candidate.chapter === item.chapter &&
+          candidate.verse === item.verse &&
+          candidate.type === item.type
+      ) === index
+  );
 
 const DiscoverPage = () => {
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState<{ book: { name: string }; chapter: number; number: number; text: string }[]>([]);
+  const [results, setResults] = useState<DiscoverResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const latestRequest = useRef(0);
   const navigate = useNavigate();
 
-  const handleSearch = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 3) return;
-    setLoading(true);
-    setSearched(true);
-    try {
-      const data = await searchVerses(query);
-      setResults(data.slice(0, 20));
-    } catch {
+  const openBibleReference = useCallback(
+    (bookAbbrev: string, chapter: number, verse?: number) => {
+      const params = new URLSearchParams({
+        book: bookAbbrev,
+        chapter: String(chapter),
+      });
+
+      if (verse) {
+        params.set("verse", String(verse));
+      }
+
+      navigate(`/biblia?${params.toString()}`);
+    },
+    [navigate]
+  );
+
+  const handleSearch = useCallback(async (rawQuery: string) => {
+    const normalizedQuery = normalizeSearchText(rawQuery);
+
+    if (normalizedQuery.length < 2) {
+      latestRequest.current += 1;
       setResults([]);
-    } finally {
+      setSearched(false);
       setLoading(false);
+      return;
+    }
+
+    const requestId = Date.now();
+    latestRequest.current = requestId;
+    setSearched(true);
+
+    const directReference = parseBibleReference(rawQuery);
+    const smartMatches = getSmartBibleMatches(rawQuery).map<DiscoverResult>((match) => ({
+      id: `tema-${match.id}`,
+      type: "tema",
+      title: match.label,
+      subtitle: "Sugestão inteligente",
+      excerpt: match.description,
+      bookAbbrev: match.bookAbbrev,
+      chapter: match.chapter,
+      verse: match.verse,
+    }));
+
+    if (directReference) {
+      setLoading(false);
+      setResults(
+        dedupeResults([
+          {
+            id: `referencia-${directReference.book.apiAbbrev}-${directReference.chapter}-${directReference.verse ?? 0}`,
+            type: "referencia",
+            title: `${directReference.book.name} ${directReference.chapter}${
+              directReference.verse ? `:${directReference.verse}` : ""
+            }`,
+            subtitle: "Referência direta",
+            excerpt: "Abrir capítulo da Bíblia exatamente no trecho buscado.",
+            bookAbbrev: directReference.book.apiAbbrev,
+            chapter: directReference.chapter,
+            verse: directReference.verse,
+          },
+          ...smartMatches,
+        ])
+      );
+      return;
+    }
+
+    if (normalizedQuery.length < 3) {
+      setLoading(false);
+      setResults(dedupeResults(smartMatches));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const remoteResults = await searchVerses(rawQuery);
+      if (latestRequest.current !== requestId) return;
+
+      const verseResults = remoteResults
+        .map<DiscoverResult | null>((item) => {
+          const bookAbbrev = resolveBookAbbrev(item.book.name);
+          if (!bookAbbrev) return null;
+
+          return {
+            id: `versiculo-${bookAbbrev}-${item.chapter}-${item.number}`,
+            type: "versiculo",
+            title: `${item.book.name} ${item.chapter}:${item.number}`,
+            subtitle: "Resultado encontrado",
+            excerpt: item.text,
+            bookAbbrev,
+            chapter: item.chapter,
+            verse: item.number,
+          };
+        })
+        .filter((item): item is DiscoverResult => !!item);
+
+      setResults(dedupeResults([...smartMatches, ...verseResults]).slice(0, 20));
+    } catch {
+      if (latestRequest.current !== requestId) return;
+      setResults(dedupeResults(smartMatches));
+    } finally {
+      if (latestRequest.current === requestId) {
+        setLoading(false);
+      }
     }
   }, []);
 
+  useEffect(() => {
+    const trimmedSearch = search.trim();
+
+    if (!trimmedSearch) {
+      latestRequest.current += 1;
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void handleSearch(trimmedSearch);
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [handleSearch, search]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      void handleSearch(search);
+    }
+  };
+
   const handleCategoryClick = (query: string) => {
     setSearch(query);
-    handleSearch(query);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch(search);
-  };
-
-  const navigateToChapter = (bookAbbrev: string, chapter: number) => {
-    // Navigate to Bible page - we'll use URL state
-    navigate(`/biblia?book=${bookAbbrev}&chapter=${chapter}`);
   };
 
   return (
     <div className="pb-20 min-h-screen">
       <header className="px-5 pt-12 pb-4">
         <h1 className="text-2xl font-bold">Descubra</h1>
+        <p className="text-sm text-dark-muted mt-1">
+          Busque por tema, capítulo ou referência como João 3:16.
+        </p>
+
         <div className="relative mt-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar na Bíblia... (ex: amor, fé)"
-            className="w-full bg-[hsl(var(--dark-card))] rounded-xl pl-10 pr-4 py-3 text-sm placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/50"
+            placeholder="Buscar na Bíblia..."
+            className="w-full bg-dark-card rounded-xl pl-10 pr-4 py-3 text-sm placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pt-3 -mx-5 px-5">
+          {quickPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => setSearch(prompt)}
+              className="flex-shrink-0 rounded-full bg-dark-card px-3 py-1.5 text-xs text-dark-muted active:bg-dark-card-hover transition-colors"
+            >
+              {prompt}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Search Results */}
       {searched && (
         <div className="px-5 mb-6">
           {loading ? (
@@ -85,65 +232,74 @@ const DiscoverPage = () => {
             </div>
           ) : results.length > 0 ? (
             <>
-              <p className="text-xs text-[hsl(var(--dark-muted))] mb-3">{results.length} resultados</p>
+              <p className="text-xs text-dark-muted mb-3">{results.length} resultado{results.length > 1 ? "s" : ""}</p>
               <div className="space-y-2">
-                {results.map((r, i) => (
+                {results.map((result) => (
                   <button
-                    key={i}
-                    onClick={() => navigate(`/biblia`)}
-                    className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                    key={result.id}
+                    onClick={() => openBibleReference(result.bookAbbrev, result.chapter, result.verse)}
+                    className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors"
                   >
-                    <p className="text-xs font-semibold text-primary mb-1">
-                      {r.book.name} {r.chapter}:{r.number}
-                    </p>
-                    <p className="text-sm text-[hsl(var(--dark-text))]">{r.text}</p>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        {result.type === "referencia"
+                          ? "Referência"
+                          : result.type === "tema"
+                            ? "Tema"
+                            : "Versículo"}
+                      </span>
+                      <span className="text-[10px] text-dark-muted">{result.subtitle}</span>
+                    </div>
+                    <p className="text-sm font-semibold mb-1">{result.title}</p>
+                    <p className="text-sm text-dark-muted leading-relaxed">{result.excerpt}</p>
                   </button>
                 ))}
               </div>
             </>
           ) : (
-            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">
-              Nenhum resultado encontrado para "{search}"
-            </p>
+            <div className="text-center py-10">
+              <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
+              <p className="text-sm text-dark-muted">
+                Não encontrei nada para "{search}". Tente buscar por tema ou uma referência bíblica.
+              </p>
+            </div>
           )}
         </div>
       )}
 
-      {/* Categories */}
       {!searched && (
         <>
           <div className="px-5 mb-6">
-            <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Categorias
             </h2>
             <div className="grid grid-cols-4 gap-2">
-              {categories.map((cat) => (
+              {categories.map((category) => (
                 <button
-                  key={cat.label}
-                  onClick={() => handleCategoryClick(cat.query)}
-                  className="bg-[hsl(var(--dark-card))] rounded-xl p-3 flex flex-col items-center gap-1 active:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                  key={category.label}
+                  onClick={() => handleCategoryClick(category.query)}
+                  className="bg-dark-card rounded-xl p-3 flex flex-col items-center gap-1 active:bg-dark-card-hover transition-colors"
                 >
-                  <span className="text-xl">{cat.emoji}</span>
-                  <span className="text-[10px] font-medium text-[hsl(var(--dark-muted))]">{cat.label}</span>
+                  <span className="text-xl">{category.emoji}</span>
+                  <span className="text-[10px] font-medium text-dark-muted">{category.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Popular Passages */}
           <div className="px-5">
-            <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Passagens populares
             </h2>
             <div className="space-y-2">
-              {popularVerses.map((v) => (
+              {popularVerses.map((verse) => (
                 <button
-                  key={v.ref}
-                  onClick={() => navigateToChapter(v.bookAbbrev, v.chapter)}
-                  className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left"
+                  key={verse.ref}
+                  onClick={() => openBibleReference(verse.bookAbbrev, verse.chapter, verse.verse)}
+                  className="w-full bg-dark-card rounded-xl p-4 active:bg-dark-card-hover transition-colors text-left"
                 >
-                  <p className="text-sm font-semibold text-primary">{v.ref}</p>
-                  <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">Toque para ler</p>
+                  <p className="text-sm font-semibold text-primary">{verse.ref}</p>
+                  <p className="text-xs text-dark-muted mt-0.5">Toque para ler com destaque no trecho</p>
                 </button>
               ))}
             </div>

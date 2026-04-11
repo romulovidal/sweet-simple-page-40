@@ -1,0 +1,1 @@
+ALTER TABLE public.admin_plans ADD COLUMN IF NOT EXISTS total_days integer DEFAULT 7;

@@ -69,6 +69,7 @@ export type Database = {
           is_active: boolean
           sort_order: number
           title: string
+          total_days: number | null
           updated_at: string
         }
         Insert: {
@@ -81,6 +82,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           title: string
+          total_days?: number | null
           updated_at?: string
         }
         Update: {
@@ -93,6 +95,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           title?: string
+          total_days?: number | null
           updated_at?: string
         }
         Relationships: []

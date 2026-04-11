@@ -40,15 +40,105 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
-const SEARCH_CHAPTERS_BY_TOPIC = [
-  { keywords: ["amor", "amar", "familia"], chapters: ["1corinthians+13", "john+15", "romans+12"] },
-  { keywords: ["fe", "crer", "milagre"], chapters: ["hebrews+11", "mark+11", "romans+8"] },
-  { keywords: ["paz", "descanso", "ansiedade", "preocupacao"], chapters: ["philippians+4", "john+14", "psalms+23"] },
-  { keywords: ["oracao", "orar", "clamor"], chapters: ["matthew+6", "psalms+91", "luke+11"] },
-  { keywords: ["sabedoria", "conselho", "direcao"], chapters: ["proverbs+3", "proverbs+4", "james+1"] },
-  { keywords: ["coragem", "forca", "animo"], chapters: ["joshua+1", "isaiah+41", "2timothy+1"] },
-  { keywords: ["esperanca", "proposito", "futuro"], chapters: ["jeremiah+29", "romans+8", "isaiah+40"] },
-  { keywords: ["cura", "restauracao", "saude"], chapters: ["psalms+103", "isaiah+53", "mark+5"] },
+// Broad topic-to-chapters mapping covering many keywords
+const SEARCH_CHAPTERS_BY_TOPIC: { keywords: string[]; chapters: string[] }[] = [
+  { keywords: ["amor", "amar", "ama", "amado", "amou"], chapters: ["1corinthians+13", "john+15", "john+3", "romans+12", "1john+4", "song of solomon+2"] },
+  { keywords: ["fe", "crer", "creia", "milagre", "milagres", "creu"], chapters: ["hebrews+11", "mark+11", "romans+8", "mark+9", "john+11", "john+20"] },
+  { keywords: ["paz", "descanso", "ansiedade", "preocupacao", "calma", "tranquilo"], chapters: ["philippians+4", "john+14", "psalms+23", "matthew+11", "isaiah+26", "psalms+4"] },
+  { keywords: ["oracao", "orar", "ora", "clama", "clamor", "suplica", "intercede"], chapters: ["matthew+6", "psalms+91", "luke+11", "luke+18", "1thessalonians+5", "james+5"] },
+  { keywords: ["sabedoria", "conselho", "direcao", "sabio", "entendimento", "prudencia"], chapters: ["proverbs+3", "proverbs+4", "james+1", "proverbs+1", "proverbs+2", "ecclesiastes+3"] },
+  { keywords: ["coragem", "forca", "animo", "forte", "valente", "guerreiro"], chapters: ["joshua+1", "isaiah+41", "2timothy+1", "deuteronomy+31", "psalms+27", "ephesians+6"] },
+  { keywords: ["esperanca", "proposito", "futuro", "plano", "destino"], chapters: ["jeremiah+29", "romans+8", "isaiah+40", "psalms+37", "lamentations+3", "romans+15"] },
+  { keywords: ["cura", "restauracao", "saude", "curar", "curado", "doenca", "enfermidade"], chapters: ["psalms+103", "isaiah+53", "mark+5", "james+5", "matthew+8", "luke+4"] },
+  { keywords: ["protecao", "protege", "refug", "escudo", "abrigo", "livramento", "guarda"], chapters: ["psalms+91", "psalms+121", "psalms+46", "psalms+23", "psalms+34", "2thessalonians+3"] },
+  { keywords: ["perdao", "perdoar", "perdoa", "misericordia", "misericordioso", "compaixao"], chapters: ["matthew+18", "psalms+51", "colossians+3", "ephesians+4", "luke+15", "1john+1"] },
+  { keywords: ["graca", "favor", "bondade"], chapters: ["ephesians+2", "romans+5", "2corinthians+12", "titus+2", "hebrews+4", "psalms+103"] },
+  { keywords: ["pecado", "pecar", "tentacao", "tentado", "cai"], chapters: ["romans+3", "romans+6", "1john+1", "james+1", "matthew+4", "genesis+3"] },
+  { keywords: ["salvacao", "salvar", "salvo", "redentor", "redencao", "resgate"], chapters: ["ephesians+2", "romans+10", "john+3", "acts+4", "titus+3", "psalms+27"] },
+  { keywords: ["morte", "morrer", "morto", "luto", "consolo", "consolar"], chapters: ["1corinthians+15", "john+11", "revelation+21", "psalms+23", "2corinthians+1", "1thessalonians+4"] },
+  { keywords: ["alegria", "alegre", "gozo", "feliz", "felicidade", "contentamento"], chapters: ["philippians+4", "psalms+16", "nehemiah+8", "james+1", "john+15", "psalms+126"] },
+  { keywords: ["jesus", "cristo", "messias", "senhor", "filho"], chapters: ["john+1", "john+3", "matthew+1", "luke+2", "colossians+1", "hebrews+1"] },
+  { keywords: ["espirito", "santo", "espiritual", "dons", "dom", "fruto"], chapters: ["galatians+5", "1corinthians+12", "acts+2", "romans+8", "john+14", "john+16"] },
+  { keywords: ["deus", "criador", "soberano", "todopoderoso", "onipotente"], chapters: ["genesis+1", "psalms+139", "isaiah+40", "psalms+8", "romans+11", "job+38"] },
+  { keywords: ["familia", "filh", "pai", "mae", "pais", "crianca", "obediencia"], chapters: ["ephesians+6", "proverbs+22", "deuteronomy+6", "psalms+127", "colossians+3", "proverbs+31"] },
+  { keywords: ["casamento", "esposa", "marido", "casal", "matrimonio"], chapters: ["ephesians+5", "1corinthians+7", "genesis+2", "song of solomon+4", "proverbs+31", "hebrews+13"] },
+  { keywords: ["trabalho", "servir", "servico", "emprego", "prosperidade", "prosperar"], chapters: ["colossians+3", "proverbs+10", "ecclesiastes+9", "2thessalonians+3", "psalms+1", "deuteronomy+28"] },
+  { keywords: ["dinheiro", "riqueza", "dizimo", "oferta", "generosidade", "dar"], chapters: ["malachi+3", "2corinthians+9", "matthew+6", "1timothy+6", "proverbs+11", "luke+6"] },
+  { keywords: ["palavra", "biblia", "escritura", "lei", "mandamento", "mandamentos"], chapters: ["psalms+119", "2timothy+3", "hebrews+4", "joshua+1", "psalms+1", "matthew+5"] },
+  { keywords: ["igreja", "corpo", "irmaos", "comunhao", "unidade"], chapters: ["1corinthians+12", "ephesians+4", "acts+2", "hebrews+10", "colossians+3", "romans+12"] },
+  { keywords: ["batalha", "guerra", "luta", "inimigo", "diabo", "mal", "armadura"], chapters: ["ephesians+6", "2corinthians+10", "james+4", "1peter+5", "psalms+144", "exodus+14"] },
+  { keywords: ["louvor", "adoracao", "adorar", "cantar", "cantico", "musica"], chapters: ["psalms+150", "psalms+100", "psalms+95", "2chronicles+20", "revelation+5", "psalms+33"] },
+  { keywords: ["agua", "rio", "mar", "fonte", "sede"], chapters: ["john+4", "revelation+22", "isaiah+55", "ezekiel+47", "psalms+42", "john+7"] },
+  { keywords: ["luz", "trevas", "escuridao", "brilhar"], chapters: ["john+1", "john+8", "matthew+5", "1john+1", "isaiah+60", "psalms+27"] },
+  { keywords: ["pastor", "ovelha", "rebanho", "guia", "guiar"], chapters: ["john+10", "psalms+23", "ezekiel+34", "1peter+5", "isaiah+40", "psalms+100"] },
+  { keywords: ["pao", "alimento", "fome", "comer", "sustento"], chapters: ["john+6", "matthew+4", "exodus+16", "deuteronomy+8", "matthew+6", "psalms+37"] },
+  { keywords: ["vida", "viver", "etern", "imortalidade", "ressurreicao", "ressuscit"], chapters: ["john+11", "john+14", "1corinthians+15", "john+3", "john+6", "romans+6"] },
+  { keywords: ["cruz", "sangue", "sacrificio", "cordeiro", "expiacao"], chapters: ["isaiah+53", "john+19", "hebrews+9", "romans+5", "1peter+1", "revelation+5"] },
+  { keywords: ["ceu", "paraiso", "celestial", "morada", "mansao"], chapters: ["revelation+21", "john+14", "2corinthians+5", "philippians+3", "hebrews+11", "1thessalonians+4"] },
+  { keywords: ["fim", "apocalipse", "juizo", "julgamento", "volta", "vinda", "arrebatamento"], chapters: ["revelation+1", "matthew+24", "1thessalonians+4", "2peter+3", "revelation+21", "daniel+7"] },
+  { keywords: ["batismo", "batizar", "batizado"], chapters: ["matthew+3", "acts+2", "romans+6", "acts+8", "matthew+28", "mark+1"] },
+  { keywords: ["anjo", "anjos", "querubim", "serafim"], chapters: ["hebrews+1", "psalms+91", "revelation+5", "isaiah+6", "luke+1", "matthew+1"] },
+  { keywords: ["criacao", "criar", "mundo", "terra", "natureza"], chapters: ["genesis+1", "genesis+2", "psalms+8", "psalms+19", "job+38", "romans+1"] },
+  { keywords: ["arrependimento", "arrepend", "voltar", "conversao", "converter"], chapters: ["acts+3", "joel+2", "luke+15", "2chronicles+7", "psalms+51", "isaiah+55"] },
+  { keywords: ["justica", "justo", "justos", "retidao", "reto"], chapters: ["matthew+5", "psalms+37", "proverbs+21", "micah+6", "isaiah+1", "amos+5"] },
+  { keywords: ["obediencia", "obedecer", "obediente", "submissao"], chapters: ["john+14", "deuteronomy+28", "1samuel+15", "james+1", "romans+13", "hebrews+13"] },
+  { keywords: ["paciencia", "esperar", "aguardar", "perseverar", "perseveranca"], chapters: ["james+1", "isaiah+40", "lamentations+3", "romans+5", "hebrews+12", "psalms+40"] },
+  { keywords: ["humildade", "humilde", "mansidao", "manso"], chapters: ["philippians+2", "matthew+5", "1peter+5", "james+4", "matthew+11", "proverbs+22"] },
+  { keywords: ["medo", "temer", "temor", "assombro"], chapters: ["isaiah+41", "psalms+23", "psalms+27", "2timothy+1", "joshua+1", "psalms+56"] },
+  { keywords: ["sofrimento", "sofrer", "dor", "tribulacao", "aflicao", "angustia"], chapters: ["romans+8", "2corinthians+4", "james+1", "1peter+4", "psalms+34", "isaiah+43"] },
+  { keywords: ["santidade", "santificacao", "santo", "pureza", "puro", "limpo"], chapters: ["1peter+1", "1thessalonians+4", "hebrews+12", "psalms+51", "leviticus+19", "2corinthians+7"] },
+  { keywords: ["promessa", "promessas", "alianca", "pacto", "juramento"], chapters: ["2peter+1", "hebrews+6", "genesis+12", "genesis+15", "2corinthians+1", "deuteronomy+7"] },
+];
+
+// All the major Bible chapters to search as fallback — covers OT and NT broadly
+const BROAD_SEARCH_CHAPTERS = [
+  // Torah / Pentateuco
+  "genesis+1", "genesis+3", "genesis+12", "genesis+22", "exodus+14", "exodus+20",
+  "deuteronomy+6", "deuteronomy+28", "deuteronomy+31",
+  // Historical
+  "joshua+1", "1samuel+17", "2samuel+22", "1kings+18", "2chronicles+20",
+  "nehemiah+8", "esther+4",
+  // Poetry/Wisdom
+  "job+38", "job+42", "psalms+1", "psalms+8", "psalms+16", "psalms+19", "psalms+23",
+  "psalms+27", "psalms+34", "psalms+37", "psalms+40", "psalms+42", "psalms+46",
+  "psalms+51", "psalms+56", "psalms+91", "psalms+100", "psalms+103", "psalms+119",
+  "psalms+121", "psalms+126", "psalms+127", "psalms+139", "psalms+150",
+  "proverbs+1", "proverbs+2", "proverbs+3", "proverbs+4", "proverbs+10",
+  "proverbs+22", "proverbs+31", "ecclesiastes+3", "ecclesiastes+12",
+  // Prophets
+  "isaiah+1", "isaiah+6", "isaiah+9", "isaiah+40", "isaiah+41", "isaiah+43",
+  "isaiah+53", "isaiah+55", "isaiah+60", "isaiah+61",
+  "jeremiah+1", "jeremiah+29", "jeremiah+31", "lamentations+3",
+  "ezekiel+34", "ezekiel+37", "daniel+3", "daniel+6", "daniel+7",
+  "hosea+6", "joel+2", "amos+5", "micah+6", "habakkuk+3", "malachi+3",
+  // Gospels
+  "matthew+1", "matthew+3", "matthew+4", "matthew+5", "matthew+6", "matthew+7",
+  "matthew+8", "matthew+11", "matthew+18", "matthew+24", "matthew+28",
+  "mark+1", "mark+4", "mark+5", "mark+9", "mark+10", "mark+11",
+  "luke+1", "luke+2", "luke+4", "luke+6", "luke+10", "luke+11",
+  "luke+15", "luke+18", "luke+24",
+  "john+1", "john+3", "john+4", "john+6", "john+8", "john+10",
+  "john+11", "john+13", "john+14", "john+15", "john+16", "john+17", "john+19", "john+20",
+  // Acts
+  "acts+1", "acts+2", "acts+4", "acts+8", "acts+9", "acts+16",
+  // Epistles
+  "romans+1", "romans+3", "romans+5", "romans+6", "romans+8", "romans+10",
+  "romans+12", "romans+13", "romans+15",
+  "1corinthians+7", "1corinthians+12", "1corinthians+13", "1corinthians+15",
+  "2corinthians+1", "2corinthians+4", "2corinthians+5", "2corinthians+9", "2corinthians+12",
+  "galatians+5", "galatians+6", "ephesians+2", "ephesians+3", "ephesians+4",
+  "ephesians+5", "ephesians+6", "philippians+2", "philippians+3", "philippians+4",
+  "colossians+1", "colossians+3",
+  "1thessalonians+4", "1thessalonians+5", "2thessalonians+3",
+  "1timothy+6", "2timothy+1", "2timothy+3", "titus+2", "titus+3",
+  "hebrews+1", "hebrews+4", "hebrews+6", "hebrews+9", "hebrews+10",
+  "hebrews+11", "hebrews+12", "hebrews+13",
+  "james+1", "james+2", "james+4", "james+5",
+  "1peter+1", "1peter+2", "1peter+5", "2peter+1", "2peter+3",
+  "1john+1", "1john+3", "1john+4",
+  "jude+1",
+  // Revelation
+  "revelation+1", "revelation+3", "revelation+5", "revelation+21", "revelation+22",
 ];
 
 async function cachedFetch<T>(url: string): Promise<T> {
@@ -67,24 +157,23 @@ async function cachedFetch<T>(url: string): Promise<T> {
   return data as T;
 }
 
-function getSearchChapters(query: string) {
+function getSearchChapters(query: string): string[] {
   const normalizedQuery = normalizeText(query);
-  const defaults = [
-    "psalms+23",
-    "psalms+91",
-    "john+3",
-    "romans+8",
-    "1corinthians+13",
-    "matthew+5",
-    "proverbs+3",
-    "philippians+4",
-  ];
 
+  // First, check topic matches
   const topicalMatches = SEARCH_CHAPTERS_BY_TOPIC
-    .filter((entry) => entry.keywords.some((keyword) => normalizedQuery.includes(keyword)))
+    .filter((entry) => entry.keywords.some((keyword) => 
+      normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)
+    ))
     .flatMap((entry) => entry.chapters);
 
-  return Array.from(new Set([...topicalMatches, ...defaults])).slice(0, 8);
+  if (topicalMatches.length > 0) {
+    // Combine topical + some broad chapters for more results
+    return Array.from(new Set([...topicalMatches, ...BROAD_SEARCH_CHAPTERS.slice(0, 20)])).slice(0, 25);
+  }
+
+  // For generic words, search broadly across many chapters
+  return BROAD_SEARCH_CHAPTERS.slice(0, 40);
 }
 
 export async function getChapter(abbrev: string, chapter: number): Promise<ChapterResponse> {
@@ -140,30 +229,50 @@ export async function searchVerses(query: string): Promise<
   { book: { name: string }; chapter: number; number: number; text: string }[]
 > {
   const normalizedQuery = normalizeText(query);
-  if (normalizedQuery.length < 3) return [];
+  if (normalizedQuery.length < 2) return [];
 
   const chapters = getSearchChapters(query);
-  const fetches = chapters.map(async (chapterKey) => {
-    try {
-      const url = `${BASE_URL}/${chapterKey}?translation=${TRANSLATION}`;
-      const data = await cachedFetch<{
-        verses: { book_name: string; chapter: number; verse: number; text: string }[];
-      }>(url);
 
-      return data.verses
-        .filter((verse) => normalizeText(verse.text).includes(normalizedQuery))
-        .map((verse) => ({
-          book: { name: verse.book_name },
-          chapter: verse.chapter,
-          number: verse.verse,
-          text: verse.text.trim(),
-        }));
-    } catch {
-      return [];
-    }
-  });
+  // Fetch in parallel batches to avoid overwhelming the API
+  const batchSize = 8;
+  const allResults: { book: { name: string }; chapter: number; number: number; text: string }[] = [];
 
-  const allResults = (await Promise.all(fetches)).flat();
+  for (let i = 0; i < chapters.length; i += batchSize) {
+    const batch = chapters.slice(i, i + batchSize);
+    const fetches = batch.map(async (chapterKey) => {
+      try {
+        const url = `${BASE_URL}/${chapterKey}?translation=${TRANSLATION}`;
+        const data = await cachedFetch<{
+          verses: { book_name: string; chapter: number; verse: number; text: string }[];
+        }>(url);
+
+        return data.verses
+          .filter((verse) => {
+            const normalizedText = normalizeText(verse.text);
+            // Match the full query or any individual word (3+ chars)
+            const words = normalizedQuery.split(/\s+/).filter(w => w.length >= 3);
+            return normalizedText.includes(normalizedQuery) ||
+              (words.length > 1 && words.every(w => normalizedText.includes(w))) ||
+              (words.length === 1 && normalizedText.includes(words[0]));
+          })
+          .map((verse) => ({
+            book: { name: verse.book_name },
+            chapter: verse.chapter,
+            number: verse.verse,
+            text: verse.text.trim(),
+          }));
+      } catch {
+        return [];
+      }
+    });
+
+    const batchResults = (await Promise.all(fetches)).flat();
+    allResults.push(...batchResults);
+
+    // Stop early if we have enough results
+    if (allResults.length >= 30) break;
+  }
+
   const uniqueResults = allResults.filter(
     (result, index, array) =>
       array.findIndex(
@@ -174,5 +283,5 @@ export async function searchVerses(query: string): Promise<
       ) === index
   );
 
-  return uniqueResults.slice(0, 20);
+  return uniqueResults.slice(0, 30);
 }

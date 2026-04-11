@@ -156,7 +156,46 @@ const HomePage = () => {
               )}
             </div>
 
-            {/* Continue Reading */}
+            {/* Admin Posts Feed */}
+            {adminPosts.length > 0 && (
+              <div className="space-y-3">
+                {adminPosts.map((post) => {
+                  const Icon = postIcon(post.type);
+                  const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
+                  return (
+                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden">
+                      {/* YouTube embed */}
+                      {post.type === "video" && embedUrl && (
+                        <div className="aspect-video">
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full"
+                            allowFullScreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            title={post.title}
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="w-4 h-4 text-primary" />
+                          <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">
+                            {POST_TYPES_LABELS[post.type] || post.type}
+                          </span>
+                          {post.bible_reference && (
+                            <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto">{post.bible_reference}</span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-sm mb-1">{post.title}</h3>
+                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed">{post.content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+
             <div>
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Continuar lendo

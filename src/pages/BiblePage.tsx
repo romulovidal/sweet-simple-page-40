@@ -18,6 +18,7 @@ const BiblePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
+  const [imageVerse, setImageVerse] = useState<{ text: string; reference: string } | null>(null);
 
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { readingPlans, bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,7 @@ interface PlanProgress {
 
 const PlansPage = () => {
   const [planProgress, setPlanProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useLocalStorage<string | null>("selected-plan", null);
   const navigate = useNavigate();
 
   const plan = selectedPlan ? readingPlans.find((p) => p.id === selectedPlan) : null;
@@ -40,7 +40,11 @@ const PlansPage = () => {
     );
   };
 
-  const navigateToReading = (bookAbbrev: string, chapter: number) => {
+  const handleReadingClick = (bookAbbrev: string, chapter: number, dayIndex: number) => {
+    // Mark as complete and navigate to chapter
+    if (!progress?.completedDays.includes(dayIndex)) {
+      markDayComplete(dayIndex);
+    }
     navigate(`/biblia?book=${bookAbbrev}&chapter=${chapter}`);
   };
 
@@ -77,32 +81,28 @@ const PlansPage = () => {
         {/* Readings list */}
         <div className="px-5 space-y-2">
           {plan.readings.map((reading, i) => {
-            const book = bibleBooks.find(
-              (b) => b.apiAbbrev === reading.bookAbbrev
-            );
+            const book = bibleBooks.find((b) => b.apiAbbrev === reading.bookAbbrev);
             const isComplete = completedDays.includes(i);
             return (
-              <div key={i} className="flex items-center gap-3">
-                <button
-                  onClick={() => markDayComplete(i)}
+              <button
+                key={i}
+                onClick={() => handleReadingClick(reading.bookAbbrev, reading.chapter, i)}
+                className="w-full flex items-center gap-3 text-left"
+              >
+                <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     isComplete ? "bg-primary text-white" : "bg-[hsl(var(--dark-card))]"
                   }`}
                 >
                   {isComplete ? <CheckCircle className="w-5 h-5" /> : <span className="text-xs">{i + 1}</span>}
-                </button>
-                <button
-                  onClick={() => navigateToReading(reading.bookAbbrev, reading.chapter)}
-                  className={`flex-1 py-3 px-4 rounded-xl text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors ${
-                    isComplete ? "opacity-60" : ""
-                  }`}
-                >
+                </div>
+                <div className={`flex-1 py-3 px-4 rounded-xl active:bg-[hsl(var(--dark-card-hover))] transition-colors ${isComplete ? "opacity-60" : ""}`}>
                   <p className="text-sm font-semibold">
                     {book?.name || reading.bookAbbrev} {reading.chapter}
                   </p>
                   <p className="text-xs text-[hsl(var(--dark-muted))]">Dia {i + 1}</p>
-                </button>
-              </div>
+                </div>
+              </button>
             );
           })}
         </div>

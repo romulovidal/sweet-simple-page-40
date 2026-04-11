@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
 import { ChevronLeft, Search, Heart, BookmarkPlus, Share2, Loader2 } from "lucide-react";
@@ -6,6 +7,7 @@ import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData
 import { toast } from "sonner";
 
 const BiblePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
@@ -17,6 +19,24 @@ const BiblePage = () => {
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [streak, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
+
+  // Read URL params (from plans or discover)
+  useEffect(() => {
+    const bookParam = searchParams.get("book");
+    const chapterParam = searchParams.get("chapter");
+    if (bookParam) {
+      const book = bibleBooks.find((b) => b.apiAbbrev === bookParam);
+      if (book) {
+        setSelectedBook(book);
+        setTestament(book.testament);
+        if (chapterParam) {
+          setSelectedChapter(parseInt(chapterParam, 10));
+        }
+        // Clear params so they don't persist on back navigation
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, []);
 
   const filteredBooks = bibleBooks.filter(
     (b) =>

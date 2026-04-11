@@ -90,7 +90,7 @@ const DiscoverPage = () => {
                 {results.map((r, i) => (
                   <button
                     key={i}
-                    onClick={() => navigateToChapter(r.book.abbrev.pt, r.chapter)}
+                    onClick={() => navigate(`/biblia`)}
                     className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
                   >
                     <p className="text-xs font-semibold text-primary mb-1">

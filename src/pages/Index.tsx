@@ -35,14 +35,14 @@ const Index = () => {
         <div className="relative z-10 max-w-6xl mx-auto px-6 w-full">
           <div className="max-w-2xl animate-fade-up">
             <span className="text-accent text-sm font-medium tracking-widest uppercase mb-4 block">
-              Ministério da Palavra
+              Pregação da Palavra
             </span>
             <h1 className="text-5xl md:text-7xl font-bold text-[hsl(var(--hero-foreground))] leading-[1.1] mb-6">
-              Fé que<br />
-              <span className="text-accent">transforma.</span>
+              Uma Palavra.<br />
+              <span className="text-accent">Uma vida nova.</span>
             </h1>
             <p className="text-lg text-[hsl(var(--hero-muted))] mb-10 max-w-md leading-relaxed">
-              Descubra o poder da pregação bíblica e permita que a Palavra de Deus renove a sua vida.
+              Cada mensagem é uma semente. Venha ouvir o que Deus preparou para você hoje.
             </p>
             <div className="flex flex-wrap gap-4">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">

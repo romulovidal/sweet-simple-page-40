@@ -111,7 +111,7 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     // Draw quote marks
     ctx.font = `italic ${scaledFontSize + 20}px ${selectedFont.family}`;
     ctx.globalAlpha = 0.3;
-    ctx.fillText(""", WIDTH / 2, HEIGHT * 0.2);
+    ctx.fillText("\u201C", WIDTH / 2, HEIGHT * 0.2);
     ctx.globalAlpha = 1;
 
     // Wrap and draw verse text

@@ -1,35 +1,53 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+function readLocalStorageValue<T>(key: string, initialValue: T): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? (JSON.parse(item) as T) : initialValue;
+  } catch {
+    return initialValue;
+  }
+}
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
+  const initialValueRef = useRef(initialValue);
+  const readValue = useCallback(() => readLocalStorageValue(key, initialValueRef.current), [key]);
+  const [storedValue, setStoredValue] = useState<T>(readValue);
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      setStoredValue((currentValue) => {
+        const valueToStore = value instanceof Function ? value(currentValue) : value;
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        return valueToStore;
+      });
     },
-    [key, storedValue]
+    [key]
   );
+
+  useEffect(() => {
+    setStoredValue(readValue());
+  }, [readValue]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== key) return;
+      setStoredValue(readValue());
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [key, readValue]);
 
   return [storedValue, setValue] as const;
 }
 
-// Saved verses
 export interface SavedVerse {
   text: string;
   reference: string;
   savedAt: string;
 }
 
-// Reading progress
 export interface ReadingProgress {
   bookAbbrev: string;
   bookName: string;
@@ -37,11 +55,10 @@ export interface ReadingProgress {
   lastRead: string;
 }
 
-// Streak data
 export interface StreakData {
   current: number;
-  lastDate: string; // YYYY-MM-DD
-  history: string[]; // dates read
+  lastDate: string;
+  history: string[];
 }
 
 export function getToday(): string {
@@ -57,9 +74,13 @@ export function updateStreak(streak: StreakData): StreakData {
   const yesterdayStr = yesterday.toISOString().split("T")[0];
 
   const isConsecutive = streak.lastDate === yesterdayStr;
+  const history = streak.history.includes(today)
+    ? streak.history
+    : [...streak.history, today].slice(-365);
+
   return {
     current: isConsecutive ? streak.current + 1 : 1,
     lastDate: today,
-    history: [...streak.history, today].slice(-365),
+    history,
   };
 }

@@ -11,7 +11,6 @@ export interface ChapterResponse {
   verses: BibleVerse[];
 }
 
-// Map Portuguese book names to bible-api.com English names
 const bookNameMap: Record<string, string> = {
   gn: "genesis", ex: "exodus", lv: "leviticus", nm: "numbers", dt: "deuteronomy",
   js: "joshua", jz: "judges", rt: "ruth", "1sm": "1samuel", "2sm": "2samuel",
@@ -31,9 +30,26 @@ const bookNameMap: Record<string, string> = {
   "1jo": "1john", "2jo": "2john", "3jo": "3john", jd: "jude", ap: "revelation",
 };
 
-// Simple in-memory cache
 const cache = new Map<string, { data: unknown; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL = 1000 * 60 * 60;
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const SEARCH_CHAPTERS_BY_TOPIC = [
+  { keywords: ["amor", "amar", "familia"], chapters: ["1corinthians+13", "john+15", "romans+12"] },
+  { keywords: ["fe", "crer", "milagre"], chapters: ["hebrews+11", "mark+11", "romans+8"] },
+  { keywords: ["paz", "descanso", "ansiedade", "preocupacao"], chapters: ["philippians+4", "john+14", "psalms+23"] },
+  { keywords: ["oracao", "orar", "clamor"], chapters: ["matthew+6", "psalms+91", "luke+11"] },
+  { keywords: ["sabedoria", "conselho", "direcao"], chapters: ["proverbs+3", "proverbs+4", "james+1"] },
+  { keywords: ["coragem", "forca", "animo"], chapters: ["joshua+1", "isaiah+41", "2timothy+1"] },
+  { keywords: ["esperanca", "proposito", "futuro"], chapters: ["jeremiah+29", "romans+8", "isaiah+40"] },
+  { keywords: ["cura", "restauracao", "saude"], chapters: ["psalms+103", "isaiah+53", "mark+5"] },
+];
 
 async function cachedFetch<T>(url: string): Promise<T> {
   const cached = cache.get(url);
@@ -49,6 +65,26 @@ async function cachedFetch<T>(url: string): Promise<T> {
   const data = await response.json();
   cache.set(url, { data, timestamp: Date.now() });
   return data as T;
+}
+
+function getSearchChapters(query: string) {
+  const normalizedQuery = normalizeText(query);
+  const defaults = [
+    "psalms+23",
+    "psalms+91",
+    "john+3",
+    "romans+8",
+    "1corinthians+13",
+    "matthew+5",
+    "proverbs+3",
+    "philippians+4",
+  ];
+
+  const topicalMatches = SEARCH_CHAPTERS_BY_TOPIC
+    .filter((entry) => entry.keywords.some((keyword) => normalizedQuery.includes(keyword)))
+    .flatMap((entry) => entry.chapters);
+
+  return Array.from(new Set([...topicalMatches, ...defaults])).slice(0, 8);
 }
 
 export async function getChapter(abbrev: string, chapter: number): Promise<ChapterResponse> {
@@ -76,7 +112,6 @@ export async function getRandomVerse(): Promise<{
   number: number;
   text: string;
 }> {
-  // Pick a random well-known verse
   const favorites = [
     "john+3:16", "psalms+23:1", "philippians+4:13", "proverbs+3:5-6",
     "jeremiah+29:11", "isaiah+40:31", "psalms+119:105", "isaiah+41:10",
@@ -104,38 +139,40 @@ export async function getRandomVerse(): Promise<{
 export async function searchVerses(query: string): Promise<
   { book: { name: string }; chapter: number; number: number; text: string }[]
 > {
-  // bible-api.com doesn't support search, so we search known passages
-  // by fetching chapters that likely contain the keyword
-  const chapters = [
-    "psalms+23", "psalms+91", "john+3", "romans+8", "1corinthians+13",
-    "matthew+5", "proverbs+3", "isaiah+40", "philippians+4", "hebrews+11",
-  ];
+  const normalizedQuery = normalizeText(query);
+  if (normalizedQuery.length < 3) return [];
 
-  const queryLower = query.toLowerCase();
-  const results: { book: { name: string }; chapter: number; number: number; text: string }[] = [];
-
-  // Fetch a few chapters and filter by keyword
-  const fetches = chapters.slice(0, 4).map(async (ch) => {
+  const chapters = getSearchChapters(query);
+  const fetches = chapters.map(async (chapterKey) => {
     try {
-      const url = `${BASE_URL}/${ch}?translation=${TRANSLATION}`;
+      const url = `${BASE_URL}/${chapterKey}?translation=${TRANSLATION}`;
       const data = await cachedFetch<{
         verses: { book_name: string; chapter: number; verse: number; text: string }[];
       }>(url);
+
       return data.verses
-        .filter((v) => v.text.toLowerCase().includes(queryLower))
-        .map((v) => ({
-          book: { name: v.book_name },
-          chapter: v.chapter,
-          number: v.verse,
-          text: v.text.trim(),
+        .filter((verse) => normalizeText(verse.text).includes(normalizedQuery))
+        .map((verse) => ({
+          book: { name: verse.book_name },
+          chapter: verse.chapter,
+          number: verse.verse,
+          text: verse.text.trim(),
         }));
     } catch {
       return [];
     }
   });
 
-  const allResults = await Promise.all(fetches);
-  allResults.forEach((r) => results.push(...r));
+  const allResults = (await Promise.all(fetches)).flat();
+  const uniqueResults = allResults.filter(
+    (result, index, array) =>
+      array.findIndex(
+        (item) =>
+          item.book.name === result.book.name &&
+          item.chapter === result.chapter &&
+          item.number === result.number
+      ) === index
+  );
 
-  return results.slice(0, 20);
+  return uniqueResults.slice(0, 20);
 }

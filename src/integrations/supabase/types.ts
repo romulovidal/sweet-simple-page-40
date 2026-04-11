@@ -22,6 +22,9 @@ export type Database = {
           day_number: number
           id: string
           plan_id: string
+          title: string | null
+          verse_end: number | null
+          verse_start: number | null
         }
         Insert: {
           book_abbrev: string
@@ -30,6 +33,9 @@ export type Database = {
           day_number: number
           id?: string
           plan_id: string
+          title?: string | null
+          verse_end?: number | null
+          verse_start?: number | null
         }
         Update: {
           book_abbrev?: string
@@ -38,6 +44,9 @@ export type Database = {
           day_number?: number
           id?: string
           plan_id?: string
+          title?: string | null
+          verse_end?: number | null
+          verse_start?: number | null
         }
         Relationships: [
           {
@@ -54,6 +63,7 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          devotional: string | null
           id: string
           image_emoji: string
           is_active: boolean
@@ -65,6 +75,7 @@ export type Database = {
           category?: string
           created_at?: string
           description: string
+          devotional?: string | null
           id?: string
           image_emoji?: string
           is_active?: boolean
@@ -76,6 +87,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          devotional?: string | null
           id?: string
           image_emoji?: string
           is_active?: boolean

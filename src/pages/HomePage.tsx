@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Loader2 } from "lucide-react";
+import { Search, Bell, Loader2, Play, Heart, BookOpen, FileText, Megaphone } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse, readingPlans, bibleBooks } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData } from "@/hooks/useLocalStorage";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const HomePage = () => {
   const navigate = useNavigate();

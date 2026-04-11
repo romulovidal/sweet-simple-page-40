@@ -57,12 +57,40 @@ const HomePage = () => {
       .finally(() => setVerseLoading(false));
   }, []);
 
+  // Fetch admin posts from database
+  const [adminPosts, setAdminPosts] = useState<AdminPost[]>([]);
+  useEffect(() => {
+    supabase
+      .from("admin_posts")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data) setAdminPosts(data);
+      });
+  }, []);
+
   // Navigate to continue reading with correct book/chapter
   const handleContinueReading = () => {
     if (progress) {
       navigate(`/biblia?book=${progress.bookAbbrev}&chapter=${progress.chapter}`);
     } else {
       navigate(`/biblia?book=gn&chapter=1`);
+    }
+  };
+
+  const getYoutubeEmbedUrl = (url: string) => {
+    const match = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  };
+
+  const postIcon = (type: string) => {
+    switch (type) {
+      case "versiculo": return BookOpen;
+      case "oracao": return Heart;
+      case "video": return Play;
+      case "anuncio": return Megaphone;
+      default: return FileText;
     }
   };
 

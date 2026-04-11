@@ -26,7 +26,7 @@ const popularVerses = [
 
 const DiscoverPage = () => {
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<{ book: { name: string }; chapter: number; number: number; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const navigate = useNavigate();

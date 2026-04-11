@@ -94,6 +94,11 @@ const HomePage = () => {
     }
   };
 
+  const POST_TYPES_LABELS: Record<string, string> = {
+    versiculo: "Versículo", oracao: "Oração", video: "Vídeo",
+    devocional: "Devocional", anuncio: "Anúncio",
+  };
+
   return (
     <div className="pb-20 min-h-screen">
       {/* Header */}

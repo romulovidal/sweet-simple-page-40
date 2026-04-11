@@ -121,10 +121,10 @@ const Index = () => {
         <div className="max-w-xl mx-auto text-center">
           <Cross className="w-8 h-8 text-accent mx-auto mb-6" />
           <h2 className="text-3xl md:text-5xl font-bold text-[hsl(var(--hero-foreground))] mb-6">
-            Venha fazer parte
+            Sua história muda aqui
           </h2>
           <p className="text-[hsl(var(--hero-muted))] text-lg mb-10 leading-relaxed">
-            Junte-se a nós e experimente a transformação que só a Palavra de Deus pode proporcionar.
+            Não espere o momento perfeito. O momento é agora. Fale com a gente e dê o primeiro passo.
           </p>
           <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
             <Button

@@ -14,16 +14,155 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_plan_readings: {
+        Row: {
+          book_abbrev: string
+          chapter: number
+          created_at: string
+          day_number: number
+          id: string
+          plan_id: string
+        }
+        Insert: {
+          book_abbrev: string
+          chapter: number
+          created_at?: string
+          day_number: number
+          id?: string
+          plan_id: string
+        }
+        Update: {
+          book_abbrev?: string
+          chapter?: number
+          created_at?: string
+          day_number?: number
+          id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_plan_readings_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "admin_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_plans: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_emoji: string
+          is_active: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          image_emoji?: string
+          is_active?: boolean
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_emoji?: string
+          is_active?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_posts: {
+        Row: {
+          bible_reference: string | null
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          published_at: string
+          sort_order: number
+          title: string
+          type: string
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          bible_reference?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          published_at?: string
+          sort_order?: number
+          title: string
+          type?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          bible_reference?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          published_at?: string
+          sort_order?: number
+          title?: string
+          type?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +289,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

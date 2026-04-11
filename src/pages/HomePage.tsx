@@ -1,23 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Bell } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse, readingPlans } from "@/data/bible";
+import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
+import { useLocalStorage, type ReadingProgress, type StreakData } from "@/hooks/useLocalStorage";
 
 const HomePage = () => {
-  const verse = getDailyVerse();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
-  const streak = 3;
+  const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
+  const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
+
+  // Try to get a random verse from API, fallback to local
+  const [verse, setVerse] = useState(getDailyVerse());
+  const [verseLoading, setVerseLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if we already fetched today's verse
+    const cached = localStorage.getItem("daily-verse-cache");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        const today = new Date().toISOString().split("T")[0];
+        if (parsed.date === today) {
+          setVerse(parsed.verse);
+          setVerseLoading(false);
+          return;
+        }
+      } catch {}
+    }
+
+    getRandomVerse()
+      .then((data) => {
+        const v = {
+          text: data.text,
+          ref: `${data.book.name} ${data.chapter}:${data.number}`,
+        };
+        setVerse(v);
+        localStorage.setItem("daily-verse-cache", JSON.stringify({
+          date: new Date().toISOString().split("T")[0],
+          verse: v,
+        }));
+      })
+      .catch(() => {
+        // Keep fallback
+      })
+      .finally(() => setVerseLoading(false));
+  }, []);
 
   return (
     <div className="pb-20 min-h-screen">
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
-        <StreakBadge days={streak} />
+        <StreakBadge days={streak.current} />
         <div className="flex items-center gap-3">
-          <button className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
+          <button
+            onClick={() => navigate("/descubra")}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+          >
             <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           </button>
           <button className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
@@ -50,8 +92,8 @@ const HomePage = () => {
             <div>
               <h1 className="text-2xl font-bold">Olá! 👋</h1>
               <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
-                {streak > 0
-                  ? `Você está numa ofensiva de ${streak} dias!`
+                {streak.current > 0
+                  ? `Você está numa ofensiva de ${streak.current} dia${streak.current > 1 ? "s" : ""}!`
                   : "Comece sua leitura de hoje!"}
               </p>
             </div>
@@ -77,8 +119,12 @@ const HomePage = () => {
                   📖
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Gênesis 1</p>
-                  <p className="text-xs text-[hsl(var(--dark-muted))]">Continue de onde parou</p>
+                  <p className="font-semibold text-sm">
+                    {progress ? `${progress.bookName} ${progress.chapter}` : "Gênesis 1"}
+                  </p>
+                  <p className="text-xs text-[hsl(var(--dark-muted))]">
+                    {progress ? "Continue de onde parou" : "Comece a ler agora"}
+                  </p>
                 </div>
                 <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
               </button>

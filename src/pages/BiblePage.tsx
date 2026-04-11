@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2 } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
+import VerseImageGenerator from "@/components/VerseImageGenerator";
 
 const BiblePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();

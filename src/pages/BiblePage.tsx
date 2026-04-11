@@ -209,6 +209,18 @@ const BiblePage = () => {
                       <button onClick={() => handleShareVerse(verse)} className="p-1">
                         <Share2 className="w-4 h-4 text-dark-muted" />
                       </button>
+                      <button
+                        onClick={() => {
+                          if (!selectedBook || !selectedChapter) return;
+                          setImageVerse({
+                            text: verse.text,
+                            reference: `${selectedBook.name} ${selectedChapter}:${verse.number}`,
+                          });
+                        }}
+                        className="p-1"
+                      >
+                        <ImageIcon className="w-4 h-4 text-dark-muted" />
+                      </button>
                     </div>
                   </div>
                 );

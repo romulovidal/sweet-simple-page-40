@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Figtree:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,39 +6,35 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 210 50% 10%;
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 50% 10%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 50% 10%;
+    --popover-foreground: 220 20% 10%;
 
-    --primary: 193 55% 39%;
+    --primary: 220 70% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 207 55% 26%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 20% 10%;
 
-    --muted: 210 30% 93%;
-    --muted-foreground: 210 20% 45%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 50%;
 
-    --accent: 174 40% 55%;
-    --accent-foreground: 210 50% 10%;
+    --accent: 35 95% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 25% 88%;
-    --input: 210 25% 88%;
-    --ring: 193 55% 39%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 220 70% 50%;
 
     --radius: 0.75rem;
-
-    --hero-bg: 212 60% 13%;
-    --hero-foreground: 210 40% 96%;
-    --hero-muted: 210 20% 70%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -48,6 +44,13 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --dark-bg: 220 25% 8%;
+    --dark-card: 220 20% 14%;
+    --dark-card-hover: 220 20% 18%;
+    --dark-text: 220 15% 90%;
+    --dark-muted: 220 10% 55%;
+    --streak-orange: 25 95% 55%;
   }
 }
 
@@ -56,9 +59,18 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-  }
+}
+
+/* Hide scrollbar for mobile feel */
+::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

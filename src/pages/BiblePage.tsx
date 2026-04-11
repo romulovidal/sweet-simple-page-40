@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
 import { ChevronLeft, Search, Heart, BookmarkPlus, Share2, Loader2 } from "lucide-react";

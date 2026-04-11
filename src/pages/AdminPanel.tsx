@@ -104,14 +104,14 @@ const AdminPanel = () => {
       toast.error("Título e descrição são obrigatórios");
       return;
     }
-    const data: Record<string, unknown> = {
+    const data = {
       title: editingPlan.title.trim(),
       description: editingPlan.description.trim(),
       image_emoji: editingPlan.image_emoji || "📖",
       category: editingPlan.category || "Geral",
       is_active: editingPlan.is_active ?? true,
       sort_order: editingPlan.sort_order ?? 0,
-      devotional: (editingPlan as Record<string, unknown>).devotional || "",
+      devotional: (editingPlan as { devotional?: string }).devotional || "",
     };
     if (editingPlan.id) {
       const { error } = await supabase.from("admin_plans").update(data).eq("id", editingPlan.id);
@@ -146,7 +146,7 @@ const AdminPanel = () => {
 
   const addReading = async (planId: string, reading: { bookAbbrev: string; chapter: number; title: string; verseStart?: number; verseEnd?: number }) => {
     const nextDay = planReadings.length + 1;
-    const insertData: Record<string, unknown> = {
+    const { error } = await supabase.from("admin_plan_readings").insert({
       plan_id: planId,
       day_number: nextDay,
       book_abbrev: reading.bookAbbrev.trim(),
@@ -154,8 +154,7 @@ const AdminPanel = () => {
       title: reading.title.trim(),
       verse_start: reading.verseStart || null,
       verse_end: reading.verseEnd || null,
-    };
-    const { error } = await supabase.from("admin_plan_readings").insert(insertData);
+    });
     if (error) { toast.error("Erro ao adicionar leitura"); return; }
     toast.success(`Dia ${nextDay} adicionado`);
     fetchReadings(planId);

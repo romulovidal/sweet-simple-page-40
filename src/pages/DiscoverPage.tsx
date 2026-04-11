@@ -1,7 +1,7 @@
 import { Search, Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { searchVerses } from "@/services/bibleApi";
-import { bibleBooks } from "@/data/bible";
+
 import { useNavigate } from "react-router-dom";
 
 const categories = [

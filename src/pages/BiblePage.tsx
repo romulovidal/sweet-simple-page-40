@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2 } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
+import VerseImageGenerator from "@/components/VerseImageGenerator";
 
 const BiblePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,6 +18,7 @@ const BiblePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
+  const [imageVerse, setImageVerse] = useState<{ text: string; reference: string } | null>(null);
 
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
@@ -207,6 +209,18 @@ const BiblePage = () => {
                       <button onClick={() => handleShareVerse(verse)} className="p-1">
                         <Share2 className="w-4 h-4 text-dark-muted" />
                       </button>
+                      <button
+                        onClick={() => {
+                          if (!selectedBook || !selectedChapter) return;
+                          setImageVerse({
+                            text: verse.text,
+                            reference: `${selectedBook.name} ${selectedChapter}:${verse.number}`,
+                          });
+                        }}
+                        className="p-1"
+                      >
+                        <ImageIcon className="w-4 h-4 text-dark-muted" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -241,6 +255,15 @@ const BiblePage = () => {
             </div>
           )}
         </div>
+
+        {imageVerse && (
+          <VerseImageGenerator
+            text={imageVerse.text}
+            reference={imageVerse.reference}
+            open={!!imageVerse}
+            onClose={() => setImageVerse(null)}
+          />
+        )}
       </div>
     );
   }

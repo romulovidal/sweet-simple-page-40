@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { readingPlans } from "@/data/bible";
+import { readingPlans, bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, CheckCircle } from "lucide-react";
@@ -77,8 +77,8 @@ const PlansPage = () => {
         {/* Readings list */}
         <div className="px-5 space-y-2">
           {plan.readings.map((reading, i) => {
-            const book = require("@/data/bible").bibleBooks.find(
-              (b: { apiAbbrev: string }) => b.apiAbbrev === reading.bookAbbrev
+            const book = bibleBooks.find(
+              (b) => b.apiAbbrev === reading.bookAbbrev
             );
             const isComplete = completedDays.includes(i);
             return (

@@ -38,11 +38,11 @@ const Index = () => {
               Pregação da Palavra
             </span>
             <h1 className="text-5xl md:text-7xl font-bold text-[hsl(var(--hero-foreground))] leading-[1.1] mb-6">
-              Uma Palavra.<br />
-              <span className="text-accent">Uma vida nova.</span>
+              Ele já falou.<br />
+              <span className="text-accent">Você já ouviu?</span>
             </h1>
             <p className="text-lg text-[hsl(var(--hero-muted))] mb-10 max-w-md leading-relaxed">
-              Cada mensagem é uma semente. Venha ouvir o que Deus preparou para você hoje.
+              A resposta que você procura não está longe. Está numa página, num versículo, numa decisão de fé.
             </p>
             <div className="flex flex-wrap gap-4">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
@@ -62,25 +62,25 @@ const Index = () => {
       <section id="pilares" className="py-24 px-6">
         <div className="max-w-5xl mx-auto space-y-20">
           <div className="text-center mb-4">
-            <span className="text-accent text-sm font-medium tracking-widest uppercase">O que nos move</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3">Três colunas que sustentam tudo</h2>
+            <span className="text-accent text-sm font-medium tracking-widest uppercase">Nosso alicerce</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3">Não é religião. É relacionamento.</h2>
           </div>
 
           {[
             {
               icon: Book,
-              title: "A Palavra viva",
-              desc: "Não é teoria — é vida. Cada estudo bíblico abre portas que você nem sabia que existiam. Venha descobrir o que Deus já escreveu sobre a sua história.",
+              title: "Escrituras que respiram",
+              desc: "Cada versículo carrega uma promessa viva. Mergulhamos na Bíblia não para decorar — mas para deixar Deus reescrever o que parecia definitivo na sua vida.",
             },
             {
               icon: Heart,
-              title: "Amor sem filtro",
-              desc: "Jesus não pediu que amássemos só quem merece. Aqui, praticamos o tipo de amor que incomoda, que transforma e que não desiste de ninguém.",
+              title: "Graça que não escolhe rosto",
+              desc: "O amor de Cristo não tem pré-requisito. Aqui ninguém precisa fingir que está bem. Venha como você é — a transformação é por conta Dele.",
             },
             {
               icon: Users,
-              title: "Ninguém caminha só",
-              desc: "Fé solitária enfraquece. Aqui você encontra irmãos que oram junto, choram junto e celebram junto. Comunidade de verdade, não de fachada.",
+              title: "Juntos no vale e no topo",
+              desc: "Sozinho você aguenta. Juntos, a gente vence. Uma comunidade que não te abandona na segunda-feira depois do culto de domingo.",
             },
           ].map((item, i) => (
             <div
@@ -108,10 +108,10 @@ const Index = () => {
         </div>
         <div className="relative max-w-3xl mx-auto text-center text-secondary-foreground">
           <p className="text-2xl md:text-4xl font-heading font-light italic leading-relaxed">
-            "Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho."
+            "Porque a palavra de Deus é viva, e eficaz, e mais penetrante do que qualquer espada de dois gumes."
           </p>
           <span className="block mt-8 text-accent text-sm font-medium tracking-widest uppercase">
-            Salmos 119:105
+            Hebreus 4:12
           </span>
         </div>
       </section>
@@ -121,10 +121,10 @@ const Index = () => {
         <div className="max-w-xl mx-auto text-center">
           <Cross className="w-8 h-8 text-accent mx-auto mb-6" />
           <h2 className="text-3xl md:text-5xl font-bold text-[hsl(var(--hero-foreground))] mb-6">
-            Sua história muda aqui
+            O próximo passo é seu
           </h2>
           <p className="text-[hsl(var(--hero-muted))] text-lg mb-10 leading-relaxed">
-            Não espere o momento perfeito. O momento é agora. Fale com a gente e dê o primeiro passo.
+            Deus já fez a parte Dele. Agora é a sua vez de responder. Uma conversa pode mudar tudo.
           </p>
           <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
             <Button

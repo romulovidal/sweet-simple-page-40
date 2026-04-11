@@ -62,25 +62,25 @@ const Index = () => {
       <section id="pilares" className="py-24 px-6">
         <div className="max-w-5xl mx-auto space-y-20">
           <div className="text-center mb-4">
-            <span className="text-accent text-sm font-medium tracking-widest uppercase">Nossa base</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3">Pilares da nossa fé</h2>
+            <span className="text-accent text-sm font-medium tracking-widest uppercase">O que nos move</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3">Três colunas que sustentam tudo</h2>
           </div>
 
           {[
             {
               icon: Book,
-              title: "Estudo Bíblico",
-              desc: "Mergulhe nas Escrituras e descubra a sabedoria eterna que guia nossos passos. Através do estudo diário, fortalecemos nossa fé e compreensão da vontade de Deus.",
+              title: "A Palavra viva",
+              desc: "Não é teoria — é vida. Cada estudo bíblico abre portas que você nem sabia que existiam. Venha descobrir o que Deus já escreveu sobre a sua história.",
             },
             {
               icon: Heart,
-              title: "Amor ao Próximo",
-              desc: "Pratique o amor incondicional que Jesus nos ensinou. Servir ao próximo é a expressão mais pura da nossa fé e o caminho para uma vida plena.",
+              title: "Amor sem filtro",
+              desc: "Jesus não pediu que amássemos só quem merece. Aqui, praticamos o tipo de amor que incomoda, que transforma e que não desiste de ninguém.",
             },
             {
               icon: Users,
-              title: "Comunidade",
-              desc: "Caminhe junto com irmãos na fé, fortalecendo uns aos outros em comunhão. Juntos somos mais fortes e capazes de impactar o mundo.",
+              title: "Ninguém caminha só",
+              desc: "Fé solitária enfraquece. Aqui você encontra irmãos que oram junto, choram junto e celebram junto. Comunidade de verdade, não de fachada.",
             },
           ].map((item, i) => (
             <div

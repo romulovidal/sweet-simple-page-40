@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, Loader2 } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
-import { getDailyVerse, readingPlans } from "@/data/bible";
+import { getDailyVerse, readingPlans, bibleBooks } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData } from "@/hooks/useLocalStorage";
@@ -13,42 +13,54 @@ const HomePage = () => {
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
 
-  // Try to get a random verse from API, fallback to local
-  const [verse, setVerse] = useState(getDailyVerse());
+  // Daily verse - fetch from API, cache for the day
+  const fallback = getDailyVerse();
+  const [verse, setVerse] = useState<{ text: string; ref: string }>(fallback);
   const [verseLoading, setVerseLoading] = useState(true);
 
   useEffect(() => {
-    // Check if we already fetched today's verse
-    const cached = localStorage.getItem("daily-verse-cache");
-    if (cached) {
-      try {
+    const today = new Date().toISOString().split("T")[0];
+
+    // Check localStorage cache
+    try {
+      const cached = localStorage.getItem("daily-verse-cache");
+      if (cached) {
         const parsed = JSON.parse(cached);
-        const today = new Date().toISOString().split("T")[0];
-        if (parsed.date === today) {
+        if (parsed.date === today && parsed.verse?.text) {
           setVerse(parsed.verse);
           setVerseLoading(false);
           return;
         }
-      } catch {}
-    }
+      }
+    } catch {}
 
+    // Fetch fresh verse
+    setVerseLoading(true);
     getRandomVerse()
       .then((data) => {
-        const v = {
-          text: data.text,
-          ref: `${data.book.name} ${data.chapter}:${data.number}`,
-        };
-        setVerse(v);
-        localStorage.setItem("daily-verse-cache", JSON.stringify({
-          date: new Date().toISOString().split("T")[0],
-          verse: v,
-        }));
+        if (data?.text) {
+          const v = {
+            text: data.text,
+            ref: `${data.book.name} ${data.chapter}:${data.number}`,
+          };
+          setVerse(v);
+          localStorage.setItem("daily-verse-cache", JSON.stringify({ date: today, verse: v }));
+        }
       })
       .catch(() => {
-        // Keep fallback
+        // Use fallback silently
       })
       .finally(() => setVerseLoading(false));
   }, []);
+
+  // Navigate to continue reading with correct book/chapter
+  const handleContinueReading = () => {
+    if (progress) {
+      navigate(`/biblia?book=${progress.bookAbbrev}&chapter=${progress.chapter}`);
+    } else {
+      navigate(`/biblia?book=gn&chapter=1`);
+    }
+  };
 
   return (
     <div className="pb-20 min-h-screen">
@@ -103,7 +115,13 @@ const HomePage = () => {
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Versículo do dia
               </h2>
-              <VerseCard text={verse.text} reference={verse.ref} />
+              {verseLoading ? (
+                <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
+                  <Loader2 className="w-6 h-6 animate-spin text-white" />
+                </div>
+              ) : (
+                <VerseCard text={verse.text} reference={verse.ref} />
+              )}
             </div>
 
             {/* Continue Reading */}
@@ -112,7 +130,7 @@ const HomePage = () => {
                 Continuar lendo
               </h2>
               <button
-                onClick={() => navigate("/biblia")}
+                onClick={handleContinueReading}
                 className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left"
               >
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-lg">
@@ -129,6 +147,51 @@ const HomePage = () => {
                 <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
               </button>
             </div>
+
+            {/* Active Plans Progress */}
+            {(() => {
+              try {
+                const planProgressData = JSON.parse(localStorage.getItem("plan-progress") || "[]");
+                const activePlans = planProgressData.filter((p: { completedDays: number[] }) => p.completedDays.length > 0);
+                if (activePlans.length === 0) return null;
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                        Seus Planos
+                      </h2>
+                      <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
+                        Ver todos
+                      </button>
+                    </div>
+                    {activePlans.slice(0, 2).map((prog: { planId: string; completedDays: number[] }) => {
+                      const plan = readingPlans.find((p) => p.id === prog.planId);
+                      if (!plan) return null;
+                      const pct = Math.round((prog.completedDays.length / plan.readings.length) * 100);
+                      return (
+                        <button
+                          key={plan.id}
+                          onClick={() => {
+                            localStorage.setItem("selected-plan", JSON.stringify(plan.id));
+                            navigate("/planos");
+                          }}
+                          className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 mb-2 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-lg">{plan.image}</span>
+                            <p className="font-semibold text-sm flex-1">{plan.title}</p>
+                            <span className="text-xs text-primary font-bold">{pct}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-[hsl(var(--dark-bg))] rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              } catch { return null; }
+            })()}
 
             {/* Reading Plans */}
             <div>
@@ -152,7 +215,7 @@ const HomePage = () => {
                   >
                     <span className="text-2xl mb-2 block">{plan.image}</span>
                     <p className="font-semibold text-xs leading-tight">{plan.title}</p>
-                    <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">{plan.days} dias</p>
+                    <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">{plan.readings.length} leituras</p>
                   </button>
                 ))}
               </div>

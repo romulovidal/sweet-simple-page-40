@@ -35,14 +35,14 @@ const Index = () => {
         <div className="relative z-10 max-w-6xl mx-auto px-6 w-full">
           <div className="max-w-2xl animate-fade-up">
             <span className="text-accent text-sm font-medium tracking-widest uppercase mb-4 block">
-              Ministério da Palavra
+              Pregação da Palavra
             </span>
             <h1 className="text-5xl md:text-7xl font-bold text-[hsl(var(--hero-foreground))] leading-[1.1] mb-6">
-              Fé que<br />
-              <span className="text-accent">transforma.</span>
+              Uma Palavra.<br />
+              <span className="text-accent">Uma vida nova.</span>
             </h1>
             <p className="text-lg text-[hsl(var(--hero-muted))] mb-10 max-w-md leading-relaxed">
-              Descubra o poder da pregação bíblica e permita que a Palavra de Deus renove a sua vida.
+              Cada mensagem é uma semente. Venha ouvir o que Deus preparou para você hoje.
             </p>
             <div className="flex flex-wrap gap-4">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
@@ -62,25 +62,25 @@ const Index = () => {
       <section id="pilares" className="py-24 px-6">
         <div className="max-w-5xl mx-auto space-y-20">
           <div className="text-center mb-4">
-            <span className="text-accent text-sm font-medium tracking-widest uppercase">Nossa base</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3">Pilares da nossa fé</h2>
+            <span className="text-accent text-sm font-medium tracking-widest uppercase">O que nos move</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3">Três colunas que sustentam tudo</h2>
           </div>
 
           {[
             {
               icon: Book,
-              title: "Estudo Bíblico",
-              desc: "Mergulhe nas Escrituras e descubra a sabedoria eterna que guia nossos passos. Através do estudo diário, fortalecemos nossa fé e compreensão da vontade de Deus.",
+              title: "A Palavra viva",
+              desc: "Não é teoria — é vida. Cada estudo bíblico abre portas que você nem sabia que existiam. Venha descobrir o que Deus já escreveu sobre a sua história.",
             },
             {
               icon: Heart,
-              title: "Amor ao Próximo",
-              desc: "Pratique o amor incondicional que Jesus nos ensinou. Servir ao próximo é a expressão mais pura da nossa fé e o caminho para uma vida plena.",
+              title: "Amor sem filtro",
+              desc: "Jesus não pediu que amássemos só quem merece. Aqui, praticamos o tipo de amor que incomoda, que transforma e que não desiste de ninguém.",
             },
             {
               icon: Users,
-              title: "Comunidade",
-              desc: "Caminhe junto com irmãos na fé, fortalecendo uns aos outros em comunhão. Juntos somos mais fortes e capazes de impactar o mundo.",
+              title: "Ninguém caminha só",
+              desc: "Fé solitária enfraquece. Aqui você encontra irmãos que oram junto, choram junto e celebram junto. Comunidade de verdade, não de fachada.",
             },
           ].map((item, i) => (
             <div
@@ -108,10 +108,10 @@ const Index = () => {
         </div>
         <div className="relative max-w-3xl mx-auto text-center text-secondary-foreground">
           <p className="text-2xl md:text-4xl font-heading font-light italic leading-relaxed">
-            "Porque a palavra de Deus é viva, e eficaz, e mais penetrante do que qualquer espada de dois gumes."
+            "Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho."
           </p>
           <span className="block mt-8 text-accent text-sm font-medium tracking-widest uppercase">
-            Hebreus 4:12
+            Salmos 119:105
           </span>
         </div>
       </section>
@@ -121,10 +121,10 @@ const Index = () => {
         <div className="max-w-xl mx-auto text-center">
           <Cross className="w-8 h-8 text-accent mx-auto mb-6" />
           <h2 className="text-3xl md:text-5xl font-bold text-[hsl(var(--hero-foreground))] mb-6">
-            Venha fazer parte
+            Sua história muda aqui
           </h2>
           <p className="text-[hsl(var(--hero-muted))] text-lg mb-10 leading-relaxed">
-            Junte-se a nós e experimente a transformação que só a Palavra de Deus pode proporcionar.
+            Não espere o momento perfeito. O momento é agora. Fale com a gente e dê o primeiro passo.
           </p>
           <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
             <Button

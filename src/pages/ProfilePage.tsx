@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
@@ -41,6 +41,31 @@ const ProfilePage = () => {
   const [name, setName] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushEnabled().then(setPushEnabled);
+  }, []);
+
+  const togglePush = async () => {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unregisterPush();
+        setPushEnabled(false);
+        toast.success("Notificações desativadas");
+      } else {
+        const ok = await registerPushNotifications();
+        setPushEnabled(ok);
+        if (ok) toast.success("Notificações ativadas! 🔔");
+        else toast.error("Não foi possível ativar notificações");
+      }
+    } catch {
+      toast.error("Erro ao alterar notificações");
+    }
+    setPushLoading(false);
+  };
 
   const activePlansCount = useMemo(
     () => planProgress.filter((plan) => plan.completedDays.length > 0).length,

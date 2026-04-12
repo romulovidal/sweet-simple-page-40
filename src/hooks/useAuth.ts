@@ -16,17 +16,21 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", session.user.id)
-            .single();
-          setProfile(data);
+          // Use setTimeout to avoid deadlock with Supabase auth
+          setTimeout(async () => {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("user_id", session.user.id)
+              .single();
+            setProfile(data);
+          }, 0);
         } else {
           setProfile(null);
         }
@@ -34,6 +38,7 @@ export function useAuth() {
       }
     );
 
+    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -45,6 +50,8 @@ export function useAuth() {
           .single()
           .then(({ data }) => setProfile(data));
       }
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
 

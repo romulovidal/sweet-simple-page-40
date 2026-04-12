@@ -1,7 +1,32 @@
 import { bibleBooks } from "@/data/bible";
 
-const BASE_URL = "https://bible-api.com";
-const TRANSLATION = "almeida";
+// ── Bible Version Definitions ──
+export interface BibleVersion {
+  id: string;
+  name: string;
+  shortName: string;
+  source: "bible-api" | "helloao";
+  translationKey: string; // key used in the API
+}
+
+export const BIBLE_VERSIONS: BibleVersion[] = [
+  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "bible-api", translationKey: "almeida" },
+  { id: "blj", name: "Bíblia Livre (semelhante à ARA)", shortName: "BLJ", source: "helloao", translationKey: "por_blj" },
+  { id: "onbv", name: "Nova Bíblia Viva (semelhante à NVI)", shortName: "NBV", source: "helloao", translationKey: "por_onbv" },
+  { id: "bsl", name: "Bíblia Portuguesa Mundial", shortName: "BPM", source: "helloao", translationKey: "por_bsl" },
+  { id: "tft", name: "Tradução para Tradutores (semelhante à NTLH)", shortName: "TFT", source: "helloao", translationKey: "por_tft" },
+  { id: "kjv", name: "King James Version", shortName: "KJV", source: "bible-api", translationKey: "kjv" },
+];
+
+export const DEFAULT_VERSION_ID = "arc";
+
+export function getVersionById(id: string): BibleVersion {
+  return BIBLE_VERSIONS.find((v) => v.id === id) || BIBLE_VERSIONS[0];
+}
+
+// ── API URLs ──
+const BIBLE_API_URL = "https://bible-api.com";
+const HELLOAO_URL = "https://bible.helloao.org/api";
 
 export interface BibleVerse {
   number: number;
@@ -13,6 +38,8 @@ export interface ChapterResponse {
   verses: BibleVerse[];
 }
 
+// ── Book name mappings ──
+// bible-api.com uses English names
 export const bookNameMap: Record<string, string> = {
   gn: "genesis", ex: "exodus", lv: "leviticus", nm: "numbers", dt: "deuteronomy",
   js: "joshua", jz: "judges", rt: "ruth", "1sm": "1samuel", "2sm": "2samuel",
@@ -32,9 +59,137 @@ export const bookNameMap: Record<string, string> = {
   "1jo": "1john", "2jo": "2john", "3jo": "3john", jd: "jude", ap: "revelation",
 };
 
+// helloao uses 3-letter book IDs
+const helloaoBookMap: Record<string, string> = {
+  gn: "GEN", ex: "EXO", lv: "LEV", nm: "NUM", dt: "DEU",
+  js: "JOS", jz: "JDG", rt: "RUT", "1sm": "1SA", "2sm": "2SA",
+  "1rs": "1KI", "2rs": "2KI", "1cr": "1CH", "2cr": "2CH",
+  ed: "EZR", ne: "NEH", et: "EST", job: "JOB", sl: "PSA",
+  pv: "PRO", ec: "ECC", ct: "SNG",
+  is: "ISA", jr: "JER", lm: "LAM", ez: "EZK", dn: "DAN",
+  os: "HOS", jl: "JOL", am: "AMO", ob: "OBA", jn: "JON",
+  mq: "MIC", na: "NAM", hc: "HAB", sf: "ZEP",
+  ag: "HAG", zc: "ZEC", ml: "MAL",
+  mt: "MAT", mc: "MRK", lc: "LUK", jo: "JHN", at: "ACT",
+  rm: "ROM", "1co": "1CO", "2co": "2CO",
+  gl: "GAL", ef: "EPH", fp: "PHP", cl: "COL",
+  "1ts": "1TH", "2ts": "2TH",
+  "1tm": "1TI", "2tm": "2TI", tt: "TIT", fm: "PHM",
+  hb: "HEB", tg: "JAS", "1pe": "1PE", "2pe": "2PE",
+  "1jo": "1JN", "2jo": "2JN", "3jo": "3JN", jd: "JUD", ap: "REV",
+};
+
+// ── Cache ──
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 60;
 
+async function cachedFetch<T>(url: string): Promise<T> {
+  const cached = cache.get(url);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data as T;
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  cache.set(url, { data, timestamp: Date.now() });
+  return data as T;
+}
+
+// ── Fetch chapter from bible-api.com ──
+async function fetchChapterBibleApi(abbrev: string, chapter: number, translation: string): Promise<ChapterResponse> {
+  const englishName = bookNameMap[abbrev.toLowerCase()];
+  if (!englishName) throw new Error(`Livro não encontrado: ${abbrev}`);
+
+  const url = `${BIBLE_API_URL}/${encodeURIComponent(englishName)}+${chapter}?translation=${translation}`;
+  const data = await cachedFetch<{
+    reference: string;
+    verses: { verse: number; text: string }[];
+  }>(url);
+
+  return {
+    reference: data.reference,
+    verses: (data.verses || []).map((v) => ({
+      number: v.verse,
+      text: v.text.trim(),
+    })),
+  };
+}
+
+// ── Fetch chapter from helloao ──
+async function fetchChapterHelloao(abbrev: string, chapter: number, translationKey: string): Promise<ChapterResponse> {
+  const bookId = helloaoBookMap[abbrev.toLowerCase()];
+  if (!bookId) throw new Error(`Livro não encontrado: ${abbrev}`);
+
+  const url = `${HELLOAO_URL}/${translationKey}/${bookId}/${chapter}.json`;
+  const data = await cachedFetch<{
+    chapter: {
+      content: { type: string; number: number; content: string[] }[];
+    };
+    book: { name: string };
+  }>(url);
+
+  const verses = data.chapter.content
+    .filter((item) => item.type === "verse")
+    .map((item) => ({
+      number: item.number,
+      text: item.content.join(" ").trim(),
+    }));
+
+  const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());
+  const bookName = book?.name || data.book?.name || abbrev;
+
+  return {
+    reference: `${bookName} ${chapter}`,
+    verses,
+  };
+}
+
+// ── Public API ──
+export async function getChapter(abbrev: string, chapter: number, versionId?: string): Promise<ChapterResponse> {
+  const version = getVersionById(versionId || DEFAULT_VERSION_ID);
+
+  if (version.source === "helloao") {
+    return fetchChapterHelloao(abbrev, chapter, version.translationKey);
+  }
+
+  return fetchChapterBibleApi(abbrev, chapter, version.translationKey);
+}
+
+export async function getRandomVerse(): Promise<{
+  book: { name: string };
+  chapter: number;
+  number: number;
+  text: string;
+}> {
+  const favorites = [
+    "john+3:16", "psalms+23:1", "philippians+4:13", "proverbs+3:5-6",
+    "jeremiah+29:11", "isaiah+40:31", "psalms+119:105", "isaiah+41:10",
+    "john+8:32", "psalms+34:4", "romans+8:28", "joshua+1:9",
+    "matthew+11:28", "psalms+46:1", "2timothy+1:7", "romans+12:2",
+    "hebrews+11:1", "psalms+27:1", "proverbs+18:10", "1peter+5:7",
+  ];
+  const pick = favorites[Math.floor(Math.random() * favorites.length)];
+  const url = `${BIBLE_API_URL}/${pick}?translation=almeida`;
+
+  const data = await cachedFetch<{
+    reference: string;
+    verses: { book_name: string; chapter: number; verse: number; text: string }[];
+  }>(url);
+
+  const v = data.verses[0];
+  return {
+    book: { name: v.book_name },
+    chapter: v.chapter,
+    number: v.verse,
+    text: v.text.trim(),
+  };
+}
+
+// ── Search (uses default almeida translation) ──
 const normalizeText = (value: string) =>
   value
     .normalize("NFD")
@@ -42,7 +197,6 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
-// Broad topic-to-chapters mapping covering many keywords
 const SEARCH_CHAPTERS_BY_TOPIC: { keywords: string[]; chapters: string[] }[] = [
   { keywords: ["amor", "amar", "ama", "amado", "amou"], chapters: ["1corinthians+13", "john+15", "john+3", "romans+12", "1john+4", "song of solomon+2"] },
   { keywords: ["fe", "crer", "creia", "milagre", "milagres", "creu"], chapters: ["hebrews+11", "mark+11", "romans+8", "mark+9", "john+11", "john+20"] },
@@ -92,28 +246,22 @@ const SEARCH_CHAPTERS_BY_TOPIC: { keywords: string[]; chapters: string[] }[] = [
   { keywords: ["promessa", "promessas", "alianca", "pacto", "juramento"], chapters: ["2peter+1", "hebrews+6", "genesis+12", "genesis+15", "2corinthians+1", "deuteronomy+7"] },
 ];
 
-// All the major Bible chapters to search as fallback — covers OT and NT broadly
 const BROAD_SEARCH_CHAPTERS = [
-  // Torah / Pentateuco
   "genesis+1", "genesis+3", "genesis+12", "genesis+22", "exodus+14", "exodus+20",
   "deuteronomy+6", "deuteronomy+28", "deuteronomy+31",
-  // Historical
   "joshua+1", "1samuel+17", "2samuel+22", "1kings+18", "2chronicles+20",
   "nehemiah+8", "esther+4",
-  // Poetry/Wisdom
   "job+38", "job+42", "psalms+1", "psalms+8", "psalms+16", "psalms+19", "psalms+23",
   "psalms+27", "psalms+34", "psalms+37", "psalms+40", "psalms+42", "psalms+46",
   "psalms+51", "psalms+56", "psalms+91", "psalms+100", "psalms+103", "psalms+119",
   "psalms+121", "psalms+126", "psalms+127", "psalms+139", "psalms+150",
   "proverbs+1", "proverbs+2", "proverbs+3", "proverbs+4", "proverbs+10",
   "proverbs+22", "proverbs+31", "ecclesiastes+3", "ecclesiastes+12",
-  // Prophets
   "isaiah+1", "isaiah+6", "isaiah+9", "isaiah+40", "isaiah+41", "isaiah+43",
   "isaiah+53", "isaiah+55", "isaiah+60", "isaiah+61",
   "jeremiah+1", "jeremiah+29", "jeremiah+31", "lamentations+3",
   "ezekiel+34", "ezekiel+37", "daniel+3", "daniel+6", "daniel+7",
   "hosea+6", "joel+2", "amos+5", "micah+6", "habakkuk+3", "malachi+3",
-  // Gospels
   "matthew+1", "matthew+3", "matthew+4", "matthew+5", "matthew+6", "matthew+7",
   "matthew+8", "matthew+11", "matthew+18", "matthew+24", "matthew+28",
   "mark+1", "mark+4", "mark+5", "mark+9", "mark+10", "mark+11",
@@ -121,9 +269,7 @@ const BROAD_SEARCH_CHAPTERS = [
   "luke+15", "luke+18", "luke+24",
   "john+1", "john+3", "john+4", "john+6", "john+8", "john+10",
   "john+11", "john+13", "john+14", "john+15", "john+16", "john+17", "john+19", "john+20",
-  // Acts
   "acts+1", "acts+2", "acts+4", "acts+8", "acts+9", "acts+16",
-  // Epistles
   "romans+1", "romans+3", "romans+5", "romans+6", "romans+8", "romans+10",
   "romans+12", "romans+13", "romans+15",
   "1corinthians+7", "1corinthians+12", "1corinthians+13", "1corinthians+15",
@@ -139,121 +285,38 @@ const BROAD_SEARCH_CHAPTERS = [
   "1peter+1", "1peter+2", "1peter+5", "2peter+1", "2peter+3",
   "1john+1", "1john+3", "1john+4",
   "jude+1",
-  // Revelation
   "revelation+1", "revelation+3", "revelation+5", "revelation+21", "revelation+22",
 ];
-
-async function cachedFetch<T>(url: string): Promise<T> {
-  const cached = cache.get(url);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data as T;
-  }
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  cache.set(url, { data, timestamp: Date.now() });
-  return data as T;
-}
 
 const ALL_SEARCH_CHAPTERS = bibleBooks.flatMap((book) => {
   const englishName = bookNameMap[book.apiAbbrev];
   if (!englishName) return [];
-
   return Array.from({ length: book.chapters }, (_, index) => `${englishName}+${index + 1}`);
 });
 
 function getSearchChapters(query: string): string[] {
   const normalizedQuery = normalizeText(query);
-
   const topicalMatches = SEARCH_CHAPTERS_BY_TOPIC
     .filter((entry) => entry.keywords.some((keyword) => normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)))
     .flatMap((entry) => entry.chapters);
-
   const priority = Array.from(new Set([...topicalMatches, ...BROAD_SEARCH_CHAPTERS]));
   const prioritySet = new Set(priority);
   const remaining = ALL_SEARCH_CHAPTERS.filter((chapterKey) => !prioritySet.has(chapterKey));
-
   return [...priority, ...remaining];
 }
 
 function scoreVerseMatch(verseText: string, normalizedQuery: string): number {
   const normalizedText = normalizeText(verseText);
   const words = normalizedQuery.split(/\s+/).filter((word) => word.length >= 2);
-
   if (!words.length) return 0;
-
   let score = 0;
-
-  if (normalizedText.includes(normalizedQuery)) {
-    score += 120;
-  }
-
+  if (normalizedText.includes(normalizedQuery)) score += 120;
   const exactWordRegex = new RegExp(`(^|\\s)${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`);
-  if (exactWordRegex.test(normalizedText)) {
-    score += 80;
-  }
-
+  if (exactWordRegex.test(normalizedText)) score += 80;
   const matchedWords = words.filter((word) => normalizedText.includes(word));
   score += matchedWords.length * 25;
-
-  if (matchedWords.length === words.length) {
-    score += 40;
-  }
-
+  if (matchedWords.length === words.length) score += 40;
   return score;
-}
-
-export async function getChapter(abbrev: string, chapter: number): Promise<ChapterResponse> {
-  const englishName = bookNameMap[abbrev.toLowerCase()];
-  if (!englishName) throw new Error(`Livro não encontrado: ${abbrev}`);
-
-  const url = `${BASE_URL}/${encodeURIComponent(englishName)}+${chapter}?translation=${TRANSLATION}`;
-  const data = await cachedFetch<{
-    reference: string;
-    verses: { verse: number; text: string }[];
-  }>(url);
-
-  return {
-    reference: data.reference,
-    verses: (data.verses || []).map((v) => ({
-      number: v.verse,
-      text: v.text.trim(),
-    })),
-  };
-}
-
-export async function getRandomVerse(): Promise<{
-  book: { name: string };
-  chapter: number;
-  number: number;
-  text: string;
-}> {
-  const favorites = [
-    "john+3:16", "psalms+23:1", "philippians+4:13", "proverbs+3:5-6",
-    "jeremiah+29:11", "isaiah+40:31", "psalms+119:105", "isaiah+41:10",
-    "john+8:32", "psalms+34:4", "romans+8:28", "joshua+1:9",
-    "matthew+11:28", "psalms+46:1", "2timothy+1:7", "romans+12:2",
-    "hebrews+11:1", "psalms+27:1", "proverbs+18:10", "1peter+5:7",
-  ];
-  const pick = favorites[Math.floor(Math.random() * favorites.length)];
-  const url = `${BASE_URL}/${pick}?translation=${TRANSLATION}`;
-
-  const data = await cachedFetch<{
-    reference: string;
-    verses: { book_name: string; chapter: number; verse: number; text: string }[];
-  }>(url);
-
-  const v = data.verses[0];
-  return {
-    book: { name: v.book_name },
-    chapter: v.chapter,
-    number: v.verse,
-    text: v.text.trim(),
-  };
 }
 
 export async function searchVerses(query: string): Promise<
@@ -270,7 +333,7 @@ export async function searchVerses(query: string): Promise<
     const batch = chapters.slice(i, i + batchSize);
     const fetches = batch.map(async (chapterKey) => {
       try {
-        const url = `${BASE_URL}/${chapterKey}?translation=${TRANSLATION}`;
+        const url = `${BIBLE_API_URL}/${chapterKey}?translation=almeida`;
         const data = await cachedFetch<{
           verses: { book_name: string; chapter: number; verse: number; text: string }[];
         }>(url);
@@ -279,7 +342,6 @@ export async function searchVerses(query: string): Promise<
           .map((verse) => {
             const score = scoreVerseMatch(verse.text, normalizedQuery);
             if (score <= 0) return null;
-
             return {
               book: { name: verse.book_name },
               chapter: verse.chapter,
@@ -288,7 +350,7 @@ export async function searchVerses(query: string): Promise<
               score,
             };
           })
-          .filter((verse): verse is { book: { name: string }; chapter: number; number: number; text: string; score: number } => !!verse);
+          .filter((verse): verse is NonNullable<typeof verse> => !!verse);
       } catch {
         return [];
       }
@@ -296,19 +358,13 @@ export async function searchVerses(query: string): Promise<
 
     const batchResults = (await Promise.all(fetches)).flat();
     allResults.push(...batchResults);
-
-    if (allResults.length >= 30) {
-      break;
-    }
+    if (allResults.length >= 30) break;
   }
 
   const uniqueResults = allResults.filter(
     (result, index, array) =>
       array.findIndex(
-        (item) =>
-          item.book.name === result.book.name &&
-          item.chapter === result.chapter &&
-          item.number === result.number
+        (item) => item.book.name === result.book.name && item.chapter === result.chapter && item.number === result.number
       ) === index
   );
 

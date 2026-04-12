@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
-import { getChapter, bookNameMap, type BibleVerse } from "@/services/bibleApi";
+import { getChapter, bookNameMap, type BibleVerse, BIBLE_VERSIONS, DEFAULT_VERSION_ID, getVersionById } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
@@ -31,6 +31,8 @@ const BiblePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
   const [imageVerse, setImageVerse] = useState<{ text: string; reference: string } | null>(null);
+  const [bibleVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [showVersionPicker, setShowVersionPicker] = useState(false);
 
   // Multi-select state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
@@ -88,6 +90,45 @@ const BiblePage = () => {
       book.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const versionPickerModal = showVersionPicker ? (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowVersionPicker(false)}>
+      <div className="absolute inset-0 bg-black/60" />
+      <div
+        className="relative w-full max-w-lg bg-dark-card rounded-t-2xl p-5 pb-8 animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold">Versão da Bíblia</h3>
+          <button onClick={() => setShowVersionPicker(false)} className="p-1">
+            <X className="w-5 h-5 text-dark-muted" />
+          </button>
+        </div>
+        <div className="space-y-1">
+          {BIBLE_VERSIONS.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => {
+                setBibleVersion(v.id);
+                setShowVersionPicker(false);
+              }}
+              className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
+                bibleVersion === v.id ? "bg-primary/20 ring-1 ring-primary/40" : "active:bg-dark-card-hover"
+              }`}
+            >
+              <div>
+                <p className="font-semibold text-sm">{v.shortName}</p>
+                <p className="text-xs text-dark-muted">{v.name}</p>
+              </div>
+              {bibleVersion === v.id && (
+                <span className="text-xs text-primary font-bold">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   useEffect(() => {
     if (!selectedBook || !selectedChapter) return;
 
@@ -95,7 +136,7 @@ const BiblePage = () => {
     setLoading(true);
     setError(null);
 
-    getChapter(selectedBook.apiAbbrev, selectedChapter)
+    getChapter(selectedBook.apiAbbrev, selectedChapter, bibleVersion)
       .then((data) => {
         if (cancelled) return;
         setVerses(data.verses);
@@ -119,7 +160,7 @@ const BiblePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [chapterRequestKey, selectedBook, selectedChapter, setProgress, setStreak]);
+  }, [chapterRequestKey, selectedBook, selectedChapter, bibleVersion, setProgress, setStreak]);
 
   useEffect(() => {
     if (!highlightedVerse || verses.length === 0 || loading) return;
@@ -331,6 +372,8 @@ const BiblePage = () => {
   if (selectedBook && selectedChapter) {
     const hasSelection = selectedVerses.size > 0;
 
+    const currentVersion = getVersionById(bibleVersion);
+
     return (
       <div className="pb-20 min-h-screen">
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10">
@@ -345,11 +388,11 @@ const BiblePage = () => {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold">
+          <h1 className="text-lg font-bold flex-1 truncate">
             {selectedBook.name} {selectedChapter}
           </h1>
-          {hasSelection && (
-            <div className="ml-auto flex items-center gap-1">
+          {hasSelection ? (
+            <div className="flex items-center gap-1">
               <span className="text-xs text-primary font-semibold mr-1">
                 {selectedVerses.size}
               </span>
@@ -360,6 +403,14 @@ const BiblePage = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+          ) : (
+            <button
+              onClick={() => setShowVersionPicker(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+            >
+              {currentVersion.shortName}
+              <ChevronDown className="w-3 h-3 text-dark-muted" />
+            </button>
           )}
         </header>
 
@@ -508,6 +559,7 @@ const BiblePage = () => {
             onClose={() => setImageVerse(null)}
           />
         )}
+        {versionPickerModal}
       </div>
     );
   }
@@ -545,6 +597,7 @@ const BiblePage = () => {
             </button>
           ))}
         </div>
+        {versionPickerModal}
       </div>
     );
   }
@@ -553,7 +606,16 @@ const BiblePage = () => {
   return (
     <div className="pb-20 min-h-screen">
       <header className="px-5 pt-12 pb-4">
-        <h1 className="text-2xl font-bold mb-4">Bíblia</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Bíblia</h1>
+          <button
+            onClick={() => setShowVersionPicker(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+          >
+            {getVersionById(bibleVersion).shortName}
+            <ChevronDown className="w-3 h-3 text-dark-muted" />
+          </button>
+        </div>
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
           <input
@@ -600,6 +662,7 @@ const BiblePage = () => {
           </button>
         ))}
       </div>
+      {versionPickerModal}
     </div>
   );
 };

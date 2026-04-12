@@ -649,11 +649,13 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
   }
 
   return (
-    <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-primary">📅 Dia {dayNumber}</p>
-        {totalDays > 0 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">de {totalDays}</p>}
-      </div>
+    <div className={`${isAddToDay ? "" : "bg-[hsl(var(--dark-card))] rounded-xl p-4"} space-y-3`}>
+      {!isAddToDay && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-primary">📅 Novo Dia {String(dayNumber).padStart(2, "0")}</p>
+          {totalDays > 0 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">de {totalDays}</p>}
+        </div>
+      )}
 
       <div>
         <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do dia (opcional)</label>

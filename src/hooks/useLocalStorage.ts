@@ -46,6 +46,12 @@ export interface SavedVerse {
   text: string;
   reference: string;
   savedAt: string;
+  highlightColor?: string;
+}
+
+export interface HighlightedVerse {
+  reference: string;
+  color: string;
 }
 
 export interface ReadingProgress {

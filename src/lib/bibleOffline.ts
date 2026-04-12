@@ -1,11 +1,13 @@
 import { BIBLE_VERSIONS, type BibleVersion } from "@/services/bibleApi";
+import { loadBundledBibleVersion, type BibleBookData } from "@/services/bibleDataLoader";
 
 const CACHE_NAME = "bible-offline-v1";
+const cacheKeyForVersion = (fileName: string) => `/offline-bibles/${fileName}.json`;
 
 export async function isVersionCached(version: BibleVersion): Promise<boolean> {
   try {
     const cache = await caches.open(CACHE_NAME);
-    const response = await cache.match(`/biblias/${version.fileName}.json`);
+    const response = await cache.match(cacheKeyForVersion(version.fileName));
     return !!response;
   } catch {
     return false;
@@ -20,55 +22,55 @@ export async function getCachedVersions(): Promise<string[]> {
   return cached;
 }
 
+export async function getCachedVersionData(fileName: string): Promise<BibleBookData[] | null> {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const response = await cache.match(cacheKeyForVersion(fileName));
+    if (!response) return null;
+    return (await response.json()) as BibleBookData[];
+  } catch {
+    return null;
+  }
+}
+
 export async function downloadVersion(
   version: BibleVersion,
   onProgress?: (pct: number) => void
 ): Promise<void> {
-  const url = `/biblias/${version.fileName}.json`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Falha ao baixar ${version.shortName}`);
+  onProgress?.(10);
+  const data = await loadBundledBibleVersion(version.fileName);
+  onProgress?.(80);
 
-  const total = Number(response.headers.get("content-length")) || 0;
-  const reader = response.body?.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-
-  if (reader) {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      if (total > 0 && onProgress) onProgress(Math.round((received / total) * 100));
-    }
-  }
-
-  const blob = new Blob(chunks as BlobPart[], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const cache = await caches.open(CACHE_NAME);
-  await cache.put(url, new Response(blob, { headers: { "Content-Type": "application/json" } }));
+  await cache.put(
+    cacheKeyForVersion(version.fileName),
+    new Response(blob, { headers: { "Content-Type": "application/json" } })
+  );
+
   onProgress?.(100);
 }
 
 export async function removeVersion(version: BibleVersion): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
-  await cache.delete(`/biblias/${version.fileName}.json`);
+  await cache.delete(cacheKeyForVersion(version.fileName));
 }
 
 export async function fetchWithOffline(url: string): Promise<Response> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Network response not ok");
-    // Validate we got JSON, not an HTML page from SPA rewrite
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("text/html")) {
-      throw new Error("Received HTML instead of JSON — possible SPA rewrite issue");
-    }
-    return response;
-  } catch (err) {
-    console.warn("[bibleOffline] fetch failed for", url, err);
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(url);
-    if (cached) return cached;
-    throw new Error("Sem conexão e versão não disponível offline");
+  const fileName = url.split("/").pop()?.replace(".json", "");
+  if (!fileName) {
+    throw new Error("URL inválida para leitura offline");
   }
+
+  const cached = await getCachedVersionData(fileName);
+  if (cached) {
+    return new Response(JSON.stringify(cached), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const bundled = await loadBundledBibleVersion(fileName);
+  return new Response(JSON.stringify(bundled), {
+    headers: { "Content-Type": "application/json" },
+  });
 }

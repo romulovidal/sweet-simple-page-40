@@ -740,7 +740,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
           </button>
         </div>
       )}
-      <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
+      
     </div>
   );
 };

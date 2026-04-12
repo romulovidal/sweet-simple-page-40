@@ -85,6 +85,10 @@ const ProfilePage = () => {
   // Auth handlers
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!lgpdAccepted) {
+      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
+      return;
+    }
     setAuthSubmitting(true);
     try {
       if (authMode === "signup") {

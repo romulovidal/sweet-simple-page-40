@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
@@ -249,6 +249,19 @@ const BiblePage = () => {
     setSavedVerses((prev) => prev.map((s) => s.reference === reference ? { ...s, highlightColor: undefined } : s));
   };
 
+  const handleRemoveHighlightSelected = () => {
+    if (!selectedBook || !selectedChapter) return;
+    const sortedNumbers = Array.from(selectedVerses).sort((a, b) => a - b);
+
+    const refsToRemove = sortedNumbers.map((num) => `${selectedBook.name} ${selectedChapter}:${num}`);
+    setHighlights((prev) => prev.filter((h) => !refsToRemove.includes(h.reference)));
+    setSavedVerses((prev) => prev.map((s) => refsToRemove.includes(s.reference) ? { ...s, highlightColor: undefined } : s));
+
+    setShowColorPicker(false);
+    setSelectedVerses(new Set());
+    toast("Destaque removido!");
+  };
+
   const handleImageSelected = () => {
     const { text, reference } = buildShareContent();
     if (reference) {
@@ -371,6 +384,13 @@ const BiblePage = () => {
                       title={c.name}
                     />
                   ))}
+                  <button
+                    onClick={handleRemoveHighlightSelected}
+                    className="w-9 h-9 rounded-full border-2 border-dark-muted bg-white/10 flex items-center justify-center hover:border-white/50 active:scale-90 transition-all"
+                    title="Remover destaque"
+                  >
+                    <Ban className="w-5 h-5 text-dark-muted" />
+                  </button>
                 </div>
               </div>
             )}

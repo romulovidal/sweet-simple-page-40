@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Loader2, Play, Heart, BookOpen, FileText, Megaphone } from "lucide-react";
+import { Search, Loader2, Play, Heart, BookOpen, FileText, Megaphone, Sun, Moon } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse } from "@/data/bible";

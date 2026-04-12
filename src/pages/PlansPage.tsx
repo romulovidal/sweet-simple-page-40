@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getChapter, type BibleVerse, DEFAULT_VERSION_ID } from "@/services/bibleApi";
 
 interface PlanProgress {
   planId: string;
@@ -41,8 +41,10 @@ const PlansPage = () => {
   const [plans, setPlans] = useState<DBPlan[]>([]);
   const [readings, setReadings] = useState<DBReading[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingReadings, setLoadingReadings] = useState(false);
-  const navigate = useNavigate();
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const [dayVerses, setDayVerses] = useState<BibleVerse[]>([]);
+  const [loadingVerses, setLoadingVerses] = useState(false);
+  const [bibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
 
   useEffect(() => {
     supabase.from("admin_plans").select("*").eq("is_active", true).order("sort_order", { ascending: true })

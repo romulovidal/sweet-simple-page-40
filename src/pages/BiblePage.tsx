@@ -559,6 +559,7 @@ const BiblePage = () => {
             onClose={() => setImageVerse(null)}
           />
         )}
+        {versionPickerModal}
       </div>
     );
   }
@@ -596,6 +597,7 @@ const BiblePage = () => {
             </button>
           ))}
         </div>
+        {versionPickerModal}
       </div>
     );
   }
@@ -660,6 +662,7 @@ const BiblePage = () => {
           </button>
         ))}
       </div>
+      {versionPickerModal}
     </div>
   );
 };

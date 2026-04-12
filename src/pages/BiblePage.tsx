@@ -90,7 +90,45 @@ const BiblePage = () => {
       book.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  useEffect(() => {
+  const versionPickerModal = showVersionPicker ? (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowVersionPicker(false)}>
+      <div className="absolute inset-0 bg-black/60" />
+      <div
+        className="relative w-full max-w-lg bg-dark-card rounded-t-2xl p-5 pb-8 animate-fade-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold">Versão da Bíblia</h3>
+          <button onClick={() => setShowVersionPicker(false)} className="p-1">
+            <X className="w-5 h-5 text-dark-muted" />
+          </button>
+        </div>
+        <div className="space-y-1">
+          {BIBLE_VERSIONS.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => {
+                setBibleVersion(v.id);
+                setShowVersionPicker(false);
+              }}
+              className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
+                bibleVersion === v.id ? "bg-primary/20 ring-1 ring-primary/40" : "active:bg-dark-card-hover"
+              }`}
+            >
+              <div>
+                <p className="font-semibold text-sm">{v.shortName}</p>
+                <p className="text-xs text-dark-muted">{v.name}</p>
+              </div>
+              {bibleVersion === v.id && (
+                <span className="text-xs text-primary font-bold">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
     if (!selectedBook || !selectedChapter) return;
 
     let cancelled = false;

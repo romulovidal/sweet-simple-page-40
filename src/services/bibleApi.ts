@@ -157,7 +157,7 @@ async function fetchChapterHelloao(abbrev: string, chapter: number, translationK
   const url = `${HELLOAO_URL}/${translationKey}/${bookId}/${chapter}.json`;
   const data = await cachedFetch<{
     chapter: {
-      content: { type: string; number: number; content: string[] }[];
+      content: { type: string; number: number; content: (string | Record<string, unknown>)[] }[];
     };
     book: { name: string };
   }>(url);
@@ -166,7 +166,10 @@ async function fetchChapterHelloao(abbrev: string, chapter: number, translationK
     .filter((item) => item.type === "verse")
     .map((item) => ({
       number: item.number,
-      text: item.content.join(" ").trim(),
+      text: item.content
+        .filter((c): c is string => typeof c === "string")
+        .join(" ")
+        .trim(),
     }));
 
   const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());

@@ -256,7 +256,7 @@ const ProfilePage = () => {
                   <span className="text-xs font-semibold text-primary">{entry.ref}</span>
                   <span className="text-[10px] text-dark-muted">{formatDate(entry.date)}</span>
                 </div>
-                <p className="text-sm leading-relaxed text-foreground/90">"{entry.text}"</p>
+                <p className="text-sm leading-relaxed text-dark-text/90">"{entry.text}"</p>
               </div>
             ))
           )}

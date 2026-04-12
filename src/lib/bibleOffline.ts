@@ -57,9 +57,15 @@ export async function removeVersion(version: BibleVersion): Promise<void> {
 export async function fetchWithOffline(url: string): Promise<Response> {
   try {
     const response = await fetch(url);
-    if (response.ok) return response;
-    throw new Error("Network response not ok");
-  } catch {
+    if (!response.ok) throw new Error("Network response not ok");
+    // Validate we got JSON, not an HTML page from SPA rewrite
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      throw new Error("Received HTML instead of JSON — possible SPA rewrite issue");
+    }
+    return response;
+  } catch (err) {
+    console.warn("[bibleOffline] fetch failed for", url, err);
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(url);
     if (cached) return cached;

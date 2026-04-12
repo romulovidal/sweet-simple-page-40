@@ -143,6 +143,22 @@ const BROAD_SEARCH_CHAPTERS = [
   "revelation+1", "revelation+3", "revelation+5", "revelation+21", "revelation+22",
 ];
 
+async function cachedFetch<T>(url: string): Promise<T> {
+  const cached = cache.get(url);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data as T;
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  cache.set(url, { data, timestamp: Date.now() });
+  return data as T;
+}
+
 const ALL_SEARCH_CHAPTERS = bibleBooks.flatMap((book) => {
   const englishName = bookNameMap[book.apiAbbrev];
   if (!englishName) return [];

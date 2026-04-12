@@ -246,7 +246,7 @@ const BiblePage = () => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verseNumber}`;
     setHighlights((prev) => prev.filter((h) => h.reference !== reference));
-    setSavedVerses((prev) => prev.map((s) => s.reference === reference ? { ...s, highlightColor: undefined } : s));
+    setSavedVerses((prev) => prev.filter((s) => s.reference !== reference));
   };
 
   const handleRemoveHighlightSelected = () => {
@@ -255,7 +255,7 @@ const BiblePage = () => {
 
     const refsToRemove = sortedNumbers.map((num) => `${selectedBook.name} ${selectedChapter}:${num}`);
     setHighlights((prev) => prev.filter((h) => !refsToRemove.includes(h.reference)));
-    setSavedVerses((prev) => prev.map((s) => refsToRemove.includes(s.reference) ? { ...s, highlightColor: undefined } : s));
+    setSavedVerses((prev) => prev.filter((s) => !refsToRemove.includes(s.reference)));
 
     setShowColorPicker(false);
     setSelectedVerses(new Set());

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
-  FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar
+  FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -15,6 +15,14 @@ import type { Database } from "@/integrations/supabase/types";
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 type PlanReading = Database["public"]["Tables"]["admin_plan_readings"]["Row"];
+
+interface UserProfile {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
 
 const POST_TYPES = [
   { value: "versiculo", label: "Versículo", icon: BookOpen },

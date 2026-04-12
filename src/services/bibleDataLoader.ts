@@ -8,8 +8,11 @@ const AVAILABLE_VERSIONS = ["ACF", "ARA", "ARC", "KJA", "NTLH", "NVI"] as const;
 function getBibleAssetUrl(fileName: string) {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  const origin = typeof window !== "undefined" && window.location?.origin
+    ? window.location.origin
+    : "http://localhost";
 
-  return `${normalizedBaseUrl}biblias/${fileName}.json`;
+  return new URL(`${normalizedBaseUrl}biblias/${fileName}.json`, origin).toString();
 }
 
 export async function loadBundledBibleVersion(fileName: string): Promise<BibleBookData[]> {

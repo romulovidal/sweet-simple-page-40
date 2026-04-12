@@ -159,6 +159,7 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
         <VerseImageGenerator
           text={text}
           reference={reference}
+          open={showImageGen}
           onClose={() => setShowImageGen(false)}
         />
       )}

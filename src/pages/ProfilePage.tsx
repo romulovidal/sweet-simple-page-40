@@ -362,6 +362,21 @@ const ProfilePage = () => {
           <h1 className="text-lg font-bold">Configurações</h1>
         </header>
         <div className="px-5 space-y-3">
+          <button onClick={togglePush} disabled={pushLoading}
+            className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3">
+            {pushEnabled ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-dark-muted" />}
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Notificações</p>
+              <p className="text-xs text-dark-muted mt-1">
+                {pushEnabled ? "Versículo do dia às 8h ativado" : "Receba o versículo do dia às 8h"}
+              </p>
+            </div>
+            {pushLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+              <span className={`text-xs font-semibold ${pushEnabled ? "text-primary" : "text-dark-muted"}`}>
+                {pushEnabled ? "Ativado" : "Ativar"}
+              </span>
+            )}
+          </button>
           <div className="bg-dark-card rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Download className="w-4 h-4 text-primary" />

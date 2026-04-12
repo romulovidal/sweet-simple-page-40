@@ -7,7 +7,6 @@ import {
 import { toast } from "sonner";
 import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { registerPushNotifications, isPushEnabled, unregisterPush } from "@/lib/pushNotifications";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";

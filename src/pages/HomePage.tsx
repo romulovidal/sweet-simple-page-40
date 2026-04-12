@@ -149,24 +149,12 @@ const HomePage = () => {
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
         <StreakBadge days={streak.current} />
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/descubra")}
-            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
-          >
-            <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-          </button>
-          <button
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center transition-colors"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-4 h-4 text-[hsl(var(--streak-orange))]" />
-            ) : (
-              <Moon className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-            )}
-          </button>
-        </div>
+        <button
+          onClick={() => navigate("/descubra")}
+          className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+        >
+          <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+        </button>
       </header>
 
       {/* Tabs */}

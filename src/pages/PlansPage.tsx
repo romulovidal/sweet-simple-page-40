@@ -43,7 +43,8 @@ const PlansPage = () => {
   const [readings, setReadings] = useState<DBReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingVerses, setLoadingVerses] = useState(false);
-  const [bibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [bibleVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [showVersionPicker, setShowVersionPicker] = useState(false);
 
   // Day reading state: which day is open, which reading index within that day
   const [selectedDay, setSelectedDay] = useState<number | null>(null);

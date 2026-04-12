@@ -97,7 +97,7 @@ const BiblePage = () => {
     setLoading(true);
     setError(null);
 
-    getChapter(selectedBook.apiAbbrev, selectedChapter)
+    getChapter(selectedBook.apiAbbrev, selectedChapter, bibleVersion)
       .then((data) => {
         if (cancelled) return;
         setVerses(data.verses);
@@ -121,7 +121,7 @@ const BiblePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [chapterRequestKey, selectedBook, selectedChapter, setProgress, setStreak]);
+  }, [chapterRequestKey, selectedBook, selectedChapter, bibleVersion, setProgress, setStreak]);
 
   useEffect(() => {
     if (!highlightedVerse || verses.length === 0 || loading) return;

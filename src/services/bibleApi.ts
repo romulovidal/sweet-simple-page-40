@@ -202,6 +202,20 @@ export async function searchBible(
   return results;
 }
 
+// Alias for DiscoverPage compatibility
+export async function searchVerses(
+  query: string,
+  versionId?: string
+): Promise<{ book: { name: string }; chapter: number; number: number; text: string }[]> {
+  const results = await searchBible(query, versionId);
+  return results.map((r) => ({
+    book: { name: r.reference.split(" ").slice(0, -1).join(" ") },
+    chapter: r.chapter,
+    number: r.verse,
+    text: r.text,
+  }));
+}
+
 // Keep bookNameMap export for compatibility
 export const bookNameMap: Record<string, string> = Object.fromEntries(
   bibleBooks.map((b) => [b.apiAbbrev, b.name])

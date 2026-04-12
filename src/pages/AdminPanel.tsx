@@ -736,7 +736,7 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
       </div>
 
       <Button onClick={handleSubmit} className="w-full" size="sm">
-        <Plus className="w-4 h-4 mr-1" /> Adicionar Dia {dayNumber}{totalDays > 0 ? ` de ${totalDays}` : ""}
+        <Plus className="w-4 h-4 mr-1" /> {isAddToDay ? "Adicionar leitura" : `Adicionar Dia ${String(dayNumber).padStart(2, "0")}${totalDays > 0 ? ` de ${totalDays}` : ""}`}
       </Button>
     </div>
   );

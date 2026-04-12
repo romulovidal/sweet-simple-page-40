@@ -122,7 +122,7 @@ const DiscoverPage = () => {
       return;
     }
 
-    if (normalizedQuery.length < 3) {
+    if (normalizedQuery.length < 2) {
       setLoading(false);
       setResults(dedupeResults(smartMatches));
       return;

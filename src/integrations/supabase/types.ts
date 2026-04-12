@@ -145,6 +145,68 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_plan_progress: {
+        Row: {
+          completed_days: number[]
+          id: string
+          plan_id: string
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_days?: number[]
+          id?: string
+          plan_id: string
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_days?: number[]
+          id?: string
+          plan_id?: string
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_plan_progress_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "admin_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -159,6 +221,66 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_saved_verses: {
+        Row: {
+          book_abbrev: string | null
+          chapter: number | null
+          created_at: string
+          id: string
+          reference: string
+          text: string
+          user_id: string
+          verse: number | null
+        }
+        Insert: {
+          book_abbrev?: string | null
+          chapter?: number | null
+          created_at?: string
+          id?: string
+          reference: string
+          text: string
+          user_id: string
+          verse?: number | null
+        }
+        Update: {
+          book_abbrev?: string | null
+          chapter?: number | null
+          created_at?: string
+          id?: string
+          reference?: string
+          text?: string
+          user_id?: string
+          verse?: number | null
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          current_streak: number
+          history: string[]
+          id: string
+          last_read_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          history?: string[]
+          id?: string
+          last_read_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          history?: string[]
+          id?: string
+          last_read_date?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

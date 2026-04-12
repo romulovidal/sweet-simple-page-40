@@ -9,22 +9,22 @@ export interface BibleVersion {
   translationKey: string;
 }
 
-// Available Portuguese translations mapped to the requested versions:
-// - ARA: bible-api.com "almeida" (Almeida Atualizada, closest to ARA)
-// - ARC: getbible.net "almeida" (old Portuguese orthography, closest to ARC)
-// - ACF: getbible.net "livretr" (Bíblia Livre Textus Receptus, ACF-like)
-// - NVI: helloao "por_onbv" (Nova Bíblia Viva, NVI-style modern language)
-// - NTLH: helloao "por_blt" (Bíblia Livre Para Todos, simple language)
-// - Bíblia de Jerusalém: helloao "por_bsl" (Bíblia Portuguesa Mundial, study-oriented)
-// - KJA: helloao "por_tft" (Tradução para Tradutores, KJA-style literal)
+// Available Portuguese translations mapped to stable public sources/fallbacks:
+// - ARA: bible-api.com "almeida" (closest to ARA)
+// - ARC: getbible.net "livre" (closest to ARC)
+// - ACF: getbible.net "livretr" (closest to ACF)
+// - NVI: helloao "por_onbv" (modern Portuguese)
+// - NTLH: helloao "por_bsl" (simpler language, stable across books)
+// - Bíblia de Jerusalém: helloao "por_blj" (closest available match)
+// - KJA: getbible.net "almeida" (closest stable formal alternative)
 export const BIBLE_VERSIONS: BibleVersion[] = [
   { id: "ara", name: "Almeida Revista e Atualizada", shortName: "ARA", source: "bible-api", translationKey: "almeida" },
-  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "getbible", translationKey: "almeida" },
+  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "getbible", translationKey: "livre" },
   { id: "acf", name: "Almeida Corrigida Fiel", shortName: "ACF", source: "getbible", translationKey: "livretr" },
   { id: "nvi", name: "Nova Versão Internacional", shortName: "NVI", source: "helloao", translationKey: "por_onbv" },
-  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", source: "helloao", translationKey: "por_blt" },
-  { id: "bj", name: "Bíblia de Jerusalém", shortName: "BJ", source: "helloao", translationKey: "por_bsl" },
-  { id: "kja", name: "King James Atualizada", shortName: "KJA", source: "helloao", translationKey: "por_tft" },
+  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", source: "helloao", translationKey: "por_bsl" },
+  { id: "bj", name: "Bíblia de Jerusalém", shortName: "BJ", source: "helloao", translationKey: "por_blj" },
+  { id: "kja", name: "King James Atualizada", shortName: "KJA", source: "getbible", translationKey: "almeida" },
 ];
 
 export const DEFAULT_VERSION_ID = "ara";
@@ -112,6 +112,51 @@ const getbibleBookNumber: Record<string, number> = {
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 60;
 
+type VersionSource = Pick<BibleVersion, "source" | "translationKey">;
+
+const VERSION_FALLBACKS: Record<string, VersionSource[]> = {
+  ara: [{ source: "bible-api", translationKey: "almeida" }, { source: "getbible", translationKey: "livre" }],
+  arc: [{ source: "getbible", translationKey: "livre" }, { source: "helloao", translationKey: "por_blj" }],
+  acf: [{ source: "getbible", translationKey: "livretr" }, { source: "helloao", translationKey: "por_blj" }],
+  nvi: [{ source: "helloao", translationKey: "por_onbv" }, { source: "helloao", translationKey: "por_blj" }],
+  ntlh: [{ source: "helloao", translationKey: "por_bsl" }, { source: "helloao", translationKey: "por_blj" }],
+  bj: [{ source: "helloao", translationKey: "por_blj" }, { source: "helloao", translationKey: "por_bsl" }],
+  kja: [{ source: "getbible", translationKey: "almeida" }, { source: "helloao", translationKey: "por_blj" }],
+};
+
+function normalizeVerseText(value: string): string {
+  return value
+    .replace(/\u00a0/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
+}
+
+function extractHelloaoText(value: unknown): string {
+  if (typeof value === "string") return value;
+
+  if (Array.isArray(value)) {
+    return value.map(extractHelloaoText).filter(Boolean).join(" ");
+  }
+
+  if (value && typeof value === "object") {
+    if ("lineBreak" in value) return "\n";
+    if ("text" in value && typeof (value as { text?: unknown }).text === "string") {
+      return (value as { text: string }).text;
+    }
+    if ("content" in value) {
+      return extractHelloaoText((value as { content?: unknown }).content);
+    }
+  }
+
+  return "";
+}
+
+function hasUsableVerses(response: ChapterResponse): boolean {
+  return response.verses.length > 0 && response.verses.some((verse) => verse.text.length > 0);
+}
+
 async function cachedFetch<T>(url: string): Promise<T> {
   const cached = cache.get(url);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -121,6 +166,11 @@ async function cachedFetch<T>(url: string): Promise<T> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("API returned non-JSON content");
   }
 
   const data = await response.json();
@@ -144,7 +194,7 @@ async function fetchChapterBibleApi(abbrev: string, chapter: number, translation
     reference: `${book?.name || data.reference} ${chapter}`,
     verses: (data.verses || []).map((v) => ({
       number: v.verse,
-      text: v.text.trim(),
+      text: normalizeVerseText(v.text),
     })),
   };
 }
@@ -166,16 +216,9 @@ async function fetchChapterHelloao(abbrev: string, chapter: number, translationK
     .filter((item) => item.type === "verse")
     .map((item) => ({
       number: item.number,
-      text: item.content
-        .map((c) => {
-          if (typeof c === "string") return c;
-          if (typeof c === "object" && c !== null && "text" in c) return (c as { text: string }).text;
-          return "";
-        })
-        .filter(Boolean)
-        .join(" ")
-        .trim(),
-    }));
+      text: normalizeVerseText(extractHelloaoText(item.content)),
+    }))
+    .filter((item) => item.text.length > 0);
 
   const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());
   return {
@@ -201,7 +244,7 @@ async function fetchChapterGetbible(abbrev: string, chapter: number, translation
     reference: `${book?.name || abbrev} ${chapter}`,
     verses: (data.verses || []).map((v) => ({
       number: v.verse,
-      text: v.text.trim(),
+      text: normalizeVerseText(v.text),
     })),
   };
 }
@@ -209,16 +252,27 @@ async function fetchChapterGetbible(abbrev: string, chapter: number, translation
 // ── Public API ──
 export async function getChapter(abbrev: string, chapter: number, versionId?: string): Promise<ChapterResponse> {
   const version = getVersionById(versionId || DEFAULT_VERSION_ID);
+  const candidates = VERSION_FALLBACKS[version.id] || [{ source: version.source, translationKey: version.translationKey }];
 
-  if (version.source === "helloao") {
-    return fetchChapterHelloao(abbrev, chapter, version.translationKey);
+  let lastError: unknown = null;
+
+  for (const candidate of candidates) {
+    try {
+      const response = candidate.source === "helloao"
+        ? await fetchChapterHelloao(abbrev, chapter, candidate.translationKey)
+        : candidate.source === "getbible"
+          ? await fetchChapterGetbible(abbrev, chapter, candidate.translationKey)
+          : await fetchChapterBibleApi(abbrev, chapter, candidate.translationKey);
+
+      if (hasUsableVerses(response)) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  if (version.source === "getbible") {
-    return fetchChapterGetbible(abbrev, chapter, version.translationKey);
-  }
-
-  return fetchChapterBibleApi(abbrev, chapter, version.translationKey);
+  throw lastError || new Error("Não foi possível carregar esta versão no momento.");
 }
 
 export async function getRandomVerse(): Promise<{

@@ -101,10 +101,10 @@ const PlansPage = () => {
     else toast("Dia desmarcado");
   };
 
-  const loadReadingVerses = useCallback(async (reading: DBReading) => {
+  const loadReadingVerses = useCallback(async (reading: DBReading, versionOverride?: string) => {
     setLoadingVerses(true);
     try {
-      const result = await getChapter(reading.book_abbrev, reading.chapter, bibleVersion);
+      const result = await getChapter(reading.book_abbrev, reading.chapter, versionOverride || bibleVersion);
       let filtered = result.verses;
       if (reading.verse_start) {
         filtered = filtered.filter(
@@ -239,7 +239,7 @@ const PlansPage = () => {
                     onClick={() => {
                       setBibleVersion(v.id);
                       setShowVersionPicker(false);
-                      if (reading) loadReadingVerses(reading);
+                      if (reading) loadReadingVerses(reading, v.id);
                     }}
                     className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
                       bibleVersion === v.id ? "bg-primary/20 text-primary" : "hover:bg-[hsl(var(--dark-card-hover))]"

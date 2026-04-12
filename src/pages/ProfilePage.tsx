@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail,
+  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import LGPDTermsDialog from "@/components/LGPDTermsDialog";
 
 interface PlanProgress {
   planId: string;
@@ -36,6 +38,7 @@ const ProfilePage = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [lgpdAccepted, setLgpdAccepted] = useState(false);
 
   const activePlansCount = useMemo(
     () => planProgress.filter((plan) => plan.completedDays.length > 0).length,
@@ -82,6 +85,10 @@ const ProfilePage = () => {
   // Auth handlers
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!lgpdAccepted) {
+      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
+      return;
+    }
     setAuthSubmitting(true);
     try {
       if (authMode === "signup") {
@@ -108,6 +115,10 @@ const ProfilePage = () => {
   };
 
   const handleGoogleLogin = async () => {
+    if (!lgpdAccepted) {
+      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
+      return;
+    }
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
@@ -150,6 +161,26 @@ const ProfilePage = () => {
           </header>
 
           <div className="px-5 space-y-4">
+            {/* LGPD Consent */}
+            <div className="flex items-start gap-3 bg-[hsl(var(--dark-card))] rounded-2xl p-4">
+              <Checkbox
+                id="lgpd"
+                checked={lgpdAccepted}
+                onCheckedChange={(checked) => setLgpdAccepted(checked === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="lgpd" className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed cursor-pointer">
+                <Shield className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                Li e concordo com a{" "}
+                <LGPDTermsDialog>
+                  <span className="text-primary font-semibold underline cursor-pointer">
+                    Política de Privacidade e Termos de Uso (LGPD)
+                  </span>
+                </LGPDTermsDialog>
+                . Autorizo o tratamento dos meus dados pessoais conforme descrito.
+              </label>
+            </div>
+
             {/* Google button */}
             <button
               onClick={handleGoogleLogin}

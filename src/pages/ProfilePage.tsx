@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download,
+  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff,
 } from "lucide-react";
-import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { toast } from "sonner";
+import BibleDownloadManager from "@/components/BibleDownloadManager";
+import { registerPushNotifications, isPushEnabled, unregisterPush } from "@/lib/pushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +41,31 @@ const ProfilePage = () => {
   const [name, setName] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushEnabled().then(setPushEnabled);
+  }, []);
+
+  const togglePush = async () => {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unregisterPush();
+        setPushEnabled(false);
+        toast.success("Notificações desativadas");
+      } else {
+        const ok = await registerPushNotifications();
+        setPushEnabled(ok);
+        if (ok) toast.success("Notificações ativadas! 🔔");
+        else toast.error("Não foi possível ativar notificações");
+      }
+    } catch {
+      toast.error("Erro ao alterar notificações");
+    }
+    setPushLoading(false);
+  };
 
   const activePlansCount = useMemo(
     () => planProgress.filter((plan) => plan.completedDays.length > 0).length,
@@ -336,6 +362,21 @@ const ProfilePage = () => {
           <h1 className="text-lg font-bold">Configurações</h1>
         </header>
         <div className="px-5 space-y-3">
+          <button onClick={togglePush} disabled={pushLoading}
+            className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3">
+            {pushEnabled ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-dark-muted" />}
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Notificações</p>
+              <p className="text-xs text-dark-muted mt-1">
+                {pushEnabled ? "Versículo do dia às 8h ativado" : "Receba o versículo do dia às 8h"}
+              </p>
+            </div>
+            {pushLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+              <span className={`text-xs font-semibold ${pushEnabled ? "text-primary" : "text-dark-muted"}`}>
+                {pushEnabled ? "Ativado" : "Ativar"}
+              </span>
+            )}
+          </button>
           <div className="bg-dark-card rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Download className="w-4 h-4 text-primary" />

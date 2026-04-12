@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import LGPDTermsDialog from "@/components/LGPDTermsDialog";
 
 interface PlanProgress {
   planId: string;

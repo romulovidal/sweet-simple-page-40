@@ -1,0 +1,18 @@
+{
+  "name": "A Bíblia do Atalaia",
+  "short_name": "Bíblia Atalaia",
+  "description": "Seu app de leitura bíblica",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

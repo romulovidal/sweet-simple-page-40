@@ -29,6 +29,7 @@ interface DBPlan {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);

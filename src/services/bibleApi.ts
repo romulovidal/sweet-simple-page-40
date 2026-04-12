@@ -116,8 +116,8 @@ type VersionSource = Pick<BibleVersion, "source" | "translationKey">;
 
 const VERSION_FALLBACKS: Record<string, VersionSource[]> = {
   ara: [{ source: "bible-api", translationKey: "almeida" }, { source: "getbible", translationKey: "livre" }],
-  arc: [{ source: "getbible", translationKey: "livre" }, { source: "getbible", translationKey: "almeida" }],
-  acf: [{ source: "getbible", translationKey: "livretr" }, { source: "getbible", translationKey: "livre" }],
+  arc: [{ source: "getbible", translationKey: "livre" }, { source: "helloao", translationKey: "por_blj" }],
+  acf: [{ source: "getbible", translationKey: "livretr" }, { source: "helloao", translationKey: "por_blj" }],
   nvi: [{ source: "helloao", translationKey: "por_onbv" }, { source: "helloao", translationKey: "por_blj" }],
   ntlh: [{ source: "helloao", translationKey: "por_bsl" }, { source: "helloao", translationKey: "por_blj" }],
   bj: [{ source: "helloao", translationKey: "por_blj" }, { source: "helloao", translationKey: "por_bsl" }],

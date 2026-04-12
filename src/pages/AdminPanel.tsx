@@ -412,12 +412,12 @@ const AdminPanel = () => {
       </header>
 
       <div className="px-5 flex gap-4 border-b border-[hsl(var(--dark-card))]">
-        {(["posts", "plans"] as const).map((t) => (
+        {(["posts", "plans", "users"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`py-3 text-sm font-semibold transition-colors ${
               tab === t ? "text-foreground border-b-2 border-primary" : "text-[hsl(var(--dark-muted))]"
             }`}>
-            {t === "posts" ? "Postagens" : "Planos"}
+            {t === "posts" ? "Postagens" : t === "plans" ? "Planos" : "Usuários"}
           </button>
         ))}
       </div>

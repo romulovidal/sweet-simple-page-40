@@ -1,4 +1,5 @@
 import { bibleBooks } from "@/data/bible";
+import { loadBundledBibleVersion, type BibleBookData } from "@/services/bibleDataLoader";
 
 // ── Bible Version Definitions ──
 export interface BibleVersion {
@@ -54,22 +55,20 @@ const abbrevToJsonAbbrev: Record<string, string> = {
 };
 
 // ── Cache loaded Bible data ──
-interface BibleBookData {
-  abbrev: string;
-  chapters: string[][];
-}
-
 const bibleCache = new Map<string, BibleBookData[]>();
 
 async function loadBibleVersion(fileName: string): Promise<BibleBookData[]> {
   const cached = bibleCache.get(fileName);
   if (cached) return cached;
 
-  const { fetchWithOffline } = await import("@/lib/bibleOffline");
-  const response = await fetchWithOffline(`/biblias/${fileName}.json`);
-  if (!response.ok) throw new Error(`Erro ao carregar versão ${fileName}`);
+  const { getCachedVersionData } = await import("@/lib/bibleOffline");
+  const offlineData = await getCachedVersionData(fileName);
+  if (offlineData) {
+    bibleCache.set(fileName, offlineData);
+    return offlineData;
+  }
 
-  const data: BibleBookData[] = await response.json();
+  const data = await loadBundledBibleVersion(fileName);
   bibleCache.set(fileName, data);
   return data;
 }

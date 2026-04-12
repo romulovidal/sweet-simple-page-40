@@ -314,7 +314,18 @@ const AdminPanel = () => {
   if (viewingPlanId) {
     const plan = plans.find((p) => p.id === viewingPlanId);
     const totalDays = (plan as Record<string, unknown>)?.total_days as number || 0;
-    const progress = totalDays > 0 ? Math.round((planReadings.length / totalDays) * 100) : 0;
+
+    // Group readings by day_number
+    const dayGroups: Record<number, PlanReading[]> = {};
+    planReadings.forEach((r) => {
+      if (!dayGroups[r.day_number]) dayGroups[r.day_number] = [];
+      dayGroups[r.day_number].push(r);
+    });
+    const existingDays = Object.keys(dayGroups).map(Number).sort((a, b) => a - b);
+    const filledDays = existingDays.length;
+    const progress = totalDays > 0 ? Math.round((filledDays / totalDays) * 100) : 0;
+    const nextNewDay = existingDays.length > 0 ? Math.max(...existingDays) + 1 : 1;
+    const canAddNewDay = totalDays === 0 || filledDays < totalDays;
 
     return (
       <div className="min-h-screen pb-10">
@@ -324,7 +335,7 @@ const AdminPanel = () => {
             <div className="flex-1">
               <h1 className="text-lg font-bold">{plan?.title}</h1>
               <p className="text-xs text-[hsl(var(--dark-muted))]">
-                {planReadings.length}/{totalDays} dias preenchidos • {progress}%
+                {filledDays}/{totalDays} dias preenchidos • {progress}%
               </p>
             </div>
             <button onClick={() => plan && setEditingPlan(plan)} className="text-xs text-primary font-semibold">
@@ -336,64 +347,75 @@ const AdminPanel = () => {
               <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} />
             </div>
           )}
-          {planReadings.length < totalDays && (
+          {filledDays < totalDays && totalDays > 0 && (
             <p className="text-[10px] text-amber-400 mt-2">
-              ⚠️ Faltam {totalDays - planReadings.length} dias para completar o plano
+              ⚠️ Faltam {totalDays - filledDays} dias para completar o plano
             </p>
           )}
-          {planReadings.length >= totalDays && totalDays > 0 && (
+          {filledDays >= totalDays && totalDays > 0 && (
             <p className="text-[10px] text-green-400 mt-2">✅ Plano completo! Todos os {totalDays} dias foram preenchidos.</p>
           )}
         </header>
 
-        <div className="px-5 py-4">
-          {/* Add reading - only if not complete */}
-          {(totalDays === 0 || planReadings.length < totalDays) && (
-            <SmartAddReadingForm
-              onAdd={(reading) => addReading(viewingPlanId, reading)}
-              dayNumber={planReadings.length + 1}
-              totalDays={totalDays}
-            />
+        <div className="px-5 py-4 space-y-4">
+          {/* Existing days grouped */}
+          {existingDays.map((dayNum) => {
+            const dayReadings = dayGroups[dayNum];
+            return (
+              <div key={dayNum} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-primary">📅 Dia {String(dayNum).padStart(2, "0")}</p>
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))]">{dayReadings.length} leitura{dayReadings.length > 1 ? "s" : ""}</p>
+                </div>
+                {dayReadings.map((r) => {
+                  const book = bibleBooks.find((b) => b.apiAbbrev === r.book_abbrev);
+                  const vs = (r as Record<string, unknown>).verse_start as number | null;
+                  const ve = (r as Record<string, unknown>).verse_end as number | null;
+                  const verseRange = vs ? `${vs}${ve ? `-${ve}` : ""}` : "";
+                  const readingTitle = (r as Record<string, unknown>).title as string;
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 bg-background rounded-lg p-2.5">
+                      <div className="flex-1 min-w-0">
+                        {readingTitle && <p className="text-[10px] font-semibold text-primary truncate">{readingTitle}</p>}
+                        <p className="text-sm">
+                          {book?.name || r.book_abbrev} {r.chapter}
+                          {verseRange && <span className="text-[hsl(var(--dark-muted))]">:{verseRange}</span>}
+                        </p>
+                      </div>
+                      <button onClick={() => deleteReading(r.id)} className="text-destructive p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {/* Add another reading to this day */}
+                <SmartAddReadingForm
+                  onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: dayNum })}
+                  dayNumber={dayNum}
+                  totalDays={totalDays}
+                  isAddToDay
+                />
+              </div>
+            );
+          })}
+
+          {/* Add new day */}
+          {canAddNewDay && (
+            <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+              <SmartAddReadingForm
+                onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: nextNewDay })}
+                dayNumber={nextNewDay}
+                totalDays={totalDays}
+              />
+            </div>
           )}
 
-          {/* Existing readings */}
-          <div className="space-y-2 mt-4">
-            {planReadings.map((r) => {
-              const book = bibleBooks.find((b) => b.apiAbbrev === r.book_abbrev);
-              const vs = (r as Record<string, unknown>).verse_start as number | null;
-              const ve = (r as Record<string, unknown>).verse_end as number | null;
-              const verseRange = vs ? `${vs}${ve ? `-${ve}` : ""}` : "";
-              const readingTitle = (r as Record<string, unknown>).title as string;
-              return (
-                <div key={r.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-primary">{r.day_number}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {readingTitle && <p className="text-xs font-semibold text-primary truncate">{readingTitle}</p>}
-                      <p className="text-sm">
-                        {book?.name || r.book_abbrev} {r.chapter}
-                        {verseRange && <span className="text-[hsl(var(--dark-muted))]">:{verseRange}</span>}
-                      </p>
-                    </div>
-                    <button onClick={() => deleteReading(r.id)} className="text-destructive p-1">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {planReadings.length === 0 && (
-              <div className="text-center py-10">
-                <BookOpen className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
-                <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhuma leitura adicionada</p>
-                <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">
-                  Adicione {totalDays > 0 ? `as ${totalDays} leituras` : "as leituras"} linkando com os capítulos da Bíblia
-                </p>
-              </div>
-            )}
-          </div>
+          {planReadings.length === 0 && !canAddNewDay && (
+            <div className="text-center py-10">
+              <BookOpen className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
+              <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhuma leitura adicionada</p>
+            </div>
+          )}
         </div>
       </div>
     );

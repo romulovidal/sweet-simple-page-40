@@ -1,5 +1,6 @@
 import { Share2, ImageIcon, BookOpen, Palette, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import ShareMenu from "@/components/ShareMenu";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type HighlightedVerse, type SavedVerse } from "@/hooks/useLocalStorage";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
@@ -50,6 +51,8 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showColors, setShowColors] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareText, setShareText] = useState("");
   const [showImageGen, setShowImageGen] = useState(false);
   const [highlights, setHighlights] = useLocalStorage<HighlightedVerse[]>("highlighted-verses", []);
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
@@ -73,18 +76,17 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
   };
 
   const handleShare = async () => {
-    const shareText = `${reference}\n\n"${text}"\n\n📖 Leia na Bíblia`;
+    const text_ = `${reference}\n\n"${text}"\n\n📖 Leia na Bíblia`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: reference, text: shareText });
+        await navigator.share({ title: reference, text: text_ });
         return;
       }
     } catch (err: any) {
       if (err?.name === "AbortError") return;
     }
-    // Fallback: open WhatsApp share
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, "_blank");
+    setShareText(text_);
+    setShowShareMenu(true);
   };
 
   const handleViewContext = () => {

@@ -147,14 +147,21 @@ export const RED_LETTER_VERSES: RedLetterMap = {
   },
 };
 
+/** Map from app apiAbbrev to English book name used in RED_LETTER_VERSES */
+export const abbrevToEnglish: Record<string, string> = {
+  mt: "matthew", mc: "mark", lc: "luke", jo: "john",
+  at: "acts", ap: "revelation",
+};
+
 /**
  * Verifica se um versículo contém falas de Jesus.
- * @param bookEnglishName Nome do livro em inglês (ex: "matthew", "john")
+ * @param bookKey Nome inglês ou apiAbbrev do livro
  * @param chapter Número do capítulo
  * @param verseNumber Número do versículo
  */
-export function isRedLetterVerse(bookEnglishName: string, chapter: number, verseNumber: number): boolean {
-  const bookData = RED_LETTER_VERSES[bookEnglishName.toLowerCase()];
+export function isRedLetterVerse(bookKey: string, chapter: number, verseNumber: number): boolean {
+  const key = abbrevToEnglish[bookKey.toLowerCase()] || bookKey.toLowerCase();
+  const bookData = RED_LETTER_VERSES[key];
   if (!bookData) return false;
 
   const chapterVerses = bookData[chapter];

@@ -65,7 +65,8 @@ async function loadBibleVersion(fileName: string): Promise<BibleBookData[]> {
   const cached = bibleCache.get(fileName);
   if (cached) return cached;
 
-  const response = await fetch(`/biblias/${fileName}.json`);
+  const { fetchWithOffline } = await import("@/lib/bibleOffline");
+  const response = await fetchWithOffline(`/biblias/${fileName}.json`);
   if (!response.ok) throw new Error(`Erro ao carregar versão ${fileName}`);
 
   const data: BibleBookData[] = await response.json();

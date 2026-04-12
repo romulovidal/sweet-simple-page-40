@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight } from "lucide-react";
+import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getChapter, type BibleVerse, DEFAULT_VERSION_ID } from "@/services/bibleApi";
+import { getChapter, type BibleVerse, DEFAULT_VERSION_ID, BIBLE_VERSIONS, getVersionById } from "@/services/bibleApi";
+import { isRedLetterVerse } from "@/data/redLetterVerses";
 
 interface PlanProgress {
   planId: string;
@@ -42,7 +43,8 @@ const PlansPage = () => {
   const [readings, setReadings] = useState<DBReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingVerses, setLoadingVerses] = useState(false);
-  const [bibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [bibleVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [showVersionPicker, setShowVersionPicker] = useState(false);
 
   // Day reading state: which day is open, which reading index within that day
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -99,10 +101,10 @@ const PlansPage = () => {
     else toast("Dia desmarcado");
   };
 
-  const loadReadingVerses = useCallback(async (reading: DBReading) => {
+  const loadReadingVerses = useCallback(async (reading: DBReading, versionOverride?: string) => {
     setLoadingVerses(true);
     try {
-      const result = await getChapter(reading.book_abbrev, reading.chapter, bibleVersion);
+      const result = await getChapter(reading.book_abbrev, reading.chapter, versionOverride || bibleVersion);
       let filtered = result.verses;
       if (reading.verse_start) {
         filtered = filtered.filter(
@@ -158,6 +160,7 @@ const PlansPage = () => {
       : "";
     const refLabel = `${book?.name || reading?.book_abbrev} ${reading?.chapter}${verseRange ? `:${verseRange}` : ""}`;
     const isLastReading = readingIndexInDay >= dayReadings.length - 1;
+    const currentVersion = getVersionById(bibleVersion);
 
     return (
       <div className="pb-20 min-h-screen">
@@ -172,6 +175,13 @@ const PlansPage = () => {
               {refLabel} • {readingIndexInDay + 1}/{dayReadings.length}
             </p>
           </div>
+          <button
+            onClick={() => setShowVersionPicker(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[hsl(var(--dark-card))] text-xs font-semibold"
+          >
+            {currentVersion.shortName}
+            <ChevronDown className="w-3 h-3" />
+          </button>
         </header>
 
         {reading?.title && (
@@ -186,12 +196,15 @@ const PlansPage = () => {
           </div>
         ) : (
           <div className="px-5 space-y-3">
-            {dayVerses.map((v) => (
-              <p key={v.number} className="text-sm leading-relaxed">
-                <span className="text-xs font-bold text-primary mr-1.5">{v.number}</span>
-                {v.text}
-              </p>
-            ))}
+            {dayVerses.map((v) => {
+              const isRed = reading ? isRedLetterVerse(reading.book_abbrev, reading.chapter, v.number) : false;
+              return (
+                <p key={v.number} className={`text-sm leading-relaxed ${isRed ? "text-red-400" : ""}`}>
+                  <span className={`text-xs font-bold mr-1.5 ${isRed ? "text-red-400" : "text-primary"}`}>{v.number}</span>
+                  {v.text}
+                </p>
+              );
+            })}
           </div>
         )}
 
@@ -207,6 +220,42 @@ const PlansPage = () => {
             )}
           </button>
         </div>
+
+        {/* Version picker modal */}
+        {showVersionPicker && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowVersionPicker(false)}>
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="relative w-full max-w-lg bg-[hsl(var(--dark-card))] rounded-t-2xl p-5 pb-8 animate-in slide-in-from-bottom" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold">Versão da Bíblia</h3>
+                <button onClick={() => setShowVersionPicker(false)} className="p-1">
+                  <X className="w-5 h-5 text-[hsl(var(--dark-muted))]" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {BIBLE_VERSIONS.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => {
+                      setBibleVersion(v.id);
+                      setShowVersionPicker(false);
+                      if (reading) loadReadingVerses(reading, v.id);
+                    }}
+                    className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
+                      bibleVersion === v.id ? "bg-primary/20 text-primary" : "hover:bg-[hsl(var(--dark-card-hover))]"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{v.shortName}</p>
+                      <p className="text-xs text-[hsl(var(--dark-muted))]">{v.name}</p>
+                    </div>
+                    {bibleVersion === v.id && <CheckCircle className="w-5 h-5 text-primary" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

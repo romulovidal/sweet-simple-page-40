@@ -82,6 +82,36 @@ const ProfilePage = () => {
     toast.success("Seu progresso foi reiniciado.");
   };
 
+  if (view === "verse-history") {
+    return (
+      <div className="pb-20 min-h-screen">
+        <header className="px-5 pt-12 pb-6 flex items-center gap-3">
+          <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">
+            ← Voltar
+          </button>
+          <h1 className="text-lg font-bold">Versículos do Dia</h1>
+        </header>
+        <div className="px-5 space-y-3">
+          {verseHistory.length === 0 ? (
+            <p className="text-sm text-dark-muted text-center py-10">
+              Nenhum versículo do dia registrado ainda. Volte à tela inicial todos os dias!
+            </p>
+          ) : (
+            verseHistory.map((entry) => (
+              <div key={entry.date} className="bg-dark-card rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-primary">{entry.ref}</span>
+                  <span className="text-[10px] text-dark-muted">{formatDate(entry.date)}</span>
+                </div>
+                <p className="text-sm leading-relaxed text-foreground/90">"{entry.text}"</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (view === "saved") {
     return (
       <div className="pb-20 min-h-screen">
@@ -305,6 +335,7 @@ const ProfilePage = () => {
       <div className="px-5 space-y-1">
         {[
           { key: "saved", label: "Versículos salvos", icon: BookmarkCheck, value: String(savedVerses.length) },
+          { key: "verse-history", label: "Versículos do dia", icon: Sparkles, value: verseHistory.length ? `${verseHistory.length} dias` : "Vazio" },
           { key: "history", label: "Histórico de leitura", icon: Clock3, value: readingHistory.length ? formatDate(readingHistory[0]) : "Vazio" },
           { key: "settings", label: "Configurações", icon: Settings, value: "Gerenciar" },
         ].map((item) => (

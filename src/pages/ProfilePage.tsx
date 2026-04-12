@@ -38,6 +38,7 @@ const ProfilePage = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [lgpdAccepted, setLgpdAccepted] = useState(false);
 
   const activePlansCount = useMemo(
     () => planProgress.filter((plan) => plan.completedDays.length > 0).length,

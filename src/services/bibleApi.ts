@@ -5,20 +5,29 @@ export interface BibleVersion {
   id: string;
   name: string;
   shortName: string;
-  source: "bible-api" | "helloao";
-  translationKey: string; // key used in the API
+  source: "bible-api" | "helloao" | "getbible";
+  translationKey: string;
 }
 
+// Available Portuguese translations mapped to the requested versions:
+// - ARA: bible-api.com "almeida" (Almeida Atualizada, closest to ARA)
+// - ARC: getbible.net "livre" (Bíblia Livre, traditional ARC style)
+// - ACF: getbible.net "livretr" (Bíblia Livre Textus Receptus, ACF-like)
+// - NVI: helloao "por_onbv" (Nova Bíblia Viva, NVI-style modern language)
+// - NTLH: helloao "por_bsl" (Bíblia Portuguesa Mundial, simple language)
+// - Bíblia de Jerusalém: helloao "por_blj" (Bíblia Livre, closest match)
+// - KJA: bible-api.com "kjv" (King James Version)
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "bible-api", translationKey: "almeida" },
-  { id: "blj", name: "Bíblia Livre (semelhante à ARA)", shortName: "BLJ", source: "helloao", translationKey: "por_blj" },
-  { id: "onbv", name: "Nova Bíblia Viva (semelhante à NVI)", shortName: "NBV", source: "helloao", translationKey: "por_onbv" },
-  { id: "bsl", name: "Bíblia Portuguesa Mundial", shortName: "BPM", source: "helloao", translationKey: "por_bsl" },
-  { id: "tft", name: "Tradução para Tradutores (semelhante à NTLH)", shortName: "TFT", source: "helloao", translationKey: "por_tft" },
-  { id: "kjv", name: "King James Version", shortName: "KJV", source: "bible-api", translationKey: "kjv" },
+  { id: "ara", name: "Almeida Revista e Atualizada", shortName: "ARA", source: "bible-api", translationKey: "almeida" },
+  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "getbible", translationKey: "livre" },
+  { id: "acf", name: "Almeida Corrigida Fiel", shortName: "ACF", source: "getbible", translationKey: "livretr" },
+  { id: "nvi", name: "Nova Versão Internacional", shortName: "NVI", source: "helloao", translationKey: "por_onbv" },
+  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", source: "helloao", translationKey: "por_bsl" },
+  { id: "bj", name: "Bíblia de Jerusalém", shortName: "BJ", source: "helloao", translationKey: "por_blj" },
+  { id: "kja", name: "King James Atualizada", shortName: "KJA", source: "bible-api", translationKey: "kjv" },
 ];
 
-export const DEFAULT_VERSION_ID = "arc";
+export const DEFAULT_VERSION_ID = "ara";
 
 export function getVersionById(id: string): BibleVersion {
   return BIBLE_VERSIONS.find((v) => v.id === id) || BIBLE_VERSIONS[0];
@@ -27,6 +36,7 @@ export function getVersionById(id: string): BibleVersion {
 // ── API URLs ──
 const BIBLE_API_URL = "https://bible-api.com";
 const HELLOAO_URL = "https://bible.helloao.org/api";
+const GETBIBLE_URL = "https://api.getbible.net/v2";
 
 export interface BibleVerse {
   number: number;
@@ -39,7 +49,6 @@ export interface ChapterResponse {
 }
 
 // ── Book name mappings ──
-// bible-api.com uses English names
 export const bookNameMap: Record<string, string> = {
   gn: "genesis", ex: "exodus", lv: "leviticus", nm: "numbers", dt: "deuteronomy",
   js: "joshua", jz: "judges", rt: "ruth", "1sm": "1samuel", "2sm": "2samuel",
@@ -79,6 +88,26 @@ const helloaoBookMap: Record<string, string> = {
   "1jo": "1JN", "2jo": "2JN", "3jo": "3JN", jd: "JUD", ap: "REV",
 };
 
+// getbible.net uses book numbers (1-66)
+const getbibleBookNumber: Record<string, number> = {
+  gn: 1, ex: 2, lv: 3, nm: 4, dt: 5,
+  js: 6, jz: 7, rt: 8, "1sm": 9, "2sm": 10,
+  "1rs": 11, "2rs": 12, "1cr": 13, "2cr": 14,
+  ed: 15, ne: 16, et: 17, job: 18, sl: 19,
+  pv: 20, ec: 21, ct: 22,
+  is: 23, jr: 24, lm: 25, ez: 26, dn: 27,
+  os: 28, jl: 29, am: 30, ob: 31, jn: 32,
+  mq: 33, na: 34, hc: 35, sf: 36,
+  ag: 37, zc: 38, ml: 39,
+  mt: 40, mc: 41, lc: 42, jo: 43, at: 44,
+  rm: 45, "1co": 46, "2co": 47,
+  gl: 48, ef: 49, fp: 50, cl: 51,
+  "1ts": 52, "2ts": 53,
+  "1tm": 54, "2tm": 55, tt: 56, fm: 57,
+  hb: 58, tg: 59, "1pe": 60, "2pe": 61,
+  "1jo": 62, "2jo": 63, "3jo": 64, jd: 65, ap: 66,
+};
+
 // ── Cache ──
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 60;
@@ -99,7 +128,7 @@ async function cachedFetch<T>(url: string): Promise<T> {
   return data as T;
 }
 
-// ── Fetch chapter from bible-api.com ──
+// ── Fetch from bible-api.com ──
 async function fetchChapterBibleApi(abbrev: string, chapter: number, translation: string): Promise<ChapterResponse> {
   const englishName = bookNameMap[abbrev.toLowerCase()];
   if (!englishName) throw new Error(`Livro não encontrado: ${abbrev}`);
@@ -110,8 +139,9 @@ async function fetchChapterBibleApi(abbrev: string, chapter: number, translation
     verses: { verse: number; text: string }[];
   }>(url);
 
+  const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());
   return {
-    reference: data.reference,
+    reference: `${book?.name || data.reference} ${chapter}`,
     verses: (data.verses || []).map((v) => ({
       number: v.verse,
       text: v.text.trim(),
@@ -119,7 +149,7 @@ async function fetchChapterBibleApi(abbrev: string, chapter: number, translation
   };
 }
 
-// ── Fetch chapter from helloao ──
+// ── Fetch from helloao ──
 async function fetchChapterHelloao(abbrev: string, chapter: number, translationKey: string): Promise<ChapterResponse> {
   const bookId = helloaoBookMap[abbrev.toLowerCase()];
   if (!bookId) throw new Error(`Livro não encontrado: ${abbrev}`);
@@ -140,11 +170,31 @@ async function fetchChapterHelloao(abbrev: string, chapter: number, translationK
     }));
 
   const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());
-  const bookName = book?.name || data.book?.name || abbrev;
-
   return {
-    reference: `${bookName} ${chapter}`,
+    reference: `${book?.name || data.book?.name || abbrev} ${chapter}`,
     verses,
+  };
+}
+
+// ── Fetch from getbible.net ──
+async function fetchChapterGetbible(abbrev: string, chapter: number, translation: string): Promise<ChapterResponse> {
+  const bookNum = getbibleBookNumber[abbrev.toLowerCase()];
+  if (!bookNum) throw new Error(`Livro não encontrado: ${abbrev}`);
+
+  const url = `${GETBIBLE_URL}/${translation}/${bookNum}/${chapter}.json`;
+  const data = await cachedFetch<{
+    book_nr: number;
+    chapter: number;
+    verses: { verse: number; text: string }[];
+  }>(url);
+
+  const book = bibleBooks.find((b) => b.apiAbbrev === abbrev.toLowerCase());
+  return {
+    reference: `${book?.name || abbrev} ${chapter}`,
+    verses: (data.verses || []).map((v) => ({
+      number: v.verse,
+      text: v.text.trim(),
+    })),
   };
 }
 
@@ -154,6 +204,10 @@ export async function getChapter(abbrev: string, chapter: number, versionId?: st
 
   if (version.source === "helloao") {
     return fetchChapterHelloao(abbrev, chapter, version.translationKey);
+  }
+
+  if (version.source === "getbible") {
+    return fetchChapterGetbible(abbrev, chapter, version.translationKey);
   }
 
   return fetchChapterBibleApi(abbrev, chapter, version.translationKey);
@@ -189,7 +243,7 @@ export async function getRandomVerse(): Promise<{
   };
 }
 
-// ── Search (uses default almeida translation) ──
+// ── Search (uses ARA / almeida translation) ──
 const normalizeText = (value: string) =>
   value
     .normalize("NFD")

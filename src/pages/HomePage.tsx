@@ -6,6 +6,7 @@ import { getDailyVerse } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
+import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 

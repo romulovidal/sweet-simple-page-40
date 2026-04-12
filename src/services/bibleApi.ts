@@ -11,20 +11,20 @@ export interface BibleVersion {
 
 // Available Portuguese translations mapped to the requested versions:
 // - ARA: bible-api.com "almeida" (Almeida Atualizada, closest to ARA)
-// - ARC: getbible.net "livre" (Bíblia Livre, traditional ARC style)
+// - ARC: getbible.net "almeida" (old Portuguese orthography, closest to ARC)
 // - ACF: getbible.net "livretr" (Bíblia Livre Textus Receptus, ACF-like)
 // - NVI: helloao "por_onbv" (Nova Bíblia Viva, NVI-style modern language)
-// - NTLH: helloao "por_bsl" (Bíblia Portuguesa Mundial, simple language)
-// - Bíblia de Jerusalém: helloao "por_blj" (Bíblia Livre, closest match)
-// - KJA: bible-api.com "kjv" (King James Version)
+// - NTLH: helloao "por_blt" (Bíblia Livre Para Todos, simple language)
+// - Bíblia de Jerusalém: helloao "por_bsl" (Bíblia Portuguesa Mundial, study-oriented)
+// - KJA: helloao "por_tft" (Tradução para Tradutores, KJA-style literal)
 export const BIBLE_VERSIONS: BibleVersion[] = [
   { id: "ara", name: "Almeida Revista e Atualizada", shortName: "ARA", source: "bible-api", translationKey: "almeida" },
-  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "getbible", translationKey: "livre" },
+  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", source: "getbible", translationKey: "almeida" },
   { id: "acf", name: "Almeida Corrigida Fiel", shortName: "ACF", source: "getbible", translationKey: "livretr" },
   { id: "nvi", name: "Nova Versão Internacional", shortName: "NVI", source: "helloao", translationKey: "por_onbv" },
-  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", source: "helloao", translationKey: "por_bsl" },
-  { id: "bj", name: "Bíblia de Jerusalém", shortName: "BJ", source: "helloao", translationKey: "por_blj" },
-  { id: "kja", name: "King James Atualizada", shortName: "KJA", source: "bible-api", translationKey: "kjv" },
+  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", source: "helloao", translationKey: "por_blt" },
+  { id: "bj", name: "Bíblia de Jerusalém", shortName: "BJ", source: "helloao", translationKey: "por_bsl" },
+  { id: "kja", name: "King James Atualizada", shortName: "KJA", source: "helloao", translationKey: "por_tft" },
 ];
 
 export const DEFAULT_VERSION_ID = "ara";
@@ -167,7 +167,12 @@ async function fetchChapterHelloao(abbrev: string, chapter: number, translationK
     .map((item) => ({
       number: item.number,
       text: item.content
-        .filter((c): c is string => typeof c === "string")
+        .map((c) => {
+          if (typeof c === "string") return c;
+          if (typeof c === "object" && c !== null && "text" in c) return (c as { text: string }).text;
+          return "";
+        })
+        .filter(Boolean)
         .join(" ")
         .trim(),
     }));

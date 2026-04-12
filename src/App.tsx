@@ -18,11 +18,12 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const resetKey = (location.state as any)?.reset || 0;
 
   return (
     <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
       <ScrollToTop />
-      <Routes>
+      <Routes key={resetKey}>
         <Route path="/" element={<HomePage />} />
         <Route path="/biblia" element={<BiblePage />} />
         <Route path="/planos" element={<PlansPage />} />

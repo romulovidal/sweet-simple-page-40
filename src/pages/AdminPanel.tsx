@@ -36,25 +36,30 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"posts" | "plans">("posts");
+  const [tab, setTab] = useState<"posts" | "plans" | "users">("posts");
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
   const [editingPlan, setEditingPlan] = useState<Partial<Plan & { devotional?: string; total_days?: number }> | null>(null);
   const [planReadings, setPlanReadings] = useState<PlanReading[]>([]);
   const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editUserName, setEditUserName] = useState("");
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
-    const [postsRes, plansRes] = await Promise.all([
+    const [postsRes, plansRes, usersRes] = await Promise.all([
       supabase.from("admin_posts").select("*").order("sort_order", { ascending: true }),
       supabase.from("admin_plans").select("*").order("sort_order", { ascending: true }),
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
     ]);
     if (postsRes.data) setPosts(postsRes.data);
     if (plansRes.data) setPlans(plansRes.data);
+    if (usersRes.data) setUsers(usersRes.data as UserProfile[]);
     setLoading(false);
   };
 

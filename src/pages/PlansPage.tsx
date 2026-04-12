@@ -88,16 +88,48 @@ const PlansPage = () => {
     else toast("Leitura desmarcada");
   };
 
-  const handleReadingClick = (bookAbbrev: string, chapter: number, dayIndex: number, verseStart?: number) => {
-    if (!progress?.completedDays.includes(dayIndex)) {
+  const loadDayVerses = useCallback(async (reading: DBReading) => {
+    setLoadingVerses(true);
+    try {
+      const result = await getChapter(reading.book_abbrev, reading.chapter, bibleVersion);
+      let filtered = result.verses;
+      if (reading.verse_start) {
+        filtered = filtered.filter(
+          (v) => v.number >= reading.verse_start! && (!reading.verse_end || v.number <= reading.verse_end)
+        );
+      }
+      setDayVerses(filtered);
+    } catch {
+      setDayVerses([]);
+      toast.error("Erro ao carregar texto");
+    }
+    setLoadingVerses(false);
+  }, [bibleVersion]);
+
+  const handleReadingClick = (dayIndex: number) => {
+    setSelectedDayIndex(dayIndex);
+    const reading = readings[dayIndex];
+    if (reading) loadDayVerses(reading);
+  };
+
+  const handleNextDay = () => {
+    if (selectedDayIndex === null) return;
+    // Mark current day as complete
+    if (!progress?.completedDays.includes(selectedDayIndex)) {
       setPlanProgress((prev) =>
-        prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, dayIndex] } : p)
+        prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, selectedDayIndex] } : p)
       );
       toast.success("Leitura concluída! ✅");
     }
-    const params = new URLSearchParams({ book: bookAbbrev, chapter: String(chapter) });
-    if (verseStart) params.set("verse", String(verseStart));
-    navigate(`/biblia?${params.toString()}`);
+    // Go to next day
+    const nextIndex = selectedDayIndex + 1;
+    if (nextIndex < readings.length) {
+      handleReadingClick(nextIndex);
+    } else {
+      setSelectedDayIndex(null);
+      setDayVerses([]);
+      toast.success("🎉 Você completou todas as leituras!");
+    }
   };
 
   // Plan detail view

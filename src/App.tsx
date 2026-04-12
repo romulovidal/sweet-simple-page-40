@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
 import ScrollToTop from "@/components/ScrollToTop";
+import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -32,6 +33,7 @@ const AppContent = () => {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      {!isAdmin && <ThemeToggleFloat />}
       {!isAdmin && <BottomNav />}
     </div>
   );

@@ -21,6 +21,7 @@ const AppContent = () => {
 
   return (
     <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/biblia" element={<BiblePage />} />

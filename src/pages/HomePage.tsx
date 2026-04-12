@@ -180,7 +180,7 @@ const HomePage = () => {
           <>
             {/* Greeting */}
             <div>
-              <h1 className="text-2xl font-bold">Olá! 👋</h1>
+              <h1 className="text-2xl font-bold">Seja bem-vindo(a) à Bíblia do Atalaia 👋</h1>
               <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
                 {streak.current > 0
                   ? `Você está numa ofensiva de ${streak.current} dia${streak.current > 1 ? "s" : ""}!`

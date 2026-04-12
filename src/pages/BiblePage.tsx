@@ -333,6 +333,8 @@ const BiblePage = () => {
   if (selectedBook && selectedChapter) {
     const hasSelection = selectedVerses.size > 0;
 
+    const currentVersion = getVersionById(bibleVersion);
+
     return (
       <div className="pb-20 min-h-screen">
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10">
@@ -347,11 +349,11 @@ const BiblePage = () => {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold">
+          <h1 className="text-lg font-bold flex-1 truncate">
             {selectedBook.name} {selectedChapter}
           </h1>
-          {hasSelection && (
-            <div className="ml-auto flex items-center gap-1">
+          {hasSelection ? (
+            <div className="flex items-center gap-1">
               <span className="text-xs text-primary font-semibold mr-1">
                 {selectedVerses.size}
               </span>
@@ -362,6 +364,14 @@ const BiblePage = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+          ) : (
+            <button
+              onClick={() => setShowVersionPicker(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+            >
+              {currentVersion.shortName}
+              <ChevronDown className="w-3 h-3 text-dark-muted" />
+            </button>
           )}
         </header>
 

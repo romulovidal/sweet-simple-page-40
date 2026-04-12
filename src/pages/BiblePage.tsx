@@ -248,9 +248,11 @@ const BiblePage = () => {
         await navigator.share({ title: reference, text: shareText });
         return;
       }
-    } catch {}
-    await copyToClipboard(shareText);
-    toast("Versículos copiados!");
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleSaveSelected = () => {
@@ -371,9 +373,11 @@ const BiblePage = () => {
         await navigator.share({ title: reference, text: shareText });
         return;
       }
-    } catch {}
-    await copyToClipboard(shareText);
-    toast("Versículo copiado!");
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   const isVerseSaved = (verse: BibleVerse) => {

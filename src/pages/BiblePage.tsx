@@ -31,6 +31,8 @@ const BiblePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
   const [imageVerse, setImageVerse] = useState<{ text: string; reference: string } | null>(null);
+  const [bibleVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+  const [showVersionPicker, setShowVersionPicker] = useState(false);
 
   // Multi-select state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());

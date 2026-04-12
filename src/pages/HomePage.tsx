@@ -28,6 +28,7 @@ interface DBPlan {
   total_days: number | null;
 }
 
+const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();

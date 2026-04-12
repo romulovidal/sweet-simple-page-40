@@ -7,6 +7,7 @@ import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palet
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
+import ShareMenu from "@/components/ShareMenu";
 
 const APP_URL = window.location.origin;
 
@@ -37,6 +38,8 @@ const BiblePage = () => {
   // Multi-select state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareMenuText, setShareMenuText] = useState("");
 
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [highlights, setHighlights] = useLocalStorage<HighlightedVerse[]>("highlighted-verses", []);
@@ -251,8 +254,8 @@ const BiblePage = () => {
     } catch (err: any) {
       if (err?.name === "AbortError") return;
     }
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, "_blank");
+    setShareMenuText(shareText);
+    setShowShareMenu(true);
   };
 
   const handleSaveSelected = () => {
@@ -376,8 +379,8 @@ const BiblePage = () => {
     } catch (err: any) {
       if (err?.name === "AbortError") return;
     }
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, "_blank");
+    setShareMenuText(shareText);
+    setShowShareMenu(true);
   };
 
   const isVerseSaved = (verse: BibleVerse) => {
@@ -578,6 +581,7 @@ const BiblePage = () => {
           />
         )}
         {versionPickerModal}
+        <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
       </div>
     );
   }
@@ -681,6 +685,7 @@ const BiblePage = () => {
         ))}
       </div>
       {versionPickerModal}
+      <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
     </div>
   );
 };
@@ -737,6 +742,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
           </button>
         </div>
       )}
+      
     </div>
   );
 };

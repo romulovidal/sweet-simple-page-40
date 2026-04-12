@@ -17,9 +17,14 @@ const BottomNav = () => {
     const isCurrentRoute = to === "/" ? location.pathname === "/" : location.pathname.startsWith(to) && to !== "/";
     if (isCurrentRoute) {
       e.preventDefault();
-      // Force re-mount by navigating with a unique key state
-      navigate(to, { replace: true, state: { reset: Date.now() } });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (to === "/biblia") {
+        // Bible: just scroll to top, keep state (last read position)
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        // Other tabs: full reset to root
+        navigate(to, { replace: true, state: { reset: Date.now() } });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
 

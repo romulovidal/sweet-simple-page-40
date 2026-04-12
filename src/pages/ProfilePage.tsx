@@ -115,6 +115,10 @@ const ProfilePage = () => {
   };
 
   const handleGoogleLogin = async () => {
+    if (!lgpdAccepted) {
+      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
+      return;
+    }
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,

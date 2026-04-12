@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getChapter, type BibleVerse, DEFAULT_VERSION_ID } from "@/services/bibleApi";
 
 interface PlanProgress {
   planId: string;
@@ -41,8 +41,10 @@ const PlansPage = () => {
   const [plans, setPlans] = useState<DBPlan[]>([]);
   const [readings, setReadings] = useState<DBReading[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingReadings, setLoadingReadings] = useState(false);
-  const navigate = useNavigate();
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const [dayVerses, setDayVerses] = useState<BibleVerse[]>([]);
+  const [loadingVerses, setLoadingVerses] = useState(false);
+  const [bibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
 
   useEffect(() => {
     supabase.from("admin_plans").select("*").eq("is_active", true).order("sort_order", { ascending: true })
@@ -54,11 +56,11 @@ const PlansPage = () => {
 
   useEffect(() => {
     if (!selectedPlan) { setReadings([]); return; }
-    setLoadingReadings(true);
+    setLoadingVerses(true);
     supabase.from("admin_plan_readings").select("*").eq("plan_id", selectedPlan).order("day_number", { ascending: true })
       .then(({ data }) => {
         if (data) setReadings(data as unknown as DBReading[]);
-        setLoadingReadings(false);
+        setLoadingVerses(false);
       });
   }, [selectedPlan]);
 
@@ -86,19 +88,117 @@ const PlansPage = () => {
     else toast("Leitura desmarcada");
   };
 
-  const handleReadingClick = (bookAbbrev: string, chapter: number, dayIndex: number, verseStart?: number) => {
-    if (!progress?.completedDays.includes(dayIndex)) {
+  const loadDayVerses = useCallback(async (reading: DBReading) => {
+    setLoadingVerses(true);
+    try {
+      const result = await getChapter(reading.book_abbrev, reading.chapter, bibleVersion);
+      let filtered = result.verses;
+      if (reading.verse_start) {
+        filtered = filtered.filter(
+          (v) => v.number >= reading.verse_start! && (!reading.verse_end || v.number <= reading.verse_end)
+        );
+      }
+      setDayVerses(filtered);
+    } catch {
+      setDayVerses([]);
+      toast.error("Erro ao carregar texto");
+    }
+    setLoadingVerses(false);
+  }, [bibleVersion]);
+
+  const handleReadingClick = (dayIndex: number) => {
+    setSelectedDayIndex(dayIndex);
+    const reading = readings[dayIndex];
+    if (reading) loadDayVerses(reading);
+  };
+
+  const handleNextDay = () => {
+    if (selectedDayIndex === null) return;
+    // Mark current day as complete
+    if (!progress?.completedDays.includes(selectedDayIndex)) {
       setPlanProgress((prev) =>
-        prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, dayIndex] } : p)
+        prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, selectedDayIndex] } : p)
       );
       toast.success("Leitura concluída! ✅");
     }
-    const params = new URLSearchParams({ book: bookAbbrev, chapter: String(chapter) });
-    if (verseStart) params.set("verse", String(verseStart));
-    navigate(`/biblia?${params.toString()}`);
+    // Go to next day
+    const nextIndex = selectedDayIndex + 1;
+    if (nextIndex < readings.length) {
+      handleReadingClick(nextIndex);
+    } else {
+      setSelectedDayIndex(null);
+      setDayVerses([]);
+      toast.success("🎉 Você completou todas as leituras!");
+    }
   };
 
-  // Plan detail view
+  // Reading detail view (showing text inline)
+  if (plan && selectedDayIndex !== null) {
+    const reading = readings[selectedDayIndex];
+    const book = reading ? bibleBooks.find((b) => b.apiAbbrev === reading.book_abbrev) : null;
+    const verseRange = reading?.verse_start
+      ? `${reading.verse_start}${reading.verse_end ? `-${reading.verse_end}` : ""}`
+      : "";
+    const refLabel = `${book?.name || reading?.book_abbrev} ${reading?.chapter}${verseRange ? `:${verseRange}` : ""}`;
+    const isComplete = progress?.completedDays.includes(selectedDayIndex);
+
+    return (
+      <div className="pb-20 min-h-screen">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3">
+          <button onClick={() => { setSelectedDayIndex(null); setDayVerses([]); }}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">Dia {reading?.day_number || selectedDayIndex + 1}</h1>
+            <p className="text-xs text-[hsl(var(--dark-muted))]">{refLabel}</p>
+          </div>
+          <button onClick={(e) => toggleDayComplete(selectedDayIndex, e)} className="transition-transform active:scale-90">
+            {isComplete
+              ? <CheckCircle className="w-7 h-7 text-primary" />
+              : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
+          </button>
+        </header>
+
+        {reading?.title && (
+          <div className="px-5 mb-3">
+            <p className="text-sm font-semibold text-primary">{reading.title}</p>
+          </div>
+        )}
+
+        {loadingVerses ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="px-5 space-y-3">
+            {dayVerses.map((v) => (
+              <p key={v.number} className="text-sm leading-relaxed">
+                <span className="text-xs font-bold text-primary mr-1.5">{v.number}</span>
+                {v.text}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Next day button */}
+        <div className="px-5 mt-8 pb-4">
+          <button
+            onClick={handleNextDay}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
+          >
+            {selectedDayIndex + 1 < readings.length ? (
+              <>Próximo dia <ChevronRight className="w-4 h-4" /></>
+            ) : (
+              "Concluir plano 🎉"
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Plan detail view (list of days)
   if (plan) {
     const completedDays = progress?.completedDays || [];
     const totalReadings = readings.length;
@@ -142,7 +242,7 @@ const PlansPage = () => {
         )}
 
         {/* Readings list */}
-        {loadingReadings ? (
+        {loadingVerses && readings.length === 0 ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
@@ -162,7 +262,7 @@ const PlansPage = () => {
                       : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
                   </button>
                   <button
-                    onClick={() => handleReadingClick(reading.book_abbrev, reading.chapter, i, reading.verse_start)}
+                    onClick={() => handleReadingClick(i)}
                     className="flex-1 py-3 px-4 rounded-xl text-left active:bg-[hsl(var(--dark-card))] transition-colors">
                     {reading.title && (
                       <p className="text-[10px] font-semibold text-primary mb-0.5">{reading.title}</p>

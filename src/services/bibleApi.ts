@@ -1,3 +1,5 @@
+import { bibleBooks } from "@/data/bible";
+
 const BASE_URL = "https://bible-api.com";
 const TRANSLATION = "almeida";
 
@@ -141,39 +143,52 @@ const BROAD_SEARCH_CHAPTERS = [
   "revelation+1", "revelation+3", "revelation+5", "revelation+21", "revelation+22",
 ];
 
-async function cachedFetch<T>(url: string): Promise<T> {
-  const cached = cache.get(url);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data as T;
-  }
+const ALL_SEARCH_CHAPTERS = bibleBooks.flatMap((book) => {
+  const englishName = bookNameMap[book.apiAbbrev];
+  if (!englishName) return [];
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  cache.set(url, { data, timestamp: Date.now() });
-  return data as T;
-}
+  return Array.from({ length: book.chapters }, (_, index) => `${englishName}+${index + 1}`);
+});
 
 function getSearchChapters(query: string): string[] {
   const normalizedQuery = normalizeText(query);
 
-  // First, check topic matches
   const topicalMatches = SEARCH_CHAPTERS_BY_TOPIC
-    .filter((entry) => entry.keywords.some((keyword) => 
-      normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)
-    ))
+    .filter((entry) => entry.keywords.some((keyword) => normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)))
     .flatMap((entry) => entry.chapters);
 
-  if (topicalMatches.length > 0) {
-    // Combine topical + some broad chapters for more results
-    return Array.from(new Set([...topicalMatches, ...BROAD_SEARCH_CHAPTERS.slice(0, 20)])).slice(0, 25);
+  const priority = Array.from(new Set([...topicalMatches, ...BROAD_SEARCH_CHAPTERS]));
+  const prioritySet = new Set(priority);
+  const remaining = ALL_SEARCH_CHAPTERS.filter((chapterKey) => !prioritySet.has(chapterKey));
+
+  return [...priority, ...remaining];
+}
+
+function scoreVerseMatch(verseText: string, normalizedQuery: string): number {
+  const normalizedText = normalizeText(verseText);
+  const words = normalizedQuery.split(/\s+/).filter((word) => word.length >= 2);
+
+  if (!words.length) return 0;
+
+  let score = 0;
+
+  if (normalizedText.includes(normalizedQuery)) {
+    score += 120;
   }
 
-  // For generic words, search broadly across many chapters
-  return BROAD_SEARCH_CHAPTERS.slice(0, 40);
+  const exactWordRegex = new RegExp(`(^|\\s)${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`);
+  if (exactWordRegex.test(normalizedText)) {
+    score += 80;
+  }
+
+  const matchedWords = words.filter((word) => normalizedText.includes(word));
+  score += matchedWords.length * 25;
+
+  if (matchedWords.length === words.length) {
+    score += 40;
+  }
+
+  return score;
 }
 
 export async function getChapter(abbrev: string, chapter: number): Promise<ChapterResponse> {
@@ -232,10 +247,8 @@ export async function searchVerses(query: string): Promise<
   if (normalizedQuery.length < 2) return [];
 
   const chapters = getSearchChapters(query);
-
-  // Fetch in parallel batches to avoid overwhelming the API
-  const batchSize = 8;
-  const allResults: { book: { name: string }; chapter: number; number: number; text: string }[] = [];
+  const batchSize = 10;
+  const allResults: ({ book: { name: string }; chapter: number; number: number; text: string } & { score: number })[] = [];
 
   for (let i = 0; i < chapters.length; i += batchSize) {
     const batch = chapters.slice(i, i + batchSize);
@@ -247,20 +260,19 @@ export async function searchVerses(query: string): Promise<
         }>(url);
 
         return data.verses
-          .filter((verse) => {
-            const normalizedText = normalizeText(verse.text);
-            // Match the full query or any individual word (3+ chars)
-            const words = normalizedQuery.split(/\s+/).filter(w => w.length >= 3);
-            return normalizedText.includes(normalizedQuery) ||
-              (words.length > 1 && words.every(w => normalizedText.includes(w))) ||
-              (words.length === 1 && normalizedText.includes(words[0]));
+          .map((verse) => {
+            const score = scoreVerseMatch(verse.text, normalizedQuery);
+            if (score <= 0) return null;
+
+            return {
+              book: { name: verse.book_name },
+              chapter: verse.chapter,
+              number: verse.verse,
+              text: verse.text.trim(),
+              score,
+            };
           })
-          .map((verse) => ({
-            book: { name: verse.book_name },
-            chapter: verse.chapter,
-            number: verse.verse,
-            text: verse.text.trim(),
-          }));
+          .filter((verse): verse is { book: { name: string }; chapter: number; number: number; text: string; score: number } => !!verse);
       } catch {
         return [];
       }
@@ -269,8 +281,9 @@ export async function searchVerses(query: string): Promise<
     const batchResults = (await Promise.all(fetches)).flat();
     allResults.push(...batchResults);
 
-    // Stop early if we have enough results
-    if (allResults.length >= 30) break;
+    if (allResults.length >= 30) {
+      break;
+    }
   }
 
   const uniqueResults = allResults.filter(
@@ -283,5 +296,8 @@ export async function searchVerses(query: string): Promise<
       ) === index
   );
 
-  return uniqueResults.slice(0, 30);
+  return uniqueResults
+    .sort((a, b) => b.score - a.score || a.book.name.localeCompare(b.book.name) || a.chapter - b.chapter || a.number - b.number)
+    .slice(0, 30)
+    .map(({ score: _score, ...result }) => result);
 }

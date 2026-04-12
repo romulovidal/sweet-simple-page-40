@@ -684,6 +684,7 @@ const BiblePage = () => {
         ))}
       </div>
       {versionPickerModal}
+      <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
     </div>
   );
 };

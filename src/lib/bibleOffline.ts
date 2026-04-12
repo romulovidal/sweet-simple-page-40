@@ -43,7 +43,7 @@ export async function downloadVersion(
     }
   }
 
-  const blob = new Blob(chunks, { type: "application/json" });
+  const blob = new Blob(chunks as BlobPart[], { type: "application/json" });
   const cache = await caches.open(CACHE_NAME);
   await cache.put(url, new Response(blob, { headers: { "Content-Type": "application/json" } }));
   onProgress?.(100);

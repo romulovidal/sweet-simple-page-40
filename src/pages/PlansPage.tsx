@@ -132,7 +132,73 @@ const PlansPage = () => {
     }
   };
 
-  // Plan detail view
+  // Reading detail view (showing text inline)
+  if (plan && selectedDayIndex !== null) {
+    const reading = readings[selectedDayIndex];
+    const book = reading ? bibleBooks.find((b) => b.apiAbbrev === reading.book_abbrev) : null;
+    const verseRange = reading?.verse_start
+      ? `${reading.verse_start}${reading.verse_end ? `-${reading.verse_end}` : ""}`
+      : "";
+    const refLabel = `${book?.name || reading?.book_abbrev} ${reading?.chapter}${verseRange ? `:${verseRange}` : ""}`;
+    const isComplete = progress?.completedDays.includes(selectedDayIndex);
+
+    return (
+      <div className="pb-20 min-h-screen">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3">
+          <button onClick={() => { setSelectedDayIndex(null); setDayVerses([]); }}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">Dia {reading?.day_number || selectedDayIndex + 1}</h1>
+            <p className="text-xs text-[hsl(var(--dark-muted))]">{refLabel}</p>
+          </div>
+          <button onClick={(e) => toggleDayComplete(selectedDayIndex, e)} className="transition-transform active:scale-90">
+            {isComplete
+              ? <CheckCircle className="w-7 h-7 text-primary" />
+              : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
+          </button>
+        </header>
+
+        {reading?.title && (
+          <div className="px-5 mb-3">
+            <p className="text-sm font-semibold text-primary">{reading.title}</p>
+          </div>
+        )}
+
+        {loadingVerses ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="px-5 space-y-3">
+            {dayVerses.map((v) => (
+              <p key={v.number} className="text-sm leading-relaxed">
+                <span className="text-xs font-bold text-primary mr-1.5">{v.number}</span>
+                {v.text}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Next day button */}
+        <div className="px-5 mt-8 pb-4">
+          <button
+            onClick={handleNextDay}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
+          >
+            {selectedDayIndex + 1 < readings.length ? (
+              <>Próximo dia <ChevronRight className="w-4 h-4" /></>
+            ) : (
+              "Concluir plano 🎉"
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Plan detail view (list of days)
   if (plan) {
     const completedDays = progress?.completedDays || [];
     const totalReadings = readings.length;
@@ -176,7 +242,7 @@ const PlansPage = () => {
         )}
 
         {/* Readings list */}
-        {loadingReadings ? (
+        {loadingVerses && readings.length === 0 ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
@@ -196,7 +262,7 @@ const PlansPage = () => {
                       : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
                   </button>
                   <button
-                    onClick={() => handleReadingClick(reading.book_abbrev, reading.chapter, i, reading.verse_start)}
+                    onClick={() => handleReadingClick(i)}
                     className="flex-1 py-3 px-4 rounded-xl text-left active:bg-[hsl(var(--dark-card))] transition-colors">
                     {reading.title && (
                       <p className="text-[10px] font-semibold text-primary mb-0.5">{reading.title}</p>

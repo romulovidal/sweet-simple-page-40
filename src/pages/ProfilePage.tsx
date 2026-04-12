@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail,
+  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

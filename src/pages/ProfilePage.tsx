@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield,
+  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download,
 } from "lucide-react";
+import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -335,6 +336,14 @@ const ProfilePage = () => {
           <h1 className="text-lg font-bold">Configurações</h1>
         </header>
         <div className="px-5 space-y-3">
+          <div className="bg-dark-card rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Download className="w-4 h-4 text-primary" />
+              <p className="font-semibold text-sm">Bíblia Offline</p>
+            </div>
+            <p className="text-xs text-dark-muted mb-3">Baixe versões para ler sem internet.</p>
+            <BibleDownloadManager />
+          </div>
           <button onClick={handleContinueReading} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Continuar leitura</p>
             <p className="text-xs text-dark-muted mt-1">Retomar exatamente de onde você parou.</p>

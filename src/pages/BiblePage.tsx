@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
-import { getChapter, type BibleVerse } from "@/services/bibleApi";
+import { getChapter, bookNameMap, type BibleVerse } from "@/services/bibleApi";
+import { isRedLetterVerse } from "@/data/redLetterVerses";
 import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
@@ -428,6 +429,8 @@ const BiblePage = () => {
                 const isUrlHighlighted = highlightedVerse === verse.number && !hasSelection;
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
+                const englishBookName = bookNameMap[selectedBook.apiAbbrev] || "";
+                const isRedLetter = isRedLetterVerse(englishBookName, selectedChapter, verse.number);
 
                 return (
                   <VerseRow
@@ -436,6 +439,7 @@ const BiblePage = () => {
                     isHighlighted={isUrlHighlighted}
                     isSelected={isSelected}
                     highlightColor={highlightColor}
+                    isRedLetter={isRedLetter}
                     isSaved={isVerseSaved(verse)}
                     onTap={toggleVerseSelection}
                     onSave={handleSaveVerse}
@@ -591,6 +595,7 @@ interface VerseRowProps {
   isHighlighted: boolean;
   isSelected: boolean;
   highlightColor?: string;
+  isRedLetter?: boolean;
   isSaved: boolean;
   onTap: (verseNumber: number) => void;
   onSave: (v: BibleVerse) => void;
@@ -598,7 +603,7 @@ interface VerseRowProps {
   onImage: (v: BibleVerse) => void;
 }
 
-const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isSaved, onTap, onSave, onShare, onImage }: VerseRowProps) => {
+const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLetter, isSaved, onTap, onSave, onShare, onImage }: VerseRowProps) => {
   return (
     <div
       id={`verse-${verse.number}`}
@@ -612,10 +617,10 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isSaved, o
       }
       onClick={() => onTap(verse.number)}
     >
-      <p className="text-sm leading-relaxed">
+      <p className={`text-sm leading-relaxed ${isRedLetter ? "text-red-400" : ""}`}>
         <span
           className="font-bold mr-2 text-xs align-super"
-          style={highlightColor ? { color: highlightColor } : undefined}
+          style={highlightColor ? { color: highlightColor } : isRedLetter ? { color: "#ef4444" } : undefined}
         >
           {verse.number}
         </span>

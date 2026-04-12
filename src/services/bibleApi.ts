@@ -13,7 +13,7 @@ export interface ChapterResponse {
   verses: BibleVerse[];
 }
 
-const bookNameMap: Record<string, string> = {
+export const bookNameMap: Record<string, string> = {
   gn: "genesis", ex: "exodus", lv: "leviticus", nm: "numbers", dt: "deuteronomy",
   js: "joshua", jz: "judges", rt: "ruth", "1sm": "1samuel", "2sm": "2samuel",
   "1rs": "1kings", "2rs": "2kings", "1cr": "1chronicles", "2cr": "2chronicles",

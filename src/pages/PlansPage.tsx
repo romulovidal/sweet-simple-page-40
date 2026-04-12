@@ -188,7 +188,7 @@ const PlansPage = () => {
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
           >
             {selectedDayIndex + 1 < readings.length ? (
-              <>Próximo dia <ChevronRight className="w-4 h-4" /></>
+              <>Próximo <ChevronRight className="w-4 h-4" /></>
             ) : (
               "Concluir plano 🎉"
             )}

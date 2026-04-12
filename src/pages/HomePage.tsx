@@ -7,6 +7,7 @@ import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -27,7 +28,7 @@ interface DBPlan {
   total_days: number | null;
 }
 
-const HomePage = () => {
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
@@ -189,7 +190,8 @@ const HomePage = () => {
           <>
             {/* Greeting */}
             <div>
-              <h1 className="text-2xl font-bold">Seja bem-vindo(a) à Bíblia do Atalaia 👋</h1>
+              <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
+              <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
               <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
                 {streak.current > 0
                   ? `Você está numa ofensiva de ${streak.current} dia${streak.current > 1 ? "s" : ""}!`

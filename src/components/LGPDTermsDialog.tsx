@@ -25,14 +25,14 @@ const LGPDTermsDialog = ({ children }: LGPDTermsDialogProps) => {
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-4 text-sm text-[hsl(var(--dark-muted))] leading-relaxed">
             <section>
-              <h3 className="font-bold text-foreground mb-1">1. Introdução</h3>
+              <h3 className="font-bold text-dark-text mb-1">1. Introdução</h3>
               <p>
                 A Bíblia do Atalaia está comprometida com a proteção dos seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
               </p>
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">2. Dados Coletados</h3>
+              <h3 className="font-bold text-dark-text mb-1">2. Dados Coletados</h3>
               <p>Coletamos apenas os dados necessários para o funcionamento do aplicativo:</p>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li><strong>Dados de cadastro:</strong> nome, e-mail e foto de perfil (quando fornecidos via Google ou formulário).</li>
@@ -41,7 +41,7 @@ const LGPDTermsDialog = ({ children }: LGPDTermsDialogProps) => {
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">3. Finalidade do Tratamento</h3>
+              <h3 className="font-bold text-dark-text mb-1">3. Finalidade do Tratamento</h3>
               <p>Seus dados são utilizados exclusivamente para:</p>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>Personalizar sua experiência no aplicativo.</li>
@@ -51,21 +51,21 @@ const LGPDTermsDialog = ({ children }: LGPDTermsDialogProps) => {
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">4. Compartilhamento de Dados</h3>
+              <h3 className="font-bold text-dark-text mb-1">4. Compartilhamento de Dados</h3>
               <p>
                 Não compartilhamos, vendemos ou transferimos seus dados pessoais a terceiros, exceto quando exigido por lei ou ordem judicial.
               </p>
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">5. Armazenamento e Segurança</h3>
+              <h3 className="font-bold text-dark-text mb-1">5. Armazenamento e Segurança</h3>
               <p>
                 Seus dados são armazenados em servidores seguros com criptografia e protegidos por políticas de acesso restrito. Apenas você tem acesso aos seus dados pessoais de leitura.
               </p>
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">6. Seus Direitos (LGPD)</h3>
+              <h3 className="font-bold text-dark-text mb-1">6. Seus Direitos (LGPD)</h3>
               <p>Você tem o direito de:</p>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>Acessar seus dados pessoais a qualquer momento.</li>
@@ -77,21 +77,21 @@ const LGPDTermsDialog = ({ children }: LGPDTermsDialogProps) => {
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">7. Exclusão de Conta</h3>
+              <h3 className="font-bold text-dark-text mb-1">7. Exclusão de Conta</h3>
               <p>
                 Você pode solicitar a exclusão completa da sua conta e todos os dados associados a qualquer momento através das configurações do perfil ou entrando em contato conosco.
               </p>
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">8. Contato</h3>
+              <h3 className="font-bold text-dark-text mb-1">8. Contato</h3>
               <p>
-                Para exercer seus direitos ou esclarecer dúvidas sobre o tratamento dos seus dados, entre em contato pelo e-mail: <strong className="text-foreground">contato@vidalweb.com.br</strong>
+                Para exercer seus direitos ou esclarecer dúvidas sobre o tratamento dos seus dados, entre em contato pelo e-mail: <strong className="text-dark-text">contato@vidalweb.com.br</strong>
               </p>
             </section>
 
             <section>
-              <h3 className="font-bold text-foreground mb-1">9. Atualizações</h3>
+              <h3 className="font-bold text-dark-text mb-1">9. Atualizações</h3>
               <p>
                 Esta política pode ser atualizada periodicamente. Recomendamos a leitura regular para se manter informado sobre como protegemos seus dados.
               </p>

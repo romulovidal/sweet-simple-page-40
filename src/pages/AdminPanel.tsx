@@ -139,15 +139,14 @@ const AdminPanel = () => {
     setPlanReadings(data || []);
   };
 
-  const addReading = async (planId: string, reading: { bookAbbrev: string; chapter: number; title: string; verseStart?: number; verseEnd?: number }) => {
-    const nextDay = planReadings.length + 1;
+  const addReading = async (planId: string, reading: { dayNumber: number; bookAbbrev: string; chapter: number; title: string; verseStart?: number; verseEnd?: number }) => {
     const { error } = await supabase.from("admin_plan_readings").insert({
-      plan_id: planId, day_number: nextDay, book_abbrev: reading.bookAbbrev.trim(),
+      plan_id: planId, day_number: reading.dayNumber, book_abbrev: reading.bookAbbrev.trim(),
       chapter: reading.chapter, title: reading.title.trim(),
       verse_start: reading.verseStart || null, verse_end: reading.verseEnd || null,
     });
     if (error) { toast.error("Erro ao adicionar leitura"); return; }
-    toast.success(`Dia ${nextDay} adicionado`);
+    toast.success(`Leitura adicionada ao Dia ${reading.dayNumber}`);
     fetchReadings(planId);
   };
 

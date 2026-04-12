@@ -565,7 +565,16 @@ const BiblePage = () => {
   return (
     <div className="pb-20 min-h-screen">
       <header className="px-5 pt-12 pb-4">
-        <h1 className="text-2xl font-bold mb-4">Bíblia</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Bíblia</h1>
+          <button
+            onClick={() => setShowVersionPicker(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+          >
+            {getVersionById(bibleVersion).shortName}
+            <ChevronDown className="w-3 h-3 text-dark-muted" />
+          </button>
+        </div>
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
           <input

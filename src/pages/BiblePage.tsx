@@ -363,17 +363,16 @@ const BiblePage = () => {
 
   const handleShareVerse = async (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
-
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
     const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${verse.number}`;
     const shareText = `${reference}\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
-
-    if (navigator.share) {
-      await navigator.share({ title: reference, text: shareText }).catch(() => {});
-      return;
-    }
-
-    await navigator.clipboard.writeText(shareText);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: reference, text: shareText });
+        return;
+      }
+    } catch {}
+    await copyToClipboard(shareText);
     toast("Versículo copiado!");
   };
 

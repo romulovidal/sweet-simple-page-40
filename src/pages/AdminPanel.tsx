@@ -608,10 +608,11 @@ const AdminPanel = () => {
 };
 
 // Smart reading form with book selector
-const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays }: {
+const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
   onAdd: (reading: { bookAbbrev: string; chapter: number; title: string; verseStart?: number; verseEnd?: number }) => void;
   dayNumber: number;
   totalDays: number;
+  isAddToDay?: boolean;
 }) => {
   const [title, setTitle] = useState("");
   const [selectedBook, setSelectedBook] = useState("");
@@ -620,6 +621,7 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays }: {
   const [verseEnd, setVerseEnd] = useState("");
   const [showBookPicker, setShowBookPicker] = useState(false);
   const [bookSearch, setBookSearch] = useState("");
+  const [expanded, setExpanded] = useState(!isAddToDay);
 
   const selectedBookData = bibleBooks.find((b) => b.apiAbbrev === selectedBook);
   const filteredBooks = bibleBooks.filter((b) =>
@@ -634,7 +636,17 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays }: {
       verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
     });
     setTitle(""); setChapter(""); setVerseStart(""); setVerseEnd("");
+    if (isAddToDay) setExpanded(false);
   };
+
+  if (isAddToDay && !expanded) {
+    return (
+      <button onClick={() => setExpanded(true)}
+        className="w-full flex items-center justify-center gap-1 py-2 text-xs text-primary font-medium hover:bg-primary/10 rounded-lg transition-colors">
+        <Plus className="w-3 h-3" /> Adicionar leitura ao Dia {String(dayNumber).padStart(2, "0")}
+      </button>
+    );
+  }
 
   return (
     <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">

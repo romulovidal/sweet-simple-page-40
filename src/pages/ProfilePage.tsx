@@ -10,9 +10,10 @@ import {
   RotateCcw,
   Settings,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData } from "@/hooks/useLocalStorage";
+import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 
 interface PlanProgress {
   planId: string;
@@ -20,7 +21,7 @@ interface PlanProgress {
   startedAt: string;
 }
 
-type ProfileView = "overview" | "saved" | "history" | "settings";
+type ProfileView = "overview" | "saved" | "history" | "verse-history" | "settings";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const ProfilePage = () => {
   const [streak, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [planProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
+  const [verseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
   const [view, setView] = useState<ProfileView>("overview");
 
   const activePlansCount = useMemo(

@@ -467,7 +467,7 @@ const AdminPanel = () => {
                 {posts.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhuma postagem ainda</p>}
               </div>
             </>
-          ) : (
+          ) : tab === "plans" ? (
             <>
               <Button onClick={() => setEditingPlan({ is_active: true, sort_order: 0, image_emoji: "📖", category: "Geral", total_days: 7 } as Partial<Plan>)} className="w-full mb-4">
                 <Plus className="w-4 h-4 mr-2" /> Novo Plano

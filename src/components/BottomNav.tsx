@@ -1,5 +1,5 @@
 import { Home, BookOpen, CalendarDays, Compass, User } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 const tabs = [
   { to: "/", icon: Home, label: "Início" },
@@ -11,11 +11,14 @@ const tabs = [
 
 const BottomNav = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleTabClick = (to: string, e: React.MouseEvent) => {
-    const isCurrentRoute = to === "/" ? location.pathname === "/" : location.pathname === to;
+    const isCurrentRoute = to === "/" ? location.pathname === "/" : location.pathname.startsWith(to) && to !== "/";
     if (isCurrentRoute) {
       e.preventDefault();
+      // Force re-mount by navigating with a unique key state
+      navigate(to, { replace: true, state: { reset: Date.now() } });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };

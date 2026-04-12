@@ -170,6 +170,7 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
           onClose={() => setShowImageGen(false)}
         />
       )}
+      <ShareMenu text={shareText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
     </>
   );
 };

@@ -85,7 +85,7 @@ const ProfilePage = () => {
   // Auth handlers
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!lgpdAccepted) {
+    if (authMode === "signup" && !lgpdAccepted) {
       toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
       return;
     }
@@ -115,7 +115,7 @@ const ProfilePage = () => {
   };
 
   const handleGoogleLogin = async () => {
-    if (!lgpdAccepted) {
+    if (authMode === "signup" && !lgpdAccepted) {
       toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
       return;
     }
@@ -161,25 +161,27 @@ const ProfilePage = () => {
           </header>
 
           <div className="px-5 space-y-4">
-            {/* LGPD Consent */}
-            <div className="flex items-start gap-3 bg-[hsl(var(--dark-card))] rounded-2xl p-4">
-              <Checkbox
-                id="lgpd"
-                checked={lgpdAccepted}
-                onCheckedChange={(checked) => setLgpdAccepted(checked === true)}
-                className="mt-0.5"
-              />
-              <label htmlFor="lgpd" className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed cursor-pointer">
-                <Shield className="w-3.5 h-3.5 inline mr-1 text-primary" />
-                Li e concordo com a{" "}
-                <LGPDTermsDialog>
-                  <span className="text-primary font-semibold underline cursor-pointer">
-                    Política de Privacidade e Termos de Uso (LGPD)
-                  </span>
-                </LGPDTermsDialog>
-                . Autorizo o tratamento dos meus dados pessoais conforme descrito.
-              </label>
-            </div>
+            {/* LGPD Consent - only for signup */}
+            {authMode === "signup" && (
+              <div className="flex items-start gap-3 bg-[hsl(var(--dark-card))] rounded-2xl p-4">
+                <Checkbox
+                  id="lgpd"
+                  checked={lgpdAccepted}
+                  onCheckedChange={(checked) => setLgpdAccepted(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="lgpd" className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed cursor-pointer">
+                  <Shield className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                  Li e concordo com a{" "}
+                  <LGPDTermsDialog>
+                    <span className="text-primary font-semibold underline cursor-pointer">
+                      Política de Privacidade e Termos de Uso (LGPD)
+                    </span>
+                  </LGPDTermsDialog>
+                  . Autorizo o tratamento dos meus dados pessoais conforme descrito.
+                </label>
+              </div>
+            )}
 
             {/* Google button */}
             <button

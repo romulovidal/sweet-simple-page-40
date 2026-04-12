@@ -56,11 +56,11 @@ const ProfilePage = () => {
 
   const handleContinueReading = () => {
     if (progress) {
-      navigate(`/biblia?book=${progress.bookAbbrev}&chapter=${progress.chapter}`);
+      navigate(`/biblia?book=${progress.bookAbbrev}&chapter=${progress.chapter}`, { state: { reset: Date.now() } });
       return;
     }
 
-    navigate(`/biblia?book=gn&chapter=1`);
+    navigate(`/biblia?book=gn&chapter=1`, { state: { reset: Date.now() } });
   };
 
   const clearSavedVerses = () => {

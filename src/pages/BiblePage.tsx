@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import { getChapter, type BibleVerse } from "@/services/bibleApi";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, CheckSquare } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
+
+const APP_URL = window.location.origin;
 
 const BiblePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,9 +22,19 @@ const BiblePage = () => {
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
   const [imageVerse, setImageVerse] = useState<{ text: string; reference: string } | null>(null);
 
+  // Multi-select state
+  const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
+
+  // Reset selection when chapter changes
+  useEffect(() => {
+    setSelectedVerses(new Set());
+    setSelectionMode(false);
+  }, [selectedChapter, selectedBook]);
 
   useEffect(() => {
     const bookParam = searchParams.get("book");
@@ -96,6 +108,108 @@ const BiblePage = () => {
     return () => window.cancelAnimationFrame(frame);
   }, [highlightedVerse, loading, verses.length]);
 
+  const toggleVerseSelection = useCallback((verseNumber: number) => {
+    setSelectedVerses((prev) => {
+      const next = new Set(prev);
+      if (next.has(verseNumber)) {
+        next.delete(verseNumber);
+      } else {
+        next.add(verseNumber);
+      }
+      if (next.size === 0) setSelectionMode(false);
+      return next;
+    });
+  }, []);
+
+  const handleVerseTap = useCallback((verse: BibleVerse) => {
+    if (selectionMode) {
+      toggleVerseSelection(verse.number);
+    }
+  }, [selectionMode, toggleVerseSelection]);
+
+  const handleVerseLongPress = useCallback((verse: BibleVerse) => {
+    if (!selectionMode) {
+      setSelectionMode(true);
+      setSelectedVerses(new Set([verse.number]));
+    }
+  }, [selectionMode]);
+
+  // Build share text from selected verses
+  const buildShareContent = useCallback(() => {
+    if (!selectedBook || !selectedChapter) return { text: "", reference: "", link: "" };
+
+    const sortedNumbers = Array.from(selectedVerses).sort((a, b) => a - b);
+    const selectedTexts = sortedNumbers
+      .map((num) => verses.find((v) => v.number === num))
+      .filter(Boolean) as BibleVerse[];
+
+    // Build compact reference like "João 3:16-18" or "João 3:16,18,20"
+    const ranges: string[] = [];
+    let rangeStart = sortedNumbers[0];
+    let rangeEnd = sortedNumbers[0];
+
+    for (let i = 1; i < sortedNumbers.length; i++) {
+      if (sortedNumbers[i] === rangeEnd + 1) {
+        rangeEnd = sortedNumbers[i];
+      } else {
+        ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+        rangeStart = sortedNumbers[i];
+        rangeEnd = sortedNumbers[i];
+      }
+    }
+    ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+
+    const reference = `${selectedBook.name} ${selectedChapter}:${ranges.join(",")}`;
+    const content = selectedTexts.map((v) => `${v.number} ${v.text}`).join(" ");
+    const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${sortedNumbers[0]}`;
+
+    return { text: content, reference, link };
+  }, [selectedBook, selectedChapter, selectedVerses, verses]);
+
+  const handleShareSelected = async () => {
+    const { text, reference, link } = buildShareContent();
+    if (!reference) return;
+
+    const shareText = `${reference}\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
+
+    if (navigator.share) {
+      await navigator.share({ title: reference, text: shareText }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(shareText);
+      toast("Versículos copiados!");
+    }
+  };
+
+  const handleSaveSelected = () => {
+    if (!selectedBook || !selectedChapter) return;
+    const sortedNumbers = Array.from(selectedVerses).sort((a, b) => a - b);
+
+    let addedCount = 0;
+    const newSaved = [...savedVerses];
+
+    for (const num of sortedNumbers) {
+      const verse = verses.find((v) => v.number === num);
+      if (!verse) continue;
+      const reference = `${selectedBook.name} ${selectedChapter}:${num}`;
+      if (!newSaved.some((s) => s.reference === reference)) {
+        newSaved.push({ text: verse.text, reference, savedAt: new Date().toISOString() });
+        addedCount++;
+      }
+    }
+
+    setSavedVerses(newSaved);
+    toast(`${addedCount} versículo${addedCount > 1 ? "s" : ""} salvo${addedCount > 1 ? "s" : ""}!`);
+    setSelectedVerses(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleImageSelected = () => {
+    const { text, reference } = buildShareContent();
+    if (reference) {
+      setImageVerse({ text, reference });
+    }
+  };
+
   const handleSaveVerse = (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
 
@@ -119,7 +233,8 @@ const BiblePage = () => {
     if (!selectedBook || !selectedChapter) return;
 
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
-    const shareText = `"${verse.text}" — ${reference} (ARC)`;
+    const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${verse.number}`;
+    const shareText = `${reference}\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
 
     if (navigator.share) {
       await navigator.share({ title: reference, text: shareText }).catch(() => {});
@@ -136,6 +251,7 @@ const BiblePage = () => {
     return savedVerses.some((savedVerse) => savedVerse.reference === reference);
   };
 
+  // ── Chapter view with verses ──
   if (selectedBook && selectedChapter) {
     return (
       <div className="pb-20 min-h-screen">
@@ -145,6 +261,8 @@ const BiblePage = () => {
               setSelectedChapter(null);
               setHighlightedVerse(null);
               setVerses([]);
+              setSelectedVerses(new Set());
+              setSelectionMode(false);
             }}
             className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
           >
@@ -153,11 +271,52 @@ const BiblePage = () => {
           <h1 className="text-lg font-bold">
             {selectedBook.name} {selectedChapter}
           </h1>
-          <span className="text-[10px] text-dark-muted ml-auto">ARC</span>
+          {!selectionMode && (
+            <button
+              onClick={() => setSelectionMode(true)}
+              className="ml-auto w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
+              title="Selecionar versículos"
+            >
+              <CheckSquare className="w-4 h-4 text-dark-muted" />
+            </button>
+          )}
+          {selectionMode && (
+            <div className="ml-auto flex items-center gap-1">
+              <span className="text-xs text-primary font-semibold mr-1">
+                {selectedVerses.size} selecionado{selectedVerses.size !== 1 ? "s" : ""}
+              </span>
+              <button
+                onClick={() => { setSelectionMode(false); setSelectedVerses(new Set()); }}
+                className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </header>
 
+        {/* Selection action bar */}
+        {selectionMode && selectedVerses.size > 0 && (
+          <div className="sticky top-[72px] z-10 mx-5 mb-2 bg-primary rounded-xl px-4 py-3 flex items-center justify-between gap-2 shadow-lg">
+            <span className="text-xs font-semibold text-primary-foreground">
+              {selectedVerses.size} versículo{selectedVerses.size !== 1 ? "s" : ""}
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={handleShareSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
+                <Share2 className="w-4 h-4 text-primary-foreground" />
+              </button>
+              <button onClick={handleSaveSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
+                <BookmarkPlus className="w-4 h-4 text-primary-foreground" />
+              </button>
+              <button onClick={handleImageSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
+                <ImageIcon className="w-4 h-4 text-primary-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="px-5 py-4">
-          {highlightedVerse && !loading && !error && (
+          {highlightedVerse && !loading && !error && !selectionMode && (
             <div className="mb-4 bg-primary/10 rounded-xl px-4 py-3">
               <p className="text-xs text-primary font-semibold">Versículo em destaque: {highlightedVerse}</p>
             </div>
@@ -182,47 +341,31 @@ const BiblePage = () => {
           )}
 
           {!loading && !error && verses.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-1">
               {verses.map((verse) => {
-                const isHighlighted = highlightedVerse === verse.number;
+                const isHighlighted = highlightedVerse === verse.number && !selectionMode;
+                const isSelected = selectedVerses.has(verse.number);
 
                 return (
-                  <div
-                    id={`verse-${verse.number}`}
+                  <VerseRow
                     key={verse.number}
-                    className={`group scroll-mt-24 rounded-xl transition-colors ${
-                      isHighlighted ? "bg-primary/10 px-3 py-3" : ""
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed">
-                      <span className="text-primary font-bold mr-2 text-xs align-super">{verse.number}</span>
-                      {verse.text}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
-                      <button onClick={() => handleSaveVerse(verse)} className="p-1">
-                        <BookmarkPlus
-                          className={`w-4 h-4 ${
-                            isVerseSaved(verse) ? "fill-primary text-primary" : "text-dark-muted"
-                          }`}
-                        />
-                      </button>
-                      <button onClick={() => handleShareVerse(verse)} className="p-1">
-                        <Share2 className="w-4 h-4 text-dark-muted" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!selectedBook || !selectedChapter) return;
-                          setImageVerse({
-                            text: verse.text,
-                            reference: `${selectedBook.name} ${selectedChapter}:${verse.number}`,
-                          });
-                        }}
-                        className="p-1"
-                      >
-                        <ImageIcon className="w-4 h-4 text-dark-muted" />
-                      </button>
-                    </div>
-                  </div>
+                    verse={verse}
+                    isHighlighted={isHighlighted}
+                    isSelected={isSelected}
+                    selectionMode={selectionMode}
+                    isSaved={isVerseSaved(verse)}
+                    onTap={handleVerseTap}
+                    onLongPress={handleVerseLongPress}
+                    onSave={handleSaveVerse}
+                    onShare={handleShareVerse}
+                    onImage={(v) => {
+                      if (!selectedBook || !selectedChapter) return;
+                      setImageVerse({
+                        text: v.text,
+                        reference: `${selectedBook.name} ${selectedChapter}:${v.number}`,
+                      });
+                    }}
+                  />
                 );
               })}
             </div>
@@ -268,6 +411,7 @@ const BiblePage = () => {
     );
   }
 
+  // ── Chapter picker ──
   if (selectedBook) {
     return (
       <div className="pb-20 min-h-screen">
@@ -304,6 +448,7 @@ const BiblePage = () => {
     );
   }
 
+  // ── Book list ──
   return (
     <div className="pb-20 min-h-screen">
       <header className="px-5 pt-12 pb-4">
@@ -354,6 +499,88 @@ const BiblePage = () => {
           </button>
         ))}
       </div>
+    </div>
+  );
+};
+
+// ── Verse Row Component ──
+interface VerseRowProps {
+  verse: BibleVerse;
+  isHighlighted: boolean;
+  isSelected: boolean;
+  selectionMode: boolean;
+  isSaved: boolean;
+  onTap: (v: BibleVerse) => void;
+  onLongPress: (v: BibleVerse) => void;
+  onSave: (v: BibleVerse) => void;
+  onShare: (v: BibleVerse) => void;
+  onImage: (v: BibleVerse) => void;
+}
+
+const VerseRow = ({ verse, isHighlighted, isSelected, selectionMode, isSaved, onTap, onLongPress, onSave, onShare, onImage }: VerseRowProps) => {
+  const [pressTimer, setPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePointerDown = () => {
+    const timer = setTimeout(() => {
+      onLongPress(verse);
+    }, 500);
+    setPressTimer(timer);
+  };
+
+  const handlePointerUp = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+  };
+
+  const handleClick = () => {
+    if (selectionMode) {
+      onTap(verse);
+    }
+  };
+
+  return (
+    <div
+      id={`verse-${verse.number}`}
+      className={`group scroll-mt-24 rounded-xl transition-all py-2 px-3 ${
+        isHighlighted ? "bg-primary/10" : ""
+      } ${isSelected ? "bg-primary/20 ring-1 ring-primary/40" : ""} ${
+        selectionMode ? "cursor-pointer active:bg-primary/15" : ""
+      }`}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <div className="flex items-start gap-2">
+        {selectionMode && (
+          <div className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+            isSelected ? "bg-primary border-primary" : "border-dark-muted"
+          }`}>
+            {isSelected && <span className="text-primary-foreground text-xs font-bold">✓</span>}
+          </div>
+        )}
+        <p className="text-sm leading-relaxed flex-1">
+          <span className="text-primary font-bold mr-2 text-xs align-super">{verse.number}</span>
+          {verse.text}
+        </p>
+      </div>
+      {!selectionMode && (
+        <div className="flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+          <button onClick={(e) => { e.stopPropagation(); onSave(verse); }} className="p-1">
+            <BookmarkPlus
+              className={`w-4 h-4 ${isSaved ? "fill-primary text-primary" : "text-dark-muted"}`}
+            />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onShare(verse); }} className="p-1">
+            <Share2 className="w-4 h-4 text-dark-muted" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onImage(verse); }} className="p-1">
+            <ImageIcon className="w-4 h-4 text-dark-muted" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

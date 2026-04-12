@@ -74,12 +74,25 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
 
   const handleShare = async () => {
     const shareText = `${reference}\n\n"${text}"\n\n📖 Leia na Bíblia`;
-    if (navigator.share) {
-      await navigator.share({ title: reference, text: shareText }).catch(() => {});
-    } else {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: reference, text: shareText });
+        return;
+      }
+    } catch {}
+    try {
       await navigator.clipboard.writeText(shareText);
-      toast.success("Copiado!");
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = shareText;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
     }
+    toast.success("Copiado!");
   };
 
   const handleViewContext = () => {

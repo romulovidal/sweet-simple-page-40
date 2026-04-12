@@ -224,18 +224,33 @@ const BiblePage = () => {
     return { text: content, reference, link };
   }, [selectedBook, selectedChapter, selectedVerses, verses]);
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  };
+
   const handleShareSelected = async () => {
     const { text, reference, link } = buildShareContent();
     if (!reference) return;
-
     const shareText = `${reference}\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
-
-    if (navigator.share) {
-      await navigator.share({ title: reference, text: shareText }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText(shareText);
-      toast("Versículos copiados!");
-    }
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: reference, text: shareText });
+        return;
+      }
+    } catch {}
+    await copyToClipboard(shareText);
+    toast("Versículos copiados!");
   };
 
   const handleSaveSelected = () => {

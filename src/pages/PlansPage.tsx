@@ -121,15 +121,10 @@ const PlansPage = () => {
       );
       toast.success("Leitura concluída! ✅");
     }
-    // Go to next day
-    const nextIndex = selectedDayIndex + 1;
-    if (nextIndex < readings.length) {
-      handleReadingClick(nextIndex);
-    } else {
-      setSelectedDayIndex(null);
-      setDayVerses([]);
-      toast.success("🎉 Você completou todas as leituras!");
-    }
+    // Return to plan day list
+    setSelectedDayIndex(null);
+    setDayVerses([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Reading detail view (showing text inline)
@@ -181,17 +176,13 @@ const PlansPage = () => {
           </div>
         )}
 
-        {/* Next day button */}
+        {/* Conclude button */}
         <div className="px-5 mt-8 pb-4">
           <button
             onClick={handleNextDay}
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
           >
-            {selectedDayIndex + 1 < readings.length ? (
-              <>Próximo <ChevronRight className="w-4 h-4" /></>
-            ) : (
-              "Concluir plano 🎉"
-            )}
+            Concluir leitura ✅
           </button>
         </div>
       </div>

@@ -11,11 +11,15 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
   const [saved, setSaved] = useState(false);
 
   const handleShare = async () => {
+    const shareText = `${reference}\n\n"${text}"\n\n📖 Leia aqui: ${window.location.origin}/biblia`;
+
     if (navigator.share) {
       await navigator.share({
         title: reference,
-        text: `"${text}" — ${reference}`,
+        text: shareText,
       }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(shareText);
     }
   };
 

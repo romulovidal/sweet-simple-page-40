@@ -129,6 +129,7 @@ const BiblePage = () => {
     </div>
   ) : null;
 
+  useEffect(() => {
     if (!selectedBook || !selectedChapter) return;
 
     let cancelled = false;

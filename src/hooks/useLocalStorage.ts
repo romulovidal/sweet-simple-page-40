@@ -54,6 +54,12 @@ export interface HighlightedVerse {
   color: string;
 }
 
+export interface DailyVerseEntry {
+  date: string;
+  text: string;
+  ref: string;
+}
+
 export interface ReadingProgress {
   bookAbbrev: string;
   bookName: string;

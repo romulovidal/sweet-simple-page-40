@@ -5,7 +5,7 @@ import VerseCard from "@/components/VerseCard";
 import { getDailyVerse, readingPlans, bibleBooks } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
-import { useLocalStorage, type ReadingProgress, type StreakData } from "@/hooks/useLocalStorage";
+import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -21,6 +21,7 @@ const HomePage = () => {
   const fallback = getDailyVerse();
   const [verse, setVerse] = useState<{ text: string; ref: string }>(fallback);
   const [verseLoading, setVerseLoading] = useState(true);
+  const [verseHistory, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -33,6 +34,11 @@ const HomePage = () => {
         if (parsed.date === today && parsed.verse?.text) {
           setVerse(parsed.verse);
           setVerseLoading(false);
+          // Ensure it's in history
+          setVerseHistory((prev) => {
+            if (prev.some((e) => e.date === today)) return prev;
+            return [{ date: today, ...parsed.verse }, ...prev].slice(0, 90);
+          });
           return;
         }
       }
@@ -49,6 +55,10 @@ const HomePage = () => {
           };
           setVerse(v);
           localStorage.setItem("daily-verse-cache", JSON.stringify({ date: today, verse: v }));
+          setVerseHistory((prev) => {
+            if (prev.some((e) => e.date === today)) return prev;
+            return [{ date: today, ...v }, ...prev].slice(0, 90);
+          });
         }
       })
       .catch(() => {

@@ -136,7 +136,7 @@ const PlansPage = () => {
           <div className="px-5 mb-4">
             <div className="bg-primary/10 rounded-xl p-4">
               <p className="text-xs font-semibold text-primary mb-2">📖 Devocional</p>
-              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">{plan.devotional}</p>
+              <p className="text-sm text-dark-text/80 leading-relaxed whitespace-pre-line">{plan.devotional}</p>
             </div>
           </div>
         )}

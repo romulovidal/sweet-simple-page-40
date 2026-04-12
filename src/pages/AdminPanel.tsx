@@ -508,6 +508,77 @@ const AdminPanel = () => {
                 {plans.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum plano ainda</p>}
               </div>
             </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-[hsl(var(--dark-muted))]">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="space-y-2">
+                {users.map((u) => (
+                  <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
+                        <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                          Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                    </div>
+                    {editingUser?.id === u.id ? (
+                      <div className="mt-3 pt-3 border-t border-background space-y-2">
+                        <Input
+                          value={editUserName}
+                          onChange={(e) => setEditUserName(e.target.value)}
+                          placeholder="Nome do usuário"
+                          className="bg-background border-none text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={async () => {
+                            const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
+                            if (error) { toast.error("Erro ao salvar"); return; }
+                            toast.success("Nome atualizado!");
+                            setEditingUser(null);
+                            fetchData();
+                          }}>
+                            <Save className="w-3 h-3 mr-1" /> Salvar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <button onClick={() => { setEditingUser(u); setEditUserName(u.display_name || ""); }}
+                          className="text-xs text-primary font-medium flex items-center gap-1">
+                          <Edit2 className="w-3 h-3" /> Editar
+                        </button>
+                        <button onClick={async () => {
+                          if (!window.confirm("Excluir este usuário e todos os dados dele?")) return;
+                          await supabase.from("user_plan_progress").delete().eq("user_id", u.user_id);
+                          await supabase.from("user_saved_verses").delete().eq("user_id", u.user_id);
+                          await supabase.from("user_streaks").delete().eq("user_id", u.user_id);
+                          await supabase.from("profiles").delete().eq("id", u.id);
+                          toast.success("Usuário removido");
+                          fetchData();
+                        }}
+                          className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+                          <Trash2 className="w-3 h-3" /> Excluir
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {users.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum usuário cadastrado</p>}
+              </div>
+            </>
           )}
         </div>
       )}

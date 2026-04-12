@@ -154,8 +154,15 @@ const HomePage = () => {
           >
             <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           </button>
-          <button className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
-            <Bell className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center transition-colors"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-[hsl(var(--streak-orange))]" />
+            ) : (
+              <Moon className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+            )}
           </button>
         </div>
       </header>

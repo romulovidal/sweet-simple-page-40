@@ -56,11 +56,11 @@ const PlansPage = () => {
 
   useEffect(() => {
     if (!selectedPlan) { setReadings([]); return; }
-    setLoadingReadings(true);
+    setLoadingVerses(true);
     supabase.from("admin_plan_readings").select("*").eq("plan_id", selectedPlan).order("day_number", { ascending: true })
       .then(({ data }) => {
         if (data) setReadings(data as unknown as DBReading[]);
-        setLoadingReadings(false);
+        setLoadingVerses(false);
       });
   }, [selectedPlan]);
 

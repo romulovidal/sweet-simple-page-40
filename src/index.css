@@ -45,11 +45,22 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
+    /* Dark theme (default) */
     --dark-bg: 220 25% 8%;
     --dark-card: 220 20% 14%;
     --dark-card-hover: 220 20% 18%;
     --dark-text: 220 15% 90%;
     --dark-muted: 220 10% 55%;
+    --streak-orange: 25 95% 55%;
+  }
+
+  /* Light theme overrides */
+  .light {
+    --dark-bg: 220 20% 97%;
+    --dark-card: 220 15% 92%;
+    --dark-card-hover: 220 15% 88%;
+    --dark-text: 220 20% 12%;
+    --dark-muted: 220 10% 45%;
     --streak-orange: 25 95% 55%;
   }
 }

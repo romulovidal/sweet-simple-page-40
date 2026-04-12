@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Loader2, Play, Heart, BookOpen, FileText, Megaphone } from "lucide-react";
+import { Search, Loader2, Play, Heart, BookOpen, FileText, Megaphone, Sun, Moon } from "lucide-react";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
+import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -28,6 +29,7 @@ interface DBPlan {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
@@ -152,8 +154,15 @@ const HomePage = () => {
           >
             <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           </button>
-          <button className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
-            <Bell className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center transition-colors"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-[hsl(var(--streak-orange))]" />
+            ) : (
+              <Moon className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+            )}
           </button>
         </div>
       </header>

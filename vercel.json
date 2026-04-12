@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/((?!biblias|icons|logo|manifest|robots|sw|placeholder).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

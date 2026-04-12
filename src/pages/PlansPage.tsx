@@ -41,10 +41,13 @@ const PlansPage = () => {
   const [plans, setPlans] = useState<DBPlan[]>([]);
   const [readings, setReadings] = useState<DBReading[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
-  const [dayVerses, setDayVerses] = useState<BibleVerse[]>([]);
   const [loadingVerses, setLoadingVerses] = useState(false);
   const [bibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
+
+  // Day reading state: which day is open, which reading index within that day
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [readingIndexInDay, setReadingIndexInDay] = useState(0);
+  const [dayVerses, setDayVerses] = useState<BibleVerse[]>([]);
 
   useEffect(() => {
     supabase.from("admin_plans").select("*").eq("is_active", true).order("sort_order", { ascending: true })
@@ -64,6 +67,14 @@ const PlansPage = () => {
       });
   }, [selectedPlan]);
 
+  // Group readings by day_number
+  const dayGroups = readings.reduce<Record<number, DBReading[]>>((acc, r) => {
+    if (!acc[r.day_number]) acc[r.day_number] = [];
+    acc[r.day_number].push(r);
+    return acc;
+  }, {});
+  const dayNumbers = Object.keys(dayGroups).map(Number).sort((a, b) => a - b);
+
   const plan = selectedPlan ? plans.find((p) => p.id === selectedPlan) : null;
   const progress = selectedPlan ? planProgress.find((p) => p.planId === selectedPlan) : null;
 
@@ -74,21 +85,21 @@ const PlansPage = () => {
     setSelectedPlan(planId);
   };
 
-  const toggleDayComplete = (dayIndex: number, e: React.MouseEvent) => {
+  const toggleDayComplete = (dayNum: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const isCompleting = !progress?.completedDays.includes(dayIndex);
+    const isCompleting = !progress?.completedDays.includes(dayNum);
     setPlanProgress((prev) =>
       prev.map((p) =>
         p.planId === selectedPlan
-          ? { ...p, completedDays: p.completedDays.includes(dayIndex) ? p.completedDays.filter((d) => d !== dayIndex) : [...p.completedDays, dayIndex] }
+          ? { ...p, completedDays: p.completedDays.includes(dayNum) ? p.completedDays.filter((d) => d !== dayNum) : [...p.completedDays, dayNum] }
           : p
       )
     );
-    if (isCompleting) toast.success("Leitura concluída! ✅");
-    else toast("Leitura desmarcada");
+    if (isCompleting) toast.success("Dia concluído! ✅");
+    else toast("Dia desmarcado");
   };
 
-  const loadDayVerses = useCallback(async (reading: DBReading) => {
+  const loadReadingVerses = useCallback(async (reading: DBReading) => {
     setLoadingVerses(true);
     try {
       const result = await getChapter(reading.book_abbrev, reading.chapter, bibleVersion);
@@ -106,53 +117,61 @@ const PlansPage = () => {
     setLoadingVerses(false);
   }, [bibleVersion]);
 
-  const handleReadingClick = (dayIndex: number) => {
-    setSelectedDayIndex(dayIndex);
-    const reading = readings[dayIndex];
-    if (reading) loadDayVerses(reading);
+  const openDay = (dayNum: number) => {
+    setSelectedDay(dayNum);
+    setReadingIndexInDay(0);
+    const dayReadings = dayGroups[dayNum];
+    if (dayReadings?.[0]) loadReadingVerses(dayReadings[0]);
   };
 
-  const handleNextDay = () => {
-    if (selectedDayIndex === null) return;
-    // Mark current day as complete
-    if (!progress?.completedDays.includes(selectedDayIndex)) {
-      setPlanProgress((prev) =>
-        prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, selectedDayIndex] } : p)
-      );
-      toast.success("Leitura concluída! ✅");
+  const handleNext = () => {
+    if (selectedDay === null) return;
+    const dayReadings = dayGroups[selectedDay] || [];
+    const nextIndex = readingIndexInDay + 1;
+    if (nextIndex < dayReadings.length) {
+      // Go to next reading within the same day
+      setReadingIndexInDay(nextIndex);
+      loadReadingVerses(dayReadings[nextIndex]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      // Last reading — mark day complete and go back
+      if (!progress?.completedDays.includes(selectedDay)) {
+        setPlanProgress((prev) =>
+          prev.map((p) => p.planId === selectedPlan ? { ...p, completedDays: [...p.completedDays, selectedDay] } : p)
+        );
+        toast.success("Dia concluído! ✅");
+      }
+      setSelectedDay(null);
+      setDayVerses([]);
+      setReadingIndexInDay(0);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-    // Return to plan day list
-    setSelectedDayIndex(null);
-    setDayVerses([]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Reading detail view (showing text inline)
-  if (plan && selectedDayIndex !== null) {
-    const reading = readings[selectedDayIndex];
+  // Reading detail view
+  if (plan && selectedDay !== null) {
+    const dayReadings = dayGroups[selectedDay] || [];
+    const reading = dayReadings[readingIndexInDay];
     const book = reading ? bibleBooks.find((b) => b.apiAbbrev === reading.book_abbrev) : null;
     const verseRange = reading?.verse_start
       ? `${reading.verse_start}${reading.verse_end ? `-${reading.verse_end}` : ""}`
       : "";
     const refLabel = `${book?.name || reading?.book_abbrev} ${reading?.chapter}${verseRange ? `:${verseRange}` : ""}`;
-    const isComplete = progress?.completedDays.includes(selectedDayIndex);
+    const isLastReading = readingIndexInDay >= dayReadings.length - 1;
 
     return (
       <div className="pb-20 min-h-screen">
         <header className="px-5 pt-12 pb-4 flex items-center gap-3">
-          <button onClick={() => { setSelectedDayIndex(null); setDayVerses([]); }}
+          <button onClick={() => { setSelectedDay(null); setDayVerses([]); setReadingIndexInDay(0); }}
             className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold">Dia {reading?.day_number || selectedDayIndex + 1}</h1>
-            <p className="text-xs text-[hsl(var(--dark-muted))]">{refLabel}</p>
+            <h1 className="text-lg font-bold">Dia {String(selectedDay).padStart(2, "0")}</h1>
+            <p className="text-xs text-[hsl(var(--dark-muted))]">
+              {refLabel} • {readingIndexInDay + 1}/{dayReadings.length}
+            </p>
           </div>
-          <button onClick={(e) => toggleDayComplete(selectedDayIndex, e)} className="transition-transform active:scale-90">
-            {isComplete
-              ? <CheckCircle className="w-7 h-7 text-primary" />
-              : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
-          </button>
         </header>
 
         {reading?.title && (
@@ -176,24 +195,26 @@ const PlansPage = () => {
           </div>
         )}
 
-        {/* Conclude button */}
         <div className="px-5 mt-8 pb-4">
           <button
-            onClick={handleNextDay}
+            onClick={handleNext}
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
           >
-            Concluir leitura ✅
+            {isLastReading ? (
+              "Encerrar dia ✅"
+            ) : (
+              <>Próximo <ChevronRight className="w-4 h-4" /></>
+            )}
           </button>
         </div>
       </div>
     );
   }
 
-  // Plan detail view (list of days)
+  // Plan detail view — simplified day list
   if (plan) {
     const completedDays = progress?.completedDays || [];
-    const totalReadings = readings.length;
-    const totalDays = plan.total_days || totalReadings;
+    const totalDays = plan.total_days || dayNumbers.length;
     const completedCount = completedDays.length;
     const progressPercent = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
 
@@ -207,12 +228,11 @@ const PlansPage = () => {
           <div className="flex-1">
             <h1 className="text-lg font-bold">{plan.title}</h1>
             <p className="text-xs text-[hsl(var(--dark-muted))]">
-              {completedCount}/{totalDays} leituras • {progressPercent}%
+              {completedCount}/{totalDays} dias • {progressPercent}%
             </p>
           </div>
         </header>
 
-        {/* Progress bar */}
         <div className="px-5 mb-4">
           <div className="w-full h-2.5 bg-[hsl(var(--dark-card))] rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
@@ -222,7 +242,6 @@ const PlansPage = () => {
           )}
         </div>
 
-        {/* Devotional */}
         {plan.devotional && (
           <div className="px-5 mb-4">
             <div className="bg-primary/10 rounded-xl p-4">
@@ -232,44 +251,38 @@ const PlansPage = () => {
           </div>
         )}
 
-        {/* Readings list */}
         {loadingVerses && readings.length === 0 ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="px-5 space-y-1.5">
-            {readings.map((reading, i) => {
-              const book = bibleBooks.find((b) => b.apiAbbrev === reading.book_abbrev);
-              const isComplete = completedDays.includes(i);
-              const verseRange = reading.verse_start
-                ? `${reading.verse_start}${reading.verse_end ? `-${reading.verse_end}` : ""}`
-                : "";
+          <div className="px-5 space-y-2">
+            {dayNumbers.map((dayNum) => {
+              const isComplete = completedDays.includes(dayNum);
+              const dayReadings = dayGroups[dayNum];
+              const chaptersCount = dayReadings.length;
               return (
-                <div key={reading.id} className={`flex items-center gap-3 rounded-xl transition-all ${isComplete ? "opacity-70" : ""}`}>
-                  <button onClick={(e) => toggleDayComplete(i, e)} className="flex-shrink-0 transition-transform active:scale-90">
+                <div key={dayNum} className={`flex items-center gap-3 rounded-xl transition-all ${isComplete ? "opacity-70" : ""}`}>
+                  <button onClick={(e) => toggleDayComplete(dayNum, e)} className="flex-shrink-0 transition-transform active:scale-90">
                     {isComplete
                       ? <CheckCircle className="w-7 h-7 text-primary" />
                       : <Circle className="w-7 h-7 text-[hsl(var(--dark-muted))]" />}
                   </button>
                   <button
-                    onClick={() => handleReadingClick(i)}
-                    className="flex-1 py-3 px-4 rounded-xl text-left active:bg-[hsl(var(--dark-card))] transition-colors">
-                    {reading.title && (
-                      <p className="text-[10px] font-semibold text-primary mb-0.5">{reading.title}</p>
-                    )}
+                    onClick={() => openDay(dayNum)}
+                    className="flex-1 py-3 px-4 rounded-xl text-left active:bg-[hsl(var(--dark-card))] transition-colors"
+                  >
                     <p className={`text-sm font-semibold ${isComplete ? "line-through text-[hsl(var(--dark-muted))]" : ""}`}>
-                      {book?.name || reading.book_abbrev} {reading.chapter}
-                      {verseRange && <span className="font-normal text-[hsl(var(--dark-muted))]">:{verseRange}</span>}
+                      Dia {String(dayNum).padStart(2, "0")}
                     </p>
                     <p className="text-xs text-[hsl(var(--dark-muted))]">
-                      {isComplete ? "✓ Lido" : `Dia ${reading.day_number}`}
+                      {isComplete ? "✓ Concluído" : `${chaptersCount} leitura${chaptersCount > 1 ? "s" : ""}`}
                     </p>
                   </button>
                 </div>
               );
             })}
-            {readings.length === 0 && (
+            {dayNumbers.length === 0 && (
               <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">
                 Este plano ainda não tem leituras cadastradas.
               </p>

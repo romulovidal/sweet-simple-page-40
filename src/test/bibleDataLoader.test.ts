@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadBundledBibleVersion } from "@/services/bibleDataLoader";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("bibleDataLoader", () => {
   it("loads bundled NVI bible data", async () => {
@@ -15,6 +19,5 @@ describe("bibleDataLoader", () => {
     expect(Array.isArray(data[0].chapters)).toBe(true);
     expect(data[0].chapters.length).toBeGreaterThan(0);
 
-    fetchMock.mockRestore();
   });
 });

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight } from "lucide-react";
+import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getChapter, type BibleVerse, DEFAULT_VERSION_ID } from "@/services/bibleApi";
+import { getChapter, type BibleVerse, DEFAULT_VERSION_ID, BIBLE_VERSIONS, getVersionById } from "@/services/bibleApi";
+import { isRedLetterVerse } from "@/data/redLetterVerses";
 
 interface PlanProgress {
   planId: string;

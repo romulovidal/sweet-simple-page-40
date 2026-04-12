@@ -516,8 +516,7 @@ const BiblePage = () => {
                 const isUrlHighlighted = highlightedVerse === verse.number && !hasSelection;
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
-                const englishBookName = bookNameMap[selectedBook.apiAbbrev] || "";
-                const isRedLetter = isRedLetterVerse(englishBookName, selectedChapter, verse.number);
+                const isRedLetter = isRedLetterVerse(selectedBook.apiAbbrev, selectedChapter, verse.number);
 
                 return (
                   <VerseRow

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
+import ScrollToTop from "@/components/ScrollToTop";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -20,6 +21,7 @@ const AppContent = () => {
 
   return (
     <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/biblia" element={<BiblePage />} />

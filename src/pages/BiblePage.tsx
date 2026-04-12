@@ -38,8 +38,23 @@ const BiblePage = () => {
 
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [highlights, setHighlights] = useLocalStorage<HighlightedVerse[]>("highlighted-verses", []);
-  const [, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
+  const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
+
+  // On mount, restore last reading position if no search params
+  useEffect(() => {
+    const hasParams = searchParams.get("book") && searchParams.get("chapter");
+    if (!hasParams && !selectedBook && progress) {
+      const book = bibleBooks.find((b) => b.apiAbbrev === progress.bookAbbrev);
+      if (book) {
+        setSelectedBook(book);
+        setTestament(book.testament);
+        setSelectedChapter(progress.chapter);
+      }
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reset selection when chapter changes
   useEffect(() => {

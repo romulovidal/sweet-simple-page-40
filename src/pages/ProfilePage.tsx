@@ -156,7 +156,7 @@ const ProfilePage = () => {
         <div className="pb-20 min-h-screen">
           <header className="px-5 pt-12 pb-6 text-center">
             <img src="/logo.png" alt="Logo" className="w-20 h-20 mx-auto mb-4 rounded-2xl" />
-            <h1 className="text-2xl font-bold">Bíblia do Atalaia</h1>
+            <h1 className="text-2xl font-bold">A Bíblia do Atalaia</h1>
             <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">Entre para salvar seu progresso</p>
           </header>
 

@@ -123,14 +123,9 @@ export async function syncPendingPushRegistration(): Promise<boolean> {
     return false;
   }
 
-  const hasPendingRegistration = Boolean(localStorage.getItem(PUSH_SYNC_STORAGE_KEY));
-
   try {
-    const enabled = await isPushEnabled();
-    if (!enabled || hasPendingRegistration) {
-      return await saveSubscription();
-    }
-    return true;
+    persistPendingRegistration();
+    return await saveSubscription();
   } catch (e) {
     console.error("Push sync error:", e);
     return false;

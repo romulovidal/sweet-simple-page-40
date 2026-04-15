@@ -38,6 +38,7 @@ const AppContent = () => {
       </Routes>
       {!isAdmin && <ThemeToggleFloat />}
       {!isAdmin && <InstallPrompt />}
+      <UpdatePrompt />
       {!isAdmin && <BottomNav />}
     </div>
   );

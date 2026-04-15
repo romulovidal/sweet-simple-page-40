@@ -117,22 +117,5 @@ export function updateStreak(streak: StreakData): StreakData {
     lastDate: today,
     history,
   };
-}
-  const today = getToday();
-  if (streak.lastDate === today) return streak;
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-  const isConsecutive = streak.lastDate === yesterdayStr;
-  const history = streak.history.includes(today)
-    ? streak.history
-    : [...streak.history, today].slice(-365);
-
-  return {
-    current: isConsecutive ? streak.current + 1 : 1,
-    lastDate: today,
-    history,
-  };
-}

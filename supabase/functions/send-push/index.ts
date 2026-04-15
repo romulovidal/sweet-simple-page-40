@@ -18,10 +18,15 @@ function isSafeRelativeUrl(value: string) {
   return value.startsWith("/") && !value.startsWith("//");
 }
 
-async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: string) {
+async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) {
     return { error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/, "");
+  if (token === serviceKey) {
+    return { userId: "service-role" };
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {
@@ -90,7 +95,7 @@ Deno.serve(async (req) => {
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;
 
-    const authResult = await requireAdminUser(req, supabaseUrl, anonKey);
+    const authResult = await requireAdminUser(req, supabaseUrl, anonKey, serviceKey);
     if (authResult.error) {
       return authResult.error;
     }

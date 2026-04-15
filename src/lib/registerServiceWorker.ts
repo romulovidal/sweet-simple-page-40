@@ -54,6 +54,11 @@ function sendPrecacheMessage(registration: ServiceWorkerRegistration) {
   });
 }
 
+function applyWaitingUpdate(registration: ServiceWorkerRegistration) {
+  if (!registration.waiting) return;
+  registration.waiting.postMessage({ type: "SKIP_WAITING" });
+}
+
 export async function registerAppServiceWorker() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) {
     return;
@@ -63,22 +68,52 @@ export async function registerAppServiceWorker() {
     const registration = await navigator.serviceWorker.register("/sw.js");
     sendPrecacheMessage(registration);
 
+    // Force-apply any waiting update immediately (covers users on old versions)
+    applyWaitingUpdate(registration);
+
+    // When the controller changes (new SW took over), reload to get fresh code
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+
+    // Auto-apply updates as soon as they install
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) return;
+
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          applyWaitingUpdate(registration);
+        }
+      });
+    });
+
     navigator.serviceWorker.ready
       .then(() => sendPrecacheMessage(registration))
       .catch(() => undefined);
 
+    // Check for SW updates on reconnect
     window.addEventListener("online", () => {
-      // When coming back online, check for SW updates immediately
       registration.update().catch(() => {});
       sendPrecacheMessage(registration);
     });
 
-    // Also check for updates on visibility change (user returns to tab)
+    // Check for SW updates when tab becomes visible
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && navigator.onLine) {
         registration.update().catch(() => {});
       }
     });
+
+    // Periodic check every 10 minutes
+    setInterval(() => {
+      if (navigator.onLine) {
+        registration.update().catch(() => {});
+      }
+    }, 10 * 60 * 1000);
   } catch (error) {
     console.error("Service worker registration error:", error);
   }

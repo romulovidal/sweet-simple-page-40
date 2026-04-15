@@ -32,11 +32,9 @@ function clearPendingRegistration() {
 }
 
 async function getActiveRegistration() {
-  const existing = await navigator.serviceWorker.getRegistration("/sw.js");
-  if (existing) {
-    return existing;
-  }
-
+  // Try without scope first (matches any SW), then fall back to registering
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing) return existing;
   return navigator.serviceWorker.register("/sw.js");
 }
 
@@ -60,30 +58,23 @@ async function saveSubscription() {
 
   const sub = await getSubscriptionJson(registration);
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  const payload = {
-    endpoint: sub.endpoint!,
-    p256dh: sub.keys!.p256dh,
-    auth: sub.keys!.auth,
-    user_id: user?.id ?? null,
-  };
+  // Use the edge function (service role) to bypass RLS issues
+  const { data, error } = await supabase.functions.invoke("push-subscription", {
+    body: {
+      endpoint: sub.endpoint!,
+      p256dh: sub.keys!.p256dh,
+      auth: sub.keys!.auth,
+      user_id: session?.user?.id ?? null,
+      action: "upsert",
+    },
+  });
 
-  // Try upsert first, fall back to delete+insert if it fails (RLS edge cases)
-  const { error } = await supabase
-    .from("push_subscriptions")
-    .upsert(payload, { onConflict: "endpoint" });
-
-  if (error) {
-    console.warn("Upsert failed, trying delete+insert:", error.message);
-    // Delete any existing row for this endpoint, then insert fresh
-    await supabase.from("push_subscriptions").delete().eq("endpoint", payload.endpoint);
-    const { error: insertError } = await supabase.from("push_subscriptions").insert(payload);
-    if (insertError) {
-      console.error("Push subscription save failed:", insertError);
-      throw insertError;
-    }
+  if (error || !data?.ok) {
+    console.error("Push subscription save failed:", error ?? data);
+    throw error ?? new Error("Failed to save push subscription");
   }
 
   clearPendingRegistration();
@@ -123,14 +114,8 @@ export async function syncPendingPushRegistration(): Promise<boolean> {
     return false;
   }
 
-  const hasPendingRegistration = Boolean(localStorage.getItem(PUSH_SYNC_STORAGE_KEY));
-
   try {
-    const enabled = await isPushEnabled();
-    if (!enabled || hasPendingRegistration) {
-      return await saveSubscription();
-    }
-    return true;
+    return await saveSubscription();
   } catch (e) {
     console.error("Push sync error:", e);
     return false;
@@ -140,7 +125,7 @@ export async function syncPendingPushRegistration(): Promise<boolean> {
 export async function isPushEnabled(): Promise<boolean> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
   try {
-    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) return false;
     const sub = await reg.pushManager.getSubscription();
     return !!sub;
@@ -152,11 +137,18 @@ export async function isPushEnabled(): Promise<boolean> {
 export async function unregisterPush(): Promise<void> {
   try {
     clearPendingRegistration();
-    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) return;
     const sub = await reg.pushManager.getSubscription();
     if (sub) {
-      await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      await supabase.functions.invoke("push-subscription", {
+        body: {
+          endpoint: sub.endpoint,
+          p256dh: "x",
+          auth: "x",
+          action: "delete",
+        },
+      });
       await sub.unsubscribe();
     }
   } catch (e) {

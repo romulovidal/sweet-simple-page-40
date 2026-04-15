@@ -1,8 +1,10 @@
-const SHELL_CACHE = "app-shell-v8";
-const RUNTIME_CACHE = "app-runtime-v8";
-const BIBLE_CACHE = "bible-offline-v5";
-const OFFLINE_FALLBACK_URL = "/";
-const CORE_URLS = [
+// Bump this version to force update on all devices
+var SW_VERSION = "v10";
+var SHELL_CACHE = "app-shell-" + SW_VERSION;
+var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
+var BIBLE_CACHE = "bible-offline-v5";
+var OFFLINE_FALLBACK_URL = "/";
+var CORE_URLS = [
   "/",
   "/manifest.json",
   "/logo.png",
@@ -17,26 +19,26 @@ async function addUrlToCache(cache, url) {
 }
 
 async function precacheShell() {
-  const cache = await caches.open(SHELL_CACHE);
+  var cache = await caches.open(SHELL_CACHE);
 
-  for (const url of CORE_URLS) {
-    await addUrlToCache(cache, url);
+  for (var i = 0; i < CORE_URLS.length; i++) {
+    await addUrlToCache(cache, CORE_URLS[i]);
   }
 
   try {
-    const response = await fetch(OFFLINE_FALLBACK_URL, { cache: "no-store" });
+    var response = await fetch(OFFLINE_FALLBACK_URL, { cache: "no-store" });
     if (!response || !response.ok) return;
 
     await cache.put(OFFLINE_FALLBACK_URL, response.clone());
     await cache.put("/index.html", response.clone());
 
-    const html = await response.text();
-    const assetUrls = [...html.matchAll(/(?:href|src)=["']([^"']+)["']/g)]
-      .map((match) => match[1])
-      .filter((value) => value.startsWith("/"));
-
-    for (const assetUrl of assetUrls) {
-      await addUrlToCache(cache, assetUrl);
+    var html = await response.text();
+    var matches = html.match(/(?:href|src)=["']([^"']+)["']/g) || [];
+    for (var j = 0; j < matches.length; j++) {
+      var match = matches[j].match(/(?:href|src)=["']([^"']+)["']/);
+      if (match && match[1] && match[1].charAt(0) === "/") {
+        await addUrlToCache(cache, match[1]);
+      }
     }
   } catch (error) {
     console.warn("Shell precache failed:", error);
@@ -44,12 +46,14 @@ async function precacheShell() {
 }
 
 async function cleanupCaches() {
-  const cacheNames = await caches.keys();
-  await Promise.all(
-    cacheNames
-      .filter((name) => ![SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE].includes(name))
-      .map((name) => caches.delete(name))
-  );
+  var cacheNames = await caches.keys();
+  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE];
+  var toDelete = cacheNames.filter(function(name) {
+    return keep.indexOf(name) === -1;
+  });
+  for (var i = 0; i < toDelete.length; i++) {
+    await caches.delete(toDelete[i]);
+  }
 }
 
 function isSameOrigin(url) {
@@ -59,8 +63,8 @@ function isSameOrigin(url) {
 function isCacheableRequest(requestUrl) {
   return (
     requestUrl.pathname === "/" ||
-    requestUrl.pathname.startsWith("/assets/") ||
-    requestUrl.pathname.startsWith("/biblias/") ||
+    requestUrl.pathname.indexOf("/assets/") === 0 ||
+    requestUrl.pathname.indexOf("/biblias/") === 0 ||
     requestUrl.pathname === "/manifest.json" ||
     requestUrl.pathname === "/admin-manifest.json" ||
     requestUrl.pathname === "/logo.png" ||
@@ -69,33 +73,31 @@ function isCacheableRequest(requestUrl) {
 }
 
 function isBibleRequest(requestUrl) {
-  return requestUrl.pathname.startsWith("/biblias/");
+  return requestUrl.pathname.indexOf("/biblias/") === 0;
 }
 
 function isHashedAsset(requestUrl) {
-  // Vite hashed assets like /assets/index-BVkekbiH.js
   return /\/assets\/.*-[a-zA-Z0-9]{6,}\.\w+$/.test(requestUrl.pathname);
 }
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(precacheShell().then(() => self.skipWaiting()));
+self.addEventListener("install", function(event) {
+  event.waitUntil(precacheShell().then(function() { return self.skipWaiting(); }));
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", function(event) {
   event.waitUntil(
-    cleanupCaches().then(() => self.clients.claim()).then(() => {
-      // Notify all clients that a new version is active
-      self.clients.matchAll({ type: "window" }).then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: "SW_UPDATED" });
+    cleanupCaches().then(function() { return self.clients.claim(); }).then(function() {
+      return self.clients.matchAll({ type: "window" }).then(function(clients) {
+        clients.forEach(function(client) {
+          client.postMessage({ type: "SW_UPDATED", version: SW_VERSION });
         });
       });
     })
   );
 });
 
-self.addEventListener("message", (event) => {
-  const data = event.data;
+self.addEventListener("message", function(event) {
+  var data = event.data;
 
   if (data && data.type === "SKIP_WAITING") {
     self.skipWaiting();
@@ -105,120 +107,113 @@ self.addEventListener("message", (event) => {
   if (!data || data.type !== "PRECACHE_URLS" || !Array.isArray(data.urls)) return;
 
   event.waitUntil(
-    caches.open(SHELL_CACHE).then(async (cache) => {
-      for (const rawUrl of data.urls) {
-        try {
-          const url = new URL(rawUrl, self.location.origin);
-          if (!isSameOrigin(url) || !isCacheableRequest(url)) continue;
-          await addUrlToCache(cache, `${url.pathname}${url.search}`);
-        } catch {
-          continue;
-        }
+    caches.open(SHELL_CACHE).then(function(cache) {
+      var urls = data.urls;
+      var chain = Promise.resolve();
+      for (var i = 0; i < urls.length; i++) {
+        (function(rawUrl) {
+          chain = chain.then(function() {
+            try {
+              var url = new URL(rawUrl, self.location.origin);
+              if (!isSameOrigin(url) || !isCacheableRequest(url)) return;
+              return addUrlToCache(cache, url.pathname + url.search);
+            } catch(e) {
+              return;
+            }
+          });
+        })(urls[i]);
       }
+      return chain;
     })
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
+self.addEventListener("fetch", function(event) {
+  var request = event.request;
   if (request.method !== "GET") return;
 
-  const url = new URL(request.url);
+  var url = new URL(request.url);
   if (!isSameOrigin(url)) return;
 
   // Navigation: always network-first
   if (request.mode === "navigate") {
     event.respondWith(
-      (async () => {
-        const shellCache = await caches.open(SHELL_CACHE);
-
-        try {
-          const response = await fetch(request, { cache: "no-store" });
-          if (response && response.ok) {
-            await shellCache.put(OFFLINE_FALLBACK_URL, response.clone());
-          }
-          return response;
-        } catch {
-          return (
-            (await shellCache.match(request)) ||
-            (await shellCache.match(OFFLINE_FALLBACK_URL)) ||
-            (await shellCache.match("/index.html")) ||
-            Response.error()
-          );
-        }
+      (function() {
+        return caches.open(SHELL_CACHE).then(function(shellCache) {
+          return fetch(request, { cache: "no-store" }).then(function(response) {
+            if (response && response.ok) {
+              shellCache.put(OFFLINE_FALLBACK_URL, response.clone());
+            }
+            return response;
+          }).catch(function() {
+            return shellCache.match(request).then(function(cached) {
+              return cached || shellCache.match(OFFLINE_FALLBACK_URL).then(function(fallback) {
+                return fallback || shellCache.match("/index.html").then(function(index) {
+                  return index || Response.error();
+                });
+              });
+            });
+          });
+        });
       })()
     );
     return;
   }
 
-  if (!isCacheableRequest(url)) {
-    return;
-  }
+  if (!isCacheableRequest(url)) return;
 
-  // Bible data: network-first, cache fallback
+  // Bible data: network-first
   if (isBibleRequest(url)) {
     event.respondWith(
-      (async () => {
-        const cache = await caches.open(RUNTIME_CACHE);
-
-        try {
-          const response = await fetch(request, { cache: "no-store" });
-          if (response && response.ok) {
-            await cache.put(request, response.clone());
-          }
+      caches.open(RUNTIME_CACHE).then(function(cache) {
+        return fetch(request, { cache: "no-store" }).then(function(response) {
+          if (response && response.ok) cache.put(request, response.clone());
           return response;
-        } catch {
-          return (await cache.match(request)) || Response.error();
-        }
-      })()
+        }).catch(function() {
+          return cache.match(request).then(function(cached) {
+            return cached || Response.error();
+          });
+        });
+      })
     );
     return;
   }
 
-  // Hashed assets (immutable): cache-first is safe since hash changes on update
+  // Hashed assets: cache-first
   if (isHashedAsset(url)) {
     event.respondWith(
-      (async () => {
-        const cache = await caches.open(SHELL_CACHE);
-        const cachedResponse = await cache.match(request);
-        if (cachedResponse) return cachedResponse;
-
-        try {
-          const response = await fetch(request);
-          if (response && response.ok) {
-            await cache.put(request, response.clone());
-          }
-          return response;
-        } catch {
-          return Response.error();
-        }
-      })()
+      caches.open(SHELL_CACHE).then(function(cache) {
+        return cache.match(request).then(function(cached) {
+          if (cached) return cached;
+          return fetch(request).then(function(response) {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          }).catch(function() {
+            return Response.error();
+          });
+        });
+      })
     );
     return;
   }
 
-  // All other assets: network-first when online, cache fallback offline
+  // Other assets: network-first
   event.respondWith(
-    (async () => {
-      const cacheName = RUNTIME_CACHE;
-      const cache = await caches.open(cacheName);
-
-      try {
-        const response = await fetch(request);
-        if (response && response.ok) {
-          await cache.put(request, response.clone());
-        }
+    caches.open(RUNTIME_CACHE).then(function(cache) {
+      return fetch(request).then(function(response) {
+        if (response && response.ok) cache.put(request, response.clone());
         return response;
-      } catch {
-        const cachedResponse = await cache.match(request);
-        return cachedResponse || Response.error();
-      }
-    })()
+      }).catch(function() {
+        return cache.match(request).then(function(cached) {
+          return cached || Response.error();
+        });
+      });
+    })
   );
 });
 
-self.addEventListener("push", (event) => {
-  let data = { title: "Versiculo do Dia", body: "Abra o app para ler", url: "/" };
+self.addEventListener("push", function(event) {
+  var data = { title: "Versiculo do Dia", body: "Abra o app para ler", url: "/" };
 
   try {
     if (event.data) {
@@ -228,7 +223,7 @@ self.addEventListener("push", (event) => {
     console.error("Push parse error:", error);
   }
 
-  const options = {
+  var options = {
     body: data.body,
     icon: "/logo.png",
     badge: "/logo.png",
@@ -240,19 +235,19 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", function(event) {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
+  var targetUrl = (event.notification.data && event.notification.data.url) || "/";
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ("focus" in client && client.url.startsWith(self.location.origin)) {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if ("focus" in client && client.url.indexOf(self.location.origin) === 0) {
           client.navigate(targetUrl);
           return client.focus();
         }
       }
-
       return clients.openWindow(targetUrl);
     })
   );

@@ -414,13 +414,16 @@ const BiblePage = () => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowVersionPicker(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
-            >
-              {currentVersion.shortName}
-              <ChevronDown className="w-3 h-3 text-dark-muted" />
-            </button>
+            <div className="flex items-center gap-2">
+              <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+              <button
+                onClick={() => setShowVersionPicker(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+              >
+                {currentVersion.shortName}
+                <ChevronDown className="w-3 h-3 text-dark-muted" />
+              </button>
+            </div>
           )}
         </header>
 

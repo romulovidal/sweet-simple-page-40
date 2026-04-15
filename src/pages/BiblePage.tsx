@@ -560,6 +560,7 @@ const BiblePage = () => {
                   if (selectedChapter <= 1) return;
                   setHighlightedVerse(null);
                   setSelectedChapter(selectedChapter - 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 disabled={selectedChapter <= 1}
                 className="text-sm font-semibold text-primary disabled:opacity-30"
@@ -571,6 +572,7 @@ const BiblePage = () => {
                   if (selectedChapter >= selectedBook.chapters) return;
                   setHighlightedVerse(null);
                   setSelectedChapter(selectedChapter + 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 disabled={selectedChapter >= selectedBook.chapters}
                 className="text-sm font-semibold text-primary disabled:opacity-30"

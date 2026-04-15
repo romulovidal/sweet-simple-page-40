@@ -1,5 +1,9 @@
 import { bibleBooks } from "@/data/bible";
-import { loadBundledBibleVersion, type BibleBookData } from "@/services/bibleDataLoader";
+import {
+  loadBundledBibleVersion,
+  type BibleBookData,
+  type BibleEpigraphData,
+} from "@/services/bibleDataLoader";
 
 // ── Bible Version Definitions ──
 export interface BibleVersion {
@@ -7,15 +11,16 @@ export interface BibleVersion {
   name: string;
   shortName: string;
   fileName: string; // JSON file name in /biblias/
+  supportsEpigraphs: boolean;
 }
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: "ara", name: "Almeida Revista e Atualizada", shortName: "ARA", fileName: "ARA" },
-  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", fileName: "ARC" },
-  { id: "acf", name: "Almeida Corrigida Fiel", shortName: "ACF", fileName: "ACF" },
-  { id: "nvi", name: "Nova Versão Internacional", shortName: "NVI", fileName: "NVI" },
-  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", fileName: "NTLH" },
-  { id: "kja", name: "King James Atualizada", shortName: "KJA", fileName: "KJA" },
+  { id: "ara", name: "Almeida Revista e Atualizada", shortName: "ARA", fileName: "ARA", supportsEpigraphs: true },
+  { id: "arc", name: "Almeida Revista e Corrigida", shortName: "ARC", fileName: "ARC", supportsEpigraphs: true },
+  { id: "acf", name: "Almeida Corrigida Fiel", shortName: "ACF", fileName: "ACF", supportsEpigraphs: true },
+  { id: "nvi", name: "Nova Versão Internacional", shortName: "NVI", fileName: "NVI", supportsEpigraphs: true },
+  { id: "ntlh", name: "Nova Tradução na Linguagem de Hoje", shortName: "NTLH", fileName: "NTLH", supportsEpigraphs: true },
+  { id: "kja", name: "King James Atualizada", shortName: "KJA", fileName: "KJA", supportsEpigraphs: true },
 ];
 
 export const DEFAULT_VERSION_ID = "nvi";
@@ -29,9 +34,18 @@ export interface BibleVerse {
   text: string;
 }
 
+export interface BibleChapterEpigraph {
+  title: string;
+  start: BibleEpigraphData["start"];
+  end: BibleEpigraphData["end"];
+  displayVerse: number;
+  continuesFromPreviousChapter: boolean;
+}
+
 export interface ChapterResponse {
   reference: string;
   verses: BibleVerse[];
+  epigraphs: BibleChapterEpigraph[];
 }
 
 // Map from app apiAbbrev → JSON file abbrev (lowercase)
@@ -73,6 +87,21 @@ async function loadBibleVersion(fileName: string): Promise<BibleBookData[]> {
   return data;
 }
 
+function getChapterEpigraphs(book: BibleBookData, chapter: number): BibleChapterEpigraph[] {
+  if (!book.epigraphs?.length) return [];
+
+  return book.epigraphs
+    .filter((epigraph) => epigraph.start.chapter <= chapter && epigraph.end.chapter >= chapter)
+    .map((epigraph) => ({
+      title: epigraph.title.trim(),
+      start: epigraph.start,
+      end: epigraph.end,
+      displayVerse: epigraph.start.chapter === chapter ? epigraph.start.verse : 1,
+      continuesFromPreviousChapter: epigraph.start.chapter < chapter,
+    }))
+    .sort((first, second) => first.displayVerse - second.displayVerse || first.title.localeCompare(second.title));
+}
+
 // ── Public API ──
 export async function getChapter(
   abbrev: string,
@@ -103,6 +132,7 @@ export async function getChapter(
       number: index + 1,
       text: text.trim(),
     })),
+    epigraphs: getChapterEpigraphs(book, chapter),
   };
 }
 

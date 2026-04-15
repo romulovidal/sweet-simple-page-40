@@ -9,6 +9,7 @@ import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerse
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
@@ -27,6 +28,10 @@ interface DBPlan {
   total_days: number | null;
 }
 
+const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
+const ADMIN_PLANS_CACHE_KEY = "cached-admin-plans";
+const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
+
 const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -42,25 +47,31 @@ const HomePage = () => {
   const [, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 
   // DB plans
-  const [dbPlans, setDbPlans] = useState<DBPlan[]>([]);
+  const [dbPlans, setDbPlans] = useState<DBPlan[]>(() => readJsonStorage<DBPlan[]>(ADMIN_PLANS_CACHE_KEY, []));
+  const [adminPosts, setAdminPosts] = useState<AdminPost[]>(() => readJsonStorage<AdminPost[]>(ADMIN_POSTS_CACHE_KEY, []));
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
-    try {
-      const cached = localStorage.getItem("daily-verse-cache");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.date === today && parsed.verse?.text) {
-          setVerse(parsed.verse);
-          setVerseLoading(false);
-          setVerseHistory((prev) => {
-            if (prev.some((e) => e.date === today)) return prev;
-            return [{ date: today, ...parsed.verse }, ...prev].slice(0, 90);
-          });
-          return;
-        }
-      }
-    } catch {}
+    const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
+    const cached = readJsonStorage<{ date: string; verse: { text: string; ref: string } } | null>(
+      DAILY_VERSE_CACHE_KEY,
+      null
+    );
+
+    if (cached?.date === today && cached.verse?.text) {
+      setVerse(cached.verse);
+      setVerseLoading(false);
+      setVerseHistory((prev) => {
+        if (prev.some((e) => e.date === today)) return prev;
+        return [{ date: today, ...cached.verse }, ...prev].slice(0, 90);
+      });
+      return;
+    }
+
+    if (!isOnline) {
+      setVerseLoading(false);
+      return;
+    }
 
     setVerseLoading(true);
     getRandomVerse()
@@ -68,7 +79,7 @@ const HomePage = () => {
         if (data?.text) {
           const v = { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
           setVerse(v);
-          localStorage.setItem("daily-verse-cache", JSON.stringify({ date: today, verse: v }));
+          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, verse: v }, false, "cache");
           setVerseHistory((prev) => {
             if (prev.some((e) => e.date === today)) return prev;
             return [{ date: today, ...v }, ...prev].slice(0, 90);
@@ -77,31 +88,47 @@ const HomePage = () => {
       })
       .catch(() => {})
       .finally(() => setVerseLoading(false));
-  }, []);
+  }, [setVerseHistory]);
 
   // Fetch DB plans
   useEffect(() => {
+    let cancelled = false;
+
     supabase
       .from("admin_plans")
       .select("id, title, description, image_emoji, category, total_days")
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        if (data) setDbPlans(data as unknown as DBPlan[]);
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const nextPlans = data as unknown as DBPlan[];
+        setDbPlans(nextPlans);
+        writeJsonStorage(ADMIN_PLANS_CACHE_KEY, nextPlans, false, "cache");
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch admin posts
-  const [adminPosts, setAdminPosts] = useState<AdminPost[]>([]);
   useEffect(() => {
+    let cancelled = false;
+
     supabase
       .from("admin_posts")
       .select("*")
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        if (data) setAdminPosts(data);
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        setAdminPosts(data);
+        writeJsonStorage(ADMIN_POSTS_CACHE_KEY, data, false, "cache");
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleContinueReading = () => {
@@ -281,7 +308,7 @@ const HomePage = () => {
                     <button
                       key={plan.id}
                       onClick={() => {
-                        localStorage.setItem("selected-plan", JSON.stringify(plan.id));
+                        writeJsonStorage("selected-plan", plan.id);
                         navigate("/planos");
                       }}
                       className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 mb-2 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"

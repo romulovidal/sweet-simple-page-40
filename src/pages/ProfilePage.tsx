@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { registerPushNotifications, isPushEnabled, unregisterPush } from "@/lib/pushNotifications";
 import { supabase } from "@/integrations/supabase/client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
@@ -141,6 +140,38 @@ const ProfilePage = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    if (authMode === "signup" && !lgpdAccepted) {
+      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
+      return;
+    }
+    try {
+      const redirectTo = `${window.location.origin}/perfil`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(getErrorMessage(error, "Erro ao entrar com Google"));
+        return;
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      toast.error("Nao foi possivel iniciar o login com Google.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Erro ao entrar com Google"));
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -190,7 +221,6 @@ const ProfilePage = () => {
                 </label>
               </div>
             )}
-
 
             {/* Email form */}
             <form onSubmit={handleEmailAuth} className="space-y-3">

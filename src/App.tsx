@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
+import OfflineSyncBootstrap from "@/components/OfflineSyncBootstrap";
 import ScrollToTop from "@/components/ScrollToTop";
 import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -46,6 +47,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <OfflineSyncBootstrap />
       <BrowserRouter>
         <AppContent />
       </BrowserRouter>

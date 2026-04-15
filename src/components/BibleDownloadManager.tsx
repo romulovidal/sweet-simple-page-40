@@ -2,23 +2,23 @@ import { useEffect, useState } from "react";
 import { Download, Check, Trash2, Loader2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { BIBLE_VERSIONS, type BibleVersion } from "@/services/bibleApi";
-import { isVersionCached, downloadVersion, removeVersion } from "@/lib/bibleOffline";
+import { downloadVersion, getCachedVersions, removeVersion } from "@/lib/bibleOffline";
 
 const BibleDownloadManager = () => {
   const [cachedVersions, setCachedVersions] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [supportsOffline, setSupportsOffline] = useState("caches" in globalThis);
+
+  const refreshCachedVersions = async () => {
+    const cached = await getCachedVersions();
+    setCachedVersions(new Set(cached));
+  };
 
   useEffect(() => {
-    const check = async () => {
-      const cached = new Set<string>();
-      for (const v of BIBLE_VERSIONS) {
-        if (await isVersionCached(v)) cached.add(v.id);
-      }
-      setCachedVersions(cached);
-    };
-    check();
+    setSupportsOffline("caches" in globalThis);
+    refreshCachedVersions();
 
     const onOnline = () => setIsOnline(true);
     const onOffline = () => setIsOnline(false);
@@ -35,10 +35,11 @@ const BibleDownloadManager = () => {
     setProgress(0);
     try {
       await downloadVersion(version, setProgress);
-      setCachedVersions((prev) => new Set([...prev, version.id]));
+      await refreshCachedVersions();
       toast.success(`${version.shortName} baixada com sucesso!`);
-    } catch {
-      toast.error(`Erro ao baixar ${version.shortName}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Erro ao baixar ${version.shortName}`;
+      toast.error(message);
     } finally {
       setDownloading(null);
     }
@@ -46,18 +47,14 @@ const BibleDownloadManager = () => {
 
   const handleRemove = async (version: BibleVersion) => {
     await removeVersion(version);
-    setCachedVersions((prev) => {
-      const next = new Set(prev);
-      next.delete(version.id);
-      return next;
-    });
+    await refreshCachedVersions();
     toast.success(`${version.shortName} removida do offline`);
   };
 
   const downloadAll = async () => {
-    for (const v of BIBLE_VERSIONS) {
-      if (!cachedVersions.has(v.id)) {
-        await handleDownload(v);
+    for (const version of BIBLE_VERSIONS) {
+      if (!cachedVersions.has(version.id)) {
+        await handleDownload(version);
       }
     }
   };
@@ -80,27 +77,33 @@ const BibleDownloadManager = () => {
         </span>
       </div>
 
-      {cachedVersions.size < BIBLE_VERSIONS.length && isOnline && (
+      {!supportsOffline && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          Seu navegador nao suporta o armazenamento offline da Biblia.
+        </div>
+      )}
+
+      {supportsOffline && cachedVersions.size < BIBLE_VERSIONS.length && isOnline && (
         <button
           onClick={downloadAll}
           disabled={!!downloading}
           className="w-full bg-primary text-primary-foreground rounded-xl p-3 text-sm font-semibold active:opacity-90 transition-opacity disabled:opacity-50"
         >
           <Download className="w-4 h-4 inline mr-2" />
-          Baixar todas as versões
+          Baixar todas as versoes
         </button>
       )}
 
       <div className="space-y-2">
-        {BIBLE_VERSIONS.map((v) => {
-          const isCached = cachedVersions.has(v.id);
-          const isDownloading = downloading === v.id;
+        {BIBLE_VERSIONS.map((version) => {
+          const isCached = cachedVersions.has(version.id);
+          const isDownloading = downloading === version.id;
 
           return (
-            <div key={v.id} className="flex items-center gap-3 bg-card rounded-xl p-3">
+            <div key={version.id} className="flex items-center gap-3 bg-card rounded-xl p-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{v.shortName}</p>
-                <p className="text-xs text-muted-foreground truncate">{v.name}</p>
+                <p className="text-sm font-semibold truncate">{version.shortName}</p>
+                <p className="text-xs text-muted-foreground truncate">{version.name}</p>
               </div>
 
               {isDownloading ? (
@@ -117,22 +120,22 @@ const BibleDownloadManager = () => {
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-500" />
                   <button
-                    onClick={() => handleRemove(v)}
+                    onClick={() => handleRemove(version)}
                     className="text-muted-foreground hover:text-destructive transition-colors p-1"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              ) : isOnline ? (
+              ) : isOnline && supportsOffline ? (
                 <button
-                  onClick={() => handleDownload(v)}
+                  onClick={() => handleDownload(version)}
                   disabled={!!downloading}
                   className="text-primary p-1 disabled:opacity-50"
                 >
                   <Download className="w-5 h-5" />
                 </button>
               ) : (
-                <span className="text-xs text-muted-foreground">Indisponível</span>
+                <span className="text-xs text-muted-foreground">Indisponivel</span>
               )}
             </div>
           );

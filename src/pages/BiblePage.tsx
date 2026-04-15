@@ -1,11 +1,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
-import { getChapter, bookNameMap, type BibleVerse, BIBLE_VERSIONS, DEFAULT_VERSION_ID, getVersionById } from "@/services/bibleApi";
+import {
+  getChapter,
+  bookNameMap,
+  type BibleChapterEpigraph,
+  type BibleVerse,
+  DEFAULT_VERSION_ID,
+  getVersionById,
+} from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
 import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
+import BibleEpigraph from "@/components/BibleEpigraph";
+import BibleVersionPicker from "@/components/BibleVersionPicker";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
 import ShareMenu from "@/components/ShareMenu";
 
@@ -28,6 +37,7 @@ const BiblePage = () => {
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [epigraphs, setEpigraphs] = useState<BibleChapterEpigraph[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chapterRequestKey, setChapterRequestKey] = useState(0);
@@ -93,44 +103,17 @@ const BiblePage = () => {
       book.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const versionPickerModal = showVersionPicker ? (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowVersionPicker(false)}>
-      <div className="absolute inset-0 bg-black/60" />
-      <div
-        className="relative w-full max-w-lg bg-dark-card rounded-t-2xl p-5 pb-8 animate-fade-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold">Versão da Bíblia</h3>
-          <button onClick={() => setShowVersionPicker(false)} className="p-1">
-            <X className="w-5 h-5 text-dark-muted" />
-          </button>
-        </div>
-        <div className="space-y-1">
-          {BIBLE_VERSIONS.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => {
-                setBibleVersion(v.id);
-                setShowVersionPicker(false);
-              }}
-              className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
-                bibleVersion === v.id ? "bg-primary/20 ring-1 ring-primary/40" : "active:bg-dark-card-hover"
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-sm">{v.shortName}</p>
-                <p className="text-xs text-dark-muted">{v.name}</p>
-              </div>
-              {bibleVersion === v.id && (
-                <span className="text-xs text-primary font-bold">✓</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  ) : null;
+  const versionPickerModal = (
+    <BibleVersionPicker
+      open={showVersionPicker}
+      selectedVersionId={bibleVersion}
+      onClose={() => setShowVersionPicker(false)}
+      onSelect={(versionId) => {
+        setBibleVersion(versionId);
+        setShowVersionPicker(false);
+      }}
+    />
+  );
 
   useEffect(() => {
     if (!selectedBook || !selectedChapter) return;
@@ -143,6 +126,7 @@ const BiblePage = () => {
       .then((data) => {
         if (cancelled) return;
         setVerses(data.verses);
+        setEpigraphs(data.epigraphs);
         setProgress({
           bookAbbrev: selectedBook.apiAbbrev,
           bookName: selectedBook.name,
@@ -155,6 +139,7 @@ const BiblePage = () => {
         if (cancelled) return;
         setError("Não foi possível carregar os versículos. Tente novamente.");
         console.error(err);
+        setEpigraphs([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -403,6 +388,7 @@ const BiblePage = () => {
               setSelectedChapter(null);
               setHighlightedVerse(null);
               setVerses([]);
+              setEpigraphs([]);
               setSelectedVerses(new Set());
             }}
             className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
@@ -492,6 +478,14 @@ const BiblePage = () => {
             </div>
           )}
 
+          {!loading && !error && verses.length > 0 && !currentVersion.supportsEpigraphs && (
+            <div className="mb-4 rounded-xl border border-dark-card bg-dark-card/60 px-4 py-3">
+              <p className="text-xs text-dark-muted">
+                A edicao {currentVersion.shortName} disponivel aqui nao inclui epigrafes no arquivo fonte.
+              </p>
+            </div>
+          )}
+
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -513,31 +507,40 @@ const BiblePage = () => {
           {!loading && !error && verses.length > 0 && (
             <div className="space-y-0.5">
               {verses.map((verse) => {
+                const verseEpigraphs = epigraphs.filter((epigraph) => epigraph.displayVerse === verse.number);
                 const isUrlHighlighted = highlightedVerse === verse.number && !hasSelection;
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
                 const isRedLetter = isRedLetterVerse(selectedBook.apiAbbrev, selectedChapter, verse.number);
 
                 return (
-                  <VerseRow
-                    key={verse.number}
-                    verse={verse}
-                    isHighlighted={isUrlHighlighted}
-                    isSelected={isSelected}
-                    highlightColor={highlightColor}
-                    isRedLetter={isRedLetter}
-                    isSaved={isVerseSaved(verse)}
-                    onTap={toggleVerseSelection}
-                    onSave={handleSaveVerse}
-                    onShare={handleShareVerse}
-                    onImage={(v) => {
-                      if (!selectedBook || !selectedChapter) return;
-                      setImageVerse({
-                        text: v.text,
-                        reference: `${selectedBook.name} ${selectedChapter}:${v.number}`,
-                      });
-                    }}
-                  />
+                  <div key={verse.number}>
+                    {verseEpigraphs.map((epigraph) => (
+                      <BibleEpigraph
+                        key={`${epigraph.title}-${epigraph.start.chapter}-${epigraph.start.verse}`}
+                        title={epigraph.title}
+                        continuesFromPreviousChapter={epigraph.continuesFromPreviousChapter}
+                      />
+                    ))}
+                    <VerseRow
+                      verse={verse}
+                      isHighlighted={isUrlHighlighted}
+                      isSelected={isSelected}
+                      highlightColor={highlightColor}
+                      isRedLetter={isRedLetter}
+                      isSaved={isVerseSaved(verse)}
+                      onTap={toggleVerseSelection}
+                      onSave={handleSaveVerse}
+                      onShare={handleShareVerse}
+                      onImage={(v) => {
+                        if (!selectedBook || !selectedChapter) return;
+                        setImageVerse({
+                          text: v.text,
+                          reference: `${selectedBook.name} ${selectedChapter}:${v.number}`,
+                        });
+                      }}
+                    />
+                  </div>
                 );
               })}
             </div>

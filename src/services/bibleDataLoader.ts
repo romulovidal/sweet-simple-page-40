@@ -1,21 +1,61 @@
+export interface BibleEpigraphData {
+  title: string;
+  start: {
+    chapter: number;
+    verse: number;
+  };
+  end: {
+    chapter: number;
+    verse: number;
+  };
+}
+
 export interface BibleBookData {
   abbrev: string;
   chapters: string[][];
+  name?: string;
+  epigraphs?: BibleEpigraphData[];
 }
 
 const AVAILABLE_VERSIONS = ["ACF", "ARA", "ARC", "KJA", "NTLH", "NVI"] as const;
-type AvailableVersion = (typeof AVAILABLE_VERSIONS)[number];
 
-const versionModuleLoaders: Record<AvailableVersion, () => Promise<BibleBookData[]>> = {
-  ACF: () => import("@/data/bibles/ACF.json").then((module) => module.default as BibleBookData[]),
-  ARA: () => import("@/data/bibles/ARA.json").then((module) => module.default as BibleBookData[]),
-  ARC: () => import("@/data/bibles/ARC.json").then((module) => module.default as BibleBookData[]),
-  KJA: () => import("@/data/bibles/KJA.json").then((module) => module.default as BibleBookData[]),
-  NTLH: () => import("@/data/bibles/NTLH.json").then((module) => module.default as BibleBookData[]),
-  NVI: () => import("@/data/bibles/NVI.json").then((module) => module.default as BibleBookData[]),
-};
+function isBibleEpigraphData(payload: unknown): payload is BibleEpigraphData {
+  if (!payload || typeof payload !== "object") return false;
 
-function getBibleAssetUrl(fileName: string) {
+  const candidate = payload as BibleEpigraphData;
+
+  return (
+    typeof candidate.title === "string" &&
+    !!candidate.start &&
+    typeof candidate.start.chapter === "number" &&
+    typeof candidate.start.verse === "number" &&
+    !!candidate.end &&
+    typeof candidate.end.chapter === "number" &&
+    typeof candidate.end.verse === "number"
+  );
+}
+
+export function isBibleBookData(payload: unknown): payload is BibleBookData[] {
+  return Array.isArray(payload) && payload.length > 0 && payload.every((book) => {
+    if (!book || typeof book !== "object") return false;
+
+    const candidate = book as BibleBookData;
+
+    return (
+      typeof candidate.abbrev === "string" &&
+      Array.isArray(candidate.chapters) &&
+      candidate.chapters.every((chapter) =>
+        Array.isArray(chapter) && chapter.every((verse) => typeof verse === "string")
+      ) &&
+      (candidate.name === undefined || typeof candidate.name === "string") &&
+      (candidate.epigraphs === undefined ||
+        (Array.isArray(candidate.epigraphs) &&
+          candidate.epigraphs.every((epigraph) => isBibleEpigraphData(epigraph))))
+    );
+  });
+}
+
+export function getBibleAssetUrl(fileName: string) {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const origin = typeof window !== "undefined" && window.location?.origin
@@ -25,48 +65,50 @@ function getBibleAssetUrl(fileName: string) {
   return new URL(`${normalizedBaseUrl}biblias/${fileName}.json`, origin).toString();
 }
 
-function validateBiblePayload(payload: unknown, fileName: string): BibleBookData[] {
-  if (!Array.isArray(payload) || payload.length === 0) {
-    throw new Error(`Arquivo da versão bíblica ${fileName} está inválido ou indisponível.`);
+export function parseBibleBookData(rawPayload: string, fileName: string): BibleBookData[] {
+  try {
+    const parsed = JSON.parse(rawPayload) as unknown;
+
+    if (!isBibleBookData(parsed)) {
+      throw new Error("Payload vazio");
+    }
+
+    return parsed;
+  } catch {
+    throw new Error(`Arquivo da versao biblica ${fileName} esta invalido ou indisponivel.`);
   }
-
-  return payload as BibleBookData[];
-}
-
-async function loadBibleFromModule(fileName: AvailableVersion): Promise<BibleBookData[]> {
-  const loader = versionModuleLoaders[fileName];
-  return validateBiblePayload(await loader(), fileName);
 }
 
 export async function loadBundledBibleVersion(fileName: string): Promise<BibleBookData[]> {
-  if (!AVAILABLE_VERSIONS.includes(fileName as AvailableVersion)) {
-    throw new Error(`Versão bíblica não encontrada: ${fileName}. Disponíveis: ${AVAILABLE_VERSIONS.join(", ")}`);
+  if (!AVAILABLE_VERSIONS.includes(fileName as (typeof AVAILABLE_VERSIONS)[number])) {
+    throw new Error(`Versao biblica nao encontrada: ${fileName}. Disponiveis: ${AVAILABLE_VERSIONS.join(", ")}`);
   }
 
-  const normalizedFileName = fileName as AvailableVersion;
+  const assetUrl = getBibleAssetUrl(fileName);
+  const response = await fetch(assetUrl, {
+    cache: "force-cache",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nao foi possivel carregar a versao biblica ${fileName}.`);
+  }
+
+  const rawPayload = await response.text();
 
   try {
-    const response = await fetch(getBibleAssetUrl(normalizedFileName), {
-      cache: "force-cache",
+    return parseBibleBookData(rawPayload, fileName);
+  } catch (initialError) {
+    const retryUrl = new URL(assetUrl);
+    retryUrl.searchParams.set("v", Date.now().toString());
+
+    const retryResponse = await fetch(retryUrl.toString(), {
+      cache: "no-store",
     });
 
-    if (response.ok) {
-      const rawPayload = await response.text();
-
-      try {
-        const parsed = JSON.parse(rawPayload) as BibleBookData[];
-        return validateBiblePayload(parsed, normalizedFileName);
-      } catch {
-        console.warn(`Falha ao ler ${normalizedFileName}.json via asset público; usando fallback interno.`);
-      }
+    if (!retryResponse.ok) {
+      throw initialError;
     }
-  } catch {
-    console.warn(`Falha ao buscar ${normalizedFileName}.json; usando fallback interno.`);
-  }
 
-  try {
-    return await loadBibleFromModule(normalizedFileName);
-  } catch {
-    throw new Error(`Arquivo da versão bíblica ${normalizedFileName} está inválido ou indisponível.`);
+    return parseBibleBookData(await retryResponse.text(), fileName);
   }
 }

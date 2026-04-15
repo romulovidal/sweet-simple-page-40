@@ -1,11 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown, X } from "lucide-react";
+import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getChapter, type BibleVerse, DEFAULT_VERSION_ID, BIBLE_VERSIONS, getVersionById } from "@/services/bibleApi";
+import {
+  getChapter,
+  type BibleChapterEpigraph,
+  type BibleVerse,
+  DEFAULT_VERSION_ID,
+  getVersionById,
+} from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
+import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
+import BibleEpigraph from "@/components/BibleEpigraph";
+import BibleVersionPicker from "@/components/BibleVersionPicker";
 
 interface PlanProgress {
   planId: string;
@@ -36,12 +45,15 @@ interface DBReading {
   verse_end?: number;
 }
 
+const PLANS_CACHE_KEY = "cached-admin-plans";
+const planReadingsCacheKey = (planId: string) => `cached-admin-plan-readings:${planId}`;
+
 const PlansPage = () => {
   const [planProgress, setPlanProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
   const [selectedPlan, setSelectedPlan] = useLocalStorage<string | null>("selected-plan", null);
-  const [plans, setPlans] = useState<DBPlan[]>([]);
+  const [plans, setPlans] = useState<DBPlan[]>(() => readJsonStorage<DBPlan[]>(PLANS_CACHE_KEY, []));
   const [readings, setReadings] = useState<DBReading[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => readJsonStorage<DBPlan[]>(PLANS_CACHE_KEY, []).length === 0);
   const [loadingVerses, setLoadingVerses] = useState(false);
   const [bibleVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
   const [showVersionPicker, setShowVersionPicker] = useState(false);
@@ -50,23 +62,54 @@ const PlansPage = () => {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [readingIndexInDay, setReadingIndexInDay] = useState(0);
   const [dayVerses, setDayVerses] = useState<BibleVerse[]>([]);
+  const [dayEpigraphs, setDayEpigraphs] = useState<BibleChapterEpigraph[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
+
     supabase.from("admin_plans").select("*").eq("is_active", true).order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        if (data) setPlans(data as unknown as DBPlan[]);
-        setLoading(false);
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const nextPlans = data as unknown as DBPlan[];
+        setPlans(nextPlans);
+        writeJsonStorage(PLANS_CACHE_KEY, nextPlans, false, "cache");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!selectedPlan) { setReadings([]); return; }
-    setLoadingVerses(true);
+    if (!selectedPlan) {
+      setReadings([]);
+      setLoadingVerses(false);
+      return;
+    }
+
+    const cachedReadings = readJsonStorage<DBReading[]>(planReadingsCacheKey(selectedPlan), []);
+    setReadings(cachedReadings);
+    setLoadingVerses(cachedReadings.length === 0);
+
+    let cancelled = false;
+
     supabase.from("admin_plan_readings").select("*").eq("plan_id", selectedPlan).order("day_number", { ascending: true })
-      .then(({ data }) => {
-        if (data) setReadings(data as unknown as DBReading[]);
-        setLoadingVerses(false);
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const nextReadings = data as unknown as DBReading[];
+        setReadings(nextReadings);
+        writeJsonStorage(planReadingsCacheKey(selectedPlan), nextReadings, false, "cache");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingVerses(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPlan]);
 
   // Group readings by day_number
@@ -106,14 +149,25 @@ const PlansPage = () => {
     try {
       const result = await getChapter(reading.book_abbrev, reading.chapter, versionOverride || bibleVersion);
       let filtered = result.verses;
+      let filteredEpigraphs = result.epigraphs;
       if (reading.verse_start) {
         filtered = filtered.filter(
           (v) => v.number >= reading.verse_start! && (!reading.verse_end || v.number <= reading.verse_end)
         );
+
+        const rangeStart = reading.verse_start;
+        const rangeEnd = reading.verse_end ?? Number.MAX_SAFE_INTEGER;
+        filteredEpigraphs = filteredEpigraphs.filter((epigraph) => {
+          const epigraphStartVerse = epigraph.start.chapter === reading.chapter ? epigraph.start.verse : 1;
+          const epigraphEndVerse = epigraph.end.chapter === reading.chapter ? epigraph.end.verse : Number.MAX_SAFE_INTEGER;
+          return epigraphEndVerse >= rangeStart && epigraphStartVerse <= rangeEnd;
+        });
       }
       setDayVerses(filtered);
+      setDayEpigraphs(filteredEpigraphs);
     } catch {
       setDayVerses([]);
+      setDayEpigraphs([]);
       toast.error("Erro ao carregar texto");
     }
     setLoadingVerses(false);
@@ -145,6 +199,7 @@ const PlansPage = () => {
       }
       setSelectedDay(null);
       setDayVerses([]);
+      setDayEpigraphs([]);
       setReadingIndexInDay(0);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -165,7 +220,7 @@ const PlansPage = () => {
     return (
       <div className="pb-20 min-h-screen">
         <header className="px-5 pt-12 pb-4 flex items-center gap-3">
-          <button onClick={() => { setSelectedDay(null); setDayVerses([]); setReadingIndexInDay(0); }}
+          <button onClick={() => { setSelectedDay(null); setDayVerses([]); setDayEpigraphs([]); setReadingIndexInDay(0); }}
             className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -190,6 +245,16 @@ const PlansPage = () => {
           </div>
         )}
 
+        {!loadingVerses && dayVerses.length > 0 && !currentVersion.supportsEpigraphs && (
+          <div className="px-5 mb-3">
+            <div className="rounded-xl border border-[hsl(var(--dark-card))] bg-[hsl(var(--dark-card))]/60 px-4 py-3">
+              <p className="text-xs text-[hsl(var(--dark-muted))]">
+                A edicao {currentVersion.shortName} disponivel aqui nao inclui epigrafes no arquivo fonte.
+              </p>
+            </div>
+          </div>
+        )}
+
         {loadingVerses ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -197,12 +262,22 @@ const PlansPage = () => {
         ) : (
           <div className="px-5 space-y-3">
             {dayVerses.map((v) => {
+              const verseEpigraphs = dayEpigraphs.filter((epigraph) => epigraph.displayVerse === v.number);
               const isRed = reading ? isRedLetterVerse(reading.book_abbrev, reading.chapter, v.number) : false;
               return (
-                <p key={v.number} className={`text-sm leading-relaxed ${isRed ? "text-red-400" : ""}`}>
-                  <span className={`text-xs font-bold mr-1.5 ${isRed ? "text-red-400" : "text-primary"}`}>{v.number}</span>
-                  {v.text}
-                </p>
+                <div key={v.number}>
+                  {verseEpigraphs.map((epigraph) => (
+                    <BibleEpigraph
+                      key={`${epigraph.title}-${epigraph.start.chapter}-${epigraph.start.verse}`}
+                      title={epigraph.title}
+                      continuesFromPreviousChapter={epigraph.continuesFromPreviousChapter}
+                    />
+                  ))}
+                  <p className={`text-sm leading-relaxed ${isRed ? "text-red-400" : ""}`}>
+                    <span className={`text-xs font-bold mr-1.5 ${isRed ? "text-red-400" : "text-primary"}`}>{v.number}</span>
+                    {v.text}
+                  </p>
+                </div>
               );
             })}
           </div>
@@ -221,41 +296,16 @@ const PlansPage = () => {
           </button>
         </div>
 
-        {/* Version picker modal */}
-        {showVersionPicker && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowVersionPicker(false)}>
-            <div className="absolute inset-0 bg-black/60" />
-            <div className="relative w-full max-w-lg bg-[hsl(var(--dark-card))] rounded-t-2xl p-5 pb-8 animate-in slide-in-from-bottom" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold">Versão da Bíblia</h3>
-                <button onClick={() => setShowVersionPicker(false)} className="p-1">
-                  <X className="w-5 h-5 text-[hsl(var(--dark-muted))]" />
-                </button>
-              </div>
-              <div className="space-y-1">
-                {BIBLE_VERSIONS.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => {
-                      setBibleVersion(v.id);
-                      setShowVersionPicker(false);
-                      if (reading) loadReadingVerses(reading, v.id);
-                    }}
-                    className={`w-full flex items-center justify-between py-3 px-4 rounded-xl text-left transition-colors ${
-                      bibleVersion === v.id ? "bg-primary/20 text-primary" : "hover:bg-[hsl(var(--dark-card-hover))]"
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">{v.shortName}</p>
-                      <p className="text-xs text-[hsl(var(--dark-muted))]">{v.name}</p>
-                    </div>
-                    {bibleVersion === v.id && <CheckCircle className="w-5 h-5 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        <BibleVersionPicker
+          open={showVersionPicker}
+          selectedVersionId={bibleVersion}
+          onClose={() => setShowVersionPicker(false)}
+          onSelect={(versionId) => {
+            setBibleVersion(versionId);
+            setShowVersionPicker(false);
+            if (reading) loadReadingVerses(reading, versionId);
+          }}
+        />
       </div>
     );
   }

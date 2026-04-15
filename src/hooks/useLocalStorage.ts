@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LOCAL_DATA_CHANGED_EVENT, readJsonStorage, writeJsonStorage } from "@/lib/localData";
 
 function readLocalStorageValue<T>(key: string, initialValue: T): T {
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? (JSON.parse(item) as T) : initialValue;
-  } catch {
-    return initialValue;
-  }
+  return readJsonStorage(key, initialValue);
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
@@ -18,7 +14,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     (value: T | ((val: T) => T)) => {
       setStoredValue((currentValue) => {
         const valueToStore = value instanceof Function ? value(currentValue) : value;
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        writeJsonStorage(key, valueToStore);
         return valueToStore;
       });
     },
@@ -35,8 +31,19 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       setStoredValue(readValue());
     };
 
+    const handleLocalDataChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string }>).detail;
+      if (detail?.key && detail.key !== key) return;
+      setStoredValue(readValue());
+    };
+
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    window.addEventListener(LOCAL_DATA_CHANGED_EVENT, handleLocalDataChange as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(LOCAL_DATA_CHANGED_EVENT, handleLocalDataChange as EventListener);
+    };
   }, [key, readValue]);
 
   return [storedValue, setValue] as const;

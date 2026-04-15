@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { registerPushNotifications, isPushEnabled } from "@/lib/pushNotifications";
 
+type PromptPhase = "hidden" | "modal" | "waiting-system" | "done";
+
 const PushPermissionPrompt = () => {
-  const [show, setShow] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(false);
+  const [phase, setPhase] = useState<PromptPhase>("hidden");
 
   useEffect(() => {
     // Don't show in iframe/preview
@@ -33,68 +34,93 @@ const PushPermissionPrompt = () => {
 
       if (Notification.permission === "denied") return;
 
-      // Check if dismissed recently — only 6 hours cooldown to be more persistent
       const dismissedAt = localStorage.getItem("push-prompt-dismissed");
       if (dismissedAt) {
         const diff = Date.now() - Number(dismissedAt);
-        if (diff < 6 * 60 * 60 * 1000) return; // 6 hours
+        if (diff < 6 * 60 * 60 * 1000) return;
       }
 
-      setTimeout(() => {
-        setShow(true);
-        setShowOverlay(true);
-      }, 1500);
+      setTimeout(() => setPhase("modal"), 1500);
     };
 
     check();
   }, []);
 
   const handleAllow = async () => {
-    setShow(false);
-    setShowOverlay(false);
+    // Step 1: Dismiss the modal and show helper text
+    setPhase("waiting-system");
+
+    // Step 2: Wait a moment for the UI to clear, then trigger the native OS dialog
+    await new Promise((r) => setTimeout(r, 400));
+
     const ok = await registerPushNotifications();
-    if (!ok) {
+    if (ok) {
+      setPhase("done");
+    } else {
       localStorage.setItem("push-prompt-dismissed", String(Date.now()));
+      setPhase("hidden");
     }
   };
 
   const handleDismiss = () => {
-    setShow(false);
-    setShowOverlay(false);
+    setPhase("hidden");
     localStorage.setItem("push-prompt-dismissed", String(Date.now()));
   };
 
-  if (!show) return null;
+  if (phase === "hidden" || phase === "done") return null;
 
+  // Phase: waiting for the system dialog
+  if (phase === "waiting-system") {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/70 z-[99] backdrop-blur-sm" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center animate-pulse">
+                <Bell className="w-8 h-8 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-lg font-bold text-foreground text-center">
+              Permita as notificações ☝️
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mt-2 leading-relaxed">
+              Toque em <strong>"Permitir"</strong> na mensagem que apareceu no topo da tela 
+              para receber notificações no seu celular.
+            </p>
+            <div className="mt-4 flex justify-center">
+              <div className="flex items-center gap-2 bg-primary/10 text-primary text-xs font-medium px-4 py-2 rounded-full">
+                <span className="animate-bounce">↑</span>
+                Olhe no topo da tela
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Phase: main modal
   return (
     <>
-      {/* Dark overlay blocking content */}
-      {showOverlay && (
-        <div className="fixed inset-0 bg-black/70 z-[99] backdrop-blur-sm" />
-      )}
-
-      {/* Modal-style prompt */}
+      <div className="fixed inset-0 bg-black/70 z-[99] backdrop-blur-sm" />
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-          {/* Icon */}
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center">
               <Bell className="w-8 h-8 text-primary" />
             </div>
           </div>
 
-          {/* Title */}
           <h2 className="text-lg font-bold text-foreground text-center">
             Fique por dentro da congregação! 🙏
           </h2>
 
-          {/* Description */}
           <p className="text-sm text-muted-foreground text-center mt-2 leading-relaxed">
             Ative as notificações para receber o <strong>versículo do dia</strong>, 
             avisos da congregação e conteúdos exclusivos diretamente no seu celular.
           </p>
 
-          {/* Benefits list */}
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <span className="text-primary">📖</span>
@@ -110,7 +136,6 @@ const PushPermissionPrompt = () => {
             </div>
           </div>
 
-          {/* CTA Button */}
           <button
             onClick={handleAllow}
             className="mt-5 w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl text-sm active:scale-[0.98] transition-transform"
@@ -118,7 +143,6 @@ const PushPermissionPrompt = () => {
             Ativar notificações
           </button>
 
-          {/* Dismiss - small and subtle */}
           <button
             onClick={handleDismiss}
             className="mt-2 w-full text-xs text-muted-foreground/60 py-2 hover:text-muted-foreground transition-colors"

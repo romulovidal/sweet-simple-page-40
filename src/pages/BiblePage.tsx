@@ -706,13 +706,14 @@ interface VerseRowProps {
   highlightColor?: string;
   isRedLetter?: boolean;
   isSaved: boolean;
+  fontSize?: number;
   onTap: (verseNumber: number) => void;
   onSave: (v: BibleVerse) => void;
   onShare: (v: BibleVerse) => void;
   onImage: (v: BibleVerse) => void;
 }
 
-const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLetter, isSaved, onTap, onSave, onShare, onImage }: VerseRowProps) => {
+const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLetter, isSaved, fontSize = 16, onTap, onSave, onShare, onImage }: VerseRowProps) => {
   return (
     <div
       id={`verse-${verse.number}`}
@@ -726,7 +727,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       }
       onClick={() => onTap(verse.number)}
     >
-      <p className={`text-sm leading-relaxed ${isRedLetter ? "text-red-400" : ""}`}>
+      <p className={`leading-relaxed ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
         <span
           className="font-bold mr-2 text-xs align-super"
           style={highlightColor ? { color: highlightColor } : isRedLetter ? { color: "#ef4444" } : undefined}

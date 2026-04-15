@@ -5,7 +5,7 @@ import VerseCard from "@/components/VerseCard";
 import { getDailyVerse } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
-import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
+import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";

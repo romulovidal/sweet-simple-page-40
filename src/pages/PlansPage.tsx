@@ -237,13 +237,16 @@ const PlansPage = () => {
               {refLabel} • {readingIndexInDay + 1}/{dayReadings.length}
             </p>
           </div>
-          <button
-            onClick={() => setShowVersionPicker(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[hsl(var(--dark-card))] text-xs font-semibold"
-          >
-            {currentVersion.shortName}
-            <ChevronDown className="w-3 h-3" />
-          </button>
+          <div className="flex items-center gap-2">
+            <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+            <button
+              onClick={() => setShowVersionPicker(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[hsl(var(--dark-card))] text-xs font-semibold"
+            >
+              {currentVersion.shortName}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          </div>
         </header>
 
         {reading?.title && (
@@ -280,7 +283,7 @@ const PlansPage = () => {
                       continuesFromPreviousChapter={epigraph.continuesFromPreviousChapter}
                     />
                   ))}
-                  <p className={`text-sm leading-relaxed ${isRed ? "text-red-400" : ""}`}>
+                  <p className={`leading-relaxed ${isRed ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
                     <span className={`text-xs font-bold mr-1.5 ${isRed ? "text-red-400" : "text-primary"}`}>{v.number}</span>
                     {v.text}
                   </p>

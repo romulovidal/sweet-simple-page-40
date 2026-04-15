@@ -1,0 +1,19 @@
+{
+  "name": "Atalaia Admin",
+  "short_name": "Admin Atalaia",
+  "description": "Painel administrativo da Bíblia do Atalaia",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

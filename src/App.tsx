@@ -9,8 +9,10 @@ import OfflineSyncBootstrap from "@/components/OfflineSyncBootstrap";
 import ScrollToTop from "@/components/ScrollToTop";
 import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import InstallPrompt from "@/components/InstallPrompt";
+import AdminInstallPrompt from "@/components/AdminInstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import PageTransition from "@/components/PageTransition";
+import { useManifestSwap } from "@/hooks/useManifestSwap";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -25,6 +27,8 @@ const AppContent = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
   const resetKey = (location.state as any)?.reset || 0;
+
+  useManifestSwap();
 
   return (
     <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
@@ -41,7 +45,7 @@ const AppContent = () => {
         </Routes>
       </AnimatePresence>
       {!isAdmin && <ThemeToggleFloat />}
-      {!isAdmin && <InstallPrompt />}
+      {isAdmin ? <AdminInstallPrompt /> : <InstallPrompt />}
       <UpdatePrompt />
       {!isAdmin && <BottomNav />}
     </div>

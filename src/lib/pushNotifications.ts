@@ -68,8 +68,9 @@ async function saveSubscription(options?: { forceResubscribe?: boolean }) {
 
   const sub = await getSubscriptionJson(registration, options);
   const {
-    data: { user, session },
+    data: { session },
   } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const { data, error } = await supabase.functions.invoke("push-subscription", {
     body: {

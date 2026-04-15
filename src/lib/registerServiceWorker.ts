@@ -54,6 +54,11 @@ function sendPrecacheMessage(registration: ServiceWorkerRegistration) {
   });
 }
 
+function applyWaitingUpdate(registration: ServiceWorkerRegistration) {
+  if (!registration.waiting) return;
+  registration.waiting.postMessage({ type: "SKIP_WAITING" });
+}
+
 export async function registerAppServiceWorker() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) {
     return;
@@ -62,21 +67,37 @@ export async function registerAppServiceWorker() {
   try {
     const registration = await navigator.serviceWorker.register("/sw.js");
     sendPrecacheMessage(registration);
+    applyWaitingUpdate(registration);
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      window.location.reload();
+    });
+
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) return;
+
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          applyWaitingUpdate(registration);
+        }
+      });
+    });
 
     navigator.serviceWorker.ready
       .then(() => sendPrecacheMessage(registration))
       .catch(() => undefined);
 
     window.addEventListener("online", () => {
-      // When coming back online, check for SW updates immediately
       registration.update().catch(() => {});
       sendPrecacheMessage(registration);
+      applyWaitingUpdate(registration);
     });
 
-    // Also check for updates on visibility change (user returns to tab)
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && navigator.onLine) {
         registration.update().catch(() => {});
+        applyWaitingUpdate(registration);
       }
     });
   } catch (error) {

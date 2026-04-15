@@ -59,7 +59,7 @@ const OfflineSyncBootstrap = () => {
     };
 
     const handleOnline = () => {
-      void syncPendingPushRegistration();
+      void syncPendingPushRegistration({ forceResubscribe: true });
 
       const userId = currentUserIdRef.current;
       if (!userId) return;

@@ -285,27 +285,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_sync_state: {
-        Row: {
-          id: string
-          state: Json
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          state?: Json
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          state?: Json
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_streaks: {
         Row: {
           current_streak: number
@@ -328,6 +307,27 @@ export type Database = {
           history?: string[]
           id?: string
           last_read_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sync_state: {
+        Row: {
+          id: string
+          state: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          state?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          state?: Json
           updated_at?: string
           user_id?: string
         }

@@ -449,6 +449,9 @@ const BiblePage = () => {
                 <button onClick={handleImageSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
                   <ImageIcon className="w-4 h-4 text-primary-foreground" />
                 </button>
+                <button onClick={() => setShowCompare(true)} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30" title="Comparar versões">
+                  <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
+                </button>
               </div>
             </div>
 

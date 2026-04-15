@@ -89,7 +89,7 @@ const VerseCompare = ({
         </div>
 
         {/* Content */}
-        <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-20" style={{ WebkitOverflowScrolling: "touch" }}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

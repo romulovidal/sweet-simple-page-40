@@ -47,7 +47,7 @@ async function getSubscriptionJson(registration: ServiceWorkerRegistration) {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: appServerKey,
+      applicationServerKey: appServerKey as BufferSource,
     });
   }
 

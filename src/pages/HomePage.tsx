@@ -41,8 +41,7 @@ const HomePage = () => {
   const [planProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
 
   // Daily verse
-  const fallback = getDailyVerse();
-  const [verse, setVerse] = useState<{ text: string; ref: string }>(fallback);
+  const [verse, setVerse] = useState<{ text: string; ref: string } | null>(null);
   const [verseLoading, setVerseLoading] = useState(true);
   const [, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 
@@ -58,6 +57,11 @@ const HomePage = () => {
       null
     );
 
+    // Invalidate stale cache
+    if (cached && cached.date !== today) {
+      localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
+    }
+
     if (cached?.date === today && cached.verse?.text) {
       setVerse(cached.verse);
       setVerseLoading(false);
@@ -69,6 +73,8 @@ const HomePage = () => {
     }
 
     if (!isOnline) {
+      // Offline fallback
+      setVerse(getDailyVerse());
       setVerseLoading(false);
       return;
     }
@@ -86,7 +92,10 @@ const HomePage = () => {
           });
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Fallback to local verse list
+        setVerse(getDailyVerse());
+      })
       .finally(() => setVerseLoading(false));
   }, [setVerseHistory]);
 

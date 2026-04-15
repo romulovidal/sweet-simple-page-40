@@ -227,7 +227,7 @@ const HomePage = () => {
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Versículo do dia
               </h2>
-              {verseLoading ? (
+              {verseLoading || !verse ? (
                 <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
                   <Loader2 className="w-6 h-6 animate-spin text-white" />
                 </div>

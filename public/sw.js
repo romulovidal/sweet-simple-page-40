@@ -62,6 +62,7 @@ function isCacheableRequest(requestUrl) {
     requestUrl.pathname.startsWith("/assets/") ||
     requestUrl.pathname.startsWith("/biblias/") ||
     requestUrl.pathname === "/manifest.json" ||
+    requestUrl.pathname === "/admin-manifest.json" ||
     requestUrl.pathname === "/logo.png" ||
     requestUrl.pathname === "/placeholder.svg"
   );

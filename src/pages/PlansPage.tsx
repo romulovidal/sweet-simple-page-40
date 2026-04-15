@@ -51,6 +51,7 @@ const PLANS_CACHE_KEY = "cached-admin-plans";
 const planReadingsCacheKey = (planId: string) => `cached-admin-plan-readings:${planId}`;
 
 const PlansPage = () => {
+  const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [planProgress, setPlanProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
   const [selectedPlan, setSelectedPlan] = useLocalStorage<string | null>("selected-plan", null);
   const [plans, setPlans] = useState<DBPlan[]>(() => readJsonStorage<DBPlan[]>(PLANS_CACHE_KEY, []));

@@ -1,5 +1,5 @@
-const SHELL_CACHE = "app-shell-v7";
-const RUNTIME_CACHE = "app-runtime-v7";
+const SHELL_CACHE = "app-shell-v8";
+const RUNTIME_CACHE = "app-runtime-v8";
 const BIBLE_CACHE = "bible-offline-v5";
 const OFFLINE_FALLBACK_URL = "/";
 const CORE_URLS = [
@@ -71,16 +71,36 @@ function isBibleRequest(requestUrl) {
   return requestUrl.pathname.startsWith("/biblias/");
 }
 
+function isHashedAsset(requestUrl) {
+  // Vite hashed assets like /assets/index-BVkekbiH.js
+  return /\/assets\/.*-[a-zA-Z0-9]{6,}\.\w+$/.test(requestUrl.pathname);
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(precacheShell().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(cleanupCaches().then(() => self.clients.claim()));
+  event.waitUntil(
+    cleanupCaches().then(() => self.clients.claim()).then(() => {
+      // Notify all clients that a new version is active
+      self.clients.matchAll({ type: "window" }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: "SW_UPDATED" });
+        });
+      });
+    })
+  );
 });
 
 self.addEventListener("message", (event) => {
   const data = event.data;
+
+  if (data && data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+
   if (!data || data.type !== "PRECACHE_URLS" || !Array.isArray(data.urls)) return;
 
   event.waitUntil(
@@ -105,13 +125,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (!isSameOrigin(url)) return;
 
+  // Navigation: always network-first
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
         const shellCache = await caches.open(SHELL_CACHE);
 
         try {
-          const response = await fetch(request);
+          const response = await fetch(request, { cache: "no-store" });
           if (response && response.ok) {
             await shellCache.put(OFFLINE_FALLBACK_URL, response.clone());
           }
@@ -133,6 +154,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Bible data: network-first, cache fallback
   if (isBibleRequest(url)) {
     event.respondWith(
       (async () => {
@@ -152,15 +174,33 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Hashed assets (immutable): cache-first is safe since hash changes on update
+  if (isHashedAsset(url)) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL_CACHE);
+        const cachedResponse = await cache.match(request);
+        if (cachedResponse) return cachedResponse;
+
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) {
+            await cache.put(request, response.clone());
+          }
+          return response;
+        } catch {
+          return Response.error();
+        }
+      })()
+    );
+    return;
+  }
+
+  // All other assets: network-first when online, cache fallback offline
   event.respondWith(
     (async () => {
-      const cacheName = url.pathname.startsWith("/assets/") ? SHELL_CACHE : RUNTIME_CACHE;
+      const cacheName = RUNTIME_CACHE;
       const cache = await caches.open(cacheName);
-      const cachedResponse = await cache.match(request);
-
-      if (cachedResponse) {
-        return cachedResponse;
-      }
 
       try {
         const response = await fetch(request);
@@ -169,6 +209,7 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       } catch {
+        const cachedResponse = await cache.match(request);
         return cachedResponse || Response.error();
       }
     })()

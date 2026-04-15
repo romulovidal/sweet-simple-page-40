@@ -67,7 +67,18 @@ export async function registerAppServiceWorker() {
       .then(() => sendPrecacheMessage(registration))
       .catch(() => undefined);
 
-    window.addEventListener("online", () => sendPrecacheMessage(registration));
+    window.addEventListener("online", () => {
+      // When coming back online, check for SW updates immediately
+      registration.update().catch(() => {});
+      sendPrecacheMessage(registration);
+    });
+
+    // Also check for updates on visibility change (user returns to tab)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        registration.update().catch(() => {});
+      }
+    });
   } catch (error) {
     console.error("Service worker registration error:", error);
   }

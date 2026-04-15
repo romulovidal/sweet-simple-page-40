@@ -18,7 +18,7 @@ const BibleVersionPicker = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-4 sm:items-center sm:pb-0"
+      className="fixed inset-0 z-[60] flex items-end justify-center px-4 pb-4 sm:items-center sm:pb-0"
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
@@ -26,7 +26,7 @@ const BibleVersionPicker = ({
         role="dialog"
         aria-modal="true"
         aria-label="Versão da Bíblia"
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/5 bg-dark-card shadow-2xl"
+        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/5 bg-dark-card shadow-2xl sm:max-h-[min(80vh,32rem)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/5 bg-dark-card/95 px-5 py-4 backdrop-blur">
@@ -39,7 +39,7 @@ const BibleVersionPicker = ({
           </button>
         </div>
 
-        <div className="max-h-[min(68vh,28rem)] overflow-y-auto overscroll-contain px-3 py-3 pb-20" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="space-y-1">
             {BIBLE_VERSIONS.map((version) => {
               const isSelected = selectedVersionId === version.id;

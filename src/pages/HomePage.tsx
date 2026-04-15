@@ -53,13 +53,13 @@ const HomePage = () => {
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
-    const cached = readJsonStorage<{ date: string; verse: { text: string; ref: string } } | null>(
+    const cached = readJsonStorage<{ date: string; version?: number; verse: { text: string; ref: string } } | null>(
       DAILY_VERSE_CACHE_KEY,
       null
     );
 
-    // Invalidate stale cache
-    if (cached && cached.date !== today) {
+    // Invalidate stale or outdated-version cache
+    if (cached && (cached.date !== today || (cached.version ?? 0) < DAILY_VERSE_CACHE_VERSION)) {
       localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
     }
 

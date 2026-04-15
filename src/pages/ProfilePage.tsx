@@ -140,38 +140,6 @@ const ProfilePage = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (authMode === "signup" && !lgpdAccepted) {
-      toast.error("Você precisa aceitar os Termos de Privacidade para continuar.");
-      return;
-    }
-    try {
-      const redirectTo = `${window.location.origin}/perfil`;
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          queryParams: {
-            prompt: "select_account",
-          },
-        },
-      });
-
-      if (error) {
-        toast.error(getErrorMessage(error, "Erro ao entrar com Google"));
-        return;
-      }
-
-      if (data?.url) {
-        window.location.assign(data.url);
-        return;
-      }
-
-      toast.error("Nao foi possivel iniciar o login com Google.");
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Erro ao entrar com Google"));
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();

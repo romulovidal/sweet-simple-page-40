@@ -117,5 +117,4 @@ export function updateStreak(streak: StreakData): StreakData {
     lastDate: today,
     history,
   };
-
-
+}

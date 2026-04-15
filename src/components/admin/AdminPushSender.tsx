@@ -15,6 +15,8 @@ interface PushLogEntry {
   total_failed: number;
 }
 
+const DEFAULT_TTL_SECONDS = 60 * 60 * 24;
+
 const AdminPushSender = () => {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -43,16 +45,30 @@ const AdminPushSender = () => {
       toast.error("Título e mensagem são obrigatórios");
       return;
     }
+
+    if (!url.trim().startsWith("/")) {
+      toast.error("A URL deve começar com /");
+      return;
+    }
+
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-push", {
-        body: { title: title.trim(), body: body.trim(), url: url.trim() || "/" },
+        body: {
+          title: title.trim(),
+          body: body.trim(),
+          url: url.trim() || "/",
+          ttl: DEFAULT_TTL_SECONDS,
+          urgency: "high",
+          type: "general",
+        },
       });
 
       if (error) throw error;
 
-      // Log the push
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       await supabase.from("push_log").insert({
         title: title.trim(),
         body: body.trim(),
@@ -76,12 +92,14 @@ const AdminPushSender = () => {
 
   return (
     <div className="space-y-4">
-      {/* Send form */}
       <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Bell className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Enviar Notificação Push</span>
         </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
+          Agora o envio usa retenção de 24h para o aparelho receber quando voltar à internet.
+        </p>
         <div>
           <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título *</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)}
@@ -103,7 +121,6 @@ const AdminPushSender = () => {
         </Button>
       </div>
 
-      {/* Push log */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-4 h-4 text-[hsl(var(--dark-muted))]" />

@@ -63,7 +63,7 @@ const HomePage = () => {
       localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
     }
 
-    if (cached?.date === today && cached.verse?.text) {
+    if (cached?.date === today && (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION && cached.verse?.text) {
       setVerse(cached.verse);
       setVerseLoading(false);
       setVerseHistory((prev) => {

@@ -81,21 +81,48 @@ const HomePage = () => {
     }
 
     setVerseLoading(true);
-    getRandomVerse()
-      .then((data) => {
-        if (data?.text) {
-          const v = { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
-          setVerse(v);
-          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, version: DAILY_VERSE_CACHE_VERSION, verse: v }, false, "cache");
-          setVerseHistory((prev) => {
-            if (prev.some((e) => e.date === today)) return prev;
-            return [{ date: today, ...v }, ...prev].slice(0, 90);
-          });
+
+    // Try manual verse from queue first
+    const tryManualVerse = async (): Promise<{ text: string; ref: string } | null> => {
+      try {
+        const { data: settings } = await supabase
+          .from("admin_settings")
+          .select("value")
+          .eq("key", "daily_verse_mode")
+          .single();
+        const mode = settings?.value ? String(settings.value).replace(/"/g, "") : "auto";
+        if (mode === "manual") {
+          const { data: queueVerse } = await supabase
+            .from("daily_verse_queue")
+            .select("verse_text, verse_ref")
+            .eq("scheduled_date", today)
+            .single();
+          if (queueVerse) {
+            return { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
+          }
         }
+      } catch { /* fall through to auto */ }
+      return null;
+    };
+
+    tryManualVerse()
+      .then(async (manualVerse) => {
+        if (manualVerse) return manualVerse;
+        try {
+          const data = await getRandomVerse();
+          if (data?.text) {
+            return { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
+          }
+        } catch { /* fallback below */ }
+        return getDailyVerse();
       })
-      .catch(() => {
-        // Fallback to local verse list
-        setVerse(getDailyVerse());
+      .then((v) => {
+        setVerse(v);
+        writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, version: DAILY_VERSE_CACHE_VERSION, verse: v }, false, "cache");
+        setVerseHistory((prev) => {
+          if (prev.some((e) => e.date === today)) return prev;
+          return [{ date: today, ...v }, ...prev].slice(0, 90);
+        });
       })
       .finally(() => setVerseLoading(false));
   }, [setVerseHistory]);

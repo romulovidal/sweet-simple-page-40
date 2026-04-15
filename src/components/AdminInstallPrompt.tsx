@@ -12,6 +12,7 @@ const AdminInstallPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    // Check standalone mode
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
       return;
@@ -21,6 +22,7 @@ const AdminInstallPrompt = () => {
       return;
     }
 
+    // Check dismissal
     const dismissedAt = localStorage.getItem("admin-install-dismissed");
     if (dismissedAt) {
       const diff = Date.now() - Number(dismissedAt);
@@ -57,11 +59,9 @@ const AdminInstallPrompt = () => {
     localStorage.setItem("admin-install-dismissed", String(Date.now()));
   };
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const showIOSHint = isIOS && !isInstalled && !dismissed;
-  const showPrompt = !isInstalled && !dismissed && deferredPrompt;
+  if (isInstalled || dismissed) return null;
 
-  if (!showPrompt && !showIOSHint) return null;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   return (
     <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-50 animate-in slide-in-from-bottom-4">
@@ -71,24 +71,32 @@ const AdminInstallPrompt = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-white">Instalar Admin Atalaia</p>
-          {showIOSHint ? (
+          {isIOS ? (
             <p className="text-xs text-slate-400 mt-1">
               Toque em <span className="font-semibold text-slate-300">Compartilhar</span> (ícone ↑) e depois em{" "}
               <span className="font-semibold text-slate-300">Adicionar à Tela de Início</span>
             </p>
+          ) : deferredPrompt ? (
+            <>
+              <p className="text-xs text-slate-400 mt-1">
+                Instale o painel admin como app para acesso rápido.
+              </p>
+              <button
+                onClick={handleInstall}
+                className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors active:opacity-90 flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Instalar agora
+              </button>
+            </>
           ) : (
             <p className="text-xs text-slate-400 mt-1">
-              Instale o painel admin como app para acesso rápido e gerenciamento facilitado.
+              Para instalar, acesse{" "}
+              <span className="font-semibold text-slate-300">o site publicado</span> no navegador do celular,
+              toque no menu (⋮) e selecione{" "}
+              <span className="font-semibold text-slate-300">Instalar aplicativo</span> ou{" "}
+              <span className="font-semibold text-slate-300">Adicionar à tela inicial</span>.
             </p>
-          )}
-          {showPrompt && (
-            <button
-              onClick={handleInstall}
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors active:opacity-90 flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Instalar agora
-            </button>
           )}
         </div>
         <button onClick={handleDismiss} className="text-slate-500 hover:text-slate-300 p-1 transition-colors">

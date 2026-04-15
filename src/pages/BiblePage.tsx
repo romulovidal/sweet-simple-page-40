@@ -530,6 +530,7 @@ const BiblePage = () => {
                     ))}
                     <VerseRow
                       verse={verse}
+                      fontSize={fontSize}
                       isHighlighted={isUrlHighlighted}
                       isSelected={isSelected}
                       highlightColor={highlightColor}

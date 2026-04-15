@@ -9,7 +9,7 @@ import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { registerPushNotifications, isPushEnabled, unregisterPush } from "@/lib/pushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
+import { useLocalStorage, type ReadingProgress, type SavedVerse, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -412,8 +412,8 @@ const ProfilePage = () => {
             <Flame className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Sequência</span>
           </div>
-          <p className="text-2xl font-bold">{streak.current}</p>
-          <p className="text-xs text-dark-muted mt-1">dia{streak.current !== 1 ? "s" : ""} seguidos</p>
+          <p className="text-2xl font-bold">{getDisplayStreak(streak)}</p>
+          <p className="text-xs text-dark-muted mt-1">dia{getDisplayStreak(streak) !== 1 ? "s" : ""} seguidos</p>
         </div>
 
         <div className="bg-dark-card rounded-2xl p-4">

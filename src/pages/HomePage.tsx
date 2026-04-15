@@ -5,7 +5,7 @@ import VerseCard from "@/components/VerseCard";
 import { getDailyVerse } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
-import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry } from "@/hooks/useLocalStorage";
+import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -183,7 +183,7 @@ const HomePage = () => {
     <div className="pb-20 min-h-screen">
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
-        <StreakBadge days={streak.current} />
+        <StreakBadge days={getDisplayStreak(streak)} />
         <button
           onClick={() => navigate("/descubra")}
           className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
@@ -217,8 +217,8 @@ const HomePage = () => {
               <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
               <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
               <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
-                {streak.current > 0
-                  ? `Você está numa ofensiva de ${streak.current} dia${streak.current > 1 ? "s" : ""}!`
+                {getDisplayStreak(streak) > 0
+                  ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
                   : "Comece sua leitura de hoje!"}
               </p>
             </div>

@@ -84,6 +84,21 @@ export function getToday(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+/** Returns the display streak: 0 if user hasn't read today or yesterday */
+export function getDisplayStreak(streak: StreakData): number {
+  const today = getToday();
+  if (streak.lastDate === today) return streak.current;
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  if (streak.lastDate === yesterdayStr) return streak.current;
+
+  // No contact today or yesterday → streak is zero
+  return 0;
+}
+
 export function updateStreak(streak: StreakData): StreakData {
   const today = getToday();
   if (streak.lastDate === today) return streak;

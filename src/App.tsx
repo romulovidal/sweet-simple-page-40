@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import InstallPrompt from "@/components/InstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
+import PageTransition from "@/components/PageTransition";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -27,15 +29,17 @@ const AppContent = () => {
   return (
     <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
       <ScrollToTop />
-      <Routes key={resetKey}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/biblia" element={<BiblePage />} />
-        <Route path="/planos" element={<PlansPage />} />
-        <Route path="/descubra" element={<DiscoverPage />} />
-        <Route path="/perfil" element={<ProfilePage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname + resetKey}>
+          <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
+          <Route path="/biblia" element={<PageTransition><BiblePage /></PageTransition>} />
+          <Route path="/planos" element={<PageTransition><PlansPage /></PageTransition>} />
+          <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
+          <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
       {!isAdmin && <ThemeToggleFloat />}
       {!isAdmin && <InstallPrompt />}
       <UpdatePrompt />

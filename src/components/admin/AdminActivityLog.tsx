@@ -5,7 +5,7 @@ import { Loader2, Clock, Shield, FileText, Bell, BookOpen, Users } from "lucide-
 interface ActivityEntry {
   id: string;
   action: string;
-  details: Record<string, unknown>;
+  details: unknown;
   created_at: string;
   user_id: string | null;
 }

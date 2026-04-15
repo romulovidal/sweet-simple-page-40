@@ -86,7 +86,7 @@ const HomePage = () => {
         if (data?.text) {
           const v = { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
           setVerse(v);
-          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, verse: v }, false, "cache");
+          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, version: DAILY_VERSE_CACHE_VERSION, verse: v }, false, "cache");
           setVerseHistory((prev) => {
             if (prev.some((e) => e.date === today)) return prev;
             return [{ date: today, ...v }, ...prev].slice(0, 90);

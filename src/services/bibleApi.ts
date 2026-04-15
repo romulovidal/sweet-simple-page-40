@@ -162,9 +162,24 @@ export async function getRandomVerse(): Promise<{
     { abbrev: "sl", chapter: 27, verse: 1 },
     { abbrev: "pv", chapter: 18, verse: 10 },
     { abbrev: "1pe", chapter: 5, verse: 7 },
+    { abbrev: "ef", chapter: 2, verse: 8 },
+    { abbrev: "gl", chapter: 5, verse: 22 },
+    { abbrev: "cl", chapter: 3, verse: 23 },
+    { abbrev: "tg", chapter: 1, verse: 5 },
+    { abbrev: "2co", chapter: 5, verse: 17 },
+    { abbrev: "sl", chapter: 37, verse: 4 },
+    { abbrev: "sl", chapter: 91, verse: 1 },
+    { abbrev: "mt", chapter: 6, verse: 33 },
+    { abbrev: "jo", chapter: 14, verse: 6 },
+    { abbrev: "1co", chapter: 13, verse: 4 },
+    { abbrev: "sl", chapter: 121, verse: 1 },
   ];
 
-  const pick = favorites[Math.floor(Math.random() * favorites.length)];
+  // Deterministic pick based on day of year
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
+  const pick = favorites[dayOfYear % favorites.length];
 
   try {
     const result = await getChapter(pick.abbrev, pick.chapter, DEFAULT_VERSION_ID);
@@ -178,11 +193,13 @@ export async function getRandomVerse(): Promise<{
       text: verse.text,
     };
   } catch {
+    // Use getDailyVerse as fallback (also deterministic by day)
+    const fallback = getDailyVerse();
     return {
-      book: { name: "João" },
-      chapter: 3,
-      number: 16,
-      text: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.",
+      book: { name: fallback.ref.split(" ").slice(0, -1).join(" ") },
+      chapter: 0,
+      number: 0,
+      text: fallback.text,
     };
   }
 }

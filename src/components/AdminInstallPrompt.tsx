@@ -29,22 +29,15 @@ const AdminInstallPrompt = () => {
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") setIsInstalled(true);
-      setDeferredPrompt(null);
-    } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        toast.info("Toque em Compartilhar (↑) e depois em \"Adicionar à Tela de Início\"", { duration: 6000 });
-      } else {
-        toast.info("Toque no menu do navegador (⋮) e selecione \"Instalar aplicativo\"", { duration: 6000 });
-      }
-    }
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") setIsInstalled(true);
+    setDeferredPrompt(null);
   };
 
-  if (isInstalled) return null;
+  // Only show the button when the native install prompt is available
+  if (isInstalled || !deferredPrompt) return null;
 
   return (
     <button

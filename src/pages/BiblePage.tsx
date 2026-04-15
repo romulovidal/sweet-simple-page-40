@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { useFontSize } from "@/hooks/useFontSize";
+import FontSizeControls from "@/components/FontSizeControls";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import {
@@ -30,6 +32,7 @@ const HIGHLIGHT_COLORS = [
 ];
 
 const BiblePage = () => {
+  const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
@@ -411,13 +414,16 @@ const BiblePage = () => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowVersionPicker(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
-            >
-              {currentVersion.shortName}
-              <ChevronDown className="w-3 h-3 text-dark-muted" />
-            </button>
+            <div className="flex items-center gap-2">
+              <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+              <button
+                onClick={() => setShowVersionPicker(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+              >
+                {currentVersion.shortName}
+                <ChevronDown className="w-3 h-3 text-dark-muted" />
+              </button>
+            </div>
           )}
         </header>
 
@@ -524,6 +530,7 @@ const BiblePage = () => {
                     ))}
                     <VerseRow
                       verse={verse}
+                      fontSize={fontSize}
                       isHighlighted={isUrlHighlighted}
                       isSelected={isSelected}
                       highlightColor={highlightColor}
@@ -700,13 +707,14 @@ interface VerseRowProps {
   highlightColor?: string;
   isRedLetter?: boolean;
   isSaved: boolean;
+  fontSize?: number;
   onTap: (verseNumber: number) => void;
   onSave: (v: BibleVerse) => void;
   onShare: (v: BibleVerse) => void;
   onImage: (v: BibleVerse) => void;
 }
 
-const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLetter, isSaved, onTap, onSave, onShare, onImage }: VerseRowProps) => {
+const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLetter, isSaved, fontSize = 16, onTap, onSave, onShare, onImage }: VerseRowProps) => {
   return (
     <div
       id={`verse-${verse.number}`}
@@ -720,7 +728,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       }
       onClick={() => onTap(verse.number)}
     >
-      <p className={`text-sm leading-relaxed ${isRedLetter ? "text-red-400" : ""}`}>
+      <p className={`leading-relaxed ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
         <span
           className="font-bold mr-2 text-xs align-super"
           style={highlightColor ? { color: highlightColor } : isRedLetter ? { color: "#ef4444" } : undefined}

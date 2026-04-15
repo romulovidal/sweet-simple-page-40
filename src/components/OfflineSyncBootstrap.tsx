@@ -78,6 +78,8 @@ const OfflineSyncBootstrap = () => {
       const userId = session?.user?.id ?? null;
       currentUserIdRef.current = userId;
 
+      void syncPendingPushRegistration();
+
       if (userId) {
         void runHydration(userId);
       }
@@ -89,7 +91,7 @@ const OfflineSyncBootstrap = () => {
       clearPendingSync();
       currentUserIdRef.current = session?.user?.id ?? null;
 
-      void syncPendingPushRegistration();
+      void syncPendingPushRegistration({ forceResubscribe: true });
 
       if (currentUserIdRef.current) {
         void runHydration(currentUserIdRef.current);

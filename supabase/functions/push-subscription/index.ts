@@ -71,11 +71,16 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceKey);
 
     if (parsed.data.action === "delete") {
-      const { error } = await adminClient
+      let deleteQuery = adminClient
         .from("push_subscriptions")
         .delete()
-        .eq("endpoint", parsed.data.endpoint)
-        .eq("user_id", resolvedUserId);
+        .eq("endpoint", parsed.data.endpoint);
+
+      deleteQuery = resolvedUserId
+        ? deleteQuery.eq("user_id", resolvedUserId)
+        : deleteQuery.is("user_id", null);
+
+      const { error } = await deleteQuery;
 
       if (error) {
         console.error("Push subscription delete failed:", error);

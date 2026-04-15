@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_plan_readings: {
         Row: {
           book_abbrev: string
@@ -145,6 +169,54 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      daily_verse_queue: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          scheduled_date: string
+          verse_ref: string
+          verse_text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          scheduled_date: string
+          verse_ref: string
+          verse_text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          scheduled_date?: string
+          verse_ref?: string
+          verse_text?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -169,6 +241,36 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      push_log: {
+        Row: {
+          body: string
+          id: string
+          sent_at: string
+          sent_by: string | null
+          title: string
+          total_failed: number
+          total_sent: number
+        }
+        Insert: {
+          body: string
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+          title: string
+          total_failed?: number
+          total_sent?: number
+        }
+        Update: {
+          body?: string
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+          title?: string
+          total_failed?: number
+          total_sent?: number
         }
         Relationships: []
       }

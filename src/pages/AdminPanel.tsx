@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -17,6 +17,13 @@ import AdminDailyVerse from "@/components/admin/AdminDailyVerse";
 import AdminPushSender from "@/components/admin/AdminPushSender";
 import AdminRoles from "@/components/admin/AdminRoles";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
@@ -42,15 +49,18 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "users" | "roles" | "log";
 
-const TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: "dashboard", label: "Início", icon: LayoutDashboard },
   { id: "posts", label: "Posts", icon: FileText },
   { id: "plans", label: "Planos", icon: BookOpen },
   { id: "verse", label: "Versículo", icon: BookMarked },
   { id: "push", label: "Push", icon: Bell },
+];
+
+const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "users", label: "Usuários", icon: Users },
-  { id: "roles", label: "Admins", icon: Shield },
-  { id: "log", label: "Log", icon: Clock },
+  { id: "roles", label: "Administradores", icon: Shield },
+  { id: "log", label: "Log de Atividades", icon: Clock },
 ];
 
 const AdminPanel = () => {
@@ -66,6 +76,7 @@ const AdminPanel = () => {
   const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editUserName, setEditUserName] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -185,23 +196,26 @@ const AdminPanel = () => {
     if (viewingPlanId) fetchReadings(viewingPlanId);
   };
 
+  const isMoreTab = MORE_TABS.some(t => t.id === tab);
+  const currentTabLabel = [...BOTTOM_TABS, ...MORE_TABS].find(t => t.id === tab)?.label || "";
+
   // ---- POST FORM ----
   if (editingPost) {
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
           <button onClick={() => setEditingPost(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPost.id ? "Editar" : "Nova"} Postagem</h1>
           <Button size="sm" onClick={savePost}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
         </header>
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Tipo</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
             <div className="flex flex-wrap gap-2">
               {POST_TYPES.map((t) => (
                 <button key={t.value} onClick={() => setEditingPost({ ...editingPost, type: t.value })}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    editingPost.type === t.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                    editingPost.type === t.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}>
                   <t.icon className="w-3 h-3" /> {t.label}
                 </button>
@@ -209,34 +223,34 @@ const AdminPanel = () => {
             </div>
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Título</label>
             <Input value={editingPost.title || ""} onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
-              className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
+              className="bg-muted border-none" maxLength={200} />
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Conteúdo</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Conteúdo</label>
             <Textarea value={editingPost.content || ""} onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
-              className="bg-[hsl(var(--dark-card))] border-none min-h-[120px]" maxLength={5000} />
+              className="bg-muted border-none min-h-[120px]" maxLength={5000} />
           </div>
           {editingPost.type === "video" && (
             <div>
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">URL do YouTube</label>
+              <label className="text-xs text-muted-foreground mb-1 block">URL do YouTube</label>
               <Input value={editingPost.youtube_url || ""} onChange={(e) => setEditingPost({ ...editingPost, youtube_url: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={500} />
+                placeholder="https://youtube.com/watch?v=..." className="bg-muted border-none" maxLength={500} />
             </div>
           )}
           {(editingPost.type === "versiculo" || editingPost.type === "oracao") && (
             <div>
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência Bíblica</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Referência Bíblica</label>
               <Input value={editingPost.bible_reference || ""} onChange={(e) => setEditingPost({ ...editingPost, bible_reference: e.target.value })}
-                placeholder="Ex: João 3:16" className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
+                placeholder="Ex: João 3:16" className="bg-muted border-none" maxLength={100} />
             </div>
           )}
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem de exibição</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Ordem de exibição</label>
             <Input type="number" value={editingPost.sort_order ?? 0}
               onChange={(e) => setEditingPost({ ...editingPost, sort_order: parseInt(e.target.value) || 0 })}
-              className="bg-[hsl(var(--dark-card))] border-none w-24" />
+              className="bg-muted border-none w-24" />
           </div>
         </div>
       </div>
@@ -248,7 +262,7 @@ const AdminPanel = () => {
     const totalDays = (editingPlan as { total_days?: number }).total_days || 7;
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
           <button onClick={() => setEditingPlan(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPlan.id ? "Editar" : "Novo"} Plano</h1>
           <Button size="sm" onClick={savePlan}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
@@ -256,70 +270,70 @@ const AdminPanel = () => {
         <div className="px-5 py-4 space-y-5">
           <div className="flex gap-3 items-end">
             <div>
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Emoji</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Emoji</label>
               <Input value={editingPlan.image_emoji || "📖"}
                 onChange={(e) => setEditingPlan({ ...editingPlan, image_emoji: e.target.value })}
-                className="bg-[hsl(var(--dark-card))] border-none w-16 text-center text-2xl" maxLength={4} />
+                className="bg-muted border-none w-16 text-center text-2xl" maxLength={4} />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do Plano *</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Título do Plano *</label>
               <Input value={editingPlan.title || ""}
                 onChange={(e) => setEditingPlan({ ...editingPlan, title: e.target.value })}
-                placeholder="Ex: 21 Dias nos Salmos" className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
+                placeholder="Ex: 21 Dias nos Salmos" className="bg-muted border-none" maxLength={200} />
             </div>
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
+            <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Quantos dias tem o plano? *
             </label>
             <div className="flex items-center gap-3">
               <Input type="number" value={totalDays}
                 onChange={(e) => setEditingPlan({ ...editingPlan, total_days: parseInt(e.target.value) || 1 } as typeof editingPlan)}
-                min={1} max={365} className="bg-[hsl(var(--dark-card))] border-none w-24" />
-              <span className="text-xs text-[hsl(var(--dark-muted))]">dias de leitura</span>
+                min={1} max={365} className="bg-muted border-none w-24" />
+              <span className="text-xs text-muted-foreground">dias de leitura</span>
             </div>
             <div className="flex gap-2 mt-2">
               {[7, 14, 21, 30, 60, 90].map((d) => (
                 <button key={d} onClick={() => setEditingPlan({ ...editingPlan, total_days: d } as typeof editingPlan)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    totalDays === d ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                    totalDays === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}>{d}d</button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Descrição *</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Descrição *</label>
             <Textarea value={editingPlan.description || ""}
               onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
-              placeholder="Breve descrição do plano..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={1000} />
+              placeholder="Breve descrição do plano..." className="bg-muted border-none" maxLength={1000} />
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Devocional / Introdução</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Devocional / Introdução</label>
             <Textarea value={(editingPlan as { devotional?: string }).devotional || ""}
               onChange={(e) => setEditingPlan({ ...editingPlan, devotional: e.target.value } as typeof editingPlan)}
               placeholder="Texto devocional de abertura do plano..."
-              className="bg-[hsl(var(--dark-card))] border-none min-h-[100px]" maxLength={5000} />
+              className="bg-muted border-none min-h-[100px]" maxLength={5000} />
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Categoria</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
             <div className="flex flex-wrap gap-2">
               {PLAN_CATEGORIES.map((cat) => (
                 <button key={cat} onClick={() => setEditingPlan({ ...editingPlan, category: cat })}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    editingPlan.category === cat ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                    editingPlan.category === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   }`}>{cat}</button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Ordem</label>
             <Input type="number" value={editingPlan.sort_order ?? 0}
               onChange={(e) => setEditingPlan({ ...editingPlan, sort_order: parseInt(e.target.value) || 0 })}
-              className="bg-[hsl(var(--dark-card))] border-none w-24" />
+              className="bg-muted border-none w-24" />
           </div>
           <div className="bg-primary/10 rounded-xl p-4">
             <p className="text-xs text-primary font-semibold mb-1">💡 Próximo passo</p>
-            <p className="text-xs text-[hsl(var(--dark-muted))]">
+            <p className="text-xs text-muted-foreground">
               Ao salvar, você será direcionado para adicionar as leituras dia a dia.
             </p>
           </div>
@@ -345,19 +359,19 @@ const AdminPanel = () => {
 
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 border-b border-[hsl(var(--dark-card))]">
+        <header className="px-5 pt-8 pb-4 border-b border-border">
           <div className="flex items-center gap-3">
             <button onClick={() => setViewingPlanId(null)}><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex-1">
               <h1 className="text-lg font-bold">{plan?.title}</h1>
-              <p className="text-xs text-[hsl(var(--dark-muted))]">{filledDays}/{totalDays} dias preenchidos • {progress}%</p>
+              <p className="text-xs text-muted-foreground">{filledDays}/{totalDays} dias preenchidos • {progress}%</p>
             </div>
             <button onClick={() => plan && setEditingPlan(plan)} className="text-xs text-primary font-semibold">
               <Edit2 className="w-4 h-4" />
             </button>
           </div>
           {totalDays > 0 && (
-            <div className="w-full h-2 bg-[hsl(var(--dark-card))] rounded-full overflow-hidden mt-3">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden mt-3">
               <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} />
             </div>
           )}
@@ -372,10 +386,10 @@ const AdminPanel = () => {
           {existingDays.map((dayNum) => {
             const dayReadings = dayGroups[dayNum];
             return (
-              <div key={dayNum} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-2">
+              <div key={dayNum} className="bg-muted rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-primary">📅 Dia {String(dayNum).padStart(2, "0")}</p>
-                  <p className="text-[10px] text-[hsl(var(--dark-muted))]">{dayReadings.length} leitura{dayReadings.length > 1 ? "s" : ""}</p>
+                  <p className="text-[10px] text-muted-foreground">{dayReadings.length} leitura{dayReadings.length > 1 ? "s" : ""}</p>
                 </div>
                 {dayReadings.map((r) => {
                   const book = bibleBooks.find((b) => b.apiAbbrev === r.book_abbrev);
@@ -389,7 +403,7 @@ const AdminPanel = () => {
                         {readingTitle && <p className="text-[10px] font-semibold text-primary truncate">{readingTitle}</p>}
                         <p className="text-sm">
                           {book?.name || r.book_abbrev} {r.chapter}
-                          {verseRange && <span className="text-[hsl(var(--dark-muted))]">:{verseRange}</span>}
+                          {verseRange && <span className="text-muted-foreground">:{verseRange}</span>}
                         </p>
                       </div>
                       <button onClick={() => deleteReading(r.id)} className="text-destructive p-1">
@@ -406,7 +420,7 @@ const AdminPanel = () => {
             );
           })}
           {canAddNewDay && (
-            <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+            <div className="bg-muted rounded-xl p-4">
               <SmartAddReadingForm
                 onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: nextNewDay })}
                 dayNumber={nextNewDay} totalDays={totalDays}
@@ -415,8 +429,8 @@ const AdminPanel = () => {
           )}
           {planReadings.length === 0 && !canAddNewDay && (
             <div className="text-center py-10">
-              <BookOpen className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
-              <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhuma leitura adicionada</p>
+              <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+              <p className="text-sm text-muted-foreground">Nenhuma leitura adicionada</p>
             </div>
           )}
         </div>
@@ -424,189 +438,239 @@ const AdminPanel = () => {
     );
   }
 
-  // ---- MAIN PANEL ----
+  // ---- MAIN PANEL (Mobile-first with bottom nav) ----
   return (
-    <div className="min-h-screen pb-10">
-      <header className="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[hsl(var(--dark-card))]">
-        <div>
-          <h1 className="text-xl font-bold">Painel Admin</h1>
-          <p className="text-xs text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>
+    <div className="min-h-screen pb-20 flex flex-col">
+      {/* Top header */}
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between border-b border-border sticky top-0 z-20 bg-background">
+        <div className="flex items-center gap-3">
+          {/* Hamburger menu */}
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <Menu className="w-5 h-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 bg-background p-0">
+              <SheetHeader className="px-5 pt-6 pb-4 border-b border-border">
+                <SheetTitle className="text-left text-base">Menu Admin</SheetTitle>
+              </SheetHeader>
+              <div className="px-3 py-4 space-y-1">
+                {MORE_TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setTab(t.id); setMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      tab === t.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <t.icon className="w-5 h-5" />
+                    {t.label}
+                  </button>
+                ))}
+                <div className="border-t border-border my-3" />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sair
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <div>
+            <h1 className="text-lg font-bold leading-tight">
+              {isMoreTab ? currentTabLabel : "Painel Admin"}
+            </h1>
+            {!isMoreTab && <p className="text-[11px] text-muted-foreground">A Bíblia do Atalaia</p>}
+          </div>
         </div>
-        <button onClick={handleLogout} className="text-[hsl(var(--dark-muted))]"><LogOut className="w-5 h-5" /></button>
       </header>
 
-      {/* Tab bar - scrollable */}
-      <div className="px-5 flex gap-1 border-b border-[hsl(var(--dark-card))] overflow-x-auto no-scrollbar">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`py-3 px-3 text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              tab === t.id ? "text-primary border-b-2 border-primary" : "text-[hsl(var(--dark-muted))]"
-            }`}>
-            <t.icon className="w-3.5 h-3.5" />
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {loading && (tab === "posts" || tab === "plans" || tab === "users") ? (
+          <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+        ) : (
+          <div className="px-5 py-4">
+            {tab === "dashboard" && <AdminDashboard />}
+            {tab === "verse" && <AdminDailyVerse />}
+            {tab === "push" && <AdminPushSender />}
+            {tab === "roles" && <AdminRoles />}
+            {tab === "log" && <AdminActivityLog />}
 
-      {loading && (tab === "posts" || tab === "plans" || tab === "users") ? (
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      ) : (
-        <div className="px-5 py-4">
-          {tab === "dashboard" && <AdminDashboard />}
-          {tab === "verse" && <AdminDailyVerse />}
-          {tab === "push" && <AdminPushSender />}
-          {tab === "roles" && <AdminRoles />}
-          {tab === "log" && <AdminActivityLog />}
-
-          {tab === "posts" && (
-            <>
-              <Button onClick={() => setEditingPost({ type: "devocional", is_active: true, sort_order: 0 })} className="w-full mb-4">
-                <Plus className="w-4 h-4 mr-2" /> Nova Postagem
-              </Button>
-              <div className="space-y-2">
-                {posts.map((post) => {
-                  const typeInfo = POST_TYPES.find((t) => t.value === post.type);
-                  const Icon = typeInfo?.icon || FileText;
-                  return (
-                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                          <Icon className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm truncate">{post.title}</p>
-                            {!post.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
-                          </div>
-                          <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">{post.content}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
-                        <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
-                          <Edit2 className="w-3 h-3" /> Editar
-                        </button>
-                        <button onClick={() => togglePostActive(post)} className="text-xs text-[hsl(var(--dark-muted))] font-medium flex items-center gap-1 ml-auto">
-                          {post.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          {post.is_active ? "Ocultar" : "Mostrar"}
-                        </button>
-                        <button onClick={() => deletePost(post.id)} className="text-xs text-destructive font-medium flex items-center gap-1">
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {posts.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhuma postagem ainda</p>}
-              </div>
-            </>
-          )}
-
-          {tab === "plans" && (
-            <>
-              <Button onClick={() => setEditingPlan({ is_active: true, sort_order: 0, image_emoji: "📖", category: "Geral", total_days: 7 } as Partial<Plan>)} className="w-full mb-4">
-                <Plus className="w-4 h-4 mr-2" /> Novo Plano
-              </Button>
-              <div className="space-y-2">
-                {plans.map((plan) => {
-                  const td = (plan as Record<string, unknown>).total_days as number || 0;
-                  return (
-                    <div key={plan.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{plan.image_emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">{plan.title}</p>
-                            <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{plan.category}</span>
-                            {!plan.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
-                          </div>
-                          <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-1">{plan.description}</p>
-                          <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
-                        <button onClick={() => fetchReadings(plan.id)} className="text-xs text-primary font-medium flex items-center gap-1">
-                          <BookOpen className="w-3 h-3" /> Leituras
-                        </button>
-                        <button onClick={() => setEditingPlan(plan)} className="text-xs text-primary font-medium flex items-center gap-1">
-                          <Edit2 className="w-3 h-3" /> Editar
-                        </button>
-                        <button onClick={() => deletePlan(plan.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {plans.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum plano ainda</p>}
-              </div>
-            </>
-          )}
-
-          {tab === "users" && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-[hsl(var(--dark-muted))]">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
-                <Button size="sm" variant="outline" onClick={exportUsersCSV}>
-                  <Download className="w-3 h-3 mr-1" /> CSV
+            {tab === "posts" && (
+              <>
+                <Button onClick={() => setEditingPost({ type: "devocional", is_active: true, sort_order: 0 })} className="w-full mb-4">
+                  <Plus className="w-4 h-4 mr-2" /> Nova Postagem
                 </Button>
-              </div>
-              <div className="space-y-2">
-                {users.map((u) => (
-                  <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
-                    <div className="flex items-center gap-3">
-                      {u.avatar_url ? (
-                        <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <div className="space-y-2">
+                  {posts.map((post) => {
+                    const typeInfo = POST_TYPES.find((t) => t.value === post.type);
+                    const Icon = typeInfo?.icon || FileText;
+                    return (
+                      <div key={post.id} className="bg-muted rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                            <Icon className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm truncate">{post.title}</p>
+                              {!post.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{post.content}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                          <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
+                            <Edit2 className="w-3 h-3" /> Editar
+                          </button>
+                          <button onClick={() => togglePostActive(post)} className="text-xs text-muted-foreground font-medium flex items-center gap-1 ml-auto">
+                            {post.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            {post.is_active ? "Ocultar" : "Mostrar"}
+                          </button>
+                          <button onClick={() => deletePost(post.id)} className="text-xs text-destructive font-medium flex items-center gap-1">
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {posts.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhuma postagem ainda</p>}
+                </div>
+              </>
+            )}
+
+            {tab === "plans" && (
+              <>
+                <Button onClick={() => setEditingPlan({ is_active: true, sort_order: 0, image_emoji: "📖", category: "Geral", total_days: 7 } as Partial<Plan>)} className="w-full mb-4">
+                  <Plus className="w-4 h-4 mr-2" /> Novo Plano
+                </Button>
+                <div className="space-y-2">
+                  {plans.map((plan) => {
+                    const td = (plan as Record<string, unknown>).total_days as number || 0;
+                    return (
+                      <div key={plan.id} className="bg-muted rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{plan.image_emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm">{plan.title}</p>
+                              <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{plan.category}</span>
+                              {!plan.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{plan.description}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                          <button onClick={() => fetchReadings(plan.id)} className="text-xs text-primary font-medium flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" /> Leituras
+                          </button>
+                          <button onClick={() => setEditingPlan(plan)} className="text-xs text-primary font-medium flex items-center gap-1">
+                            <Edit2 className="w-3 h-3" /> Editar
+                          </button>
+                          <button onClick={() => deletePlan(plan.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {plans.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhum plano ainda</p>}
+                </div>
+              </>
+            )}
+
+            {tab === "users" && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
+                  <Button size="sm" variant="outline" onClick={exportUsersCSV}>
+                    <Download className="w-3 h-3 mr-1" /> CSV
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {users.map((u) => (
+                    <div key={u.id} className="bg-muted rounded-xl p-4">
+                      <div className="flex items-center gap-3">
+                        {u.avatar_url ? (
+                          <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+                      {editingUser?.id === u.id ? (
+                        <div className="mt-3 pt-3 border-t border-background space-y-2">
+                          <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
+                            placeholder="Nome do usuário" className="bg-background border-none text-sm" />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={async () => {
+                              const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
+                              if (error) { toast.error("Erro ao salvar"); return; }
+                              toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
+                            }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-primary" />
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                          <button onClick={() => { setEditingUser(u); setEditUserName(u.display_name || ""); }}
+                            className="text-xs text-primary font-medium flex items-center gap-1">
+                            <Edit2 className="w-3 h-3" /> Editar
+                          </button>
+                          <button onClick={async () => {
+                            if (!window.confirm("Excluir este usuário e todos os dados dele?")) return;
+                            await supabase.from("user_plan_progress").delete().eq("user_id", u.user_id);
+                            await supabase.from("user_saved_verses").delete().eq("user_id", u.user_id);
+                            await supabase.from("user_streaks").delete().eq("user_id", u.user_id);
+                            await supabase.from("profiles").delete().eq("id", u.id);
+                            toast.success("Usuário removido"); fetchData();
+                          }} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
-                        <p className="text-[10px] text-[hsl(var(--dark-muted))]">
-                          Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR")}
-                        </p>
-                      </div>
                     </div>
-                    {editingUser?.id === u.id ? (
-                      <div className="mt-3 pt-3 border-t border-background space-y-2">
-                        <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
-                          placeholder="Nome do usuário" className="bg-background border-none text-sm" />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={async () => {
-                            const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
-                            if (error) { toast.error("Erro ao salvar"); return; }
-                            toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
-                          }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
-                        <button onClick={() => { setEditingUser(u); setEditUserName(u.display_name || ""); }}
-                          className="text-xs text-primary font-medium flex items-center gap-1">
-                          <Edit2 className="w-3 h-3" /> Editar
-                        </button>
-                        <button onClick={async () => {
-                          if (!window.confirm("Excluir este usuário e todos os dados dele?")) return;
-                          await supabase.from("user_plan_progress").delete().eq("user_id", u.user_id);
-                          await supabase.from("user_saved_verses").delete().eq("user_id", u.user_id);
-                          await supabase.from("user_streaks").delete().eq("user_id", u.user_id);
-                          await supabase.from("profiles").delete().eq("id", u.id);
-                          toast.success("Usuário removido"); fetchData();
-                        }} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {users.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum usuário cadastrado</p>}
-              </div>
-            </>
-          )}
+                  ))}
+                  {users.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhum usuário cadastrado</p>}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Navigation - mobile app style */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border">
+        <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+          {BOTTOM_TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <t.icon className={`w-5 h-5 ${active ? "text-primary" : ""}`} />
+                <span className={`text-[10px] font-medium ${active ? "text-primary" : ""}`}>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
+      </nav>
     </div>
   );
 };
@@ -653,87 +717,67 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
   }
 
   return (
-    <div className={`${isAddToDay ? "" : "bg-[hsl(var(--dark-card))] rounded-xl p-4"} space-y-3`}>
+    <div className={`${isAddToDay ? "" : "bg-muted rounded-xl p-4"} space-y-3`}>
       {!isAddToDay && (
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold text-primary">📅 Novo Dia {String(dayNumber).padStart(2, "0")}</p>
-          {totalDays > 0 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">de {totalDays}</p>}
+          {totalDays > 0 && <p className="text-[10px] text-muted-foreground">de {totalDays}</p>}
         </div>
       )}
       <div>
-        <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do dia (opcional)</label>
+        <label className="text-xs text-muted-foreground mb-1 block">Título do dia (opcional)</label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: A Criação do Mundo" className="bg-background border-none" maxLength={100} />
       </div>
       <div>
-        <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📖 Livro da Bíblia *</label>
+        <label className="text-xs text-muted-foreground mb-1 block">📖 Livro da Bíblia *</label>
         <button onClick={() => setShowBookPicker(!showBookPicker)}
           className="w-full flex items-center justify-between bg-background rounded-md px-3 py-2 text-sm">
-          <span className={selectedBookData ? "" : "text-[hsl(var(--dark-muted))]"}>
+          <span className={selectedBookData ? "" : "text-muted-foreground"}>
             {selectedBookData ? `${selectedBookData.name} (${selectedBookData.chapters} cap.)` : "Selecionar livro..."}
           </span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showBookPicker ? "rotate-180" : ""}`} />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
         {showBookPicker && (
-          <div className="mt-1 bg-background rounded-xl border border-[hsl(var(--dark-card))] max-h-48 overflow-y-auto">
+          <div className="mt-2 bg-background rounded-xl border border-border max-h-52 overflow-y-auto">
             <div className="p-2 sticky top-0 bg-background">
               <Input value={bookSearch} onChange={(e) => setBookSearch(e.target.value)}
-                placeholder="Buscar livro..." className="bg-[hsl(var(--dark-card))] border-none text-xs h-8" />
+                placeholder="Buscar livro..." className="bg-muted border-none text-sm h-8" />
             </div>
-            {filteredBooks.map((book) => (
-              <button key={book.apiAbbrev}
-                onClick={() => { setSelectedBook(book.apiAbbrev); setShowBookPicker(false); setBookSearch(""); setChapter(""); }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-[hsl(var(--dark-card))] transition-colors ${
-                  selectedBook === book.apiAbbrev ? "text-primary font-semibold" : ""
-                }`}>
-                {book.name} <span className="text-[hsl(var(--dark-muted))]">({book.chapters} cap.)</span>
-              </button>
-            ))}
+            <div className="px-1 pb-1">
+              {filteredBooks.map((b) => (
+                <button key={b.apiAbbrev}
+                  onClick={() => { setSelectedBook(b.apiAbbrev); setShowBookPicker(false); setBookSearch(""); }}
+                  className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors ${
+                    selectedBook === b.apiAbbrev ? "bg-primary/15 text-primary font-medium" : ""
+                  }`}>
+                  {b.name} <span className="text-muted-foreground text-xs">({b.chapters} cap.)</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
-      {selectedBookData && (
-        <div>
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Capítulo *</label>
-          <div className="flex gap-2 items-center mb-2">
-            <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
-              min={1} max={selectedBookData.chapters} placeholder={`1-${selectedBookData.chapters}`}
-              className="bg-background border-none w-24" />
-            <span className="text-xs text-[hsl(var(--dark-muted))]">de {selectedBookData.chapters}</span>
-          </div>
-          {selectedBookData.chapters <= 30 && (
-            <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: selectedBookData.chapters }, (_, i) => i + 1).map((ch) => (
-                <button key={ch} onClick={() => setChapter(String(ch))}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                    chapter === String(ch) ? "bg-primary text-primary-foreground" : "bg-background text-[hsl(var(--dark-muted))]"
-                  }`}>{ch}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {!selectedBookData && (
-        <div>
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Capítulo *</label>
-          <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
-            min={1} placeholder="—" className="bg-background border-none w-24" />
-        </div>
-      )}
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Versículo início (opcional)</label>
-          <Input type="number" value={verseStart} onChange={(e) => setVerseStart(e.target.value)}
-            min={1} placeholder="—" className="bg-background border-none" />
+          <label className="text-xs text-muted-foreground mb-1 block">Capítulo *</label>
+          <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
+            placeholder="1" min={1} max={selectedBookData?.chapters || 150}
+            className="bg-background border-none" />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Versículo fim (opcional)</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Vers. início</label>
+          <Input type="number" value={verseStart} onChange={(e) => setVerseStart(e.target.value)}
+            placeholder="—" min={1} className="bg-background border-none" />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs text-muted-foreground mb-1 block">Vers. fim</label>
           <Input type="number" value={verseEnd} onChange={(e) => setVerseEnd(e.target.value)}
-            min={1} placeholder="—" className="bg-background border-none" />
+            placeholder="—" min={1} className="bg-background border-none" />
         </div>
       </div>
       <Button onClick={handleSubmit} className="w-full" size="sm">
-        <Plus className="w-4 h-4 mr-1" /> {isAddToDay ? "Adicionar leitura" : `Adicionar Dia ${String(dayNumber).padStart(2, "0")}${totalDays > 0 ? ` de ${totalDays}` : ""}`}
+        <Plus className="w-3 h-3 mr-1" /> Adicionar Leitura
       </Button>
     </div>
   );

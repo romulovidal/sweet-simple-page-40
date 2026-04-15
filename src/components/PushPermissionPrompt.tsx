@@ -47,11 +47,7 @@ const PushPermissionPrompt = () => {
   }, []);
 
   const handleAllow = async () => {
-    // Step 1: Dismiss the modal and show helper text
     setPhase("waiting-system");
-
-    // Step 2: Wait a moment for the UI to clear, then trigger the native OS dialog
-    await new Promise((r) => setTimeout(r, 400));
 
     const ok = await registerPushNotifications();
     if (ok) {

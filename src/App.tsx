@@ -48,6 +48,7 @@ const AppContent = () => {
       {!isAdmin && <ThemeToggleFloat />}
       {isAdmin ? <AdminInstallPrompt /> : <InstallPrompt />}
       <UpdatePrompt />
+      {!isAdmin && <PushPermissionPrompt />}
       {!isAdmin && <BottomNav />}
     </div>
   );

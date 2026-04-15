@@ -596,6 +596,17 @@ const BiblePage = () => {
             onClose={() => setImageVerse(null)}
           />
         )}
+        {showCompare && selectedBook && selectedChapter && (
+          <VerseCompare
+            open={showCompare}
+            onClose={() => setShowCompare(false)}
+            bookAbbrev={selectedBook.apiAbbrev}
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            verseNumbers={[...selectedVerses].sort((a, b) => a - b)}
+            currentVersionId={bibleVersion}
+          />
+        )}
         {versionPickerModal}
         <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
       </div>

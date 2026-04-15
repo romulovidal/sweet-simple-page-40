@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { useFontSize } from "@/hooks/useFontSize";
+import FontSizeControls from "@/components/FontSizeControls";
 import { useSearchParams } from "react-router-dom";
 import { bibleBooks, type BibleBook } from "@/data/bible";
 import {

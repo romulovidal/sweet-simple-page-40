@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useFontSize } from "@/hooks/useFontSize";
+import FontSizeControls from "@/components/FontSizeControls";
 import { bibleBooks } from "@/data/bible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown } from "lucide-react";

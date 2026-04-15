@@ -65,9 +65,12 @@ async function sendToSubscription(
       options,
     );
     return { sent: 1, failed: 0 };
-  } catch (e: any) {
-    console.error(`Push failed for ${sub.endpoint}:`, e?.statusCode, e?.body);
-    if (e?.statusCode === 410 || e?.statusCode === 404) {
+  } catch (e: unknown) {
+    const statusCode = typeof e === "object" && e !== null && "statusCode" in e ? Reflect.get(e, "statusCode") : undefined;
+    const errorBody = typeof e === "object" && e !== null && "body" in e ? Reflect.get(e, "body") : undefined;
+
+    console.error(`Push failed for ${sub.endpoint}:`, statusCode, errorBody);
+    if (statusCode === 410 || statusCode === 404) {
       await supabase.from("push_subscriptions").delete().eq("id", sub.id);
     }
     return { sent: 0, failed: 1 };

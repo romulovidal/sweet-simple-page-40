@@ -8,6 +8,7 @@ import OfflineSyncBootstrap from "@/components/OfflineSyncBootstrap";
 import ScrollToTop from "@/components/ScrollToTop";
 import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import InstallPrompt from "@/components/InstallPrompt";
+import UpdatePrompt from "@/components/UpdatePrompt";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";

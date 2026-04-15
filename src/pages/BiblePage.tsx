@@ -32,6 +32,7 @@ const HIGHLIGHT_COLORS = [
 ];
 
 const BiblePage = () => {
+  const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);

@@ -8,9 +8,15 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
+import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminDailyVerse from "@/components/admin/AdminDailyVerse";
+import AdminPushSender from "@/components/admin/AdminPushSender";
+import AdminRoles from "@/components/admin/AdminRoles";
+import AdminActivityLog from "@/components/admin/AdminActivityLog";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
@@ -34,9 +40,22 @@ const POST_TYPES = [
 
 const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas", "Profetas", "Devocional", "Temático"];
 
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "users" | "roles" | "log";
+
+const TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "posts", label: "Posts", icon: FileText },
+  { id: "plans", label: "Planos", icon: BookOpen },
+  { id: "verse", label: "Versículo", icon: BookMarked },
+  { id: "push", label: "Push", icon: Bell },
+  { id: "users", label: "Usuários", icon: Users },
+  { id: "roles", label: "Admins", icon: Shield },
+  { id: "log", label: "Log", icon: Clock },
+];
+
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"posts" | "plans" | "users">("posts");
+  const [tab, setTab] = useState<TabType>("dashboard");
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -64,6 +83,20 @@ const AdminPanel = () => {
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
+
+  const exportUsersCSV = () => {
+    const headers = ["Nome", "Data de Cadastro"];
+    const rows = users.map(u => [u.display_name || "Sem nome", new Date(u.created_at).toLocaleDateString("pt-BR")]);
+    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `usuarios_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado!");
+  };
 
   // ---- POSTS ----
   const savePost = async () => {
@@ -120,10 +153,7 @@ const AdminPanel = () => {
     }
     setEditingPlan(null);
     fetchData();
-    // Auto-open readings view for the plan
-    if (planId) {
-      fetchReadings(planId);
-    }
+    if (planId) fetchReadings(planId);
   };
 
   const deletePlan = async (id: string) => {
@@ -238,8 +268,6 @@ const AdminPanel = () => {
                 placeholder="Ex: 21 Dias nos Salmos" className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
             </div>
           </div>
-
-          {/* Total Days */}
           <div>
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Quantos dias tem o plano? *
@@ -255,20 +283,16 @@ const AdminPanel = () => {
                 <button key={d} onClick={() => setEditingPlan({ ...editingPlan, total_days: d } as typeof editingPlan)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                     totalDays === d ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
-                  }`}>
-                  {d}d
-                </button>
+                  }`}>{d}d</button>
               ))}
             </div>
           </div>
-
           <div>
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Descrição *</label>
             <Textarea value={editingPlan.description || ""}
               onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
               placeholder="Breve descrição do plano..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={1000} />
           </div>
-
           <div>
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Devocional / Introdução</label>
             <Textarea value={(editingPlan as { devotional?: string }).devotional || ""}
@@ -276,7 +300,6 @@ const AdminPanel = () => {
               placeholder="Texto devocional de abertura do plano..."
               className="bg-[hsl(var(--dark-card))] border-none min-h-[100px]" maxLength={5000} />
           </div>
-
           <div>
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Categoria</label>
             <div className="flex flex-wrap gap-2">
@@ -284,25 +307,20 @@ const AdminPanel = () => {
                 <button key={cat} onClick={() => setEditingPlan({ ...editingPlan, category: cat })}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     editingPlan.category === cat ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
-                  }`}>
-                  {cat}
-                </button>
+                  }`}>{cat}</button>
               ))}
             </div>
           </div>
-
           <div>
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem</label>
             <Input type="number" value={editingPlan.sort_order ?? 0}
               onChange={(e) => setEditingPlan({ ...editingPlan, sort_order: parseInt(e.target.value) || 0 })}
               className="bg-[hsl(var(--dark-card))] border-none w-24" />
           </div>
-
           <div className="bg-primary/10 rounded-xl p-4">
             <p className="text-xs text-primary font-semibold mb-1">💡 Próximo passo</p>
             <p className="text-xs text-[hsl(var(--dark-muted))]">
-              Ao salvar, você será direcionado para adicionar as leituras dia a dia, 
-              linkando cada dia com o livro, capítulo e versículos da Bíblia.
+              Ao salvar, você será direcionado para adicionar as leituras dia a dia.
             </p>
           </div>
         </div>
@@ -314,8 +332,6 @@ const AdminPanel = () => {
   if (viewingPlanId) {
     const plan = plans.find((p) => p.id === viewingPlanId);
     const totalDays = (plan as Record<string, unknown>)?.total_days as number || 0;
-
-    // Group readings by day_number
     const dayGroups: Record<number, PlanReading[]> = {};
     planReadings.forEach((r) => {
       if (!dayGroups[r.day_number]) dayGroups[r.day_number] = [];
@@ -334,9 +350,7 @@ const AdminPanel = () => {
             <button onClick={() => setViewingPlanId(null)}><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex-1">
               <h1 className="text-lg font-bold">{plan?.title}</h1>
-              <p className="text-xs text-[hsl(var(--dark-muted))]">
-                {filledDays}/{totalDays} dias preenchidos • {progress}%
-              </p>
+              <p className="text-xs text-[hsl(var(--dark-muted))]">{filledDays}/{totalDays} dias preenchidos • {progress}%</p>
             </div>
             <button onClick={() => plan && setEditingPlan(plan)} className="text-xs text-primary font-semibold">
               <Edit2 className="w-4 h-4" />
@@ -348,17 +362,13 @@ const AdminPanel = () => {
             </div>
           )}
           {filledDays < totalDays && totalDays > 0 && (
-            <p className="text-[10px] text-amber-400 mt-2">
-              ⚠️ Faltam {totalDays - filledDays} dias para completar o plano
-            </p>
+            <p className="text-[10px] text-amber-400 mt-2">⚠️ Faltam {totalDays - filledDays} dias para completar o plano</p>
           )}
           {filledDays >= totalDays && totalDays > 0 && (
-            <p className="text-[10px] text-green-400 mt-2">✅ Plano completo! Todos os {totalDays} dias foram preenchidos.</p>
+            <p className="text-[10px] text-green-400 mt-2">✅ Plano completo!</p>
           )}
         </header>
-
         <div className="px-5 py-4 space-y-4">
-          {/* Existing days grouped */}
           {existingDays.map((dayNum) => {
             const dayReadings = dayGroups[dayNum];
             return (
@@ -388,28 +398,21 @@ const AdminPanel = () => {
                     </div>
                   );
                 })}
-                {/* Add another reading to this day */}
                 <SmartAddReadingForm
                   onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: dayNum })}
-                  dayNumber={dayNum}
-                  totalDays={totalDays}
-                  isAddToDay
+                  dayNumber={dayNum} totalDays={totalDays} isAddToDay
                 />
               </div>
             );
           })}
-
-          {/* Add new day */}
           {canAddNewDay && (
             <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
               <SmartAddReadingForm
                 onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: nextNewDay })}
-                dayNumber={nextNewDay}
-                totalDays={totalDays}
+                dayNumber={nextNewDay} totalDays={totalDays}
               />
             </div>
           )}
-
           {planReadings.length === 0 && !canAddNewDay && (
             <div className="text-center py-10">
               <BookOpen className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
@@ -421,7 +424,7 @@ const AdminPanel = () => {
     );
   }
 
-  // ---- MAIN LIST ----
+  // ---- MAIN PANEL ----
   return (
     <div className="min-h-screen pb-10">
       <header className="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[hsl(var(--dark-card))]">
@@ -432,22 +435,30 @@ const AdminPanel = () => {
         <button onClick={handleLogout} className="text-[hsl(var(--dark-muted))]"><LogOut className="w-5 h-5" /></button>
       </header>
 
-      <div className="px-5 flex gap-4 border-b border-[hsl(var(--dark-card))]">
-        {(["posts", "plans", "users"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`py-3 text-sm font-semibold transition-colors ${
-              tab === t ? "text-dark-text border-b-2 border-primary" : "text-[hsl(var(--dark-muted))]"
+      {/* Tab bar - scrollable */}
+      <div className="px-5 flex gap-1 border-b border-[hsl(var(--dark-card))] overflow-x-auto no-scrollbar">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`py-3 px-3 text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              tab === t.id ? "text-primary border-b-2 border-primary" : "text-[hsl(var(--dark-muted))]"
             }`}>
-            {t === "posts" ? "Postagens" : t === "plans" ? "Planos" : "Usuários"}
+            <t.icon className="w-3.5 h-3.5" />
+            {t.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
+      {loading && (tab === "posts" || tab === "plans" || tab === "users") ? (
         <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : (
         <div className="px-5 py-4">
-          {tab === "posts" ? (
+          {tab === "dashboard" && <AdminDashboard />}
+          {tab === "verse" && <AdminDailyVerse />}
+          {tab === "push" && <AdminPushSender />}
+          {tab === "roles" && <AdminRoles />}
+          {tab === "log" && <AdminActivityLog />}
+
+          {tab === "posts" && (
             <>
               <Button onClick={() => setEditingPost({ type: "devocional", is_active: true, sort_order: 0 })} className="w-full mb-4">
                 <Plus className="w-4 h-4 mr-2" /> Nova Postagem
@@ -488,7 +499,9 @@ const AdminPanel = () => {
                 {posts.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhuma postagem ainda</p>}
               </div>
             </>
-          ) : tab === "plans" ? (
+          )}
+
+          {tab === "plans" && (
             <>
               <Button onClick={() => setEditingPlan({ is_active: true, sort_order: 0, image_emoji: "📖", category: "Geral", total_days: 7 } as Partial<Plan>)} className="w-full mb-4">
                 <Plus className="w-4 h-4 mr-2" /> Novo Plano
@@ -507,9 +520,7 @@ const AdminPanel = () => {
                             {!plan.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
                           </div>
                           <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-1">{plan.description}</p>
-                          <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">
-                            <Calendar className="w-3 h-3 inline mr-1" />{td} dias
-                          </p>
+                          <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
@@ -529,10 +540,15 @@ const AdminPanel = () => {
                 {plans.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum plano ainda</p>}
               </div>
             </>
-          ) : (
+          )}
+
+          {tab === "users" && (
             <>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[hsl(var(--dark-muted))]">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
+                <Button size="sm" variant="outline" onClick={exportUsersCSV}>
+                  <Download className="w-3 h-3 mr-1" /> CSV
+                </Button>
               </div>
               <div className="space-y-2">
                 {users.map((u) => (
@@ -554,25 +570,15 @@ const AdminPanel = () => {
                     </div>
                     {editingUser?.id === u.id ? (
                       <div className="mt-3 pt-3 border-t border-background space-y-2">
-                        <Input
-                          value={editUserName}
-                          onChange={(e) => setEditUserName(e.target.value)}
-                          placeholder="Nome do usuário"
-                          className="bg-background border-none text-sm"
-                        />
+                        <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
+                          placeholder="Nome do usuário" className="bg-background border-none text-sm" />
                         <div className="flex gap-2">
                           <Button size="sm" onClick={async () => {
                             const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
                             if (error) { toast.error("Erro ao salvar"); return; }
-                            toast.success("Nome atualizado!");
-                            setEditingUser(null);
-                            fetchData();
-                          }}>
-                            <Save className="w-3 h-3 mr-1" /> Salvar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>
-                            Cancelar
-                          </Button>
+                            toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
+                          }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
                         </div>
                       </div>
                     ) : (
@@ -587,10 +593,8 @@ const AdminPanel = () => {
                           await supabase.from("user_saved_verses").delete().eq("user_id", u.user_id);
                           await supabase.from("user_streaks").delete().eq("user_id", u.user_id);
                           await supabase.from("profiles").delete().eq("id", u.id);
-                          toast.success("Usuário removido");
-                          fetchData();
-                        }}
-                          className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+                          toast.success("Usuário removido"); fetchData();
+                        }} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
                           <Trash2 className="w-3 h-3" /> Excluir
                         </button>
                       </div>
@@ -656,13 +660,11 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
           {totalDays > 0 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">de {totalDays}</p>}
         </div>
       )}
-
       <div>
         <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do dia (opcional)</label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: A Criação do Mundo" className="bg-background border-none" maxLength={100} />
       </div>
-
       <div>
         <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📖 Livro da Bíblia *</label>
         <button onClick={() => setShowBookPicker(!showBookPicker)}
@@ -690,8 +692,6 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
           </div>
         )}
       </div>
-
-      {/* Chapter selector with quick buttons when book is selected */}
       {selectedBookData && (
         <div>
           <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Capítulo *</label>
@@ -707,15 +707,12 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
                 <button key={ch} onClick={() => setChapter(String(ch))}
                   className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
                     chapter === String(ch) ? "bg-primary text-primary-foreground" : "bg-background text-[hsl(var(--dark-muted))]"
-                  }`}>
-                  {ch}
-                </button>
+                  }`}>{ch}</button>
               ))}
             </div>
           )}
         </div>
       )}
-
       {!selectedBookData && (
         <div>
           <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Capítulo *</label>
@@ -723,7 +720,6 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
             min={1} placeholder="—" className="bg-background border-none w-24" />
         </div>
       )}
-
       <div className="flex gap-2">
         <div className="flex-1">
           <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Versículo início (opcional)</label>
@@ -736,7 +732,6 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
             min={1} placeholder="—" className="bg-background border-none" />
         </div>
       </div>
-
       <Button onClick={handleSubmit} className="w-full" size="sm">
         <Plus className="w-4 h-4 mr-1" /> {isAddToDay ? "Adicionar leitura" : `Adicionar Dia ${String(dayNumber).padStart(2, "0")}${totalDays > 0 ? ` de ${totalDays}` : ""}`}
       </Button>

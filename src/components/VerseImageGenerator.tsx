@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Check, Download, ImageIcon, ImageOff, Loader2, Palette, Share2, Type, X } from "lucide-react";
+import { Check, Download, ImageIcon, ImageOff, Loader2, Palette, Share2, Type, X, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface VerseImageGeneratorProps {
@@ -31,10 +31,12 @@ const BACKGROUNDS: BackgroundOption[] = [
   { id: "gradient2", type: "gradient", value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", label: "Rosa" },
   { id: "gradient3", type: "gradient", value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", label: "Azul" },
   { id: "gradient4", type: "gradient", value: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", label: "Verde" },
-  { id: "gradient5", type: "gradient", value: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", label: "Por do sol" },
+  { id: "gradient5", type: "gradient", value: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", label: "Pôr do sol" },
   { id: "gradient6", type: "gradient", value: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)", label: "Lavanda" },
-  { id: "gradient7", type: "gradient", value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", label: "Pessego" },
+  { id: "gradient7", type: "gradient", value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", label: "Pêssego" },
   { id: "gradient8", type: "gradient", value: "linear-gradient(135deg, #0c3483 0%, #a2b6df 100%, #6b8cce 100%)", label: "Oceano" },
+  { id: "gradient9", type: "gradient", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", label: "Noturno" },
+  { id: "gradient10", type: "gradient", value: "linear-gradient(135deg, #f5f0e8 0%, #dce5d4 50%, #a8c0a0 100%)", label: "Sereno" },
   {
     id: "image1",
     type: "image",
@@ -67,7 +69,7 @@ const BACKGROUNDS: BackgroundOption[] = [
     id: "image5",
     type: "image",
     value: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=1200&q=80",
-    label: "Ceu",
+    label: "Céu",
     fallback: "linear-gradient(135deg, #74ebd5 0%, #9face6 100%)",
   },
   {
@@ -91,7 +93,11 @@ const TEXT_COLORS = [
   { id: "cream", value: "#FFF8E7", label: "Creme" },
   { id: "black", value: "#1A1A1A", label: "Preto" },
   { id: "gold", value: "#FFD700", label: "Dourado" },
+  { id: "sky", value: "#87CEEB", label: "Céu" },
+  { id: "coral", value: "#FF7F7F", label: "Coral" },
 ];
+
+type TextAlign = "left" | "center" | "right";
 
 function parseGradient(css: string): { colors: string[]; angle: number } {
   const angleMatch = css.match(/(\d+)deg/);
@@ -129,6 +135,7 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
   const [selectedFont, setSelectedFont] = useState(FONTS[0]);
   const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0]);
   const [fontSize, setFontSize] = useState(28);
+  const [textAlign, setTextAlign] = useState<TextAlign>("center");
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [imageStatus, setImageStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [activeTab, setActiveTab] = useState<"bg" | "font" | "color">("bg");
@@ -198,16 +205,21 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
 
     const scaledFontSize = fontSize * 2;
     ctx.fillStyle = selectedColor.value;
-    ctx.textAlign = "center";
+    ctx.textAlign = textAlign;
     ctx.textBaseline = "middle";
 
+    const padding = 80;
+    const maxWidth = WIDTH - padding * 2;
+    const textX = textAlign === "left" ? padding : textAlign === "right" ? WIDTH - padding : WIDTH / 2;
+
+    // Quote mark
     ctx.font = `italic ${scaledFontSize + 20}px ${selectedFont.family}`;
     ctx.globalAlpha = 0.3;
-    ctx.fillText("\"", WIDTH / 2, HEIGHT * 0.2);
+    ctx.fillText("\u201C", textX, HEIGHT * 0.18);
     ctx.globalAlpha = 1;
 
+    // Verse text
     ctx.font = `italic ${scaledFontSize}px ${selectedFont.family}`;
-    const maxWidth = WIDTH - 160;
     const words = text.split(" ");
     const lines: string[] = [];
     let currentLine = "";
@@ -229,19 +241,22 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     const startY = (HEIGHT - totalTextHeight) / 2;
 
     lines.forEach((line, index) => {
-      ctx.fillText(line, WIDTH / 2, startY + index * lineHeight + lineHeight / 2);
+      ctx.fillText(line, textX, startY + index * lineHeight + lineHeight / 2);
     });
 
+    // Reference
     ctx.font = `bold ${scaledFontSize * 0.65}px ${selectedFont.family}`;
     ctx.globalAlpha = 0.85;
-    ctx.fillText(`- ${reference}`, WIDTH / 2, startY + totalTextHeight + lineHeight);
+    ctx.fillText(`— ${reference}`, textX, startY + totalTextHeight + lineHeight);
     ctx.globalAlpha = 1;
 
+    // Watermark
+    ctx.textAlign = "center";
     ctx.font = "12px Inter, sans-serif";
     ctx.globalAlpha = 0.4;
     ctx.fillText("Biblia App", WIDTH / 2, HEIGHT - 40);
     ctx.globalAlpha = 1;
-  }, [fontSize, loadedImage, reference, selectedBg, selectedColor.value, selectedFont.family, text]);
+  }, [fontSize, loadedImage, reference, selectedBg, selectedColor.value, selectedFont.family, text, textAlign]);
 
   useEffect(() => {
     if (open) drawCanvas();
@@ -293,16 +308,20 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
 
   const selectedImageUnavailable = selectedBg.type === "image" && imageStatus === "error";
 
+  const gradientBgs = BACKGROUNDS.filter((b) => b.type === "gradient");
+  const imageBgs = BACKGROUNDS.filter((b) => b.type === "image");
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm">
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-dark-card bg-dark-bg/95 px-4 py-3">
-          <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-dark-card">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 bg-black/80 px-4 py-3">
+          <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-white/10">
             <X className="h-5 w-5" />
           </button>
           <h2 className="text-sm font-bold">Criar Imagem</h2>
           <div className="flex gap-2">
-            <button onClick={handleDownload} className="rounded-full bg-dark-card p-2 transition-colors hover:bg-dark-card-hover">
+            <button onClick={handleDownload} className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Download className="h-4 w-4" />
             </button>
             <button onClick={handleShare} className="rounded-full bg-primary p-2 text-primary-foreground transition-opacity hover:opacity-90">
@@ -311,28 +330,33 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto px-4 py-5 sm:px-6">
+        {/* Content */}
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* Preview */}
+          <div className="flex shrink-0 items-center justify-center px-4 py-4">
             <canvas
               ref={canvasRef}
-              className="h-[min(82vw,26rem)] w-[min(82vw,26rem)] rounded-[1.75rem] shadow-2xl sm:h-[min(68vw,30rem)] sm:w-[min(68vw,30rem)] md:h-[min(56vh,34rem)] md:w-[min(56vh,34rem)]"
+              className="h-[min(55vw,16rem)] w-[min(55vw,16rem)] rounded-2xl shadow-2xl sm:h-[min(50vw,22rem)] sm:w-[min(50vw,22rem)]"
             />
-            {selectedBg.type === "image" && imageStatus === "loading" && (
-              <div className="mt-4 flex items-center gap-2 rounded-full bg-dark-card/80 px-3 py-2 text-xs text-dark-muted">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando fundo...
-              </div>
-            )}
-            {selectedImageUnavailable && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                <ImageOff className="h-4 w-4" />
-                Esse fundo nao carregou. O preview usou um fallback visual.
-              </div>
-            )}
           </div>
 
-          <div className="flex min-h-[18rem] max-h-[44vh] flex-col border-t border-dark-card bg-dark-bg/95 md:max-h-none md:min-h-0 md:w-[24rem] md:border-l md:border-t-0">
-            <div className="grid grid-cols-3 border-b border-dark-card">
+          {selectedBg.type === "image" && imageStatus === "loading" && (
+            <div className="mx-auto mb-2 flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/60">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Carregando fundo...
+            </div>
+          )}
+          {selectedImageUnavailable && (
+            <div className="mx-auto mb-2 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200">
+              <ImageOff className="h-3.5 w-3.5" />
+              Fundo indisponível, usando fallback.
+            </div>
+          )}
+
+          {/* Controls panel */}
+          <div className="flex min-h-0 flex-1 flex-col rounded-t-3xl border-t border-white/10 bg-[hsl(var(--dark-bg))]">
+            {/* Tabs */}
+            <div className="grid grid-cols-3 border-b border-white/5">
               {[
                 { key: "bg" as const, icon: ImageIcon, label: "Fundo" },
                 { key: "font" as const, icon: Type, label: "Fonte" },
@@ -341,8 +365,8 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-semibold transition-colors ${
-                    activeTab === key ? "border-b-2 border-primary text-primary" : "text-dark-muted"
+                  className={`flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-colors ${
+                    activeTab === key ? "border-b-2 border-primary text-primary" : "text-white/40"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -351,125 +375,190 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
               ))}
             </div>
 
+            {/* Tab content - scrollable */}
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
               {activeTab === "bg" && (
-                <div className="grid grid-cols-2 gap-3">
-                  {BACKGROUNDS.map((background) => {
-                    const isSelected = selectedBg.id === background.id;
-                    const previewFailed = background.type === "image" && hiddenPreviewIds[background.id];
-
-                    return (
-                      <button
-                        key={background.id}
-                        onClick={() => setSelectedBg(background)}
-                        className={`rounded-2xl border p-2 text-left transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-white/5 bg-dark-card hover:bg-dark-card-hover"
-                        }`}
-                      >
-                        <div className="relative aspect-[4/3] overflow-hidden rounded-xl">
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              background:
-                                background.type === "gradient" ? background.value : background.fallback,
-                            }}
-                          />
-                          {background.type === "image" && !previewFailed && (
-                            <img
-                              src={background.value}
-                              alt={background.label}
-                              className="absolute inset-0 h-full w-full object-cover"
-                              onError={() => markPreviewAsUnavailable(background.id)}
+                <div className="space-y-4">
+                  {/* Gradients - horizontal scroll */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-white/50">Gradientes</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                      {gradientBgs.map((bg) => {
+                        const isSelected = selectedBg.id === bg.id;
+                        return (
+                          <button
+                            key={bg.id}
+                            onClick={() => setSelectedBg(bg)}
+                            className={`relative flex-shrink-0 overflow-hidden rounded-xl transition-all ${
+                              isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-black" : "ring-1 ring-white/10"
+                            }`}
+                          >
+                            <div
+                              className="h-16 w-16"
+                              style={{ background: bg.value }}
                             />
-                          )}
-                          <div className="absolute inset-0 bg-black/10" />
-                          {background.type === "image" && previewFailed && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                              <ImageOff className="h-6 w-6 text-white/85" />
+                            {isSelected && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <Check className="h-4 w-4 text-white" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Images - horizontal scroll */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-white/50">Imagens</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                      {imageBgs.map((bg) => {
+                        const isSelected = selectedBg.id === bg.id;
+                        const previewFailed = hiddenPreviewIds[bg.id];
+                        return (
+                          <button
+                            key={bg.id}
+                            onClick={() => setSelectedBg(bg)}
+                            className={`relative flex-shrink-0 overflow-hidden rounded-xl transition-all ${
+                              isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-black" : "ring-1 ring-white/10"
+                            }`}
+                          >
+                            <div className="relative h-16 w-24">
+                              <div
+                                className="absolute inset-0"
+                                style={{ background: bg.type === "image" ? bg.fallback : undefined }}
+                              />
+                              {!previewFailed && (
+                                <img
+                                  src={bg.value}
+                                  alt={bg.label}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={() => markPreviewAsUnavailable(bg.id)}
+                                />
+                              )}
+                              {previewFailed && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <ImageOff className="h-4 w-4 text-white/60" />
+                                </div>
+                              )}
+                              {isSelected && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                  <Check className="h-4 w-4 text-white" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {isSelected && (
-                            <div className="absolute right-2 top-2 rounded-full bg-black/40 p-1 text-white">
-                              <Check className="h-3.5 w-3.5" />
-                            </div>
-                          )}
-                        </div>
-                        <p className="mt-2 truncate text-xs font-semibold">{background.label}</p>
-                      </button>
-                    );
-                  })}
+                            <p className="py-1 text-center text-[10px] font-medium text-white/60">{bg.label}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
               {activeTab === "font" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    {FONTS.map((font) => {
-                      const isSelected = selectedFont.id === font.id;
-
-                      return (
-                        <button
-                          key={font.id}
-                          onClick={() => setSelectedFont(font)}
-                          className={`rounded-xl px-4 py-3 text-sm transition-colors ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-dark-card text-dark-muted hover:bg-dark-card-hover"
-                          }`}
-                          style={{ fontFamily: font.family }}
-                        >
-                          {font.label}
-                        </button>
-                      );
-                    })}
+                <div className="space-y-5">
+                  {/* Font family */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-white/50">Estilo da fonte</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {FONTS.map((font) => {
+                        const isSelected = selectedFont.id === font.id;
+                        return (
+                          <button
+                            key={font.id}
+                            onClick={() => setSelectedFont(font)}
+                            className={`flex-shrink-0 rounded-xl px-4 py-2.5 text-sm transition-all ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                : "bg-white/5 text-white/60 hover:bg-white/10"
+                            }`}
+                            style={{ fontFamily: font.family }}
+                          >
+                            {font.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="rounded-2xl bg-dark-card p-4">
-                    <div className="mb-2 flex items-center justify-between text-xs text-dark-muted">
-                      <span>Tamanho da fonte</span>
-                      <span>{fontSize}px</span>
+                  {/* Font size slider */}
+                  <div>
+                    <div className="mb-3 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white/50">Tamanho</span>
+                      <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-white/70">{fontSize}px</span>
                     </div>
-                    <input
-                      type="range"
-                      min={16}
-                      max={48}
-                      value={fontSize}
-                      onChange={(event) => setFontSize(Number(event.target.value))}
-                      className="w-full accent-primary"
-                    />
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min={14}
+                        max={48}
+                        step={1}
+                        value={fontSize}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="verse-slider w-full"
+                      />
+                      <div className="mt-1 flex justify-between text-[10px] text-white/30">
+                        <span>A</span>
+                        <span className="text-base">A</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text alignment */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-white/50">Alinhamento</p>
+                    <div className="flex gap-2">
+                      {([
+                        { id: "left" as TextAlign, icon: AlignLeft, label: "Esquerda" },
+                        { id: "center" as TextAlign, icon: AlignCenter, label: "Centro" },
+                        { id: "right" as TextAlign, icon: AlignRight, label: "Direita" },
+                      ]).map(({ id, icon: Icon, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => setTextAlign(id)}
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
+                            textAlign === id
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-white/5 text-white/60 hover:bg-white/10"
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeTab === "color" && (
-                <div className="grid grid-cols-2 gap-3">
-                  {TEXT_COLORS.map((color) => {
-                    const isSelected = selectedColor.id === color.id;
-
-                    return (
-                      <button
-                        key={color.id}
-                        onClick={() => setSelectedColor(color)}
-                        className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-white/5 bg-dark-card hover:bg-dark-card-hover"
-                        }`}
-                      >
-                        <span
-                          className="inline-flex h-10 w-10 flex-shrink-0 rounded-full border border-black/10"
-                          style={{ backgroundColor: color.value }}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">{color.label}</span>
-                          <span className="block truncate text-xs text-dark-muted">{color.value}</span>
-                        </span>
-                        {isSelected && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
-                      </button>
-                    );
-                  })}
+                <div>
+                  <p className="mb-3 text-xs font-semibold text-white/50">Cor do texto</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {TEXT_COLORS.map((color) => {
+                      const isSelected = selectedColor.id === color.id;
+                      return (
+                        <button
+                          key={color.id}
+                          onClick={() => setSelectedColor(color)}
+                          className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/10"
+                              : "border-white/5 bg-white/[0.03] hover:bg-white/[0.06]"
+                          }`}
+                        >
+                          <span
+                            className={`inline-flex h-10 w-10 rounded-full border ${
+                              isSelected ? "border-primary shadow-lg" : "border-white/10"
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                          />
+                          <span className="text-xs font-medium text-white/70">{color.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

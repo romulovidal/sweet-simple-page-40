@@ -85,3 +85,45 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Allow thin scrollbar for specific elements */
+.scrollbar-thin::-webkit-scrollbar {
+  display: block;
+  height: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 2px;
+}
+
+/* Verse image slider */
+.verse-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(var(--muted) / 0.2);
+  outline: none;
+}
+.verse-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+}
+.verse-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+}

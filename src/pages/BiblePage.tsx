@@ -52,6 +52,7 @@ const BiblePage = () => {
   // Multi-select state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMenuText, setShareMenuText] = useState("");
 

@@ -1,4 +1,4 @@
-import { bibleBooks } from "@/data/bible";
+import { bibleBooks, getDailyVerse } from "@/data/bible";
 import {
   loadBundledBibleVersion,
   type BibleBookData,

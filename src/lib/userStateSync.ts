@@ -239,8 +239,8 @@ export async function saveRemoteUserState(userId: string, snapshot = readLocalAp
     .upsert(
       {
         user_id: userId,
-        state: snapshot,
-      },
+        state: snapshot as any,
+      } as any,
       { onConflict: "user_id" }
     );
 

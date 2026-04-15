@@ -74,7 +74,9 @@ const PlansPage = () => {
         setPlans(nextPlans);
         writeJsonStorage(PLANS_CACHE_KEY, nextPlans, false, "cache");
       })
-      .finally(() => {
+      .then(() => {
+        if (!cancelled) setLoading(false);
+      }, () => {
         if (!cancelled) setLoading(false);
       });
 
@@ -103,7 +105,9 @@ const PlansPage = () => {
         setReadings(nextReadings);
         writeJsonStorage(planReadingsCacheKey(selectedPlan), nextReadings, false, "cache");
       })
-      .finally(() => {
+      .then(() => {
+        if (!cancelled) setLoadingVerses(false);
+      }, () => {
         if (!cancelled) setLoadingVerses(false);
       });
 

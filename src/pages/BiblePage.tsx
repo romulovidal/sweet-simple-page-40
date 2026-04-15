@@ -12,12 +12,13 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
 import BibleVersionPicker from "@/components/BibleVersionPicker";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
+import VerseCompare from "@/components/VerseCompare";
 import ShareMenu from "@/components/ShareMenu";
 
 const APP_URL = window.location.origin;
@@ -51,6 +52,7 @@ const BiblePage = () => {
   // Multi-select state
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMenuText, setShareMenuText] = useState("");
 
@@ -447,6 +449,9 @@ const BiblePage = () => {
                 <button onClick={handleImageSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
                   <ImageIcon className="w-4 h-4 text-primary-foreground" />
                 </button>
+                <button onClick={() => setShowCompare(true)} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30" title="Comparar versões">
+                  <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
+                </button>
               </div>
             </div>
 
@@ -589,6 +594,17 @@ const BiblePage = () => {
             reference={imageVerse.reference}
             open={!!imageVerse}
             onClose={() => setImageVerse(null)}
+          />
+        )}
+        {showCompare && selectedBook && selectedChapter && (
+          <VerseCompare
+            open={showCompare}
+            onClose={() => setShowCompare(false)}
+            bookAbbrev={selectedBook.apiAbbrev}
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            verseNumbers={[...selectedVerses].sort((a, b) => a - b)}
+            currentVersionId={bibleVersion}
           />
         )}
         {versionPickerModal}

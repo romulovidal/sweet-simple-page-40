@@ -49,6 +49,8 @@ Deno.serve(async (req) => {
         body: verse.text.substring(0, 120) + (verse.text.length > 120 ? "..." : ""),
         url: "/",
         type: "daily-verse",
+        ttl: 60 * 60 * 24,
+        urgency: "high",
       }),
     });
 

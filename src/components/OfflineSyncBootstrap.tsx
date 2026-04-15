@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LOCAL_DATA_CHANGED_EVENT } from "@/lib/localData";
+import { syncPendingPushRegistration } from "@/lib/pushNotifications";
 import { hydrateAndSyncUserState, saveRemoteUserState } from "@/lib/userStateSync";
 
 const SYNC_DEBOUNCE_MS = 1200;
@@ -58,6 +59,8 @@ const OfflineSyncBootstrap = () => {
     };
 
     const handleOnline = () => {
+      void syncPendingPushRegistration();
+
       const userId = currentUserIdRef.current;
       if (!userId) return;
       void runHydration(userId);
@@ -68,6 +71,8 @@ const OfflineSyncBootstrap = () => {
       if (detail?.source === "hydrate") return;
       scheduleSync();
     };
+
+    void syncPendingPushRegistration();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const userId = session?.user?.id ?? null;
@@ -83,6 +88,8 @@ const OfflineSyncBootstrap = () => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       clearPendingSync();
       currentUserIdRef.current = session?.user?.id ?? null;
+
+      void syncPendingPushRegistration();
 
       if (currentUserIdRef.current) {
         void runHydration(currentUserIdRef.current);

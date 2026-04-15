@@ -623,6 +623,7 @@ const BiblePage = () => {
               onClick={() => {
                 setHighlightedVerse(null);
                 setSelectedChapter(index + 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="aspect-square rounded-xl bg-dark-card flex items-center justify-center text-sm font-semibold active:bg-primary active:text-primary-foreground transition-colors"
             >

@@ -29,6 +29,7 @@ interface DBPlan {
 }
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
+const DAILY_VERSE_CACHE_VERSION = 2; // Bump this to force all users to refresh
 const ADMIN_PLANS_CACHE_KEY = "cached-admin-plans";
 const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
 
@@ -52,17 +53,17 @@ const HomePage = () => {
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
-    const cached = readJsonStorage<{ date: string; verse: { text: string; ref: string } } | null>(
+    const cached = readJsonStorage<{ date: string; version?: number; verse: { text: string; ref: string } } | null>(
       DAILY_VERSE_CACHE_KEY,
       null
     );
 
-    // Invalidate stale cache
-    if (cached && cached.date !== today) {
+    // Invalidate stale or outdated-version cache
+    if (cached && (cached.date !== today || (cached.version ?? 0) < DAILY_VERSE_CACHE_VERSION)) {
       localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
     }
 
-    if (cached?.date === today && cached.verse?.text) {
+    if (cached?.date === today && (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION && cached.verse?.text) {
       setVerse(cached.verse);
       setVerseLoading(false);
       setVerseHistory((prev) => {
@@ -85,7 +86,7 @@ const HomePage = () => {
         if (data?.text) {
           const v = { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
           setVerse(v);
-          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, verse: v }, false, "cache");
+          writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, version: DAILY_VERSE_CACHE_VERSION, verse: v }, false, "cache");
           setVerseHistory((prev) => {
             if (prev.some((e) => e.date === today)) return prev;
             return [{ date: today, ...v }, ...prev].slice(0, 90);

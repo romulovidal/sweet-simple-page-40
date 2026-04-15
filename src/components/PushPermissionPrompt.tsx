@@ -47,6 +47,8 @@ const PushPermissionPrompt = () => {
   }, []);
 
   const handleAllow = async () => {
+    setPhase("waiting-system");
+
     const ok = await registerPushNotifications();
     if (ok) {
       setPhase("done");

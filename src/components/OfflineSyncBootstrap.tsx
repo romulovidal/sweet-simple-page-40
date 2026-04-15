@@ -59,7 +59,8 @@ const OfflineSyncBootstrap = () => {
     };
 
     const handleOnline = () => {
-      void syncPendingPushRegistration({ forceResubscribe: true });
+      // Re-sync push subscription when coming back online
+      void syncPendingPushRegistration();
 
       const userId = currentUserIdRef.current;
       if (!userId) return;
@@ -72,12 +73,14 @@ const OfflineSyncBootstrap = () => {
       scheduleSync();
     };
 
+    // Always try to sync push on app start (registers device automatically)
     void syncPendingPushRegistration();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const userId = session?.user?.id ?? null;
       currentUserIdRef.current = userId;
 
+      // Re-sync push with user context
       void syncPendingPushRegistration();
 
       if (userId) {
@@ -91,7 +94,8 @@ const OfflineSyncBootstrap = () => {
       clearPendingSync();
       currentUserIdRef.current = session?.user?.id ?? null;
 
-      void syncPendingPushRegistration({ forceResubscribe: true });
+      // Re-sync push with new auth state
+      void syncPendingPushRegistration();
 
       if (currentUserIdRef.current) {
         void runHydration(currentUserIdRef.current);

@@ -32,25 +32,15 @@ function clearPendingRegistration() {
 }
 
 async function getActiveRegistration() {
+  // Try without scope first (matches any SW), then fall back to registering
   const existing = await navigator.serviceWorker.getRegistration();
-  if (existing) {
-    return existing;
-  }
-
+  if (existing) return existing;
   return navigator.serviceWorker.register("/sw.js");
 }
 
-async function getSubscriptionJson(
-  registration: ServiceWorkerRegistration,
-  options?: { forceResubscribe?: boolean },
-) {
+async function getSubscriptionJson(registration: ServiceWorkerRegistration) {
   const appServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
   let subscription = await registration.pushManager.getSubscription();
-
-  if (subscription && options?.forceResubscribe) {
-    await subscription.unsubscribe().catch(() => undefined);
-    subscription = null;
-  }
 
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
@@ -62,29 +52,24 @@ async function getSubscriptionJson(
   return subscription.toJSON();
 }
 
-async function saveSubscription(options?: { forceResubscribe?: boolean }) {
+async function saveSubscription() {
   const registration = await getActiveRegistration();
   await navigator.serviceWorker.ready;
 
-  const sub = await getSubscriptionJson(registration, options);
+  const sub = await getSubscriptionJson(registration);
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
 
+  // Use the edge function (service role) to bypass RLS issues
   const { data, error } = await supabase.functions.invoke("push-subscription", {
     body: {
       endpoint: sub.endpoint!,
       p256dh: sub.keys!.p256dh,
       auth: sub.keys!.auth,
-      user_id: user?.id ?? null,
+      user_id: session?.user?.id ?? null,
       action: "upsert",
     },
-    headers: session?.access_token
-      ? {
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      : undefined,
   });
 
   if (error || !data?.ok) {
@@ -120,7 +105,7 @@ export async function registerPushNotifications(): Promise<boolean> {
   }
 }
 
-export async function syncPendingPushRegistration(options?: { forceResubscribe?: boolean }): Promise<boolean> {
+export async function syncPendingPushRegistration(): Promise<boolean> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
     return false;
   }
@@ -130,8 +115,7 @@ export async function syncPendingPushRegistration(options?: { forceResubscribe?:
   }
 
   try {
-    persistPendingRegistration();
-    return await saveSubscription({ forceResubscribe: options?.forceResubscribe ?? false });
+    return await saveSubscription();
   } catch (e) {
     console.error("Push sync error:", e);
     return false;
@@ -157,22 +141,13 @@ export async function unregisterPush(): Promise<void> {
     if (!reg) return;
     const sub = await reg.pushManager.getSubscription();
     if (sub) {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
       await supabase.functions.invoke("push-subscription", {
         body: {
           endpoint: sub.endpoint,
-          p256dh: "placeholder",
-          auth: "placeholder",
+          p256dh: "x",
+          auth: "x",
           action: "delete",
         },
-        headers: session?.access_token
-          ? {
-              Authorization: `Bearer ${session.access_token}`,
-            }
-          : undefined,
       });
       await sub.unsubscribe();
     }

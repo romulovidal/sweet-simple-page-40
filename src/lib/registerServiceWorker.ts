@@ -67,12 +67,19 @@ export async function registerAppServiceWorker() {
   try {
     const registration = await navigator.serviceWorker.register("/sw.js");
     sendPrecacheMessage(registration);
+
+    // Force-apply any waiting update immediately (covers users on old versions)
     applyWaitingUpdate(registration);
 
+    // When the controller changes (new SW took over), reload to get fresh code
+    let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloading) return;
+      reloading = true;
       window.location.reload();
     });
 
+    // Auto-apply updates as soon as they install
     registration.addEventListener("updatefound", () => {
       const installing = registration.installing;
       if (!installing) return;
@@ -88,18 +95,25 @@ export async function registerAppServiceWorker() {
       .then(() => sendPrecacheMessage(registration))
       .catch(() => undefined);
 
+    // Check for SW updates on reconnect
     window.addEventListener("online", () => {
       registration.update().catch(() => {});
       sendPrecacheMessage(registration);
-      applyWaitingUpdate(registration);
     });
 
+    // Check for SW updates when tab becomes visible
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && navigator.onLine) {
         registration.update().catch(() => {});
-        applyWaitingUpdate(registration);
       }
     });
+
+    // Periodic check every 10 minutes
+    setInterval(() => {
+      if (navigator.onLine) {
+        registration.update().catch(() => {});
+      }
+    }, 10 * 60 * 1000);
   } catch (error) {
     console.error("Service worker registration error:", error);
   }

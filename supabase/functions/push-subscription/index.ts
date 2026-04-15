@@ -19,24 +19,17 @@ function jsonResponse(body: unknown, status = 200) {
 
 async function getRequestUser(req: Request, supabaseUrl: string, anonKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) return null;
 
-  if (!authHeader.startsWith("Bearer ")) {
+  try {
+    const client = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await client.auth.getUser();
+    return user ?? null;
+  } catch {
     return null;
   }
-
-  const client = createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-
-  return user ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -61,13 +54,9 @@ Deno.serve(async (req) => {
     }
 
     const user = await getRequestUser(req, supabaseUrl, anonKey);
-    const requestedUserId = parsed.data.user_id ?? null;
     const resolvedUserId = user?.id ?? null;
 
-    if (requestedUserId && requestedUserId !== resolvedUserId) {
-      return jsonResponse({ error: "Forbidden" }, 403);
-    }
-
+    // Use service role to bypass RLS — this function IS the secure gateway
     const adminClient = createClient(supabaseUrl, serviceKey);
 
     if (parsed.data.action === "delete") {
@@ -81,15 +70,14 @@ Deno.serve(async (req) => {
         : deleteQuery.is("user_id", null);
 
       const { error } = await deleteQuery;
-
       if (error) {
         console.error("Push subscription delete failed:", error);
-        return jsonResponse({ error: "Failed to delete subscription" }, 500);
+        return jsonResponse({ error: "Failed to delete" }, 500);
       }
-
       return jsonResponse({ ok: true, action: "delete" });
     }
 
+    // Upsert
     const payload = {
       endpoint: parsed.data.endpoint,
       p256dh: parsed.data.p256dh,
@@ -103,12 +91,12 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Push subscription upsert failed:", error);
-      return jsonResponse({ error: "Failed to save subscription" }, 500);
+      return jsonResponse({ error: "Failed to save" }, 500);
     }
 
     return jsonResponse({ ok: true, action: "upsert" });
   } catch (error) {
-    console.error("Push subscription function error:", error);
+    console.error("Push subscription error:", error);
     return jsonResponse({ error: "Internal error" }, 500);
   }
 });

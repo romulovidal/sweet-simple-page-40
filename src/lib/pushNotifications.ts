@@ -47,7 +47,7 @@ async function getSubscriptionJson(registration: ServiceWorkerRegistration) {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: appServerKey,
+      applicationServerKey: appServerKey as BufferSource,
     });
   }
 
@@ -70,12 +70,20 @@ async function saveSubscription() {
     user_id: user?.id ?? null,
   };
 
+  // Try upsert first, fall back to delete+insert if it fails (RLS edge cases)
   const { error } = await supabase
     .from("push_subscriptions")
     .upsert(payload, { onConflict: "endpoint" });
 
   if (error) {
-    throw error;
+    console.warn("Upsert failed, trying delete+insert:", error.message);
+    // Delete any existing row for this endpoint, then insert fresh
+    await supabase.from("push_subscriptions").delete().eq("endpoint", payload.endpoint);
+    const { error: insertError } = await supabase.from("push_subscriptions").insert(payload);
+    if (insertError) {
+      console.error("Push subscription save failed:", insertError);
+      throw insertError;
+    }
   }
 
   clearPendingRegistration();

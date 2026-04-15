@@ -32,7 +32,7 @@ function clearPendingRegistration() {
 }
 
 async function getActiveRegistration() {
-  const existing = await navigator.serviceWorker.getRegistration("/sw.js");
+  const existing = await navigator.serviceWorker.getRegistration();
   if (existing) {
     return existing;
   }
@@ -40,9 +40,17 @@ async function getActiveRegistration() {
   return navigator.serviceWorker.register("/sw.js");
 }
 
-async function getSubscriptionJson(registration: ServiceWorkerRegistration) {
+async function getSubscriptionJson(
+  registration: ServiceWorkerRegistration,
+  options?: { forceResubscribe?: boolean },
+) {
   const appServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
   let subscription = await registration.pushManager.getSubscription();
+
+  if (subscription && options?.forceResubscribe) {
+    await subscription.unsubscribe().catch(() => undefined);
+    subscription = null;
+  }
 
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
@@ -54,11 +62,11 @@ async function getSubscriptionJson(registration: ServiceWorkerRegistration) {
   return subscription.toJSON();
 }
 
-async function saveSubscription() {
+async function saveSubscription(options?: { forceResubscribe?: boolean }) {
   const registration = await getActiveRegistration();
   await navigator.serviceWorker.ready;
 
-  const sub = await getSubscriptionJson(registration);
+  const sub = await getSubscriptionJson(registration, options);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -70,17 +78,17 @@ async function saveSubscription() {
     user_id: user?.id ?? null,
   };
 
-  // Try upsert first, fall back to delete+insert if it fails (RLS edge cases)
   const { error } = await supabase
     .from("push_subscriptions")
     .upsert(payload, { onConflict: "endpoint" });
 
   if (error) {
-    console.warn("Upsert failed, trying delete+insert:", error.message);
-    // Delete any existing row for this endpoint, then insert fresh
-    await supabase.from("push_subscriptions").delete().eq("endpoint", payload.endpoint);
-    const { error: insertError } = await supabase.from("push_subscriptions").insert(payload);
-    if (insertError) {
+    console.warn("Upsert failed, trying insert fallback:", error.message);
+    const { error: insertError } = await supabase
+      .from("push_subscriptions")
+      .insert(payload);
+
+    if (insertError && insertError.code !== "23505") {
       console.error("Push subscription save failed:", insertError);
       throw insertError;
     }
@@ -114,7 +122,7 @@ export async function registerPushNotifications(): Promise<boolean> {
   }
 }
 
-export async function syncPendingPushRegistration(): Promise<boolean> {
+export async function syncPendingPushRegistration(options?: { forceResubscribe?: boolean }): Promise<boolean> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
     return false;
   }
@@ -125,7 +133,7 @@ export async function syncPendingPushRegistration(): Promise<boolean> {
 
   try {
     persistPendingRegistration();
-    return await saveSubscription();
+    return await saveSubscription({ forceResubscribe: options?.forceResubscribe ?? false });
   } catch (e) {
     console.error("Push sync error:", e);
     return false;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { HandHeart, Plus, Loader2, Heart, Lock, Globe, Check } from "lucide-react";
+import { HandHeart, Plus, Loader2, Heart, Lock, Globe, Check, Pencil, X, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -32,6 +32,10 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [tab, setTab] = useState<"public" | "mine">("public");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editIsPublic, setEditIsPublic] = useState(true);
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -134,6 +138,53 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
     await supabase.from("prayer_requests").update({ is_answered: !current }).eq("id", id);
     toast.success(!current ? "Marcado como respondido! 🎉" : "Desmarcado");
     fetchRequests();
+  };
+
+  const startEdit = (req: PrayerRequest) => {
+    setEditingId(req.id);
+    setEditContent(req.content);
+    setEditIsPublic(req.is_public);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent("");
+  };
+
+  const saveEdit = async (id: string) => {
+    const trimmed = editContent.trim();
+    if (!trimmed) {
+      toast.error("O pedido não pode ficar vazio");
+      return;
+    }
+    if (trimmed.length > 1000) {
+      toast.error("Máximo de 1000 caracteres");
+      return;
+    }
+    setEditSaving(true);
+    const { error } = await supabase
+      .from("prayer_requests")
+      .update({ content: trimmed, is_public: editIsPublic })
+      .eq("id", id);
+    if (error) {
+      toast.error("Erro ao salvar");
+    } else {
+      toast.success("Pedido atualizado ✏️");
+      cancelEdit();
+      fetchRequests();
+    }
+    setEditSaving(false);
+  };
+
+  const handleDeleteOwn = async (id: string) => {
+    if (!confirm("Excluir este pedido de oração?")) return;
+    const { error } = await supabase.from("prayer_requests").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir");
+    } else {
+      toast.success("Pedido excluído");
+      fetchRequests();
+    }
   };
 
   if (!enabled) return null;

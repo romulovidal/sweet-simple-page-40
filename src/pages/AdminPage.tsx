@@ -78,7 +78,7 @@ const AdminPage = () => {
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-dark-muted mt-3">Validando acesso do administrador...</p>
+          <p className="text-sm text-muted-foreground mt-3">Validando acesso do administrador...</p>
         </div>
       </div>
     );
@@ -92,7 +92,7 @@ const AdminPage = () => {
         <div className="text-center max-w-sm">
           <p className="text-4xl mb-4">⚠️</p>
           <h2 className="text-lg font-bold mb-2">Falha ao validar o acesso</h2>
-          <p className="text-sm text-dark-muted">{accessError}</p>
+          <p className="text-sm text-muted-foreground">{accessError}</p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <button
               onClick={() => void resolveAdminAccess(session)}
@@ -102,7 +102,7 @@ const AdminPage = () => {
             </button>
             <button
               onClick={() => void supabase.auth.signOut()}
-              className="text-dark-muted text-sm font-semibold"
+              className="text-muted-foreground text-sm font-semibold"
             >
               Sair
             </button>
@@ -118,7 +118,7 @@ const AdminPage = () => {
         <div className="text-center">
           <p className="text-4xl mb-4">🔒</p>
           <h2 className="text-lg font-bold mb-2">Acesso negado</h2>
-          <p className="text-sm text-dark-muted">Você não tem permissão de administrador.</p>
+          <p className="text-sm text-muted-foreground">Você não tem permissão de administrador.</p>
           <button
             onClick={() => void supabase.auth.signOut()}
             className="text-primary text-sm font-semibold mt-4"

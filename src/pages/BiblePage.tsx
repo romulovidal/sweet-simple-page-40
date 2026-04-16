@@ -12,7 +12,7 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
@@ -26,6 +26,10 @@ import AIConnections from "@/components/ai/AIConnections";
 import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
+import PresentationMode from "@/components/PresentationMode";
+import AudioBible from "@/components/AudioBible";
+import PersonalNotes from "@/components/PersonalNotes";
 
 const APP_URL = window.location.origin;
 

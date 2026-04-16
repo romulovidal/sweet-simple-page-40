@@ -465,7 +465,7 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen pb-20 flex flex-col">
       {/* Top header */}
-      <header className="px-5 pt-6 pb-3 flex items-center justify-between border-b border-border sticky top-0 z-20 bg-background">
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between border-b border-[hsl(var(--dark-card))] sticky top-0 z-20 bg-[hsl(var(--dark-bg))]">
         <div className="flex items-center gap-3">
           {/* Hamburger menu */}
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -474,9 +474,9 @@ const AdminPanel = () => {
                 <Menu className="w-5 h-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-background p-0">
-              <SheetHeader className="px-5 pt-6 pb-4 border-b border-border">
-                <SheetTitle className="text-left text-base">Menu Admin</SheetTitle>
+            <SheetContent side="left" className="w-72 bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] p-0">
+              <SheetHeader className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))]">
+                <SheetTitle className="text-left text-base text-[hsl(var(--dark-text))]">Menu Admin</SheetTitle>
               </SheetHeader>
               <div className="px-3 py-4 space-y-1">
                 {MORE_TABS.map((t) => (
@@ -484,14 +484,14 @@ const AdminPanel = () => {
                     key={t.id}
                     onClick={() => { setTab(t.id); setMenuOpen(false); }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      tab === t.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                      tab === t.id ? "bg-primary text-primary-foreground" : "text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
                     }`}
                   >
                     <t.icon className="w-5 h-5" />
                     {t.label}
                   </button>
                 ))}
-                <div className="border-t border-border my-3" />
+                <div className="border-t border-[hsl(var(--dark-card))] my-3" />
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
@@ -503,10 +503,10 @@ const AdminPanel = () => {
             </SheetContent>
           </Sheet>
           <div>
-            <h1 className="text-lg font-bold leading-tight">
+            <h1 className="text-lg font-bold leading-tight text-[hsl(var(--dark-text))]">
               {isMoreTab ? currentTabLabel : "Painel Admin"}
             </h1>
-            {!isMoreTab && <p className="text-[11px] text-muted-foreground">A Bíblia do Atalaia</p>}
+            {!isMoreTab && <p className="text-[11px] text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>}
           </div>
         </div>
       </header>
@@ -676,7 +676,7 @@ const AdminPanel = () => {
       </div>
 
       {/* Bottom Navigation - mobile app style */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[hsl(var(--dark-bg))] border-t border-[hsl(var(--dark-card))]">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
           {BOTTOM_TABS.map((t) => {
             const active = tab === t.id;

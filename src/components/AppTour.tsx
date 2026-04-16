@@ -298,9 +298,9 @@ const STEPS: Step[] = [
   // ===== END =====
   {
     selector: '[data-tour="home-tab-comunidade"]',
-    title: "🙏 Comunidade & notificações",
+    title: "🙏 Comunidade",
     description:
-      "Esta é a aba **Comunidade**: pedidos de oração públicos, horários de culto, versículo do dia por push, lembretes de culto e opção de instalar o app na tela inicial.",
+      "Esta é a aba **Comunidade**: pedidos de oração públicos e horários de culto da igreja.",
     before: () => {
       // Volta para Home
       if (window.location.pathname !== "/") {

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import CultoScheduleList from "@/components/CultoScheduleList";
 
 interface PrayerRequest {
   id: string;
@@ -165,6 +166,9 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
           </button>
         ))}
       </div>
+
+      {/* Horários de culto (apenas na aba Comunidade) */}
+      {tab === "public" && <CultoScheduleList />}
 
       {/* New request form */}
       {showForm && user && (

@@ -455,11 +455,11 @@ const BiblePage = () => {
         {hasSelection && (
           <div className="sticky top-[72px] z-10 mx-5 mb-2">
             <div className="bg-primary rounded-xl px-3 py-2.5 shadow-lg">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-primary-foreground shrink-0">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-xs font-semibold text-primary-foreground">
                   {selectedVerses.size} versículo{selectedVerses.size !== 1 ? "s" : ""}
                 </span>
-                <div className="flex items-center gap-1 flex-wrap justify-end">
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
                   <button onClick={() => setShowColorPicker(!showColorPicker)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
                     <Palette className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>

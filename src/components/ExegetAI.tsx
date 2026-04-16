@@ -109,6 +109,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
     <>
       <button
         onClick={runExegesis}
+        data-tour="exegetai-fab"
         className="fixed bottom-24 right-5 z-30 group"
         title="ExegettAI — Exegese com IA"
       >

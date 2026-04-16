@@ -191,10 +191,17 @@ const STEPS: Step[] = [
     selector: '[data-tour="bible-chapter-summary"]',
     title: "✨ Resumo do Capítulo (IA)",
     description:
-      "Este botão azul no topo do capítulo gera um resumo completo com IA: contexto, temas principais e aplicação prática. E o botão flutuante **ExegetAI** traz exegese profunda do trecho aberto.",
+      "Este botão azul no topo do capítulo gera um resumo completo com IA: contexto, temas principais e aplicação prática.",
     before: deselectVerse16,
     waitMs: 300,
     side: "bottom",
+  },
+  {
+    selector: '[data-tour="exegetai-fab"]',
+    title: "🔮 ExegetAI (botão flutuante)",
+    description:
+      "Este botão dourado flutuante no canto inferior direito abre o **ExegetAI**: exegese profunda do trecho aberto — análise teológica, contexto histórico e linguístico gerados por IA.",
+    side: "left",
   },
   {
     selector: '[data-tour="ask-bible"]',

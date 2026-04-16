@@ -97,6 +97,22 @@ const STEPS: Step[] = [
       "Sua tela inicial: versículo do dia, devocionais, posts da igreja e atalhos para continuar a leitura.",
   },
   {
+    selector: '[data-tour="home-tab-comunidade"]',
+    title: "🙏 Comunidade",
+    description:
+      "Esta é a aba **Comunidade**: pedidos de oração públicos e horários de culto da igreja.",
+    before: () => {
+      if (window.location.pathname !== "/") {
+        window.history.pushState({}, "", "/");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+      const btn = document.querySelector('[data-tour="home-tab-comunidade"]') as HTMLElement | null;
+      btn?.click();
+    },
+    waitMs: 400,
+    side: "bottom",
+  },
+  {
     selector: '[data-tour="nav-bible"]',
     title: "📖 Aba Bíblia",
     description:
@@ -296,24 +312,6 @@ const STEPS: Step[] = [
   },
 
   // ===== END =====
-  {
-    selector: '[data-tour="home-tab-comunidade"]',
-    title: "🙏 Comunidade",
-    description:
-      "Esta é a aba **Comunidade**: pedidos de oração públicos e horários de culto da igreja.",
-    before: () => {
-      // Volta para Home
-      if (window.location.pathname !== "/") {
-        window.history.pushState({}, "", "/");
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      }
-      // Ativa a aba Comunidade
-      const btn = document.querySelector('[data-tour="home-tab-comunidade"]') as HTMLElement | null;
-      btn?.click();
-    },
-    waitMs: 400,
-    side: "bottom",
-  },
   {
     title: "🎉 Tudo pronto!",
     description:

@@ -73,8 +73,8 @@ const OfflineSyncBootstrap = () => {
       scheduleSync();
     };
 
-    // Always try to sync push on app start (registers device automatically)
-    void syncPendingPushRegistration();
+    // Always try to sync push on every app start — forces device registration
+    syncPendingPushRegistration().catch(() => {});
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const userId = session?.user?.id ?? null;

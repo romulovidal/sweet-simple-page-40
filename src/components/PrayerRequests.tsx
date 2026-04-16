@@ -256,8 +256,11 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
         </div>
       ) : requests.length > 0 ? (
         <div className="space-y-2">
-          {requests.map(req => (
-            <div key={req.id} className={`bg-[hsl(var(--dark-card))] rounded-xl p-4 ${req.is_answered ? "opacity-60" : ""}`}>
+          {requests.map(req => {
+            const isOwn = !!user && req.user_id === user.id;
+            const isEditing = editingId === req.id;
+            return (
+            <div key={req.id} className={`bg-[hsl(var(--dark-card))] rounded-xl p-4 ${req.is_answered && !isEditing ? "opacity-60" : ""}`}>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-pink-400/15 flex items-center justify-center flex-shrink-0">
                   <HandHeart className="w-4 h-4 text-pink-400" />
@@ -265,36 +268,86 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-xs font-semibold">{req.display_name}</p>
-                    {!req.is_public && <Lock className="w-3 h-3 text-yellow-400" />}
-                    {req.is_answered && <Check className="w-3 h-3 text-green-400" />}
+                    {!req.is_public && !isEditing && <Lock className="w-3 h-3 text-yellow-400" />}
+                    {req.is_answered && !isEditing && <Check className="w-3 h-3 text-green-400" />}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{req.content}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <button
-                      onClick={() => handleReact(req.id, !!req.user_reacted)}
-                      className={`flex items-center gap-1 text-xs ${
-                        req.user_reacted ? "text-red-400" : "text-[hsl(var(--dark-muted))]"
-                      }`}
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${req.user_reacted ? "fill-red-400" : ""}`} />
-                      {(req.reaction_count || 0) > 0 && req.reaction_count} Orei
-                    </button>
-                    <p className="text-[10px] text-[hsl(var(--dark-muted))]">
-                      {new Date(req.created_at).toLocaleDateString("pt-BR")}
-                    </p>
-                    {user && req.user_id === user.id && (
+
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="bg-[hsl(var(--dark-bg))] border-none min-h-[80px] text-sm"
+                        maxLength={1000}
+                      />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => setEditIsPublic(!editIsPublic)}
+                          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${
+                            editIsPublic ? "bg-green-400/20 text-green-400" : "bg-yellow-400/20 text-yellow-400"
+                          }`}
+                        >
+                          {editIsPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                          {editIsPublic ? "Público" : "Privado"}
+                        </button>
+                        <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto">
+                          {editContent.length}/1000
+                        </span>
+                        <Button onClick={cancelEdit} size="sm" variant="outline" disabled={editSaving}>
+                          <X className="w-3 h-3 mr-1" /> Cancelar
+                        </Button>
+                        <Button onClick={() => saveEdit(req.id)} size="sm" disabled={editSaving || !editContent.trim()}>
+                          {editSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : (<><Check className="w-3 h-3 mr-1" /> Salvar</>)}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{req.content}</p>
+                  )}
+
+                  {!isEditing && (
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
                       <button
-                        onClick={() => handleToggleAnswered(req.id, req.is_answered)}
-                        className="text-[10px] text-primary ml-auto"
+                        onClick={() => handleReact(req.id, !!req.user_reacted)}
+                        className={`flex items-center gap-1 text-xs ${
+                          req.user_reacted ? "text-red-400" : "text-[hsl(var(--dark-muted))]"
+                        }`}
                       >
-                        {req.is_answered ? "Desmarcar" : "Respondido ✓"}
+                        <Heart className={`w-3.5 h-3.5 ${req.user_reacted ? "fill-red-400" : ""}`} />
+                        {(req.reaction_count || 0) > 0 && req.reaction_count} Orei
                       </button>
-                    )}
-                  </div>
+                      <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                        {new Date(req.created_at).toLocaleDateString("pt-BR")}
+                      </p>
+                      {isOwn && (
+                        <div className="flex items-center gap-2 ml-auto">
+                          <button
+                            onClick={() => startEdit(req)}
+                            className="text-[10px] text-primary flex items-center gap-1"
+                          >
+                            <Pencil className="w-3 h-3" /> Editar
+                          </button>
+                          <button
+                            onClick={() => handleToggleAnswered(req.id, req.is_answered)}
+                            className="text-[10px] text-primary"
+                          >
+                            {req.is_answered ? "Desmarcar" : "Respondido ✓"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOwn(req.id)}
+                            className="text-[10px] text-destructive flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-10">

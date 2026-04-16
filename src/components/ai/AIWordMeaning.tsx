@@ -45,7 +45,7 @@ const AIWordMeaning = ({ reference, text, enabled }: Props) => {
         className="p-2 rounded-lg bg-cyan-500/10 active:bg-cyan-500/20 transition-colors"
         title="Significado Original"
       >
-        <Languages className="w-4 h-4 text-cyan-400" />
+        <Languages className="w-[18px] h-[18px] text-cyan-400" />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

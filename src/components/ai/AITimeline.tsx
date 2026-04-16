@@ -53,7 +53,7 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="h-[80vh] rounded-t-[2rem] p-0 flex flex-col border-0"
+          className="h-[80vh] rounded-t-[2rem] p-0 flex flex-col border-0 [&>button.absolute]:hidden"
           style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card) / 0.5) 100%)" }}
         >
           <SheetHeader className="relative px-5 pt-5 pb-4 flex-shrink-0">

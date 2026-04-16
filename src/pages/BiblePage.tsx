@@ -454,46 +454,48 @@ const BiblePage = () => {
         {/* Floating action bar */}
         {hasSelection && (
           <div className="sticky top-[72px] z-10 mx-5 mb-2">
-            <div className="bg-primary rounded-xl px-4 py-3 flex items-center justify-between gap-2 shadow-lg">
-              <span className="text-xs font-semibold text-primary-foreground">
-                {selectedVerses.size} versículo{selectedVerses.size !== 1 ? "s" : ""}
-              </span>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setShowColorPicker(!showColorPicker)} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
-                  <Palette className="w-4 h-4 text-primary-foreground" />
-                </button>
-                <button onClick={handleShareSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
-                  <Share2 className="w-4 h-4 text-primary-foreground" />
-                </button>
-                <button onClick={handleSaveSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
-                  <BookmarkPlus className="w-4 h-4 text-primary-foreground" />
-                </button>
-                <button onClick={handleImageSelected} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30">
-                  <ImageIcon className="w-4 h-4 text-primary-foreground" />
-                </button>
-                <button onClick={() => setShowCompare(true)} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30" title="Comparar versões">
-                  <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
-                </button>
-                {(() => {
-                  const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);
-                  const selTexts = sortedSel.map((n) => verses.find((v) => v.number === n)).filter(Boolean) as BibleVerse[];
-                  const selRanges: string[] = [];
-                  let s = sortedSel[0], e = sortedSel[0];
-                  for (let i = 1; i < sortedSel.length; i++) {
-                    if (sortedSel[i] === e + 1) { e = sortedSel[i]; }
-                    else { selRanges.push(s === e ? `${s}` : `${s}-${e}`); s = e = sortedSel[i]; }
-                  }
-                  selRanges.push(s === e ? `${s}` : `${s}-${e}`);
-                  const selRef = `${selectedBook.name} ${selectedChapter}:${selRanges.join(",")}`;
-                  const selText = selTexts.map((v) => `${v.number} ${v.text}`).join("\n");
-                  return (
-                    <>
-                      <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
-                      <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
-                      <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
-                    </>
-                  );
-                })()}
+            <div className="bg-primary rounded-xl px-3 py-2.5 shadow-lg">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-primary-foreground shrink-0">
+                  {selectedVerses.size} versículo{selectedVerses.size !== 1 ? "s" : ""}
+                </span>
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  <button onClick={() => setShowColorPicker(!showColorPicker)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                    <Palette className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                  <button onClick={handleShareSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                    <Share2 className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                  <button onClick={handleSaveSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                    <BookmarkPlus className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                  <button onClick={handleImageSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                    <ImageIcon className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                  <button onClick={() => setShowCompare(true)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0" title="Comparar versões">
+                    <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
+                  </button>
+                  {(() => {
+                    const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);
+                    const selTexts = sortedSel.map((n) => verses.find((v) => v.number === n)).filter(Boolean) as BibleVerse[];
+                    const selRanges: string[] = [];
+                    let s = sortedSel[0], e = sortedSel[0];
+                    for (let i = 1; i < sortedSel.length; i++) {
+                      if (sortedSel[i] === e + 1) { e = sortedSel[i]; }
+                      else { selRanges.push(s === e ? `${s}` : `${s}-${e}`); s = e = sortedSel[i]; }
+                    }
+                    selRanges.push(s === e ? `${s}` : `${s}-${e}`);
+                    const selRef = `${selectedBook.name} ${selectedChapter}:${selRanges.join(",")}`;
+                    const selText = selTexts.map((v) => `${v.number} ${v.text}`).join("\n");
+                    return (
+                      <>
+                        <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
+                        <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
+                        <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
 

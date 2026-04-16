@@ -203,7 +203,7 @@ const DiscoverPage = () => {
           Busque por tema, capítulo ou referência como João 3:16.
         </p>
 
-        <div className="relative mt-4">
+        <div className="relative mt-4" data-tour="discover-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />
           <input
             type="text"
@@ -215,7 +215,7 @@ const DiscoverPage = () => {
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pt-3 -mx-5 px-5">
+        <div className="flex gap-2 overflow-x-auto pt-3 -mx-5 px-5" data-tour="discover-prompts">
           {quickPrompts.map((prompt) => (
             <button
               key={prompt}

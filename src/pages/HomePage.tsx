@@ -213,9 +213,10 @@ const HomePage = () => {
     <div className="pb-20 min-h-screen">
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
-        <StreakBadge days={getDisplayStreak(streak)} />
+        <div data-tour="home-streak"><StreakBadge days={getDisplayStreak(streak)} /></div>
         <button
           onClick={() => navigate("/descubra")}
+          data-tour="home-search"
           className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
         >
           <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
@@ -254,7 +255,7 @@ const HomePage = () => {
             </div>
 
             {/* Verse of the Day */}
-            <div>
+            <div data-tour="home-verse-of-day">
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Versículo do dia
               </h2>
@@ -309,7 +310,7 @@ const HomePage = () => {
             )}
 
             {/* Continue Reading */}
-            <div>
+            <div data-tour="home-continue">
               <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                 Continuar lendo
               </h2>

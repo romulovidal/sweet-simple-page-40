@@ -17,6 +17,7 @@ import AdminDailyVerse from "@/components/admin/AdminDailyVerse";
 import AdminPushSender from "@/components/admin/AdminPushSender";
 import AdminRoles from "@/components/admin/AdminRoles";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
+import AdminCultoSchedule from "@/components/admin/AdminCultoSchedule";
 import {
   Sheet,
   SheetContent,
@@ -47,7 +48,7 @@ const POST_TYPES = [
 
 const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas", "Profetas", "Devocional", "Temático"];
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "users" | "roles" | "log";
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },
@@ -58,6 +59,7 @@ const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[
 ];
 
 const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: "cultos", label: "Cultos", icon: Calendar },
   { id: "users", label: "Usuários", icon: Users },
   { id: "roles", label: "Administradores", icon: Shield },
   { id: "log", label: "Log de Atividades", icon: Clock },

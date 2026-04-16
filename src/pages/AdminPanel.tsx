@@ -226,7 +226,7 @@ const AdminPanel = () => {
   if (editingPost) {
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
           <button onClick={() => setEditingPost(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPost.id ? "Editar" : "Nova"} Postagem</h1>
           <Button size="sm" onClick={savePost}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
@@ -285,7 +285,7 @@ const AdminPanel = () => {
     const totalDays = (editingPlan as { total_days?: number }).total_days || 7;
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
           <button onClick={() => setEditingPlan(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPlan.id ? "Editar" : "Novo"} Plano</h1>
           <Button size="sm" onClick={savePlan}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
@@ -382,7 +382,7 @@ const AdminPanel = () => {
 
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 border-b border-border">
+        <header className="px-5 pt-8 pb-4 border-b border-[hsl(var(--dark-card))]">
           <div className="flex items-center gap-3">
             <button onClick={() => setViewingPlanId(null)}><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex-1">
@@ -421,7 +421,7 @@ const AdminPanel = () => {
                   const verseRange = vs ? `${vs}${ve ? `-${ve}` : ""}` : "";
                   const readingTitle = (r as Record<string, unknown>).title as string;
                   return (
-                    <div key={r.id} className="flex items-center gap-3 bg-background rounded-lg p-2.5">
+                    <div key={r.id} className="flex items-center gap-3 bg-[hsl(var(--dark-bg))] rounded-lg p-2.5">
                       <div className="flex-1 min-w-0">
                         {readingTitle && <p className="text-[10px] font-semibold text-primary truncate">{readingTitle}</p>}
                         <p className="text-sm">
@@ -465,7 +465,7 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen pb-20 flex flex-col">
       {/* Top header */}
-      <header className="px-5 pt-6 pb-3 flex items-center justify-between border-b border-border sticky top-0 z-20 bg-background">
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between border-b border-[hsl(var(--dark-card))] sticky top-0 z-20 bg-[hsl(var(--dark-bg))]">
         <div className="flex items-center gap-3">
           {/* Hamburger menu */}
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -474,9 +474,9 @@ const AdminPanel = () => {
                 <Menu className="w-5 h-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-background p-0">
-              <SheetHeader className="px-5 pt-6 pb-4 border-b border-border">
-                <SheetTitle className="text-left text-base">Menu Admin</SheetTitle>
+            <SheetContent side="left" className="w-72 bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] p-0">
+              <SheetHeader className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))]">
+                <SheetTitle className="text-left text-base text-[hsl(var(--dark-text))]">Menu Admin</SheetTitle>
               </SheetHeader>
               <div className="px-3 py-4 space-y-1">
                 {MORE_TABS.map((t) => (
@@ -484,14 +484,14 @@ const AdminPanel = () => {
                     key={t.id}
                     onClick={() => { setTab(t.id); setMenuOpen(false); }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      tab === t.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                      tab === t.id ? "bg-primary text-primary-foreground" : "text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
                     }`}
                   >
                     <t.icon className="w-5 h-5" />
                     {t.label}
                   </button>
                 ))}
-                <div className="border-t border-border my-3" />
+                <div className="border-t border-[hsl(var(--dark-card))] my-3" />
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
@@ -503,10 +503,10 @@ const AdminPanel = () => {
             </SheetContent>
           </Sheet>
           <div>
-            <h1 className="text-lg font-bold leading-tight">
+            <h1 className="text-lg font-bold leading-tight text-[hsl(var(--dark-text))]">
               {isMoreTab ? currentTabLabel : "Painel Admin"}
             </h1>
-            {!isMoreTab && <p className="text-[11px] text-muted-foreground">A Bíblia do Atalaia</p>}
+            {!isMoreTab && <p className="text-[11px] text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>}
           </div>
         </div>
       </header>
@@ -547,7 +547,7 @@ const AdminPanel = () => {
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{post.content}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
                             <Edit2 className="w-3 h-3" /> Editar
                           </button>
@@ -589,7 +589,7 @@ const AdminPanel = () => {
                             <p className="text-[10px] text-muted-foreground mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => fetchReadings(plan.id)} className="text-xs text-primary font-medium flex items-center gap-1">
                             <BookOpen className="w-3 h-3" /> Leituras
                           </button>
@@ -635,9 +635,9 @@ const AdminPanel = () => {
                         </div>
                       </div>
                       {editingUser?.id === u.id ? (
-                        <div className="mt-3 pt-3 border-t border-background space-y-2">
+                        <div className="mt-3 pt-3 border-t border-[hsl(var(--dark-card))] space-y-2">
                           <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
-                            placeholder="Nome do usuário" className="bg-background border-none text-sm" />
+                            placeholder="Nome do usuário" className="bg-[hsl(var(--dark-bg))] border-none text-sm" />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={async () => {
                               const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
@@ -648,7 +648,7 @@ const AdminPanel = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => { setEditingUser(u); setEditUserName(u.display_name || ""); }}
                             className="text-xs text-primary font-medium flex items-center gap-1">
                             <Edit2 className="w-3 h-3" /> Editar
@@ -676,7 +676,7 @@ const AdminPanel = () => {
       </div>
 
       {/* Bottom Navigation - mobile app style */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[hsl(var(--dark-bg))] border-t border-[hsl(var(--dark-card))]">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
           {BOTTOM_TABS.map((t) => {
             const active = tab === t.id;
@@ -751,20 +751,20 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">Título do dia (opcional)</label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex: A Criação do Mundo" className="bg-background border-none" maxLength={100} />
+          placeholder="Ex: A Criação do Mundo" className="bg-[hsl(var(--dark-bg))] border-none" maxLength={100} />
       </div>
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">📖 Livro da Bíblia *</label>
         <button onClick={() => setShowBookPicker(!showBookPicker)}
-          className="w-full flex items-center justify-between bg-background rounded-md px-3 py-2 text-sm">
+          className="w-full flex items-center justify-between bg-[hsl(var(--dark-bg))] rounded-md px-3 py-2 text-sm">
           <span className={selectedBookData ? "" : "text-muted-foreground"}>
             {selectedBookData ? `${selectedBookData.name} (${selectedBookData.chapters} cap.)` : "Selecionar livro..."}
           </span>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
         {showBookPicker && (
-          <div className="mt-2 bg-background rounded-xl border border-border max-h-52 overflow-y-auto">
-            <div className="p-2 sticky top-0 bg-background">
+          <div className="mt-2 bg-[hsl(var(--dark-bg))] rounded-xl border border-[hsl(var(--dark-card))] max-h-52 overflow-y-auto">
+            <div className="p-2 sticky top-0 bg-[hsl(var(--dark-bg))]">
               <Input value={bookSearch} onChange={(e) => setBookSearch(e.target.value)}
                 placeholder="Buscar livro..." className="bg-muted border-none text-sm h-8" />
             </div>
@@ -787,17 +787,17 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
           <label className="text-xs text-muted-foreground mb-1 block">Capítulo *</label>
           <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
             placeholder="1" min={1} max={selectedBookData?.chapters || 150}
-            className="bg-background border-none" />
+            className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Vers. início</label>
           <Input type="number" value={verseStart} onChange={(e) => setVerseStart(e.target.value)}
-            placeholder="—" min={1} className="bg-background border-none" />
+            placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Vers. fim</label>
           <Input type="number" value={verseEnd} onChange={(e) => setVerseEnd(e.target.value)}
-            placeholder="—" min={1} className="bg-background border-none" />
+            placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
       </div>
       <Button onClick={handleSubmit} className="w-full" size="sm">

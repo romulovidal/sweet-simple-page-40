@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import LGPDTermsDialog from "@/components/LGPDTermsDialog";
+import ReadingGoals from "@/components/ReadingGoals";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
 
 interface PlanProgress {
   planId: string;

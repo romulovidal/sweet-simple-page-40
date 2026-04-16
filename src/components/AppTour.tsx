@@ -356,7 +356,7 @@ const AppTour = () => {
         popover: {
           title: step.title,
           description: step.description,
-          ...(step.selector ? { side: (step.side ?? "top") as const } : {}),
+          ...(step.selector ? { side: (step.side ?? "top") } : {}),
           align: "center" as const,
           onPopoverRender: () => {
             if (step.showDontShow) injectDontShowCheckbox();

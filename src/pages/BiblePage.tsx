@@ -21,6 +21,11 @@ import VerseImageGenerator from "@/components/VerseImageGenerator";
 import VerseCompare from "@/components/VerseCompare";
 import ShareMenu from "@/components/ShareMenu";
 import ExegetAI from "@/components/ExegetAI";
+import AIChapterSummary from "@/components/ai/AIChapterSummary";
+import AIConnections from "@/components/ai/AIConnections";
+import AIWordMeaning from "@/components/ai/AIWordMeaning";
+import AITimeline from "@/components/ai/AITimeline";
+import { useAIFeatures } from "@/hooks/useAIFeatures";
 
 const APP_URL = window.location.origin;
 

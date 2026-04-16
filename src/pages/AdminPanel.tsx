@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home, Sparkles,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -63,6 +63,7 @@ const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[
 
 const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "cultos", label: "Cultos", icon: Calendar },
+  { id: "exegetai", label: "ExegetAI", icon: Sparkles },
   { id: "users", label: "Usuários", icon: Users },
   { id: "roles", label: "Administradores", icon: Shield },
   { id: "log", label: "Log de Atividades", icon: Clock },

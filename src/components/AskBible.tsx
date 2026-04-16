@@ -19,6 +19,7 @@ interface AskBibleProps {
 
 const AskBible = ({ enabled }: AskBibleProps) => {
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

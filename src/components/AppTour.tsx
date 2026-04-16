@@ -203,19 +203,6 @@ const STEPS: Step[] = [
       "Este botão dourado flutuante no canto inferior direito abre o **ExegetAI**: exegese profunda do trecho aberto — análise teológica, contexto histórico e linguístico gerados por IA.",
     side: "left",
   },
-  {
-    selector: '[data-tour="ask-bible"]',
-    title: "🙋 Pergunte à Bíblia",
-    description:
-      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
-    before: () => {
-      window.history.pushState({}, "", "/descubra");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    },
-    waitMs: 500,
-    side: "bottom",
-  },
-
   // ===== PLANS =====
   {
     selector: '[data-tour="nav-plans"]',
@@ -246,12 +233,35 @@ const STEPS: Step[] = [
     title: "🔎 Busca inteligente",
     description:
       "Digite uma palavra (“paz”, “fé”), um tema ou uma referência (“Salmo 23”) e ela acha em segundos em qualquer versão.",
+    side: "bottom",
   },
   {
     selector: '[data-tour="discover-prompts"]',
     title: "💡 Sugestões rápidas",
     description:
-      "Atalhos com temas populares: Ansiedade, Esperança, Amor, Perdão... Toque para ver versículos sobre cada tema.",
+      "Atalhos com buscas comuns (joão 3:16, salmos 23, ansiedade...). Toque em uma para preencher a busca automaticamente.",
+    side: "bottom",
+  },
+  {
+    selector: '[data-tour="discover-categories"]',
+    title: "🗂️ Categorias por tema",
+    description:
+      "Atalhos com temas populares: Oração, Fé, Amor, Paz, Sabedoria, Proteção, Propósito e Coragem. Toque para ver versículos do tema.",
+    side: "top",
+  },
+  {
+    selector: '[data-tour="discover-popular"]',
+    title: "⭐ Passagens populares",
+    description:
+      "Lista pronta com versículos clássicos (João 3:16, Salmos 23, Filipenses 4:6...). Toque para abrir direto na Bíblia.",
+    side: "top",
+  },
+  {
+    selector: '[data-tour="ask-bible"]',
+    title: "🙋 Pergunte à Bíblia",
+    description:
+      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
+    side: "top",
   },
 
   // ===== PROFILE =====

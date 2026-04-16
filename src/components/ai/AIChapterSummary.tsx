@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { BookOpen, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { BookOpen, Loader2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import { useAIStream } from "@/hooks/useAIStream";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { content, loading, run, reset } = useAIStream();
 
   const handleToggle = useCallback(() => {
@@ -23,6 +25,18 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
     setOpen(true);
     run("summary", `${bookName} ${chapter}`, text);
   }, [open, bookName, chapter, text, run, reset]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://sweet-simple-page-40.lovable.app`;
+      await navigator.clipboard.writeText(textWithLink);
+      setCopied(true);
+      toast.success("Resumo copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Erro ao copiar");
+    }
+  }, [content]);
 
   if (!enabled) return null;
 
@@ -49,9 +63,22 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
             </div>
           )}
           {content && (
-            <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-[13px] prose-p:leading-relaxed">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+            <>
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-[13px] prose-p:leading-relaxed">
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+              {!loading && (
+                <div className="flex justify-end mt-3">
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/15 transition-colors"
+                  >
+                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copied ? "Copiado!" : "Copiar"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

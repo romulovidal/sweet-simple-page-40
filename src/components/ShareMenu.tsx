@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface ShareMenuProps {
   text: string;
@@ -15,6 +16,7 @@ const SHARE_OPTIONS = [
 ];
 
 const ShareMenu = ({ text, open, onClose }: ShareMenuProps) => {
+  useBackHandler(open, onClose);
   if (!open) return null;
 
   const handleCopy = async () => {

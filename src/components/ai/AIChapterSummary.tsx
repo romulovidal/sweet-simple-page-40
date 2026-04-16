@@ -3,6 +3,7 @@ import { BookOpen, Loader2, ChevronDown, ChevronUp, Share2 } from "lucide-react"
 import ReactMarkdown from "react-markdown";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface Props {
   bookName: string;
@@ -15,6 +16,7 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
+  useBackHandler(open, () => { setOpen(false); reset(); });
 
   const handleToggle = useCallback(() => {
     if (open) {

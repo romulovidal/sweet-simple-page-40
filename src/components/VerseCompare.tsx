@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { BIBLE_VERSIONS, getChapter, type BibleVerse } from "@/services/bibleApi";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface VerseCompareProps {
   open: boolean;
@@ -30,6 +31,7 @@ const VerseCompare = ({
 }: VerseCompareProps) => {
   const [results, setResults] = useState<VersionVerses[]>([]);
   const [loading, setLoading] = useState(true);
+  useBackHandler(open, onClose);
 
   useEffect(() => {
     if (!open) return;

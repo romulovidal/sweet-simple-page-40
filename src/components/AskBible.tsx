@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 const AI_TOOLS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tools`;
 
@@ -19,6 +20,7 @@ interface AskBibleProps {
 
 const AskBible = ({ enabled }: AskBibleProps) => {
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

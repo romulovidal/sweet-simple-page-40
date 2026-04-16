@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface Props {
   reference: string;
@@ -15,6 +16,7 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
+  useBackHandler(open, () => setOpen(false));
 
   const handleOpen = useCallback(() => {
     setOpen(true);

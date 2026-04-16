@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Check, Download, ImageIcon, ImageOff, Loader2, Palette, Share2, Type, X, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { toast } from "sonner";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface VerseImageGeneratorProps {
   text: string;
@@ -130,6 +131,7 @@ function drawGradientBackground(
 }
 
 const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGeneratorProps) => {
+  useBackHandler(open, onClose);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedBg, setSelectedBg] = useState<BackgroundOption>(BACKGROUNDS[0]);
   const [selectedFont, setSelectedFont] = useState(FONTS[0]);

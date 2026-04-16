@@ -1,13 +1,9 @@
 import { useState, useCallback } from "react";
-import { Sparkles, X, Loader2, BrainCircuit, BookOpen, Copy, Check } from "lucide-react";
+import { Sparkles, X, Loader2, BrainCircuit, BookOpen, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import ShareMenu from "@/components/ShareMenu";
 
 interface ExegetAIProps {
   reference: string;
@@ -20,7 +16,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const runExegesis = useCallback(async () => {
     setOpen(true);
@@ -93,21 +89,10 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
     }
   }, [reference, text]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
-      await navigator.clipboard.writeText(textWithLink);
-      setCopied(true);
-      toast.success("Exegese copiada!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Erro ao copiar");
-    }
-  }, [content]);
+  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
 
   return (
     <>
-      {/* Floating AI button */}
       <button
         onClick={runExegesis}
         className="fixed bottom-24 right-5 z-30 group"
@@ -123,67 +108,45 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
         <SheetContent
           side="bottom"
           className="h-[90vh] rounded-t-[2rem] p-0 flex flex-col border-0 overflow-hidden"
-          style={{
-            background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card) / 0.5) 100%)",
-          }}
+          style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card) / 0.5) 100%)" }}
         >
-          {/* Header */}
           <SheetHeader className="relative px-5 pt-5 pb-4 flex-shrink-0">
-            {/* Drag handle */}
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-[hsl(var(--dark-muted)/0.3)]" />
-
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-[0_2px_12px_rgba(245,158,11,0.3)]">
                   <BrainCircuit className="w-[18px] h-[18px] text-white" />
                 </div>
                 <div>
-                  <SheetTitle className="text-base font-bold text-[hsl(var(--dark-text))] tracking-tight">
-                    ExegettAI
-                  </SheetTitle>
-                  <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-widest">
-                    Exegese Inteligente
-                  </p>
+                  <SheetTitle className="text-base font-bold text-[hsl(var(--dark-text))] tracking-tight">ExegettAI</SheetTitle>
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-widest">Exegese Inteligente</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {content && !loading && (
                   <button
-                    onClick={handleCopy}
+                    onClick={() => setShareOpen(true)}
                     className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
-                    title="Copiar exegese"
+                    title="Compartilhar"
                   >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                    )}
+                    <Share2 className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
                   </button>
                 )}
-                <button
-                  onClick={() => setOpen(false)}
-                  className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
-                >
+                <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors">
                   <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
                 </button>
               </div>
             </div>
-
-            {/* Reference pill */}
             <div className="mt-3 flex items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
                 <BookOpen className="w-3 h-3 text-amber-500" />
                 <span className="text-xs font-semibold text-amber-400">{reference}</span>
               </div>
             </div>
-
-            {/* Divider */}
             <div className="absolute bottom-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-[hsl(var(--dark-muted)/0.2)] to-transparent" />
           </SheetHeader>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {/* Loading state */}
             {loading && !content && (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="relative">
@@ -198,7 +161,6 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
                   <p className="text-sm font-medium text-[hsl(var(--dark-text))]">Analisando o texto...</p>
                   <p className="text-xs text-[hsl(var(--dark-muted))]">Contexto histórico, cultural e linguístico</p>
                 </div>
-                {/* Animated dots */}
                 <div className="flex items-center gap-1.5 mt-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -206,27 +168,11 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
                 </div>
               </div>
             )}
-
-            {/* Markdown content */}
             {content && (
-              <div className="exegetai-content prose prose-sm prose-invert max-w-none 
-                text-[hsl(var(--dark-text))]
-                prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight
-                prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20
-                prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2
-                prose-strong:text-amber-300 prose-strong:font-semibold
-                prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded
-                prose-li:marker:text-amber-500
-                prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
-                prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal
-                prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline
-                prose-p:leading-relaxed prose-p:text-[13px]
-              ">
+              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-relaxed prose-p:text-[13px]">
                 <ReactMarkdown>{content}</ReactMarkdown>
               </div>
             )}
-
-            {/* Typing indicator */}
             {loading && content && (
               <div className="flex items-center gap-2.5 mt-6 mb-2 px-3 py-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10 w-fit">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
@@ -235,7 +181,6 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
             )}
           </div>
 
-          {/* Footer */}
           {!loading && content && (
             <div className="px-5 py-3 border-t border-[hsl(var(--dark-muted)/0.1)] flex-shrink-0">
               <p className="text-[10px] text-center text-[hsl(var(--dark-muted)/0.5)]">
@@ -245,6 +190,8 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
           )}
         </SheetContent>
       </Sheet>
+
+      <ShareMenu text={shareText} open={shareOpen} onClose={() => setShareOpen(false)} />
     </>
   );
 };

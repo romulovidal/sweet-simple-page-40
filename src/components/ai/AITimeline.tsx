@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
-import { Clock, Loader2, X, BrainCircuit, Copy, Check } from "lucide-react";
+import { Clock, Loader2, X, BrainCircuit, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { toast } from "sonner";
 import { useAIStream } from "@/hooks/useAIStream";
+import ShareMenu from "@/components/ShareMenu";
 
 interface Props {
   reference: string;
@@ -13,7 +13,7 @@ interface Props {
 
 const AITimeline = ({ reference, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
 
   const handleOpen = useCallback(() => {
@@ -22,19 +22,9 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
     run("timeline", reference, text);
   }, [reference, text, run, reset]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
-      await navigator.clipboard.writeText(textWithLink);
-      setCopied(true);
-      toast.success("Linha do tempo copiada!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Erro ao copiar");
-    }
-  }, [content]);
-
   if (!enabled) return null;
+
+  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
 
   return (
     <>
@@ -67,11 +57,11 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
               <div className="flex items-center gap-2">
                 {content && !loading && (
                   <button
-                    onClick={handleCopy}
+                    onClick={() => setShareOpen(true)}
                     className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
-                    title="Copiar"
+                    title="Compartilhar"
                   >
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-[hsl(var(--dark-muted))]" />}
+                    <Share2 className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
                   </button>
                 )}
                 <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
@@ -112,6 +102,8 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
           )}
         </SheetContent>
       </Sheet>
+
+      <ShareMenu text={shareText} open={shareOpen} onClose={() => setShareOpen(false)} />
     </>
   );
 };

@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
-import { BookOpen, Loader2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { BookOpen, Loader2, ChevronDown, ChevronUp, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { toast } from "sonner";
 import { useAIStream } from "@/hooks/useAIStream";
+import ShareMenu from "@/components/ShareMenu";
 
 interface Props {
   bookName: string;
@@ -13,7 +13,7 @@ interface Props {
 
 const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
 
   const handleToggle = useCallback(() => {
@@ -26,19 +26,9 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
     run("summary", `${bookName} ${chapter}`, text);
   }, [open, bookName, chapter, text, run, reset]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
-      await navigator.clipboard.writeText(textWithLink);
-      setCopied(true);
-      toast.success("Resumo copiado!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Erro ao copiar");
-    }
-  }, [content]);
-
   if (!enabled) return null;
+
+  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
 
   return (
     <div className="mx-5 mb-4">
@@ -70,11 +60,11 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
               {!loading && (
                 <div className="flex justify-end mt-3">
                   <button
-                    onClick={handleCopy}
+                    onClick={() => setShareOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/15 transition-colors"
                   >
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copied ? "Copiado!" : "Copiar"}
+                    <Share2 className="w-3 h-3" />
+                    Compartilhar
                   </button>
                 </div>
               )}
@@ -82,6 +72,8 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
           )}
         </div>
       )}
+
+      <ShareMenu text={shareText} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 };

@@ -22,6 +22,7 @@ import PlansPage from "@/pages/PlansPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
+import AppLanding from "@/pages/AppLanding";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,12 +30,13 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const isLanding = location.pathname === "/app";
   const resetKey = (location.state as any)?.reset || 0;
 
   useManifestSwap();
 
   return (
-    <div className={isAdmin ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
+    <div className={isAdmin || isLanding ? "min-h-screen" : "max-w-lg mx-auto relative min-h-screen"}>
       <ScrollToTop />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname + resetKey}>
@@ -44,15 +46,16 @@ const AppContent = () => {
           <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
           <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/app" element={<AppLanding />} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
-      {!isAdmin && <ThemeToggleFloat />}
-      {isAdmin ? <AdminInstallPrompt /> : <InstallPrompt />}
+      {!isAdmin && !isLanding && <ThemeToggleFloat />}
+      {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
-      {!isAdmin && <PushPermissionPrompt />}
-      {!isAdmin && <BottomNav />}
-      {!isAdmin && <AppTour />}
+      {!isAdmin && !isLanding && <PushPermissionPrompt />}
+      {!isAdmin && !isLanding && <BottomNav />}
+      {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />
     </div>
   );

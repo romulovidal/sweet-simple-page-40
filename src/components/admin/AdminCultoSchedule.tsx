@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Church, Clock, Bell, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Church, Bell, Loader2, MessageSquare } from "lucide-react";
 
 const DAYS_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -19,31 +20,50 @@ interface CultoSchedule {
   created_at: string;
 }
 
-const REMINDER_OPTIONS = [
+interface CultoReminder {
+  id: string;
+  schedule_id: string;
+  minutes_before: number;
+  message: string;
+  last_sent: string | null;
+  sort_order: number;
+}
+
+const REMINDER_PRESETS = [
+  { value: 15, label: "15 min" },
   { value: 30, label: "30 min" },
-  { value: 60, label: "1 hora" },
-  { value: 120, label: "2 horas" },
-  { value: 180, label: "3 horas" },
-  { value: 360, label: "6 horas" },
-  { value: 720, label: "12 horas" },
-  { value: 1440, label: "24 horas" },
+  { value: 60, label: "1h" },
+  { value: 120, label: "2h" },
+  { value: 180, label: "3h" },
+  { value: 360, label: "6h" },
+  { value: 720, label: "12h" },
+  { value: 1440, label: "24h" },
 ];
+
+const formatMinutes = (min: number) => {
+  if (min >= 1440) return `${Math.round(min / 1440)}d`;
+  if (min >= 60) return `${Math.round(min / 60)}h`;
+  return `${min}min`;
+};
 
 const AdminCultoSchedule = () => {
   const [schedules, setSchedules] = useState<CultoSchedule[]>([]);
+  const [reminders, setReminders] = useState<CultoReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<CultoSchedule> | null>(null);
+  const [editingReminders, setEditingReminders] = useState<Partial<CultoReminder>[]>([]);
+  const [viewingScheduleId, setViewingScheduleId] = useState<string | null>(null);
 
   useEffect(() => { loadSchedules(); }, []);
 
   const loadSchedules = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("culto_schedules")
-      .select("*")
-      .order("day_of_week", { ascending: true })
-      .order("time", { ascending: true });
-    setSchedules((data as CultoSchedule[]) || []);
+    const [schedulesRes, remindersRes] = await Promise.all([
+      supabase.from("culto_schedules").select("*").order("day_of_week").order("time"),
+      supabase.from("culto_reminders").select("*").order("minutes_before", { ascending: false }),
+    ]);
+    setSchedules((schedulesRes.data as CultoSchedule[]) || []);
+    setReminders((remindersRes.data as CultoReminder[]) || []);
     setLoading(false);
   };
 
@@ -59,16 +79,38 @@ const AdminCultoSchedule = () => {
       is_active: editing.is_active ?? true,
     };
 
+    let scheduleId = editing.id;
+
     if (editing.id) {
       const { error } = await supabase.from("culto_schedules").update(payload).eq("id", editing.id);
       if (error) { toast.error("Erro ao salvar"); return; }
-      toast.success("Culto atualizado!");
     } else {
-      const { error } = await supabase.from("culto_schedules").insert(payload);
-      if (error) { toast.error("Erro ao criar"); return; }
-      toast.success("Culto agendado!");
+      const { data, error } = await supabase.from("culto_schedules").insert(payload).select().single();
+      if (error || !data) { toast.error("Erro ao criar"); return; }
+      scheduleId = data.id;
     }
+
+    // Save reminders
+    if (scheduleId) {
+      // Delete existing reminders for this schedule
+      await supabase.from("culto_reminders").delete().eq("schedule_id", scheduleId);
+
+      // Insert new reminders
+      if (editingReminders.length > 0) {
+        const reminderPayloads = editingReminders.map((r, i) => ({
+          schedule_id: scheduleId!,
+          minutes_before: r.minutes_before ?? 180,
+          message: r.message?.trim() || "",
+          sort_order: i,
+        }));
+        const { error } = await supabase.from("culto_reminders").insert(reminderPayloads);
+        if (error) { toast.error("Erro ao salvar lembretes"); return; }
+      }
+    }
+
+    toast.success(editing.id ? "Culto atualizado!" : "Culto agendado!");
     setEditing(null);
+    setEditingReminders([]);
     loadSchedules();
   };
 
@@ -84,12 +126,36 @@ const AdminCultoSchedule = () => {
     loadSchedules();
   };
 
+  const startEditing = (schedule?: CultoSchedule) => {
+    if (schedule) {
+      setEditing(schedule);
+      const schedReminders = reminders.filter(r => r.schedule_id === schedule.id);
+      setEditingReminders(schedReminders.length > 0 ? schedReminders : [{ minutes_before: 180, message: "" }]);
+    } else {
+      setEditing({ day_of_week: 0, reminder_minutes_before: 180, is_active: true });
+      setEditingReminders([{ minutes_before: 180, message: "" }]);
+    }
+  };
+
+  const addReminder = () => {
+    setEditingReminders([...editingReminders, { minutes_before: 60, message: "" }]);
+  };
+
+  const removeReminder = (index: number) => {
+    setEditingReminders(editingReminders.filter((_, i) => i !== index));
+  };
+
+  const updateReminder = (index: number, updates: Partial<CultoReminder>) => {
+    setEditingReminders(editingReminders.map((r, i) => i === index ? { ...r, ...updates } : r));
+  };
+
+  // Editing form
   if (editing) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => setEditing(null)}><X className="w-5 h-5" /></button>
-          <h2 className="text-sm font-bold flex-1">{editing.id ? "Editar" : "Novo"} Culto</h2>
+          <button onClick={() => { setEditing(null); setEditingReminders([]); }}><X className="w-5 h-5 text-[hsl(var(--dark-text))]" /></button>
+          <h2 className="text-sm font-bold flex-1 text-[hsl(var(--dark-text))]">{editing.id ? "Editar" : "Novo"} Culto</h2>
         </div>
 
         <div>
@@ -116,18 +182,65 @@ const AdminCultoSchedule = () => {
             className="bg-muted border-none w-36" />
         </div>
 
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
-            <Bell className="w-3 h-3" /> Lembrete antes do culto
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {REMINDER_OPTIONS.map((opt) => (
-              <button key={opt.value} onClick={() => setEditing({ ...editing, reminder_minutes_before: opt.value })}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  editing.reminder_minutes_before === opt.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}>{opt.label}</button>
-            ))}
+        {/* Multiple reminders */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Bell className="w-3 h-3" /> Lembretes Push ({editingReminders.length})
+            </label>
+            <button onClick={addReminder} className="text-xs text-primary font-medium flex items-center gap-1">
+              <Plus className="w-3 h-3" /> Adicionar
+            </button>
           </div>
+
+          {editingReminders.map((reminder, index) => (
+            <div key={index} className="bg-muted rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-primary">Lembrete {index + 1}</span>
+                {editingReminders.length > 1 && (
+                  <button onClick={() => removeReminder(index)} className="text-destructive">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-1 block">Quanto tempo antes</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {REMINDER_PRESETS.map((opt) => (
+                    <button key={opt.value} onClick={() => updateReminder(index, { minutes_before: opt.value })}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                        reminder.minutes_before === opt.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-bg))] text-muted-foreground"
+                      }`}>{opt.label}</button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px] text-muted-foreground">ou:</span>
+                  <Input type="number" value={reminder.minutes_before ?? 180}
+                    onChange={(e) => updateReminder(index, { minutes_before: parseInt(e.target.value) || 1 })}
+                    min={1} max={10080} className="bg-[hsl(var(--dark-bg))] border-none h-7 text-xs w-20" />
+                  <span className="text-[10px] text-muted-foreground">minutos</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-1 block flex items-center gap-1">
+                  <MessageSquare className="w-3 h-3" /> Mensagem personalizada (opcional)
+                </label>
+                <Textarea value={reminder.message || ""}
+                  onChange={(e) => updateReminder(index, { message: e.target.value })}
+                  placeholder="Deixe vazio para usar mensagem padrão"
+                  className="bg-[hsl(var(--dark-bg))] border-none min-h-[60px] text-xs" maxLength={300} />
+              </div>
+            </div>
+          ))}
+
+          {editingReminders.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-xs text-muted-foreground">Nenhum lembrete configurado</p>
+              <button onClick={addReminder} className="text-xs text-primary font-medium mt-1">+ Adicionar lembrete</button>
+            </div>
+          )}
         </div>
 
         <Button onClick={save} className="w-full">
@@ -137,17 +250,66 @@ const AdminCultoSchedule = () => {
     );
   }
 
+  // View reminders for a schedule
+  if (viewingScheduleId) {
+    const schedule = schedules.find(s => s.id === viewingScheduleId);
+    const schedReminders = reminders.filter(r => r.schedule_id === viewingScheduleId);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <button onClick={() => setViewingScheduleId(null)}><X className="w-5 h-5 text-[hsl(var(--dark-text))]" /></button>
+          <h2 className="text-sm font-bold flex-1 text-[hsl(var(--dark-text))]">
+            Lembretes: {schedule?.name}
+          </h2>
+        </div>
+
+        {schedReminders.length === 0 ? (
+          <div className="text-center py-6">
+            <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+            <p className="text-sm text-muted-foreground">Nenhum lembrete configurado</p>
+            <p className="text-xs text-muted-foreground mt-1">Edite o culto para adicionar lembretes</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {schedReminders.map((r, i) => (
+              <div key={r.id} className="bg-muted rounded-xl p-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">
+                    {formatMinutes(r.minutes_before)} antes
+                  </span>
+                </div>
+                {r.message ? (
+                  <p className="text-xs text-muted-foreground mt-1 ml-6">"{r.message}"</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1 ml-6 italic">Mensagem padrão</p>
+                )}
+                {r.last_sent && (
+                  <p className="text-[10px] text-muted-foreground mt-1 ml-6">
+                    Último envio: {new Date(r.last_sent).toLocaleString("pt-BR")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Main list
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-1">
         <Church className="w-4 h-4 text-primary" />
-        <span className="text-sm font-semibold">Horários de Culto</span>
+        <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Horários de Culto</span>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Configure os dias e horários dos cultos. Um lembrete push será enviado automaticamente antes de cada culto.
+        Configure os dias e horários dos cultos com múltiplos lembretes push personalizados.
       </p>
 
-      <Button onClick={() => setEditing({ day_of_week: 0, reminder_minutes_before: 180, is_active: true })} className="w-full">
+      <Button onClick={() => startEditing()} className="w-full">
         <Plus className="w-4 h-4 mr-2" /> Novo Horário de Culto
       </Button>
 
@@ -158,7 +320,7 @@ const AdminCultoSchedule = () => {
       ) : (
         <div className="space-y-2">
           {schedules.map((s) => {
-            const reminderLabel = REMINDER_OPTIONS.find(o => o.value === s.reminder_minutes_before)?.label || `${s.reminder_minutes_before} min`;
+            const schedReminders = reminders.filter(r => r.schedule_id === s.id);
             return (
               <div key={s.id} className="bg-muted rounded-xl p-4">
                 <div className="flex items-center gap-3">
@@ -167,21 +329,27 @@ const AdminCultoSchedule = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm">{s.name}</p>
+                      <p className="font-semibold text-sm text-[hsl(var(--dark-text))]">{s.name}</p>
                       {!s.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Inativo</span>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {DAYS_PT[s.day_of_week]} às {s.time.substring(0, 5)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Bell className="w-3 h-3" /> Lembrete: {reminderLabel} antes
+                      <Bell className="w-3 h-3" />
+                      {schedReminders.length > 0
+                        ? `${schedReminders.length} lembrete${schedReminders.length > 1 ? "s" : ""}: ${schedReminders.map(r => formatMinutes(r.minutes_before)).join(", ")}`
+                        : "Nenhum lembrete"}
                     </p>
                   </div>
                   <Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} />
                 </div>
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
-                  <button onClick={() => setEditing(s)} className="text-xs text-primary font-medium flex items-center gap-1">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-bg))]">
+                  <button onClick={() => startEditing(s)} className="text-xs text-primary font-medium flex items-center gap-1">
                     <Edit2 className="w-3 h-3" /> Editar
+                  </button>
+                  <button onClick={() => setViewingScheduleId(s.id)} className="text-xs text-primary font-medium flex items-center gap-1">
+                    <Bell className="w-3 h-3" /> Lembretes
                   </button>
                   <button onClick={() => remove(s.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
                     <Trash2 className="w-3 h-3" /> Excluir

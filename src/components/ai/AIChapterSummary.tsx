@@ -28,7 +28,19 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
 
   if (!enabled) return null;
 
-  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
+  const shareText = `📖 Resumo de ${bookName} ${chapter}\n\n${content}\n\n— Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Resumo de ${bookName} ${chapter}`, text: shareText });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    setShareOpen(true);
+  };
 
   return (
     <div className="mx-5 mb-4">
@@ -60,7 +72,7 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
               {!loading && (
                 <div className="flex justify-end mt-3">
                   <button
-                    onClick={() => setShareOpen(true)}
+                    onClick={handleShare}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/15 transition-colors"
                   >
                     <Share2 className="w-3 h-3" />

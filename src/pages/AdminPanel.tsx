@@ -522,6 +522,7 @@ const AdminPanel = () => {
             {tab === "push" && <AdminPushSender />}
             {tab === "roles" && <AdminRoles />}
             {tab === "log" && <AdminActivityLog />}
+            {tab === "cultos" && <AdminCultoSchedule />}
 
             {tab === "posts" && (
               <>

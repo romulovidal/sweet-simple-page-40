@@ -278,7 +278,7 @@ const DiscoverPage = () => {
             <AskBible enabled={appFeatures.ask_bible} />
           </div>
 
-          <div className="px-5 mb-6">
+          <div className="px-5 mb-6" data-tour="discover-categories">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Categorias
             </h2>
@@ -296,7 +296,7 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          <div className="px-5 mb-6">
+          <div className="px-5 mb-6" data-tour="discover-popular">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Passagens populares
             </h2>

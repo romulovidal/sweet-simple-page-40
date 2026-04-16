@@ -610,12 +610,31 @@ const BiblePage = () => {
         )}
         {versionPickerModal}
         <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
-        {!loading && verses.length > 0 && selectedBook && selectedChapter && (
-          <ExegetAI
-            reference={`${selectedBook.name} ${selectedChapter}`}
-            text={verses.map((v) => `${v.number} ${v.text}`).join("\n")}
-          />
-        )}
+        {!loading && verses.length > 0 && selectedBook && selectedChapter && (() => {
+          const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);
+          const hasSelection = sortedSel.length > 0;
+          const targetVerses = hasSelection
+            ? sortedSel.map((n) => verses.find((v) => v.number === n)).filter(Boolean) as BibleVerse[]
+            : verses;
+          const ranges: string[] = [];
+          if (hasSelection) {
+            let start = sortedSel[0], end = sortedSel[0];
+            for (let i = 1; i < sortedSel.length; i++) {
+              if (sortedSel[i] === end + 1) { end = sortedSel[i]; }
+              else { ranges.push(start === end ? `${start}` : `${start}-${end}`); start = end = sortedSel[i]; }
+            }
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
+          }
+          const ref = hasSelection
+            ? `${selectedBook.name} ${selectedChapter}:${ranges.join(",")}`
+            : `${selectedBook.name} ${selectedChapter}`;
+          return (
+            <ExegetAI
+              reference={ref}
+              text={targetVerses.map((v) => `${v.number} ${v.text}`).join("\n")}
+            />
+          );
+        })()}
       </div>
     );
   }

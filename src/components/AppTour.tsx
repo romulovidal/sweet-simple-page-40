@@ -170,9 +170,22 @@ const STEPS: Step[] = [
       "Veja o mesmo versículo em todas as 6 traduções lado a lado para estudar diferenças.",
   },
   {
-    title: "🤖 IA bíblica integrada",
+    selector: '[data-tour="bible-action-connections"]',
+    title: "🔗 Conexões Bíblicas (IA)",
     description:
-      "Com versículos selecionados, você ainda tem: **Conexões Bíblicas**, **Significado Original** (hebraico/grego) e **Linha do Tempo**. Tudo gerado por IA dentro do app.",
+      "Este botão verde mostra outras passagens da Bíblia conectadas ao versículo selecionado — referências cruzadas, paralelos no AT/NT e textos que se complementam, gerados por IA.",
+  },
+  {
+    selector: '[data-tour="bible-action-wordmeaning"]',
+    title: "🔤 Significado Original (IA)",
+    description:
+      "Este botão azul-ciano traz o sentido das palavras-chave em hebraico (AT) ou grego (NT): transliteração, significado original e nuances que se perdem na tradução.",
+  },
+  {
+    selector: '[data-tour="bible-action-timeline"]',
+    title: "⏳ Linha do Tempo (IA)",
+    description:
+      "Este botão laranja monta uma linha do tempo histórica do trecho: contexto, datas aproximadas, personagens e o que aconteceu antes/depois — perfeito para entender o pano de fundo.",
     before: deselectVerse16,
     waitMs: 250,
   },

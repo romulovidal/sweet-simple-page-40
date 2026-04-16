@@ -238,7 +238,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
           {!loading && content && (
             <div className="px-5 py-3 border-t border-[hsl(var(--dark-muted)/0.1)] flex-shrink-0">
               <p className="text-[10px] text-center text-[hsl(var(--dark-muted)/0.5)]">
-                ✨ Gerado por ExegettAI • Exegese acadêmica assistida por inteligência artificial
+                ✨ Gerado por ExegettAI • Especialista em Exegese Bíblica da Bíblia do Atalaia.
               </p>
             </div>
           )}

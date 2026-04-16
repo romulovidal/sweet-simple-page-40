@@ -190,6 +190,44 @@ export type Database = {
         }
         Relationships: []
       }
+      culto_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          last_sent: string | null
+          message: string
+          minutes_before: number
+          schedule_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sent?: string | null
+          message?: string
+          minutes_before?: number
+          schedule_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sent?: string | null
+          message?: string
+          minutes_before?: number
+          schedule_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "culto_reminders_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "culto_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       culto_schedules: {
         Row: {
           created_at: string

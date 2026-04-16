@@ -221,7 +221,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="nav-discover"]',
     title: "🧭 Aba Descubra",
     description:
-      "Vamos abrir agora! Busque por temas, devocionais especiais, posts da igreja e horários de cultos.",
+      "Vamos abrir agora! Busque por temas, categorias, passagens populares e converse com o Pergunte à Bíblia.",
     before: () => {
       window.history.pushState({}, "", "/descubra");
       window.dispatchEvent(new PopStateEvent("popstate"));

@@ -461,19 +461,19 @@ const BiblePage = () => {
                 </span>
                 <div className="flex items-center gap-1 flex-wrap justify-end">
                   <button onClick={() => setShowColorPicker(!showColorPicker)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
-                    <Palette className="w-4 h-4 text-primary-foreground" />
+                    <Palette className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   <button onClick={handleShareSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
-                    <Share2 className="w-4 h-4 text-primary-foreground" />
+                    <Share2 className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   <button onClick={handleSaveSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
-                    <BookmarkPlus className="w-4 h-4 text-primary-foreground" />
+                    <BookmarkPlus className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   <button onClick={handleImageSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
-                    <ImageIcon className="w-4 h-4 text-primary-foreground" />
+                    <ImageIcon className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   <button onClick={() => setShowCompare(true)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0" title="Comparar versões">
-                    <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
+                    <GitCompareArrows className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   {(() => {
                     const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);

@@ -686,6 +686,15 @@ const BiblePage = () => {
               />
             ) : null;
         })()}
+        {showPresentation && selectedBook && selectedChapter && (
+          <PresentationMode
+            verses={verses}
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            selectedVerses={selectedVerses.size > 0 ? selectedVerses : undefined}
+            onClose={() => setShowPresentation(false)}
+          />
+        )}
       </div>
     );
   }

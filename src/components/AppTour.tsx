@@ -287,14 +287,22 @@ const STEPS: Step[] = [
 
   // ===== END =====
   {
+    selector: '[data-tour="home-tab-comunidade"]',
     title: "🙏 Comunidade & notificações",
     description:
-      "Pedidos de oração públicos, versículo do dia por push, lembretes de culto e opção de instalar o app na tela inicial.",
+      "Esta é a aba **Comunidade**: pedidos de oração públicos, horários de culto, versículo do dia por push, lembretes de culto e opção de instalar o app na tela inicial.",
     before: () => {
-      window.history.pushState({}, "", "/");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      // Volta para Home
+      if (window.location.pathname !== "/") {
+        window.history.pushState({}, "", "/");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+      // Ativa a aba Comunidade
+      const btn = document.querySelector('[data-tour="home-tab-comunidade"]') as HTMLElement | null;
+      btn?.click();
     },
-    waitMs: 300,
+    waitMs: 400,
+    side: "bottom",
   },
   {
     title: "🎉 Tudo pronto!",

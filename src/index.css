@@ -130,7 +130,15 @@ body {
 
 /* ===== App Tour (driver.js) — dark + amber theme ===== */
 .driver-overlay {
-  backdrop-filter: blur(2px);
+  backdrop-filter: none;
+}
+/* Realça o elemento destacado com glow âmbar para ficar bem visível */
+.driver-active-element,
+.driver-active-element * {
+  z-index: 10004 !important;
+}
+.driver-stage {
+  filter: drop-shadow(0 0 12px hsl(35 95% 55% / 0.5));
 }
 .atalaias-tour-popover.driver-popover {
   background: hsl(var(--dark-card, 220 15% 12%));

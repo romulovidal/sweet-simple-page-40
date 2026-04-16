@@ -75,20 +75,14 @@ const BiblePage = () => {
   const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
 
-  // Native-like back behavior: closes pickers/selection/modals before navigating away.
+  // Native-like back behavior: closes overlays/modals before navigating away.
+  // Verse/chapter back interception was removed because it was breaking verse selection on mobile.
   useBackHandler(showColorPicker, () => setShowColorPicker(false));
   useBackHandler(showShareMenu, () => setShowShareMenu(false));
   useBackHandler(showCompare, () => setShowCompare(false));
   useBackHandler(showVersionPicker, () => setShowVersionPicker(false));
   useBackHandler(showPresentation, () => setShowPresentation(false));
   useBackHandler(!!imageVerse, () => setImageVerse(null));
-  useBackHandler(selectedVerses.size > 0 && !showColorPicker && !showShareMenu && !showCompare, () => setSelectedVerses(new Set()));
-  useBackHandler(!!selectedChapter && selectedVerses.size === 0, () => {
-    setSelectedChapter(null);
-    setHighlightedVerse(null);
-    setVerses([]);
-    setEpigraphs([]);
-  });
 
   // On mount, restore last reading position if no search params
   useEffect(() => {

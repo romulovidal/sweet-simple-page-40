@@ -664,12 +664,12 @@ const BiblePage = () => {
           const ref = hasSelection
             ? `${selectedBook.name} ${selectedChapter}:${ranges.join(",")}`
             : `${selectedBook.name} ${selectedChapter}`;
-          return (
-            <ExegetAI
-              reference={ref}
-              text={targetVerses.map((v) => `${v.number} ${v.text}`).join("\n")}
-            />
-          );
+          return aiFeatures.exegetai ? (
+              <ExegetAI
+                reference={ref}
+                text={targetVerses.map((v) => `${v.number} ${v.text}`).join("\n")}
+              />
+            ) : null;
         })()}
       </div>
     );

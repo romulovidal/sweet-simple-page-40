@@ -8,6 +8,7 @@ export interface AIFeatures {
   word_meaning: boolean;
   timeline: boolean;
   plan_generator: boolean;
+  exegetai: boolean;
 }
 
 const DEFAULT_FEATURES: AIFeatures = {
@@ -17,6 +18,7 @@ const DEFAULT_FEATURES: AIFeatures = {
   word_meaning: true,
   timeline: true,
   plan_generator: true,
+  exegetai: true,
 };
 
 export function useAIFeatures() {

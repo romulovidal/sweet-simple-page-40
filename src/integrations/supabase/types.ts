@@ -291,6 +291,65 @@ export type Database = {
         }
         Relationships: []
       }
+      prayer_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prayer_reactions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "prayer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prayer_requests: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_answered: boolean
+          is_public: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_answered?: boolean
+          is_public?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_answered?: boolean
+          is_public?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -372,6 +431,69 @@ export type Database = {
           id?: string
           p256dh?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      reading_goals: {
+        Row: {
+          completed_chapters: Json
+          created_at: string
+          id: string
+          target_chapters: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          completed_chapters?: Json
+          created_at?: string
+          id?: string
+          target_chapters?: number
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          completed_chapters?: Json
+          created_at?: string
+          id?: string
+          target_chapters?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      user_notes: {
+        Row: {
+          book_abbrev: string
+          chapter: number
+          content: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          verse: number | null
+        }
+        Insert: {
+          book_abbrev: string
+          chapter: number
+          content?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          verse?: number | null
+        }
+        Update: {
+          book_abbrev?: string
+          chapter?: number
+          content?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          verse?: number | null
         }
         Relationships: []
       }

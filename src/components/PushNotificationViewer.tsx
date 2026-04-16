@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bell } from "lucide-react";
 
 interface PushData {
@@ -21,14 +21,12 @@ const PushNotificationViewer = () => {
 
     navigator.serviceWorker?.addEventListener("message", handler);
 
-    // Also check URL params (fallback for when app wasn't open)
     const params = new URLSearchParams(window.location.search);
     const pushTitle = params.get("push_title");
     const pushBody = params.get("push_body");
     if (pushTitle && pushBody) {
       setData({ title: decodeURIComponent(pushTitle), body: decodeURIComponent(pushBody) });
       setOpen(true);
-      // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
     }
 
@@ -41,15 +39,17 @@ const PushNotificationViewer = () => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-sm mx-auto rounded-2xl">
+      <DialogContent className="max-w-sm mx-auto rounded-2xl bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))]">
         <DialogHeader>
-          <div className="flex items-center gap-2 mb-1">
-            <Bell className="w-5 h-5 text-primary" />
-            <DialogTitle className="text-base">{data.title}</DialogTitle>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            <DialogTitle className="text-base text-[hsl(var(--dark-text))]">{data.title}</DialogTitle>
           </div>
-          <DialogDescription className="text-sm leading-relaxed whitespace-pre-wrap pt-2">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap pt-2 text-[hsl(var(--dark-text))] opacity-90">
             {data.body}
-          </DialogDescription>
+          </p>
         </DialogHeader>
       </DialogContent>
     </Dialog>

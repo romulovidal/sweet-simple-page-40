@@ -32,7 +32,7 @@ const AdminLogin = () => {
             <Lock className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Admin</h1>
-          <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">A Bíblia do Atalaia</p>
+          <p className="text-sm text-muted-foreground mt-1">A Bíblia do Atalaia</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <Input
@@ -40,14 +40,14 @@ const AdminLogin = () => {
             placeholder="Email do admin"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-[hsl(var(--dark-card))] border-none"
+            className="bg-muted border-none"
           />
           <Input
             type="password"
             placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-[hsl(var(--dark-card))] border-none"
+            className="bg-muted border-none"
           />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Entrar"}

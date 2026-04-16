@@ -457,6 +457,11 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      {/* Reading Goals */}
+      <div className="px-5 mb-6">
+        <ReadingGoals enabled={appFeatures.reading_goals} />
+      </div>
+
       <div className="px-5 mb-6">
         <button onClick={handleContinueReading}
           className="w-full bg-primary text-primary-foreground rounded-2xl p-4 text-left active:opacity-90 transition-opacity">

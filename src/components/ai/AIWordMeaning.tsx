@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
-import { Languages, Loader2, X, BrainCircuit } from "lucide-react";
+import { Languages, Loader2, X, BrainCircuit, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { toast } from "sonner";
 import { useAIStream } from "@/hooks/useAIStream";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 const AIWordMeaning = ({ reference, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { content, loading, run, reset } = useAIStream();
 
   const handleOpen = useCallback(() => {
@@ -19,6 +21,18 @@ const AIWordMeaning = ({ reference, text, enabled }: Props) => {
     reset();
     run("word-meaning", reference, text);
   }, [reference, text, run, reset]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
+      await navigator.clipboard.writeText(textWithLink);
+      setCopied(true);
+      toast.success("Significado copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Erro ao copiar");
+    }
+  }, [content]);
 
   if (!enabled) return null;
 
@@ -50,9 +64,20 @@ const AIWordMeaning = ({ reference, text, enabled }: Props) => {
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-widest">Hebraico & Grego</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
-                <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-              </button>
+              <div className="flex items-center gap-2">
+                {content && !loading && (
+                  <button
+                    onClick={handleCopy}
+                    className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
+                    title="Copiar"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-[hsl(var(--dark-muted))]" />}
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
+                  <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                </button>
+              </div>
             </div>
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
               <span className="text-xs font-semibold text-cyan-400">{reference}</span>
@@ -78,6 +103,13 @@ const AIWordMeaning = ({ reference, text, enabled }: Props) => {
               </div>
             )}
           </div>
+          {!loading && content && (
+            <div className="px-5 py-3 border-t border-[hsl(var(--dark-muted)/0.1)] flex-shrink-0">
+              <p className="text-[10px] text-center text-[hsl(var(--dark-muted)/0.5)]">
+                ✨ Significado Original • Bíblia do Atalaia
+              </p>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </>

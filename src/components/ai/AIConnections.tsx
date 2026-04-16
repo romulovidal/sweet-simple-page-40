@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import { Link2, Loader2, X, BrainCircuit } from "lucide-react";
+import { Link2, Loader2, X, BrainCircuit, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
+import ShareMenu from "@/components/ShareMenu";
 
 interface Props {
   reference: string;
@@ -12,6 +13,7 @@ interface Props {
 
 const AIConnections = ({ reference, text, enabled }: Props) => {
   const [open, setOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
 
   const handleOpen = useCallback(() => {
@@ -21,6 +23,8 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
   }, [reference, text, run, reset]);
 
   if (!enabled) return null;
+
+  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
 
   return (
     <>
@@ -50,9 +54,20 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-widest">Referências Cruzadas</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
-                <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-              </button>
+              <div className="flex items-center gap-2">
+                {content && !loading && (
+                  <button
+                    onClick={() => setShareOpen(true)}
+                    className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
+                    title="Compartilhar"
+                  >
+                    <Share2 className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
+                  <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                </button>
+              </div>
             </div>
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <span className="text-xs font-semibold text-emerald-400">{reference}</span>
@@ -78,8 +93,17 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
               </div>
             )}
           </div>
+          {!loading && content && (
+            <div className="px-5 py-3 border-t border-[hsl(var(--dark-muted)/0.1)] flex-shrink-0">
+              <p className="text-[10px] text-center text-[hsl(var(--dark-muted)/0.5)]">
+                ✨ Conexões Bíblicas • Bíblia do Atalaia
+              </p>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
+
+      <ShareMenu text={shareText} open={shareOpen} onClose={() => setShareOpen(false)} />
     </>
   );
 };

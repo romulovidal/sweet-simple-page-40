@@ -31,8 +31,8 @@ const AdminLogin = () => {
           <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">Admin</h1>
-          <p className="text-sm text-muted-foreground mt-1">A Bíblia do Atalaia</p>
+           <h1 className="text-2xl font-bold text-[hsl(var(--dark-text))]">Admin</h1>
+          <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">A Bíblia do Atalaia</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <Input

@@ -91,7 +91,7 @@ const AdminPage = () => {
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="text-center max-w-sm">
           <p className="text-4xl mb-4">⚠️</p>
-          <h2 className="text-lg font-bold mb-2">Falha ao validar o acesso</h2>
+          <h2 className="text-lg font-bold mb-2 text-[hsl(var(--dark-text))]">Falha ao validar o acesso</h2>
           <p className="text-sm text-muted-foreground">{accessError}</p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <button
@@ -117,7 +117,7 @@ const AdminPage = () => {
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="text-center">
           <p className="text-4xl mb-4">🔒</p>
-          <h2 className="text-lg font-bold mb-2">Acesso negado</h2>
+          <h2 className="text-lg font-bold mb-2 text-[hsl(var(--dark-text))]">Acesso negado</h2>
           <p className="text-sm text-muted-foreground">Você não tem permissão de administrador.</p>
           <button
             onClick={() => void supabase.auth.signOut()}

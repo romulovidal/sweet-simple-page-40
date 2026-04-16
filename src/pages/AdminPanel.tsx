@@ -520,6 +520,13 @@ const AdminPanel = () => {
                 ))}
                 <div className="border-t border-[hsl(var(--dark-card))] my-3" />
                 <button
+                  onClick={() => { setMenuOpen(false); navigate("/"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Home className="w-5 h-5" />
+                  Voltar para a Bíblia
+                </button>
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                 >

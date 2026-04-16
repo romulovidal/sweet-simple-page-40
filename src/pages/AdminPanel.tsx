@@ -612,7 +612,12 @@ const AdminPanel = () => {
               <>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-[hsl(var(--dark-muted))]">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
-                  <Button size="sm" variant="outline" onClick={exportUsersCSV}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={exportUsersCSV}
+                    className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]"
+                  >
                     <Download className="w-3 h-3 mr-1" /> CSV
                   </Button>
                 </div>
@@ -644,7 +649,7 @@ const AdminPanel = () => {
                               if (error) { toast.error("Erro ao salvar"); return; }
                               toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
                             }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingUser(null)} className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">Cancelar</Button>
                           </div>
                         </div>
                       ) : (

@@ -124,7 +124,7 @@ const AdminRoles = () => {
               {u.user_id !== currentUserId && (
                 <Button size="sm" variant="outline" onClick={() => removeAdmin(u.user_id)}
                   disabled={actionLoading === u.user_id}
-                  className="text-xs">
+                  className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
                   {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldOff className="w-3 h-3 mr-1" />}
                   Remover
                 </Button>
@@ -155,7 +155,7 @@ const AdminRoles = () => {
               </div>
               <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
                 disabled={actionLoading === u.user_id}
-                className="text-xs">
+                className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
                 {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
                 Promover
               </Button>

@@ -12,7 +12,7 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
@@ -26,6 +26,10 @@ import AIConnections from "@/components/ai/AIConnections";
 import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
+import PresentationMode from "@/components/PresentationMode";
+import AudioBible from "@/components/AudioBible";
+import PersonalNotes from "@/components/PersonalNotes";
 
 const APP_URL = window.location.origin;
 
@@ -40,6 +44,8 @@ const HIGHLIGHT_COLORS = [
 
 const BiblePage = () => {
   const { features: aiFeatures } = useAIFeatures();
+  const { features: appFeatures } = useAppFeatures();
+  const [showPresentation, setShowPresentation] = useState(false);
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
@@ -424,6 +430,15 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              {appFeatures.presentation_mode && (
+                <button
+                  onClick={() => setShowPresentation(true)}
+                  className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                  title="Modo Apresentação"
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+              )}
               <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
               <button
                 onClick={() => setShowVersionPicker(true)}
@@ -671,6 +686,15 @@ const BiblePage = () => {
               />
             ) : null;
         })()}
+        {showPresentation && selectedBook && selectedChapter && (
+          <PresentationMode
+            verses={verses}
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            selectedVerses={selectedVerses.size > 0 ? selectedVerses : undefined}
+            onClose={() => setShowPresentation(false)}
+          />
+        )}
       </div>
     );
   }

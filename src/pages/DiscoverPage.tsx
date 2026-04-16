@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Search, Sparkles } from "lucide-react";
 import { searchVerses } from "@/services/bibleApi";
 import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
+import AskBible from "@/components/AskBible";
+import PrayerRequests from "@/components/PrayerRequests";
 
 type DiscoverResult = {
   id: string;
@@ -50,6 +53,7 @@ const dedupeResults = (items: DiscoverResult[]) =>
   );
 
 const DiscoverPage = () => {
+  const { features: appFeatures } = useAppFeatures();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<DiscoverResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -269,6 +273,11 @@ const DiscoverPage = () => {
 
       {!searched && (
         <>
+          {/* Ask Bible */}
+          <div className="px-5 mb-4">
+            <AskBible enabled={appFeatures.ask_bible} />
+          </div>
+
           <div className="px-5 mb-6">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Categorias
@@ -287,7 +296,7 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          <div className="px-5">
+          <div className="px-5 mb-6">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Passagens populares
             </h2>
@@ -303,6 +312,11 @@ const DiscoverPage = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Prayer Requests */}
+          <div className="px-5 mb-6">
+            <PrayerRequests enabled={appFeatures.prayer_requests} />
           </div>
         </>
       )}

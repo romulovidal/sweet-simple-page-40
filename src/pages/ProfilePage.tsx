@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import LGPDTermsDialog from "@/components/LGPDTermsDialog";
+import ReadingGoals from "@/components/ReadingGoals";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
 
 interface PlanProgress {
   planId: string;
@@ -26,6 +28,7 @@ type ProfileView = "overview" | "saved" | "history" | "verse-history" | "setting
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { features: appFeatures } = useAppFeatures();
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [streak, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
@@ -452,6 +455,11 @@ const ProfilePage = () => {
           <p className="text-2xl font-bold">{activePlansCount}</p>
           <p className="text-xs text-dark-muted mt-1">em andamento</p>
         </div>
+      </div>
+
+      {/* Reading Goals */}
+      <div className="px-5 mb-6">
+        <ReadingGoals enabled={appFeatures.reading_goals} />
       </div>
 
       <div className="px-5 mb-6">

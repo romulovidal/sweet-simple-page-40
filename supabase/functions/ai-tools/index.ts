@@ -42,6 +42,7 @@ const TOOL_PROMPTS: Record<string, string> = {
     "IMPORTANTE: Retorne APENAS um JSON válido no formato:\n" +
     '{"title":"...","description":"...","category":"Temático","emoji":"📖","readings":[{"day":1,"title":"...","book_abbrev":"gn","chapter":1,"verse_start":1,"verse_end":31}]}\n\n' +
     "Abreviações válidas: gn,ex,lv,nm,dt,js,jz,rt,1sm,2sm,1rs,2rs,1cr,2cr,ed,ne,et,jó,sl,pv,ec,ct,is,jr,lm,ez,dn,os,jl,am,ob,jn,mq,na,hc,sf,ag,zc,ml,mt,mc,lc,jo,at,rm,1co,2co,gl,ef,fp,cl,1ts,2ts,1tm,2tm,tt,fm,hb,tg,1pe,2pe,1jo,2jo,3jo,jd,ap",
+  "ask-bible": "", // placeholder — loaded from admin_settings
 };
 
 serve(async (req) => {
@@ -50,7 +51,7 @@ serve(async (req) => {
   try {
     const { tool, reference, text } = await req.json();
 
-    if (!tool || !TOOL_PROMPTS[tool]) {
+    if (!tool || (!TOOL_PROMPTS.hasOwnProperty(tool))) {
       return new Response(JSON.stringify({ error: "Invalid tool" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -72,6 +73,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Check AI features
     const { data: setting } = await supabase
       .from("admin_settings")
       .select("value")
@@ -79,15 +81,58 @@ serve(async (req) => {
       .single();
 
     const features = (setting?.value as Record<string, boolean>) || {};
-    const featureKey = tool.replace("-", "_");
-    if (features[featureKey] === false) {
-      return new Response(JSON.stringify({ error: "Este recurso de IA está desativado pelo administrador." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    // Check app features for ask-bible
+    if (tool === "ask-bible") {
+      const { data: appSetting } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "app_features")
+        .single();
+
+      const appFeatures = (appSetting?.value as Record<string, boolean>) || {};
+      if (appFeatures.ask_bible === false) {
+        return new Response(JSON.stringify({ error: "Este recurso está desativado pelo administrador." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const featureKey = tool.replace("-", "_");
+      if (features[featureKey] === false) {
+        return new Response(JSON.stringify({ error: "Este recurso de IA está desativado pelo administrador." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    const systemPrompt = TOOL_PROMPTS[tool];
+    // Get prompt
+    let systemPrompt = TOOL_PROMPTS[tool];
+
+    // For ask-bible, load custom prompt from admin_settings
+    if (tool === "ask-bible") {
+      const DEFAULT_ASK_PROMPT = `Você é um teólogo e pastor experiente. O usuário fará perguntas sobre a Bíblia, doutrina cristã, vida espiritual e temas relacionados.
+Responda de forma:
+1) Bíblica — sempre fundamente nas Escrituras com referências
+2) Acessível — linguagem clara e acolhedora
+3) Prática — conecte ao cotidiano do leitor
+4) Equilibrada — apresente diferentes perspectivas quando relevante
+Use markdown para formatação. Responda em português brasileiro.`;
+
+      const { data: promptSetting } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "ask_bible_prompt")
+        .single();
+
+      if (promptSetting?.value && typeof promptSetting.value === "object" && (promptSetting.value as any).prompt) {
+        systemPrompt = (promptSetting.value as any).prompt;
+      } else {
+        systemPrompt = DEFAULT_ASK_PROMPT;
+      }
+    }
+
     const isJsonTool = tool === "plan-generator";
 
     const userContent = reference

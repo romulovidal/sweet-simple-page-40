@@ -107,7 +107,7 @@ const AdminRoles = () => {
         </div>
         <div className="space-y-2">
           {admins.map(u => (
-            <div key={u.id} className="bg-muted rounded-xl p-4 flex items-center gap-3">
+            <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-3">
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -137,12 +137,12 @@ const AdminRoles = () => {
       {/* Regular users */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-muted-foreground" />
+          <Users className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           <span className="text-sm font-semibold">Usuários ({regularUsers.length})</span>
         </div>
         <div className="space-y-2">
           {regularUsers.map(u => (
-            <div key={u.id} className="bg-muted rounded-xl p-4 flex items-center gap-3">
+            <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-3">
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -162,7 +162,7 @@ const AdminRoles = () => {
             </div>
           ))}
           {regularUsers.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">Todos os usuários já são admins</p>
+            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Todos os usuários já são admins</p>
           )}
         </div>
       </div>

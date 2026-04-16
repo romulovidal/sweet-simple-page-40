@@ -159,33 +159,33 @@ const AdminCultoSchedule = () => {
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Nome do Culto *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Nome do Culto *</label>
           <Input value={editing.name || ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-            placeholder="Ex: Culto de Domingo" className="bg-muted border-none" maxLength={100} />
+            placeholder="Ex: Culto de Domingo" className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Dia da Semana *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Dia da Semana *</label>
           <div className="flex flex-wrap gap-2">
             {DAYS_PT.map((day, i) => (
               <button key={i} onClick={() => setEditing({ ...editing, day_of_week: i })}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  editing.day_of_week === i ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  editing.day_of_week === i ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
                 }`}>{day}</button>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Horário *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Horário *</label>
           <Input type="time" value={editing.time || ""} onChange={(e) => setEditing({ ...editing, time: e.target.value })}
-            className="bg-muted border-none w-36" />
+            className="bg-[hsl(var(--dark-card))] border-none w-36" />
         </div>
 
         {/* Multiple reminders */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <label className="text-xs text-[hsl(var(--dark-muted))] flex items-center gap-1">
               <Bell className="w-3 h-3" /> Lembretes Push ({editingReminders.length})
             </label>
             <button onClick={addReminder} className="text-xs text-primary font-medium flex items-center gap-1">
@@ -194,7 +194,7 @@ const AdminCultoSchedule = () => {
           </div>
 
           {editingReminders.map((reminder, index) => (
-            <div key={index} className="bg-muted rounded-xl p-3 space-y-2">
+            <div key={index} className="bg-[hsl(var(--dark-card))] rounded-xl p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-primary">Lembrete {index + 1}</span>
                 {editingReminders.length > 1 && (
@@ -205,26 +205,26 @@ const AdminCultoSchedule = () => {
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Quanto tempo antes</label>
+                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block">Quanto tempo antes</label>
                 <div className="flex flex-wrap gap-1.5">
                   {REMINDER_PRESETS.map((opt) => (
                     <button key={opt.value} onClick={() => updateReminder(index, { minutes_before: opt.value })}
                       className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                        reminder.minutes_before === opt.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-bg))] text-muted-foreground"
+                        reminder.minutes_before === opt.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"
                       }`}>{opt.label}</button>
                   ))}
                 </div>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] text-muted-foreground">ou:</span>
+                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">ou:</span>
                   <Input type="number" value={reminder.minutes_before ?? 180}
                     onChange={(e) => updateReminder(index, { minutes_before: parseInt(e.target.value) || 1 })}
                     min={1} max={10080} className="bg-[hsl(var(--dark-bg))] border-none h-7 text-xs w-20" />
-                  <span className="text-[10px] text-muted-foreground">minutos</span>
+                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">minutos</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block flex items-center gap-1">
+                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
                   <MessageSquare className="w-3 h-3" /> Mensagem personalizada (opcional)
                 </label>
                 <Textarea value={reminder.message || ""}
@@ -237,7 +237,7 @@ const AdminCultoSchedule = () => {
 
           {editingReminders.length === 0 && (
             <div className="text-center py-4">
-              <p className="text-xs text-muted-foreground">Nenhum lembrete configurado</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))]">Nenhum lembrete configurado</p>
               <button onClick={addReminder} className="text-xs text-primary font-medium mt-1">+ Adicionar lembrete</button>
             </div>
           )}
@@ -266,14 +266,14 @@ const AdminCultoSchedule = () => {
 
         {schedReminders.length === 0 ? (
           <div className="text-center py-6">
-            <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-            <p className="text-sm text-muted-foreground">Nenhum lembrete configurado</p>
-            <p className="text-xs text-muted-foreground mt-1">Edite o culto para adicionar lembretes</p>
+            <Bell className="w-8 h-8 text-[hsl(var(--dark-muted))] mx-auto mb-2 opacity-40" />
+            <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhum lembrete configurado</p>
+            <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Edite o culto para adicionar lembretes</p>
           </div>
         ) : (
           <div className="space-y-2">
             {schedReminders.map((r, i) => (
-              <div key={r.id} className="bg-muted rounded-xl p-3">
+              <div key={r.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-3">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">
@@ -281,12 +281,12 @@ const AdminCultoSchedule = () => {
                   </span>
                 </div>
                 {r.message ? (
-                  <p className="text-xs text-muted-foreground mt-1 ml-6">"{r.message}"</p>
+                  <p className="text-xs text-[hsl(var(--dark-muted))] mt-1 ml-6">"{r.message}"</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground mt-1 ml-6 italic">Mensagem padrão</p>
+                  <p className="text-xs text-[hsl(var(--dark-muted))] mt-1 ml-6 italic">Mensagem padrão</p>
                 )}
                 {r.last_sent && (
-                  <p className="text-[10px] text-muted-foreground mt-1 ml-6">
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1 ml-6">
                     Último envio: {new Date(r.last_sent).toLocaleString("pt-BR")}
                   </p>
                 )}
@@ -305,7 +305,7 @@ const AdminCultoSchedule = () => {
         <Church className="w-4 h-4 text-primary" />
         <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Horários de Culto</span>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">
+      <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
         Configure os dias e horários dos cultos com múltiplos lembretes push personalizados.
       </p>
 
@@ -316,13 +316,13 @@ const AdminCultoSchedule = () => {
       {loading ? (
         <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
       ) : schedules.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">Nenhum culto agendado ainda</p>
+        <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Nenhum culto agendado ainda</p>
       ) : (
         <div className="space-y-2">
           {schedules.map((s) => {
             const schedReminders = reminders.filter(r => r.schedule_id === s.id);
             return (
-              <div key={s.id} className="bg-muted rounded-xl p-4">
+              <div key={s.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
                     <Church className="w-5 h-5 text-primary" />
@@ -332,10 +332,10 @@ const AdminCultoSchedule = () => {
                       <p className="font-semibold text-sm text-[hsl(var(--dark-text))]">{s.name}</p>
                       {!s.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Inativo</span>}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">
                       {DAYS_PT[s.day_of_week]} às {s.time.substring(0, 5)}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5 flex items-center gap-1">
                       <Bell className="w-3 h-3" />
                       {schedReminders.length > 0
                         ? `${schedReminders.length} lembrete${schedReminders.length > 1 ? "s" : ""}: ${schedReminders.map(r => formatMinutes(r.minutes_before)).join(", ")}`

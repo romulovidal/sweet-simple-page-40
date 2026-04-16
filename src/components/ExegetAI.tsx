@@ -89,7 +89,19 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
     }
   }, [reference, text]);
 
-  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
+  const shareText = `🧠 ExegettAI — ${reference}\n\n${content}\n\n— Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `ExegettAI — ${reference}`, text: shareText });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    setShareOpen(true);
+  };
 
   return (
     <>
@@ -125,7 +137,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
               <div className="flex items-center gap-2">
                 {content && !loading && (
                   <button
-                    onClick={() => setShareOpen(true)}
+                    onClick={handleShare}
                     className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
                     title="Compartilhar"
                   >

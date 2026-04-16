@@ -104,14 +104,15 @@ const AppTour = () => {
     }
 
     setTimeout(() => {
+      let isFinishing = false;
       const d = driver({
         showProgress: true,
         progressText: "{{current}} de {{total}}",
         nextBtnText: "Próximo →",
         prevBtnText: "← Voltar",
-        doneBtnText: "Concluir",
+        doneBtnText: "Concluir ✓",
         allowClose: true,
-        overlayOpacity: 0.78,
+        overlayOpacity: 0.7,
         stagePadding: 6,
         stageRadius: 12,
         popoverClass: "atalaias-tour-popover",
@@ -125,26 +126,28 @@ const AppTour = () => {
           },
         })),
         onDestroyStarted: () => {
+          if (isFinishing) return;
           const isLastStep = !d.hasNextStep();
           if (isLastStep) {
+            isFinishing = true;
             finishTour(true);
-          } else {
-            const confirmed = window.confirm(
-              "Tem certeza que deseja sair do tour? Você pode refazê-lo depois em Você → Configurações."
-            );
-            if (confirmed) {
-              finishTour(true);
-              d.destroy();
-            }
+            d.destroy();
             return;
           }
-          d.destroy();
+          const confirmed = window.confirm(
+            "Tem certeza que deseja sair do tour? Você pode refazê-lo depois em Você → Configurações."
+          );
+          if (confirmed) {
+            isFinishing = true;
+            finishTour(true);
+            d.destroy();
+          }
         },
       });
 
       d.drive();
       setDriverInstance(d);
-    }, 250);
+    }, 400);
   }, [location.pathname, navigate, finishTour]);
 
   useEffect(() => {

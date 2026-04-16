@@ -190,6 +190,42 @@ export type Database = {
         }
         Relationships: []
       }
+      culto_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          last_reminder_sent: string | null
+          name: string
+          reminder_minutes_before: number
+          time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          last_reminder_sent?: string | null
+          name: string
+          reminder_minutes_before?: number
+          time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          last_reminder_sent?: string | null
+          name?: string
+          reminder_minutes_before?: number
+          time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_verse_queue: {
         Row: {
           created_at: string

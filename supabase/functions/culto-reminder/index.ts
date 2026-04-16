@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               title: `⛪ ${schedule.name}`,
               body: pushBody,
-              url: "/",
+              url: "/?tab=comunidade",
               type: "culto-reminder",
               ttl: reminder.minutes_before * 60,
               urgency: "high",

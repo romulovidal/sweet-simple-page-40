@@ -39,7 +39,29 @@ const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const { features: aiFeatures } = useAIFeatures();
-  const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
+  const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "comunidade") return "comunidade";
+    }
+    return "hoje";
+  });
+
+  // Reage a mudanças de URL (ex: clique em notificação push abrindo /?tab=comunidade
+  // enquanto o app já está aberto)
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "comunidade") {
+        setActiveTab("comunidade");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("tab");
+        window.history.replaceState({}, "", url.pathname + (url.search || ""));
+      }
+    };
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
+  }, []);
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [planProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);

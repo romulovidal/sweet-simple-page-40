@@ -163,7 +163,7 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
           {!loading && content && (
             <div className="px-5 py-3 border-t border-[hsl(var(--dark-muted)/0.1)] flex-shrink-0">
               <p className="text-[10px] text-center text-[hsl(var(--dark-muted)/0.5)]">
-                ✨ Reflexão Devocional • Bíblia do Atalaia com IA
+                ✨ Reflexão Devocional • Bíblia do Atalaia
               </p>
             </div>
           )}

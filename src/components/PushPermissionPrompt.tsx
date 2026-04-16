@@ -43,6 +43,10 @@ const PushPermissionPrompt = () => {
     check();
   }, []);
 
+  const notifyClosed = () => {
+    window.dispatchEvent(new CustomEvent("push-prompt:closed"));
+  };
+
   const handleAllow = async () => {
     setPhase("waiting-system");
     const ok = await registerPushNotifications();
@@ -52,11 +56,13 @@ const PushPermissionPrompt = () => {
       // If they dismissed the browser prompt, hide but show again next visit
       setPhase("hidden");
     }
+    notifyClosed();
   };
 
   const handleDismiss = () => {
     // Only hide for this session — will show again on next app open
     setPhase("hidden");
+    notifyClosed();
   };
 
   if (phase === "hidden" || phase === "done") return null;

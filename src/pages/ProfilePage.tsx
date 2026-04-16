@@ -42,10 +42,18 @@ const ProfilePage = () => {
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
   }, []);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      setIsAdmin(!!data);
+    });
+  }, [user]);
 
   const togglePush = async () => {
     setPushLoading(true);
@@ -139,6 +147,8 @@ const ProfilePage = () => {
       setAuthSubmitting(false);
     }
   };
+
+
 
 
   const handleSignOut = async () => {
@@ -451,6 +461,20 @@ const ProfilePage = () => {
           <p className="text-xs opacity-90 mt-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Abrir Gênesis 1 agora"}</p>
         </button>
       </div>
+
+      {isAdmin && (
+        <div className="px-5 mb-6">
+          <button onClick={() => navigate("/admin")}
+            className="w-full bg-[hsl(var(--dark-card))] border border-primary/30 rounded-2xl p-4 text-left active:opacity-90 transition-opacity flex items-center gap-3">
+            <Shield className="w-5 h-5 text-primary" />
+            <div>
+              <p className="font-semibold text-sm text-primary">Ir para área admin</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Gerenciar avisos, planos, cultos e mais</p>
+            </div>
+            <ChevronRight className="w-5 h-5 ml-auto text-primary" />
+          </button>
+        </div>
+      )}
 
       {recentSavedVerses.length > 0 && (
         <div className="px-5 mb-6">

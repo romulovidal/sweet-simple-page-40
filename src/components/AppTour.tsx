@@ -207,7 +207,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="ask-bible"]',
     title: "🙋 Pergunte à Bíblia",
     description:
-      "Aqui em **Descubra** (e também no Início) fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
+      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
     before: () => {
       window.history.pushState({}, "", "/descubra");
       window.dispatchEvent(new PopStateEvent("popstate"));

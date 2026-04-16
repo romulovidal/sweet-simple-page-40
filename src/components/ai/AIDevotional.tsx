@@ -47,7 +47,7 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
         className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 transition-all hover:from-purple-500/15 hover:to-pink-500/15 active:scale-[0.98]"
       >
         <Sparkles className="w-4 h-4 text-purple-400" />
-        <span className="text-xs font-semibold text-purple-400">Reflexão Devocional com IA</span>
+        <span className="text-xs font-semibold text-purple-400">Reflexão Devocional</span>
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

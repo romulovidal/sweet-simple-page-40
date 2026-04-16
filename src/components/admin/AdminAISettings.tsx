@@ -49,8 +49,8 @@ const AdminAISettings = () => {
     setFeatures(newFeatures);
     setSaving(true);
 
-    const { error } = await supabase
-      .from("admin_settings")
+    const { error } = await (supabase
+      .from("admin_settings") as any)
       .upsert({ key: "ai_features", value: newFeatures as unknown as Record<string, unknown> }, { onConflict: "key" });
 
     if (error) {

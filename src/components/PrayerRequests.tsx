@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import CultoScheduleList from "@/components/CultoScheduleList";
 
 interface PrayerRequest {
   id: string;

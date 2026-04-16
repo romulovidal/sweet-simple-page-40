@@ -28,7 +28,7 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
 
   const handleCopy = useCallback(async () => {
     try {
-      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://sweet-simple-page-40.lovable.app`;
+      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
       await navigator.clipboard.writeText(textWithLink);
       setCopied(true);
       toast.success("Resumo copiado!");

@@ -108,7 +108,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="bible-version"]',
     title: "🌐 Trocar versão",
     description:
-      "Estamos abrindo João 3:16 na NVI. Toque aqui para alternar entre ARA, ARC, ACF, NVI, NTLH e KJA — pode comparar lado a lado também.",
+      "Estamos abrindo João 3:16, um dos versículos mais conhecidos da Bíblia. Toque aqui para alternar entre ARA, ARC, ACF, NVI, NTLH e KJA — pode comparar lado a lado também.",
     before: goToBibleJohn316,
     waitMs: 700,
   },

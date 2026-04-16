@@ -4,6 +4,8 @@ import AIDevotional from "@/components/ai/AIDevotional";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
+import CultoScheduleList from "@/components/CultoScheduleList";
+import PrayerRequests from "@/components/PrayerRequests";
 import { getDailyVerse } from "@/data/bible";
 import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
@@ -421,12 +423,9 @@ const HomePage = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-4">🤝</p>
-            <h2 className="text-lg font-bold mb-2">Comunidade</h2>
-            <p className="text-sm text-[hsl(var(--dark-muted))] max-w-xs mx-auto">
-              Em breve você poderá compartilhar versículos e devocionais com amigos.
-            </p>
+          <div className="space-y-6 pb-6">
+            <CultoScheduleList />
+            <PrayerRequests enabled={true} />
           </div>
         )}
       </div>

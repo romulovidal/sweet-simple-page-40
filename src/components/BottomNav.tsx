@@ -2,11 +2,11 @@ import { Home, BookOpen, CalendarDays, Compass, User } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 const tabs = [
-  { to: "/", icon: Home, label: "Início" },
-  { to: "/biblia", icon: BookOpen, label: "Bíblia" },
-  { to: "/planos", icon: CalendarDays, label: "Planos" },
-  { to: "/descubra", icon: Compass, label: "Descubra" },
-  { to: "/perfil", icon: User, label: "Você" },
+  { to: "/", icon: Home, label: "Início", tour: "nav-home" },
+  { to: "/biblia", icon: BookOpen, label: "Bíblia", tour: "nav-bible" },
+  { to: "/planos", icon: CalendarDays, label: "Planos", tour: "nav-plans" },
+  { to: "/descubra", icon: Compass, label: "Descubra", tour: "nav-discover" },
+  { to: "/perfil", icon: User, label: "Você", tour: "nav-profile" },
 ];
 
 const BottomNav = () => {
@@ -31,11 +31,12 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[hsl(var(--dark-card))] border-t border-[hsl(var(--dark-card-hover))] safe-area-bottom">
       <div className="flex items-center justify-around max-w-lg mx-auto h-16">
-        {tabs.map(({ to, icon: Icon, label }) => (
+        {tabs.map(({ to, icon: Icon, label, tour }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
+            data-tour={tour}
             onClick={(e) => handleTabClick(to, e)}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors ${

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";

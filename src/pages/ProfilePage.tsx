@@ -429,9 +429,7 @@ const ProfilePage = () => {
           <p className="text-xs text-dark-muted mt-1">dia{getDisplayStreak(streak) !== 1 ? "s" : ""} seguidos</p>
         </div>
 
-        {/* Reading Goals */}
-        <ReadingGoals enabled={appFeatures.reading_goals} />
-
+        <div className="bg-dark-card rounded-2xl p-4">
           <div className="flex items-center gap-2 text-primary mb-2">
             <BookOpenText className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Última leitura</span>

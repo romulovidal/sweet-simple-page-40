@@ -252,6 +252,7 @@ const HomePage = () => {
         {(["hoje", "comunidade"] as const).map((tab) => (
           <button
             key={tab}
+            data-tour={tab === "comunidade" ? "home-tab-comunidade" : undefined}
             onClick={() => setActiveTab(tab)}
             className={`pb-3 text-sm font-semibold capitalize transition-colors ${
               activeTab === tab

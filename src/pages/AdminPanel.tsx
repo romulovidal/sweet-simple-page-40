@@ -18,6 +18,7 @@ import AdminPushSender from "@/components/admin/AdminPushSender";
 import AdminRoles from "@/components/admin/AdminRoles";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
 import AdminCultoSchedule from "@/components/admin/AdminCultoSchedule";
+import AdminExegetAI from "@/components/admin/AdminExegetAI";
 import {
   Sheet,
   SheetContent,

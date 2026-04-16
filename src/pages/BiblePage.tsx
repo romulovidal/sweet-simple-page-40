@@ -430,6 +430,15 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              {appFeatures.presentation_mode && (
+                <button
+                  onClick={() => setShowPresentation(true)}
+                  className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                  title="Modo Apresentação"
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+              )}
               <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
               <button
                 onClick={() => setShowVersionPicker(true)}

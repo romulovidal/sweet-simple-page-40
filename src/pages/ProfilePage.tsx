@@ -42,6 +42,7 @@ const ProfilePage = () => {
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);

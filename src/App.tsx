@@ -12,6 +12,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import AdminInstallPrompt from "@/components/AdminInstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import PushPermissionPrompt from "@/components/PushPermissionPrompt";
+import PushNotificationViewer from "@/components/PushNotificationViewer";
 import PageTransition from "@/components/PageTransition";
 import { useManifestSwap } from "@/hooks/useManifestSwap";
 import HomePage from "@/pages/HomePage";
@@ -50,6 +51,7 @@ const AppContent = () => {
       <UpdatePrompt />
       {!isAdmin && <PushPermissionPrompt />}
       {!isAdmin && <BottomNav />}
+      <PushNotificationViewer />
     </div>
   );
 };

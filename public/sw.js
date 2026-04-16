@@ -228,7 +228,7 @@ self.addEventListener("push", function(event) {
     icon: "/logo.png",
     badge: "/logo.png",
     vibrate: [100, 50, 100],
-    data: { url: data.url || "/" },
+    data: { url: data.url || "/", title: data.title, body: data.body },
     actions: [{ action: "open", title: "Abrir" }],
   };
 
@@ -237,18 +237,27 @@ self.addEventListener("push", function(event) {
 
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
-  var targetUrl = (event.notification.data && event.notification.data.url) || "/";
+  var notifData = event.notification.data || {};
+  var title = notifData.title || "";
+  var body = notifData.body || "";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
+      // Try to find an existing window and post message to it
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
         if ("focus" in client && client.url.indexOf(self.location.origin) === 0) {
-          client.navigate(targetUrl);
+          client.postMessage({
+            type: "PUSH_NOTIFICATION_CLICKED",
+            title: title,
+            body: body
+          });
           return client.focus();
         }
       }
-      return clients.openWindow(targetUrl);
+      // No window open — open with query params so the app can show the modal
+      var url = "/?push_title=" + encodeURIComponent(title) + "&push_body=" + encodeURIComponent(body);
+      return clients.openWindow(url);
     })
   );
 });

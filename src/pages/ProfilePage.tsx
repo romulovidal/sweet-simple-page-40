@@ -510,6 +510,15 @@ const ProfilePage = () => {
           <RotateCcw className="w-3 h-3" /> Reiniciar meus dados locais
         </button>
       </div>
+
+      {isAdmin && (
+        <button onClick={() => navigate("/admin")}
+          className="fixed bottom-24 right-5 z-30 bg-primary text-primary-foreground rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          title="Área admin"
+        >
+          <Shield className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };

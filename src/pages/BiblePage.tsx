@@ -524,6 +524,17 @@ const BiblePage = () => {
           </div>
         )}
 
+        {/* Audio Bible */}
+        {!loading && !error && verses.length > 0 && (
+          <AudioBible
+            verses={verses}
+            selectedVerses={selectedVerses}
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            enabled={appFeatures.audio_bible}
+          />
+        )}
+
         {/* AI Chapter Summary */}
         {!loading && !error && verses.length > 0 && (
           <AIChapterSummary

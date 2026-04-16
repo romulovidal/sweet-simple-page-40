@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import ShareMenu from "@/components/ShareMenu";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface ExegetAIProps {
   reference: string;
@@ -17,6 +18,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
 
   const runExegesis = useCallback(async () => {
     setOpen(true);

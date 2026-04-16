@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Check, Download, ImageIcon, ImageOff, Loader2, Palette, Share2, Type, X, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { toast } from "sonner";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface VerseImageGeneratorProps {
   text: string;

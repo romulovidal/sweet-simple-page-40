@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import type { BibleVerse } from "@/services/bibleApi";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface PresentationModeProps {
   verses: BibleVerse[];
@@ -17,6 +18,7 @@ const PresentationMode = ({ verses, bookName, chapter, selectedVerses, onClose }
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  useBackHandler(true, onClose);
 
   const currentVerse = displayVerses[currentIndex];
 

@@ -273,6 +273,11 @@ const DiscoverPage = () => {
 
       {!searched && (
         <>
+          {/* Ask Bible */}
+          <div className="px-5 mb-4">
+            <AskBible enabled={appFeatures.ask_bible} />
+          </div>
+
           <div className="px-5 mb-6">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Categorias
@@ -291,7 +296,7 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          <div className="px-5">
+          <div className="px-5 mb-6">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Passagens populares
             </h2>
@@ -307,6 +312,11 @@ const DiscoverPage = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Prayer Requests */}
+          <div className="px-5 mb-6">
+            <PrayerRequests enabled={appFeatures.prayer_requests} />
           </div>
         </>
       )}

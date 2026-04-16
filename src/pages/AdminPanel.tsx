@@ -48,6 +48,8 @@ const POST_TYPES = [
 
 const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas", "Profetas", "Devocional", "Temático"];
 
+const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
+
 type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
@@ -111,6 +113,21 @@ const AdminPanel = () => {
     toast.success("CSV exportado!");
   };
 
+  const sendPostPush = async (postData: Pick<Post, "title" | "content" | "type">) => {
+    const postTypeLabel = POST_TYPES.find((t) => t.value === postData.type)?.label || "Post";
+
+    await supabase.functions.invoke("send-push", {
+      body: {
+        title: `📢 ${postTypeLabel}: ${postData.title.substring(0, 60)}`,
+        body: postData.content.substring(0, 120) + (postData.content.length > 120 ? "..." : ""),
+        url: "/",
+        ttl: POST_PUSH_TTL_SECONDS,
+        urgency: "high",
+        type: "post",
+      },
+    });
+  };
+
   // ---- POSTS ----
   const savePost = async () => {
     if (!editingPost?.title?.trim() || !editingPost?.content?.trim()) { toast.error("Título e conteúdo são obrigatórios"); return; }
@@ -133,17 +150,7 @@ const AdminPanel = () => {
     // Auto-send push notification for new active posts
     if (isNew && data.is_active) {
       try {
-        const postTypeLabel = POST_TYPES.find(t => t.value === data.type)?.label || "Post";
-        await supabase.functions.invoke("send-push", {
-          body: {
-            title: `📢 ${postTypeLabel}: ${data.title.substring(0, 60)}`,
-            body: data.content.substring(0, 120) + (data.content.length > 120 ? "..." : ""),
-            url: "/",
-            ttl: 60 * 60 * 24,
-            urgency: "high",
-            type: "post",
-          },
-        });
+        await sendPostPush(data);
         toast.success("Notificação push enviada automaticamente!");
       } catch (e) {
         console.error("Push auto-send error:", e);
@@ -160,7 +167,27 @@ const AdminPanel = () => {
   };
 
   const togglePostActive = async (post: Post) => {
-    await supabase.from("admin_posts").update({ is_active: !post.is_active }).eq("id", post.id);
+    const nextIsActive = !post.is_active;
+
+    const { error } = await supabase.from("admin_posts").update({ is_active: nextIsActive }).eq("id", post.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar visibilidade");
+      return;
+    }
+
+    if (!post.is_active && nextIsActive) {
+      try {
+        await sendPostPush(post);
+        toast.success("Aviso exibido novamente e push enviado!");
+      } catch (e) {
+        console.error("Push resend error:", e);
+        toast.error("Aviso exibido, mas falha ao reenviar push");
+      }
+    } else {
+      toast.success("Visibilidade do aviso atualizada!");
+    }
+
     fetchData();
   };
 

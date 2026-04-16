@@ -69,7 +69,7 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
               <div className="flex items-center gap-2">
                 {content && !loading && (
                   <button
-                    onClick={() => setShareOpen(true)}
+                    onClick={handleShare}
                     className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
                     title="Compartilhar"
                   >

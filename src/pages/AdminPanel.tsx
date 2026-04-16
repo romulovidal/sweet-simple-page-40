@@ -63,7 +63,7 @@ const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[
 
 const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "cultos", label: "Cultos", icon: Calendar },
-  { id: "exegetai", label: "ExegetAI", icon: Sparkles },
+  { id: "exegetai", label: "ExegettAI", icon: Sparkles },
   { id: "users", label: "Usuários", icon: Users },
   { id: "roles", label: "Administradores", icon: Shield },
   { id: "log", label: "Log de Atividades", icon: Clock },

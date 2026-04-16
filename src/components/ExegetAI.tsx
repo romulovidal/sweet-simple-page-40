@@ -97,7 +97,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
       <button
         onClick={runExegesis}
         className="fixed bottom-24 right-5 z-30 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-        title="ExegetAI — Exegese com IA"
+        title="ExegettAI — Exegese com IA"
       >
         <Sparkles className="w-5 h-5" />
       </button>
@@ -112,7 +112,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-500" />
                 <SheetTitle className="text-base text-[hsl(var(--dark-text))]">
-                  ExegetAI
+                  ExegettAI
                 </SheetTitle>
               </div>
               <button onClick={() => setOpen(false)} className="p-1">

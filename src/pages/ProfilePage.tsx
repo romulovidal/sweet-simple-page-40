@@ -462,19 +462,8 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      {isAdmin && (
-        <div className="px-5 mb-6">
-          <button onClick={() => navigate("/admin")}
-            className="w-full bg-[hsl(var(--dark-card))] border border-primary/30 rounded-2xl p-4 text-left active:opacity-90 transition-opacity flex items-center gap-3">
-            <Shield className="w-5 h-5 text-primary" />
-            <div>
-              <p className="font-semibold text-sm text-primary">Ir para área admin</p>
-              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Gerenciar avisos, planos, cultos e mais</p>
-            </div>
-            <ChevronRight className="w-5 h-5 ml-auto text-primary" />
-          </button>
-        </div>
-      )}
+
+
 
       {recentSavedVerses.length > 0 && (
         <div className="px-5 mb-6">
@@ -521,6 +510,15 @@ const ProfilePage = () => {
           <RotateCcw className="w-3 h-3" /> Reiniciar meus dados locais
         </button>
       </div>
+
+      {isAdmin && (
+        <button onClick={() => navigate("/admin")}
+          className="fixed bottom-24 right-5 z-30 bg-primary text-primary-foreground rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          title="Área admin"
+        >
+          <Shield className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };

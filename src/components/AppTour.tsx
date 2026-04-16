@@ -300,10 +300,22 @@ const AppTour = () => {
 
   /** Injeta o checkbox "Não mostrar novamente" no popover atual. */
   const injectDontShowCheckbox = useCallback(() => {
-    // pequeno delay para garantir que o DOM foi montado
-    window.setTimeout(() => {
-      const popover = document.querySelector(".driver-popover-description");
-      if (!popover || popover.querySelector(".tour-dont-show-wrapper")) return;
+    const tryInject = (attempt = 0) => {
+      // Procura primeiro o container principal do popover (sempre existe)
+      const popover =
+        document.querySelector(".driver-popover-description") ||
+        document.querySelector(".driver-popover");
+      if (!popover) {
+        if (attempt < 10) window.setTimeout(() => tryInject(attempt + 1), 60);
+        return;
+      }
+      if (popover.querySelector(".tour-dont-show-wrapper")) return;
+
+      // Persiste o valor padrão imediatamente (caso o usuário só clique em "Próximo")
+      try {
+        localStorage.setItem(DONT_SHOW_KEY, dontShowRef.current ? "1" : "0");
+      } catch {}
+
       const wrapper = document.createElement("label");
       wrapper.className = "tour-dont-show-wrapper";
       wrapper.style.cssText =
@@ -311,19 +323,23 @@ const AppTour = () => {
       const input = document.createElement("input");
       input.type = "checkbox";
       input.checked = dontShowRef.current;
-      input.style.cssText = "width:16px;height:16px;accent-color:hsl(var(--primary));cursor:pointer;";
-      input.addEventListener("change", () => {
+      input.style.cssText = "width:16px;height:16px;accent-color:hsl(var(--primary));cursor:pointer;flex-shrink:0;";
+      input.addEventListener("change", (e) => {
+        e.stopPropagation();
         dontShowRef.current = input.checked;
         try {
           localStorage.setItem(DONT_SHOW_KEY, input.checked ? "1" : "0");
         } catch {}
       });
+      // Evita que clique no label feche o popover
+      wrapper.addEventListener("click", (e) => e.stopPropagation());
       const text = document.createElement("span");
       text.textContent = "Não mostrar novamente";
       wrapper.appendChild(input);
       wrapper.appendChild(text);
       popover.appendChild(wrapper);
-    }, 50);
+    };
+    window.setTimeout(() => tryInject(), 80);
   }, []);
 
   const completeTour = useCallback(
@@ -344,7 +360,13 @@ const AppTour = () => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
     finishingRef.current = false;
-    dontShowRef.current = true;
+    // Lê preferência salva (default true se nunca foi setado)
+    try {
+      const saved = localStorage.getItem(DONT_SHOW_KEY);
+      dontShowRef.current = saved === null ? true : saved === "1";
+    } catch {
+      dontShowRef.current = true;
+    }
 
     if (location.pathname !== "/") {
       navigate("/", { replace: false, state: { reset: Date.now() } });

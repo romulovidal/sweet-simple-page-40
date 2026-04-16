@@ -543,6 +543,13 @@ const AdminPanel = () => {
             {!isMoreTab && <p className="text-[11px] text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>}
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 transition-colors">
+            <Home className="w-4 h-4" />
+            Bíblia
+          </button>
+        </div>
       </header>
 
       {/* Content */}

@@ -20,6 +20,7 @@ import BibleVersionPicker from "@/components/BibleVersionPicker";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
 import VerseCompare from "@/components/VerseCompare";
 import ShareMenu from "@/components/ShareMenu";
+import ExegetAI from "@/components/ExegetAI";
 
 const APP_URL = window.location.origin;
 
@@ -609,6 +610,12 @@ const BiblePage = () => {
         )}
         {versionPickerModal}
         <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
+        {!loading && verses.length > 0 && selectedBook && selectedChapter && (
+          <ExegetAI
+            reference={`${selectedBook.name} ${selectedChapter}`}
+            text={verses.map((v) => `${v.number} ${v.text}`).join("\n")}
+          />
+        )}
       </div>
     );
   }

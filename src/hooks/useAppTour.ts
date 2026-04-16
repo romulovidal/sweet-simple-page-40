@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const TOUR_KEY = "tour_completed_v1";
 
@@ -8,22 +8,22 @@ export function useAppTour() {
   useEffect(() => {
     const completed = localStorage.getItem(TOUR_KEY);
     if (!completed) {
-      const timer = setTimeout(() => setShouldStart(true), 1500);
-      return () => clearTimeout(timer);
+      const timer = window.setTimeout(() => setShouldStart(true), 1500);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
-  const finishTour = (dontShowAgain: boolean) => {
+  const finishTour = useCallback((dontShowAgain: boolean) => {
     if (dontShowAgain) {
       localStorage.setItem(TOUR_KEY, new Date().toISOString());
     }
     setShouldStart(false);
-  };
+  }, []);
 
-  const restartTour = () => {
+  const restartTour = useCallback(() => {
     localStorage.removeItem(TOUR_KEY);
     setShouldStart(true);
-  };
+  }, []);
 
   return { shouldStart, finishTour, restartTour };
 }

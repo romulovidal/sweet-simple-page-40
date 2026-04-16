@@ -45,7 +45,7 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
         className="p-2 rounded-lg bg-emerald-500/10 active:bg-emerald-500/20 transition-colors"
         title="Conexões Bíblicas"
       >
-        <Link2 className="w-4 h-4 text-emerald-400" />
+        <Link2 className="w-[18px] h-[18px] text-emerald-400" />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

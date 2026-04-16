@@ -45,7 +45,7 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
         className="p-2 rounded-lg bg-orange-500/10 active:bg-orange-500/20 transition-colors"
         title="Linha do Tempo"
       >
-        <Clock className="w-4 h-4 text-orange-400" />
+        <Clock className="w-[18px] h-[18px] text-orange-400" />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

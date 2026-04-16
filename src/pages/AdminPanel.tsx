@@ -9,6 +9,7 @@ import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
   LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home, Sparkles, BrainCircuit,
+  Settings2, MessageCircleQuestion,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -20,6 +21,8 @@ import AdminActivityLog from "@/components/admin/AdminActivityLog";
 import AdminCultoSchedule from "@/components/admin/AdminCultoSchedule";
 import AdminExegetAI from "@/components/admin/AdminExegetAI";
 import AdminAISettings from "@/components/admin/AdminAISettings";
+import AdminAppFeatures from "@/components/admin/AdminAppFeatures";
+import AdminAskBiblePrompt from "@/components/admin/AdminAskBiblePrompt";
 import {
   Sheet,
   SheetContent,
@@ -52,7 +55,7 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai";
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "app-features" | "ask-bible-prompt";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },
@@ -65,7 +68,9 @@ const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[
 const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "cultos", label: "Cultos", icon: Calendar },
   { id: "ai", label: "IA", icon: BrainCircuit },
+  { id: "app-features", label: "Funcionalidades", icon: Settings2 },
   { id: "exegetai", label: "ExegettAI", icon: Sparkles },
+  { id: "ask-bible-prompt", label: "Pergunte à Bíblia", icon: MessageCircleQuestion },
   { id: "users", label: "Usuários", icon: Users },
   { id: "roles", label: "Administradores", icon: Shield },
   { id: "log", label: "Log de Atividades", icon: Clock },
@@ -570,6 +575,8 @@ const AdminPanel = () => {
             {tab === "cultos" && <AdminCultoSchedule />}
             {tab === "exegetai" && <AdminExegetAI />}
             {tab === "ai" && <AdminAISettings />}
+            {tab === "app-features" && <AdminAppFeatures />}
+            {tab === "ask-bible-prompt" && <AdminAskBiblePrompt />}
 
             {tab === "posts" && (
               <>

@@ -566,6 +566,7 @@ const AdminPanel = () => {
             {tab === "roles" && <AdminRoles />}
             {tab === "log" && <AdminActivityLog />}
             {tab === "cultos" && <AdminCultoSchedule />}
+            {tab === "exegetai" && <AdminExegetAI />}
 
             {tab === "posts" && (
               <>

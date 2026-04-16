@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff,
+  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { triggerAppTour } from "@/hooks/useAppTour";
 import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { registerPushNotifications, isPushEnabled, unregisterPush } from "@/lib/pushNotifications";
 import { supabase } from "@/integrations/supabase/client";
@@ -361,6 +362,16 @@ const ProfilePage = () => {
           <button onClick={handleContinueReading} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Continuar leitura</p>
             <p className="text-xs text-dark-muted mt-1">Retomar exatamente de onde você parou.</p>
+          </button>
+          <button
+            onClick={() => { triggerAppTour(); toast.success("Tour reiniciado!"); setView("overview"); }}
+            className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3"
+          >
+            <GraduationCap className="w-5 h-5 text-primary" />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Refazer tour do app</p>
+              <p className="text-xs text-dark-muted mt-1">Reveja todas as funcionalidades passo a passo.</p>
+            </div>
           </button>
           <button onClick={() => navigate("/descubra")} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Explorar temas</p>

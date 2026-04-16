@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Search, Sparkles } from "lucide-react";
 import { searchVerses } from "@/services/bibleApi";
 import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
+import AskBible from "@/components/AskBible";
+import PrayerRequests from "@/components/PrayerRequests";
+import { searchVerses } from "@/services/bibleApi";
+import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
 
 type DiscoverResult = {
   id: string;
@@ -50,6 +55,7 @@ const dedupeResults = (items: DiscoverResult[]) =>
   );
 
 const DiscoverPage = () => {
+  const { features: appFeatures } = useAppFeatures();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<DiscoverResult[]>([]);
   const [loading, setLoading] = useState(false);

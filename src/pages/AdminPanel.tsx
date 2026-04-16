@@ -51,7 +51,7 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log";
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },

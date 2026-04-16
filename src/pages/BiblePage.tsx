@@ -30,6 +30,7 @@ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 const APP_URL = window.location.origin;
 
@@ -73,6 +74,21 @@ const BiblePage = () => {
   const [highlights, setHighlights] = useLocalStorage<HighlightedVerse[]>("highlighted-verses", []);
   const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
   const [, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
+
+  // Native-like back behavior: closes pickers/selection/modals before navigating away.
+  useBackHandler(showColorPicker, () => setShowColorPicker(false));
+  useBackHandler(showShareMenu, () => setShowShareMenu(false));
+  useBackHandler(showCompare, () => setShowCompare(false));
+  useBackHandler(showVersionPicker, () => setShowVersionPicker(false));
+  useBackHandler(showPresentation, () => setShowPresentation(false));
+  useBackHandler(!!imageVerse, () => setImageVerse(null));
+  useBackHandler(selectedVerses.size > 0 && !showColorPicker && !showShareMenu && !showCompare, () => setSelectedVerses(new Set()));
+  useBackHandler(!!selectedChapter && selectedVerses.size === 0, () => {
+    setSelectedChapter(null);
+    setHighlightedVerse(null);
+    setVerses([]);
+    setEpigraphs([]);
+  });
 
   // On mount, restore last reading position if no search params
   useEffect(() => {

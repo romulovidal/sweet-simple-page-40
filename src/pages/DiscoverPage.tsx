@@ -6,8 +6,6 @@ import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolve
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
 import PrayerRequests from "@/components/PrayerRequests";
-import { searchVerses } from "@/services/bibleApi";
-import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
 
 type DiscoverResult = {
   id: string;

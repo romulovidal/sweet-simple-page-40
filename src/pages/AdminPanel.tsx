@@ -226,7 +226,7 @@ const AdminPanel = () => {
   if (editingPost) {
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
           <button onClick={() => setEditingPost(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPost.id ? "Editar" : "Nova"} Postagem</h1>
           <Button size="sm" onClick={savePost}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
@@ -285,7 +285,7 @@ const AdminPanel = () => {
     const totalDays = (editingPlan as { total_days?: number }).total_days || 7;
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-border">
+        <header className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[hsl(var(--dark-card))]">
           <button onClick={() => setEditingPlan(null)}><X className="w-5 h-5" /></button>
           <h1 className="text-lg font-bold flex-1">{editingPlan.id ? "Editar" : "Novo"} Plano</h1>
           <Button size="sm" onClick={savePlan}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
@@ -382,7 +382,7 @@ const AdminPanel = () => {
 
     return (
       <div className="min-h-screen pb-10">
-        <header className="px-5 pt-8 pb-4 border-b border-border">
+        <header className="px-5 pt-8 pb-4 border-b border-[hsl(var(--dark-card))]">
           <div className="flex items-center gap-3">
             <button onClick={() => setViewingPlanId(null)}><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex-1">
@@ -547,7 +547,7 @@ const AdminPanel = () => {
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{post.content}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
                             <Edit2 className="w-3 h-3" /> Editar
                           </button>
@@ -589,7 +589,7 @@ const AdminPanel = () => {
                             <p className="text-[10px] text-muted-foreground mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => fetchReadings(plan.id)} className="text-xs text-primary font-medium flex items-center gap-1">
                             <BookOpen className="w-3 h-3" /> Leituras
                           </button>
@@ -635,7 +635,7 @@ const AdminPanel = () => {
                         </div>
                       </div>
                       {editingUser?.id === u.id ? (
-                        <div className="mt-3 pt-3 border-t border-background space-y-2">
+                        <div className="mt-3 pt-3 border-t border-[hsl(var(--dark-card))] space-y-2">
                           <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
                             placeholder="Nome do usuário" className="bg-[hsl(var(--dark-bg))] border-none text-sm" />
                           <div className="flex gap-2">
@@ -648,7 +648,7 @@ const AdminPanel = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-background">
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => { setEditingUser(u); setEditUserName(u.display_name || ""); }}
                             className="text-xs text-primary font-medium flex items-center gap-1">
                             <Edit2 className="w-3 h-3" /> Editar
@@ -763,7 +763,7 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
         {showBookPicker && (
-          <div className="mt-2 bg-[hsl(var(--dark-bg))] rounded-xl border border-border max-h-52 overflow-y-auto">
+          <div className="mt-2 bg-[hsl(var(--dark-bg))] rounded-xl border border-[hsl(var(--dark-card))] max-h-52 overflow-y-auto">
             <div className="p-2 sticky top-0 bg-[hsl(var(--dark-bg))]">
               <Input value={bookSearch} onChange={(e) => setBookSearch(e.target.value)}
                 placeholder="Buscar livro..." className="bg-muted border-none text-sm h-8" />

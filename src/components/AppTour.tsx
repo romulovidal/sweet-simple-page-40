@@ -360,7 +360,13 @@ const AppTour = () => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
     finishingRef.current = false;
-    dontShowRef.current = true;
+    // Lê preferência salva (default true se nunca foi setado)
+    try {
+      const saved = localStorage.getItem(DONT_SHOW_KEY);
+      dontShowRef.current = saved === null ? true : saved === "1";
+    } catch {
+      dontShowRef.current = true;
+    }
 
     if (location.pathname !== "/") {
       navigate("/", { replace: false, state: { reset: Date.now() } });

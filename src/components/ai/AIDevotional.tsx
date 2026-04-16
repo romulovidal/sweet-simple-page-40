@@ -24,7 +24,19 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
 
   if (!enabled) return null;
 
-  const shareText = `${content}\n\n📖 Bíblia do Atalaia — https://biblia.atalaias.online`;
+  const shareText = `💜 Reflexão Devocional — ${verseRef}\n\n${content}\n\n— Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Reflexão Devocional — ${verseRef}`, text: shareText });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+    setShareOpen(true);
+  };
 
   return (
     <>

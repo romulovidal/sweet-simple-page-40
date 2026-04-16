@@ -48,6 +48,7 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
     <div className="mx-5 mb-4">
       <button
         onClick={handleToggle}
+        data-tour="bible-chapter-summary"
         className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 transition-colors hover:bg-blue-500/15"
       >
         <div className="flex items-center gap-2">

@@ -113,6 +113,7 @@ const AskBible = ({ enabled }: AskBibleProps) => {
     <>
       <button
         onClick={() => setOpen(true)}
+        data-tour="ask-bible"
         className="w-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
       >
         <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">

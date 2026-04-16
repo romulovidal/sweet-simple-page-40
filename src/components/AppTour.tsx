@@ -188,16 +188,25 @@ const STEPS: Step[] = [
       "Este botão laranja monta uma linha do tempo histórica do trecho: contexto, datas aproximadas, personagens e o que aconteceu antes/depois — perfeito para entender o pano de fundo.",
   },
   {
-    title: "✨ Mais IA dentro da Bíblia",
+    selector: '[data-tour="bible-chapter-summary"]',
+    title: "✨ Resumo do Capítulo (IA)",
     description:
-      "No topo do capítulo: **Resumo do Capítulo** com IA. E o botão **ExegetAI** flutuante traz exegese profunda do trecho aberto.",
+      "Este botão azul no topo do capítulo gera um resumo completo com IA: contexto, temas principais e aplicação prática. E o botão flutuante **ExegetAI** traz exegese profunda do trecho aberto.",
     before: deselectVerse16,
-    waitMs: 250,
+    waitMs: 300,
+    side: "bottom",
   },
   {
+    selector: '[data-tour="ask-bible"]',
     title: "🙋 Pergunte à Bíblia",
     description:
-      "Em Início e Descubra você encontra o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
+      "Aqui em **Descubra** (e também no Início) fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
+    before: () => {
+      window.history.pushState({}, "", "/descubra");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    },
+    waitMs: 500,
+    side: "bottom",
   },
 
   // ===== PLANS =====

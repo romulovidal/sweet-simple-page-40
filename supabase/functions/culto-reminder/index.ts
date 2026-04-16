@@ -19,10 +19,11 @@ Deno.serve(async (req) => {
     const now = new Date();
     const brasiliaOffset = -3 * 60;
     const brasiliaTime = new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
-    const currentDay = brasiliaTime.getDay(); // 0=Sunday
+    const currentDay = brasiliaTime.getDay();
     const currentHour = brasiliaTime.getHours();
     const currentMinute = brasiliaTime.getMinutes();
     const currentTotalMinutes = currentHour * 60 + currentMinute;
+    const today = brasiliaTime.toISOString().split("T")[0];
 
     // Get all active schedules for today
     const { data: schedules, error } = await supabase
@@ -38,56 +39,95 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get all reminders for today's schedules
+    const scheduleIds = schedules.map(s => s.id);
+    const { data: allReminders, error: remError } = await supabase
+      .from("culto_reminders")
+      .select("*")
+      .in("schedule_id", scheduleIds)
+      .order("minutes_before", { ascending: false });
+
+    if (remError) throw remError;
+
     let sent = 0;
-    const today = brasiliaTime.toISOString().split("T")[0];
 
     for (const schedule of schedules) {
-      // Parse schedule time (HH:MM:SS)
       const [h, m] = schedule.time.split(":").map(Number);
       const cultoTotalMinutes = h * 60 + m;
-      const reminderTime = cultoTotalMinutes - schedule.reminder_minutes_before;
+      const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-      // Check if it's time to send the reminder (within a 15-minute window)
-      if (currentTotalMinutes >= reminderTime && currentTotalMinutes < reminderTime + 15) {
-        // Check if already sent today
-        if (schedule.last_reminder_sent) {
-          const lastSent = schedule.last_reminder_sent.split("T")[0];
-          if (lastSent === today) continue;
+      // Get reminders for this schedule
+      const scheduleReminders = (allReminders || []).filter(r => r.schedule_id === schedule.id);
+
+      // If no reminders configured, use the legacy single reminder
+      const remindersToCheck = scheduleReminders.length > 0
+        ? scheduleReminders
+        : [{
+            id: `legacy_${schedule.id}`,
+            schedule_id: schedule.id,
+            minutes_before: schedule.reminder_minutes_before || 180,
+            message: "",
+            last_sent: schedule.last_reminder_sent,
+            sort_order: 0,
+          }];
+
+      for (const reminder of remindersToCheck) {
+        const reminderTime = cultoTotalMinutes - reminder.minutes_before;
+
+        // Check if it's time to send (within 15-minute window)
+        if (currentTotalMinutes >= reminderTime && currentTotalMinutes < reminderTime + 15) {
+          // Check if already sent today
+          if (reminder.last_sent) {
+            const lastSent = reminder.last_sent.split("T")[0];
+            if (lastSent === today) continue;
+          }
+
+          const reminderLabel = reminder.minutes_before >= 60
+            ? `${Math.round(reminder.minutes_before / 60)}h`
+            : `${reminder.minutes_before}min`;
+
+          // Use custom message or default
+          const pushBody = reminder.message && reminder.message.trim()
+            ? reminder.message.trim()
+            : `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`;
+
+          // Send push notification
+          const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+              title: `⛪ ${schedule.name}`,
+              body: pushBody,
+              url: "/",
+              type: "culto-reminder",
+              ttl: reminder.minutes_before * 60,
+              urgency: "high",
+            }),
+          });
+
+          const pushResult = await pushResponse.json();
+
+          // Mark reminder as sent
+          if (reminder.id.startsWith("legacy_")) {
+            // Legacy: update the schedule itself
+            await supabase
+              .from("culto_schedules")
+              .update({ last_reminder_sent: new Date().toISOString() })
+              .eq("id", schedule.id);
+          } else {
+            // New: update the specific reminder
+            await supabase
+              .from("culto_reminders")
+              .update({ last_sent: new Date().toISOString() })
+              .eq("id", reminder.id);
+          }
+
+          sent++;
+          console.log(`Sent reminder "${reminder.id}" for "${schedule.name}" (${reminderLabel} before):`, pushResult);
         }
-
-        // Format time for display
-        const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-        const reminderLabel = schedule.reminder_minutes_before >= 60
-          ? `${Math.round(schedule.reminder_minutes_before / 60)}h`
-          : `${schedule.reminder_minutes_before}min`;
-
-        // Send push notification
-        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({
-            title: `⛪ ${schedule.name}`,
-            body: `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`,
-            url: "/",
-            type: "culto-reminder",
-            ttl: schedule.reminder_minutes_before * 60,
-            urgency: "high",
-          }),
-        });
-
-        const pushResult = await pushResponse.json();
-
-        // Mark as sent
-        await supabase
-          .from("culto_schedules")
-          .update({ last_reminder_sent: new Date().toISOString() })
-          .eq("id", schedule.id);
-
-        sent++;
-        console.log(`Sent reminder for "${schedule.name}":`, pushResult);
       }
     }
 

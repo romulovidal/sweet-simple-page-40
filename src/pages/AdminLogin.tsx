@@ -40,14 +40,14 @@ const AdminLogin = () => {
             placeholder="Email do admin"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-muted border-none"
+            className="bg-[hsl(var(--dark-card))] border-none"
           />
           <Input
             type="password"
             placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-muted border-none"
+            className="bg-[hsl(var(--dark-card))] border-none"
           />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Entrar"}

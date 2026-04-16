@@ -233,12 +233,12 @@ const AdminPanel = () => {
         </header>
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Tipo</label>
             <div className="flex flex-wrap gap-2">
               {POST_TYPES.map((t) => (
                 <button key={t.value} onClick={() => setEditingPost({ ...editingPost, type: t.value })}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    editingPost.type === t.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    editingPost.type === t.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
                   }`}>
                   <t.icon className="w-3 h-3" /> {t.label}
                 </button>
@@ -246,34 +246,34 @@ const AdminPanel = () => {
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Título</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título</label>
             <Input value={editingPost.title || ""} onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
-              className="bg-muted border-none" maxLength={200} />
+              className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Conteúdo</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Conteúdo</label>
             <Textarea value={editingPost.content || ""} onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
-              className="bg-muted border-none min-h-[120px]" maxLength={5000} />
+              className="bg-[hsl(var(--dark-card))] border-none min-h-[120px]" maxLength={5000} />
           </div>
           {editingPost.type === "video" && (
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">URL do YouTube</label>
+              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">URL do YouTube</label>
               <Input value={editingPost.youtube_url || ""} onChange={(e) => setEditingPost({ ...editingPost, youtube_url: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..." className="bg-muted border-none" maxLength={500} />
+                placeholder="https://youtube.com/watch?v=..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={500} />
             </div>
           )}
           {(editingPost.type === "versiculo" || editingPost.type === "oracao") && (
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Referência Bíblica</label>
+              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência Bíblica</label>
               <Input value={editingPost.bible_reference || ""} onChange={(e) => setEditingPost({ ...editingPost, bible_reference: e.target.value })}
-                placeholder="Ex: João 3:16" className="bg-muted border-none" maxLength={100} />
+                placeholder="Ex: João 3:16" className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
             </div>
           )}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Ordem de exibição</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem de exibição</label>
             <Input type="number" value={editingPost.sort_order ?? 0}
               onChange={(e) => setEditingPost({ ...editingPost, sort_order: parseInt(e.target.value) || 0 })}
-              className="bg-muted border-none w-24" />
+              className="bg-[hsl(var(--dark-card))] border-none w-24" />
           </div>
         </div>
       </div>
@@ -293,70 +293,70 @@ const AdminPanel = () => {
         <div className="px-5 py-4 space-y-5">
           <div className="flex gap-3 items-end">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Emoji</label>
+              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Emoji</label>
               <Input value={editingPlan.image_emoji || "📖"}
                 onChange={(e) => setEditingPlan({ ...editingPlan, image_emoji: e.target.value })}
-                className="bg-muted border-none w-16 text-center text-2xl" maxLength={4} />
+                className="bg-[hsl(var(--dark-card))] border-none w-16 text-center text-2xl" maxLength={4} />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">Título do Plano *</label>
+              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do Plano *</label>
               <Input value={editingPlan.title || ""}
                 onChange={(e) => setEditingPlan({ ...editingPlan, title: e.target.value })}
-                placeholder="Ex: 21 Dias nos Salmos" className="bg-muted border-none" maxLength={200} />
+                placeholder="Ex: 21 Dias nos Salmos" className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Quantos dias tem o plano? *
             </label>
             <div className="flex items-center gap-3">
               <Input type="number" value={totalDays}
                 onChange={(e) => setEditingPlan({ ...editingPlan, total_days: parseInt(e.target.value) || 1 } as typeof editingPlan)}
-                min={1} max={365} className="bg-muted border-none w-24" />
-              <span className="text-xs text-muted-foreground">dias de leitura</span>
+                min={1} max={365} className="bg-[hsl(var(--dark-card))] border-none w-24" />
+              <span className="text-xs text-[hsl(var(--dark-muted))]">dias de leitura</span>
             </div>
             <div className="flex gap-2 mt-2">
               {[7, 14, 21, 30, 60, 90].map((d) => (
                 <button key={d} onClick={() => setEditingPlan({ ...editingPlan, total_days: d } as typeof editingPlan)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    totalDays === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    totalDays === d ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
                   }`}>{d}d</button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Descrição *</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Descrição *</label>
             <Textarea value={editingPlan.description || ""}
               onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
-              placeholder="Breve descrição do plano..." className="bg-muted border-none" maxLength={1000} />
+              placeholder="Breve descrição do plano..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={1000} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Devocional / Introdução</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Devocional / Introdução</label>
             <Textarea value={(editingPlan as { devotional?: string }).devotional || ""}
               onChange={(e) => setEditingPlan({ ...editingPlan, devotional: e.target.value } as typeof editingPlan)}
               placeholder="Texto devocional de abertura do plano..."
-              className="bg-muted border-none min-h-[100px]" maxLength={5000} />
+              className="bg-[hsl(var(--dark-card))] border-none min-h-[100px]" maxLength={5000} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Categoria</label>
             <div className="flex flex-wrap gap-2">
               {PLAN_CATEGORIES.map((cat) => (
                 <button key={cat} onClick={() => setEditingPlan({ ...editingPlan, category: cat })}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    editingPlan.category === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    editingPlan.category === cat ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
                   }`}>{cat}</button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Ordem</label>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem</label>
             <Input type="number" value={editingPlan.sort_order ?? 0}
               onChange={(e) => setEditingPlan({ ...editingPlan, sort_order: parseInt(e.target.value) || 0 })}
-              className="bg-muted border-none w-24" />
+              className="bg-[hsl(var(--dark-card))] border-none w-24" />
           </div>
           <div className="bg-primary/10 rounded-xl p-4">
             <p className="text-xs text-primary font-semibold mb-1">💡 Próximo passo</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[hsl(var(--dark-muted))]">
               Ao salvar, você será direcionado para adicionar as leituras dia a dia.
             </p>
           </div>
@@ -387,14 +387,14 @@ const AdminPanel = () => {
             <button onClick={() => setViewingPlanId(null)}><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex-1">
               <h1 className="text-lg font-bold">{plan?.title}</h1>
-              <p className="text-xs text-muted-foreground">{filledDays}/{totalDays} dias preenchidos • {progress}%</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))]">{filledDays}/{totalDays} dias preenchidos • {progress}%</p>
             </div>
             <button onClick={() => plan && setEditingPlan(plan)} className="text-xs text-primary font-semibold">
               <Edit2 className="w-4 h-4" />
             </button>
           </div>
           {totalDays > 0 && (
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden mt-3">
+            <div className="w-full h-2 bg-[hsl(var(--dark-card))] rounded-full overflow-hidden mt-3">
               <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} />
             </div>
           )}
@@ -409,10 +409,10 @@ const AdminPanel = () => {
           {existingDays.map((dayNum) => {
             const dayReadings = dayGroups[dayNum];
             return (
-              <div key={dayNum} className="bg-muted rounded-xl p-4 space-y-2">
+              <div key={dayNum} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-primary">📅 Dia {String(dayNum).padStart(2, "0")}</p>
-                  <p className="text-[10px] text-muted-foreground">{dayReadings.length} leitura{dayReadings.length > 1 ? "s" : ""}</p>
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))]">{dayReadings.length} leitura{dayReadings.length > 1 ? "s" : ""}</p>
                 </div>
                 {dayReadings.map((r) => {
                   const book = bibleBooks.find((b) => b.apiAbbrev === r.book_abbrev);
@@ -426,7 +426,7 @@ const AdminPanel = () => {
                         {readingTitle && <p className="text-[10px] font-semibold text-primary truncate">{readingTitle}</p>}
                         <p className="text-sm">
                           {book?.name || r.book_abbrev} {r.chapter}
-                          {verseRange && <span className="text-muted-foreground">:{verseRange}</span>}
+                          {verseRange && <span className="text-[hsl(var(--dark-muted))]">:{verseRange}</span>}
                         </p>
                       </div>
                       <button onClick={() => deleteReading(r.id)} className="text-destructive p-1">
@@ -443,7 +443,7 @@ const AdminPanel = () => {
             );
           })}
           {canAddNewDay && (
-            <div className="bg-muted rounded-xl p-4">
+            <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
               <SmartAddReadingForm
                 onAdd={(reading) => addReading(viewingPlanId, { ...reading, dayNumber: nextNewDay })}
                 dayNumber={nextNewDay} totalDays={totalDays}
@@ -452,8 +452,8 @@ const AdminPanel = () => {
           )}
           {planReadings.length === 0 && !canAddNewDay && (
             <div className="text-center py-10">
-              <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-              <p className="text-sm text-muted-foreground">Nenhuma leitura adicionada</p>
+              <BookOpen className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
+              <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhuma leitura adicionada</p>
             </div>
           )}
         </div>
@@ -470,7 +470,7 @@ const AdminPanel = () => {
           {/* Hamburger menu */}
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
-              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+              <button className="p-1.5 rounded-lg hover:bg-[hsl(var(--dark-card))] transition-colors">
                 <Menu className="w-5 h-5" />
               </button>
             </SheetTrigger>
@@ -534,7 +534,7 @@ const AdminPanel = () => {
                     const typeInfo = POST_TYPES.find((t) => t.value === post.type);
                     const Icon = typeInfo?.icon || FileText;
                     return (
-                      <div key={post.id} className="bg-muted rounded-xl p-4">
+                      <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
                             <Icon className="w-5 h-5 text-primary" />
@@ -544,14 +544,14 @@ const AdminPanel = () => {
                               <p className="font-semibold text-sm truncate">{post.title}</p>
                               {!post.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{post.content}</p>
+                            <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">{post.content}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                           <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
                             <Edit2 className="w-3 h-3" /> Editar
                           </button>
-                          <button onClick={() => togglePostActive(post)} className="text-xs text-muted-foreground font-medium flex items-center gap-1 ml-auto">
+                          <button onClick={() => togglePostActive(post)} className="text-xs text-[hsl(var(--dark-muted))] font-medium flex items-center gap-1 ml-auto">
                             {post.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             {post.is_active ? "Ocultar" : "Mostrar"}
                           </button>
@@ -562,7 +562,7 @@ const AdminPanel = () => {
                       </div>
                     );
                   })}
-                  {posts.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhuma postagem ainda</p>}
+                  {posts.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhuma postagem ainda</p>}
                 </div>
               </>
             )}
@@ -576,7 +576,7 @@ const AdminPanel = () => {
                   {plans.map((plan) => {
                     const td = (plan as Record<string, unknown>).total_days as number || 0;
                     return (
-                      <div key={plan.id} className="bg-muted rounded-xl p-4">
+                      <div key={plan.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{plan.image_emoji}</span>
                           <div className="flex-1 min-w-0">
@@ -585,8 +585,8 @@ const AdminPanel = () => {
                               <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{plan.category}</span>
                               {!plan.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{plan.description}</p>
-                            <p className="text-[10px] text-muted-foreground mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
+                            <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-1">{plan.description}</p>
+                            <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1"><Calendar className="w-3 h-3 inline mr-1" />{td} dias</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
@@ -603,7 +603,7 @@ const AdminPanel = () => {
                       </div>
                     );
                   })}
-                  {plans.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhum plano ainda</p>}
+                  {plans.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum plano ainda</p>}
                 </div>
               </>
             )}
@@ -611,14 +611,19 @@ const AdminPanel = () => {
             {tab === "users" && (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-muted-foreground">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
-                  <Button size="sm" variant="outline" onClick={exportUsersCSV}>
+                  <p className="text-sm text-[hsl(var(--dark-muted))]">{users.length} usuário{users.length !== 1 ? "s" : ""}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={exportUsersCSV}
+                    className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]"
+                  >
                     <Download className="w-3 h-3 mr-1" /> CSV
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {users.map((u) => (
-                    <div key={u.id} className="bg-muted rounded-xl p-4">
+                    <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
                       <div className="flex items-center gap-3">
                         {u.avatar_url ? (
                           <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -629,7 +634,7 @@ const AdminPanel = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">
                             Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
@@ -644,7 +649,7 @@ const AdminPanel = () => {
                               if (error) { toast.error("Erro ao salvar"); return; }
                               toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
                             }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingUser(null)} className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">Cancelar</Button>
                           </div>
                         </div>
                       ) : (
@@ -667,7 +672,7 @@ const AdminPanel = () => {
                       )}
                     </div>
                   ))}
-                  {users.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhum usuário cadastrado</p>}
+                  {users.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhum usuário cadastrado</p>}
                 </div>
               </>
             )}
@@ -685,7 +690,7 @@ const AdminPanel = () => {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
-                  active ? "text-primary" : "text-muted-foreground"
+                  active ? "text-primary" : "text-[hsl(var(--dark-muted))]"
                 }`}
               >
                 <t.icon className={`w-5 h-5 ${active ? "text-primary" : ""}`} />
@@ -741,41 +746,41 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
   }
 
   return (
-    <div className={`${isAddToDay ? "" : "bg-muted rounded-xl p-4"} space-y-3`}>
+    <div className={`${isAddToDay ? "" : "bg-[hsl(var(--dark-card))] rounded-xl p-4"} space-y-3`}>
       {!isAddToDay && (
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold text-primary">📅 Novo Dia {String(dayNumber).padStart(2, "0")}</p>
-          {totalDays > 0 && <p className="text-[10px] text-muted-foreground">de {totalDays}</p>}
+          {totalDays > 0 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">de {totalDays}</p>}
         </div>
       )}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Título do dia (opcional)</label>
+        <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título do dia (opcional)</label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex: A Criação do Mundo" className="bg-[hsl(var(--dark-bg))] border-none" maxLength={100} />
       </div>
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">📖 Livro da Bíblia *</label>
+        <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📖 Livro da Bíblia *</label>
         <button onClick={() => setShowBookPicker(!showBookPicker)}
           className="w-full flex items-center justify-between bg-[hsl(var(--dark-bg))] rounded-md px-3 py-2 text-sm">
-          <span className={selectedBookData ? "" : "text-muted-foreground"}>
+          <span className={selectedBookData ? "" : "text-[hsl(var(--dark-muted))]"}>
             {selectedBookData ? `${selectedBookData.name} (${selectedBookData.chapters} cap.)` : "Selecionar livro..."}
           </span>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <ChevronDown className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
         </button>
         {showBookPicker && (
           <div className="mt-2 bg-[hsl(var(--dark-bg))] rounded-xl border border-[hsl(var(--dark-card))] max-h-52 overflow-y-auto">
             <div className="p-2 sticky top-0 bg-[hsl(var(--dark-bg))]">
               <Input value={bookSearch} onChange={(e) => setBookSearch(e.target.value)}
-                placeholder="Buscar livro..." className="bg-muted border-none text-sm h-8" />
+                placeholder="Buscar livro..." className="bg-[hsl(var(--dark-card))] border-none text-sm h-8" />
             </div>
             <div className="px-1 pb-1">
               {filteredBooks.map((b) => (
                 <button key={b.apiAbbrev}
                   onClick={() => { setSelectedBook(b.apiAbbrev); setShowBookPicker(false); setBookSearch(""); }}
-                  className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors ${
+                  className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-[hsl(var(--dark-card))] transition-colors ${
                     selectedBook === b.apiAbbrev ? "bg-primary/15 text-primary font-medium" : ""
                   }`}>
-                  {b.name} <span className="text-muted-foreground text-xs">({b.chapters} cap.)</span>
+                  {b.name} <span className="text-[hsl(var(--dark-muted))] text-xs">({b.chapters} cap.)</span>
                 </button>
               ))}
             </div>
@@ -784,18 +789,18 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
       </div>
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-muted-foreground mb-1 block">Capítulo *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Capítulo *</label>
           <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
             placeholder="1" min={1} max={selectedBookData?.chapters || 150}
             className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-muted-foreground mb-1 block">Vers. início</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Vers. início</label>
           <Input type="number" value={verseStart} onChange={(e) => setVerseStart(e.target.value)}
             placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-muted-foreground mb-1 block">Vers. fim</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Vers. fim</label>
           <Input type="number" value={verseEnd} onChange={(e) => setVerseEnd(e.target.value)}
             placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>

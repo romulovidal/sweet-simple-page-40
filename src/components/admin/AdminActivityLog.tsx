@@ -48,8 +48,8 @@ const AdminActivityLog = () => {
   if (entries.length === 0) {
     return (
       <div className="text-center py-10">
-        <Clock className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-        <p className="text-sm text-muted-foreground">Nenhuma atividade registrada ainda</p>
+        <Clock className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
+        <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhuma atividade registrada ainda</p>
       </div>
     );
   }
@@ -57,16 +57,16 @@ const AdminActivityLog = () => {
   return (
     <div className="space-y-2">
       {entries.map((entry) => {
-        const config = ACTION_LABELS[entry.action] || { label: entry.action, icon: Clock, color: "text-muted-foreground" };
+        const config = ACTION_LABELS[entry.action] || { label: entry.action, icon: Clock, color: "text-[hsl(var(--dark-muted))]" };
         const Icon = config.icon;
         return (
-          <div key={entry.id} className="bg-muted rounded-xl p-3 flex items-center gap-3">
+          <div key={entry.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-3 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${config.color} bg-current/10`}>
               <Icon className={`w-4 h-4 ${config.color}`} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{config.label}</p>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[10px] text-[hsl(var(--dark-muted))]">
                 {new Date(entry.created_at).toLocaleString("pt-BR")}
               </p>
             </div>

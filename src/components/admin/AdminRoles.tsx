@@ -107,7 +107,7 @@ const AdminRoles = () => {
         </div>
         <div className="space-y-2">
           {admins.map(u => (
-            <div key={u.id} className="bg-muted rounded-xl p-4 flex items-center gap-3">
+            <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-3">
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -124,7 +124,7 @@ const AdminRoles = () => {
               {u.user_id !== currentUserId && (
                 <Button size="sm" variant="outline" onClick={() => removeAdmin(u.user_id)}
                   disabled={actionLoading === u.user_id}
-                  className="text-xs">
+                  className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
                   {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldOff className="w-3 h-3 mr-1" />}
                   Remover
                 </Button>
@@ -137,12 +137,12 @@ const AdminRoles = () => {
       {/* Regular users */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-muted-foreground" />
+          <Users className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           <span className="text-sm font-semibold">Usuários ({regularUsers.length})</span>
         </div>
         <div className="space-y-2">
           {regularUsers.map(u => (
-            <div key={u.id} className="bg-muted rounded-xl p-4 flex items-center gap-3">
+            <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-3">
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -155,14 +155,14 @@ const AdminRoles = () => {
               </div>
               <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
                 disabled={actionLoading === u.user_id}
-                className="text-xs">
+                className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
                 {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
                 Promover
               </Button>
             </div>
           ))}
           {regularUsers.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">Todos os usuários já são admins</p>
+            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Todos os usuários já são admins</p>
           )}
         </div>
       </div>

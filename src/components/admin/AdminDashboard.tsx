@@ -89,29 +89,29 @@ const AdminDashboard = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         {cards.map((card) => (
-          <div key={card.label} className="bg-muted rounded-xl p-4">
+          <div key={card.label} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <card.icon className={`w-4 h-4 ${card.color}`} />
-              <span className="text-xs text-muted-foreground">{card.label}</span>
+              <span className="text-xs text-[hsl(var(--dark-muted))]">{card.label}</span>
             </div>
-            <p className="text-2xl font-bold">{card.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{card.sub}</p>
+            <p className="text-2xl font-bold text-[hsl(var(--dark-text))]">{card.value}</p>
+            <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">{card.sub}</p>
           </div>
         ))}
       </div>
 
       {stats.topVerses.length > 0 && (
-        <div className="bg-muted rounded-xl p-4">
+        <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold">Versículos Mais Salvos</span>
+            <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Versículos Mais Salvos</span>
           </div>
           <div className="space-y-2">
             {stats.topVerses.map((v, i) => (
               <div key={v.reference} className="flex items-center gap-3">
                 <span className="text-xs font-bold text-primary w-5">{i + 1}.</span>
                 <span className="text-sm flex-1 truncate">{v.reference}</span>
-                <span className="text-xs text-muted-foreground">{v.count}x</span>
+                <span className="text-xs text-[hsl(var(--dark-muted))]">{v.count}x</span>
               </div>
             ))}
           </div>

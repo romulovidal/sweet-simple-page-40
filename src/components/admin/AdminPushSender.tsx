@@ -92,28 +92,28 @@ const AdminPushSender = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-muted rounded-xl p-4 space-y-3">
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Bell className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Enviar Notificação Push</span>
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed">
+        <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
           Agora o envio usa retenção de 24h para o aparelho receber quando voltar à internet.
         </p>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Título *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título *</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ex: 📖 Versículo especial!" className="bg-background border-none" maxLength={100} />
+            placeholder="Ex: 📖 Versículo especial!" className="bg-[hsl(var(--dark-bg))] border-none" maxLength={100} />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Mensagem *</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Mensagem *</label>
           <Textarea value={body} onChange={(e) => setBody(e.target.value)}
-            placeholder="Texto da notificação..." className="bg-background border-none min-h-[80px]" maxLength={500} />
+            placeholder="Texto da notificação..." className="bg-[hsl(var(--dark-bg))] border-none min-h-[80px]" maxLength={500} />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">URL ao clicar (opcional)</label>
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">URL ao clicar (opcional)</label>
           <Input value={url} onChange={(e) => setUrl(e.target.value)}
-            placeholder="/" className="bg-background border-none" maxLength={200} />
+            placeholder="/" className="bg-[hsl(var(--dark-bg))] border-none" maxLength={200} />
         </div>
         <Button onClick={sendPush} disabled={sending} className="w-full">
           {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
@@ -123,20 +123,20 @@ const AdminPushSender = () => {
 
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-4 h-4 text-muted-foreground" />
+          <Clock className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
           <span className="text-sm font-semibold">Histórico de Envios</span>
         </div>
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
         ) : log.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">Nenhum push enviado ainda</p>
+          <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Nenhum push enviado ainda</p>
         ) : (
           <div className="space-y-2">
             {log.map((entry) => (
-              <div key={entry.id} className="bg-muted rounded-xl p-3">
+              <div key={entry.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-3">
                 <p className="text-sm font-semibold truncate">{entry.title}</p>
-                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{entry.body}</p>
-                <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-1 mt-0.5">{entry.body}</p>
+                <div className="flex items-center gap-3 mt-2 text-[10px] text-[hsl(var(--dark-muted))]">
                   <span>{new Date(entry.sent_at).toLocaleString("pt-BR")}</span>
                   <span className="text-green-400">✓ {entry.total_sent}</span>
                   {entry.total_failed > 0 && <span className="text-destructive">✗ {entry.total_failed}</span>}

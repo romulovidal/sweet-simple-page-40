@@ -8,6 +8,7 @@ import {
 import type { AIFeatures } from "@/hooks/useAIFeatures";
 
 const FEATURES_CONFIG: { key: keyof AIFeatures; label: string; description: string; icon: typeof BrainCircuit; color: string }[] = [
+  { key: "exegetai", label: "ExegettAI", description: "Exegese bíblica completa com inteligência artificial", icon: BrainCircuit, color: "text-amber-400" },
   { key: "summary", label: "Resumo do Capítulo", description: "Gera um resumo acadêmico ao abrir um capítulo", icon: BookOpen, color: "text-blue-400" },
   { key: "devotional", label: "Devocional Diário", description: "Reflexão devocional para o versículo do dia", icon: Heart, color: "text-purple-400" },
   { key: "connections", label: "Conexões Bíblicas", description: "Referências cruzadas e paralelos temáticos", icon: Link2, color: "text-emerald-400" },
@@ -23,6 +24,7 @@ const DEFAULT_FEATURES: AIFeatures = {
   word_meaning: true,
   timeline: true,
   plan_generator: true,
+  exegetai: true,
 };
 
 const AdminAISettings = () => {

@@ -439,19 +439,23 @@ const BiblePage = () => {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-tour="bible-header-tools">
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}
+                  data-tour="bible-presentation"
                   className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
                   title="Modo Apresentação"
                 >
                   <Monitor className="w-4 h-4" />
                 </button>
               )}
-              <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+              <div data-tour="bible-fontsize">
+                <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+              </div>
               <button
                 onClick={() => setShowVersionPicker(true)}
+                data-tour="bible-version"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
               >
                 {currentVersion.shortName}
@@ -463,26 +467,26 @@ const BiblePage = () => {
 
         {/* Floating action bar */}
         {hasSelection && (
-          <div className="sticky top-[72px] z-10 mx-5 mb-2">
+          <div className="sticky top-[72px] z-10 mx-5 mb-2" data-tour="bible-action-bar">
             <div className="bg-primary rounded-xl px-3 py-2.5 shadow-lg">
               <div className="flex flex-col items-center gap-2">
                 <span className="text-xs font-semibold text-primary-foreground">
                   {selectedVerses.size} versículo{selectedVerses.size !== 1 ? "s" : ""}
                 </span>
                 <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                  <button onClick={() => setShowColorPicker(!showColorPicker)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                  <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
                     <Palette className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
-                  <button onClick={handleShareSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                  <button onClick={handleShareSelected} data-tour="bible-action-share" className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
                     <Share2 className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
-                  <button onClick={handleSaveSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                  <button onClick={handleSaveSelected} data-tour="bible-action-save" className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
                     <BookmarkPlus className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
-                  <button onClick={handleImageSelected} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
+                  <button onClick={handleImageSelected} data-tour="bible-action-image" className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0">
                     <ImageIcon className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
-                  <button onClick={() => setShowCompare(true)} className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0" title="Comparar versões">
+                  <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0" title="Comparar versões">
                     <GitCompareArrows className="w-[18px] h-[18px] text-primary-foreground" />
                   </button>
                   {(() => {

@@ -430,7 +430,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="px-5 grid grid-cols-2 gap-3 mb-6">
+      <div className="px-5 grid grid-cols-2 gap-3 mb-6" data-tour="profile-stats">
         <div className="bg-dark-card rounded-2xl p-4">
           <div className="flex items-center gap-2 text-primary mb-2">
             <Flame className="w-4 h-4" />
@@ -469,7 +469,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Reading Goals */}
-      <div className="px-5 mb-6">
+      <div className="px-5 mb-6" data-tour="profile-goals">
         <ReadingGoals enabled={appFeatures.reading_goals} />
       </div>
 
@@ -501,7 +501,7 @@ const ProfilePage = () => {
         </div>
       )}
 
-      <div className="px-5 space-y-1">
+      <div className="px-5 space-y-1" data-tour="profile-menu">
         {[
           { key: "saved", label: "Versículos salvos", icon: BookmarkCheck, value: String(savedVerses.length) },
           { key: "verse-history", label: "Versículos do dia", icon: Sparkles, value: verseHistory.length ? `${verseHistory.length} dias` : "Vazio" },

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -520,6 +520,13 @@ const AdminPanel = () => {
                 ))}
                 <div className="border-t border-[hsl(var(--dark-card))] my-3" />
                 <button
+                  onClick={() => { setMenuOpen(false); navigate("/"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Home className="w-5 h-5" />
+                  Voltar para a Bíblia
+                </button>
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                 >
@@ -535,6 +542,13 @@ const AdminPanel = () => {
             </h1>
             {!isMoreTab && <p className="text-[11px] text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>}
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 transition-colors">
+            <Home className="w-4 h-4" />
+            Bíblia
+          </button>
         </div>
       </header>
 

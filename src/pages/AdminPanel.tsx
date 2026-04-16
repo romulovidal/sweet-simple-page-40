@@ -118,6 +118,7 @@ const AdminPanel = () => {
       bible_reference: editingPost.bible_reference?.trim() || null, image_url: editingPost.image_url?.trim() || null,
       is_active: editingPost.is_active ?? true, sort_order: editingPost.sort_order ?? 0,
     };
+    const isNew = !editingPost.id;
     if (editingPost.id) {
       const { error } = await supabase.from("admin_posts").update(data).eq("id", editingPost.id);
       if (error) { toast.error("Erro ao salvar"); return; }
@@ -126,6 +127,26 @@ const AdminPanel = () => {
       const { error } = await supabase.from("admin_posts").insert(data);
       if (error) { toast.error("Erro ao criar"); return; }
       toast.success("Postagem criada!");
+    }
+    // Auto-send push notification for new active posts
+    if (isNew && data.is_active) {
+      try {
+        const postTypeLabel = POST_TYPES.find(t => t.value === data.type)?.label || "Post";
+        await supabase.functions.invoke("send-push", {
+          body: {
+            title: `📢 ${postTypeLabel}: ${data.title.substring(0, 60)}`,
+            body: data.content.substring(0, 120) + (data.content.length > 120 ? "..." : ""),
+            url: "/",
+            ttl: 60 * 60 * 24,
+            urgency: "high",
+            type: "post",
+          },
+        });
+        toast.success("Notificação push enviada automaticamente!");
+      } catch (e) {
+        console.error("Push auto-send error:", e);
+        toast.error("Post criado, mas falha ao enviar push");
+      }
     }
     setEditingPost(null); fetchData();
   };

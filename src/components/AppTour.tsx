@@ -186,13 +186,13 @@ const STEPS: Step[] = [
     title: "⏳ Linha do Tempo (IA)",
     description:
       "Este botão laranja monta uma linha do tempo histórica do trecho: contexto, datas aproximadas, personagens e o que aconteceu antes/depois — perfeito para entender o pano de fundo.",
-    before: deselectVerse16,
-    waitMs: 250,
   },
   {
     title: "✨ Mais IA dentro da Bíblia",
     description:
       "No topo do capítulo: **Resumo do Capítulo** com IA. E o botão **ExegetAI** flutuante traz exegese profunda do trecho aberto.",
+    before: deselectVerse16,
+    waitMs: 250,
   },
   {
     title: "🙋 Pergunte à Bíblia",

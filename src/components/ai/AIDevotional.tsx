@@ -29,7 +29,8 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      const textWithLink = `${content}\n\n📖 Bíblia do Atalaia — https://sweet-simple-page-40.lovable.app`;
+      await navigator.clipboard.writeText(textWithLink);
       setCopied(true);
       toast.success("Reflexão copiada!");
       setTimeout(() => setCopied(false), 2000);

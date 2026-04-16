@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
   FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home,
+  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home, Sparkles,
 } from "lucide-react";
 import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
@@ -18,6 +18,7 @@ import AdminPushSender from "@/components/admin/AdminPushSender";
 import AdminRoles from "@/components/admin/AdminRoles";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
 import AdminCultoSchedule from "@/components/admin/AdminCultoSchedule";
+import AdminExegetAI from "@/components/admin/AdminExegetAI";
 import {
   Sheet,
   SheetContent,
@@ -50,7 +51,7 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log";
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },
@@ -62,6 +63,7 @@ const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[
 
 const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "cultos", label: "Cultos", icon: Calendar },
+  { id: "exegetai", label: "ExegetAI", icon: Sparkles },
   { id: "users", label: "Usuários", icon: Users },
   { id: "roles", label: "Administradores", icon: Shield },
   { id: "log", label: "Log de Atividades", icon: Clock },
@@ -564,6 +566,7 @@ const AdminPanel = () => {
             {tab === "roles" && <AdminRoles />}
             {tab === "log" && <AdminActivityLog />}
             {tab === "cultos" && <AdminCultoSchedule />}
+            {tab === "exegetai" && <AdminExegetAI />}
 
             {tab === "posts" && (
               <>

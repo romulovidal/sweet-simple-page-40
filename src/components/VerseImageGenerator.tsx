@@ -131,6 +131,7 @@ function drawGradientBackground(
 }
 
 const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGeneratorProps) => {
+  useBackHandler(open, onClose);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedBg, setSelectedBg] = useState<BackgroundOption>(BACKGROUNDS[0]);
   const [selectedFont, setSelectedFont] = useState(FONTS[0]);

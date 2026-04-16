@@ -44,6 +44,7 @@ const AIWordMeaning = ({ reference, text, enabled }: Props) => {
     <>
       <button
         onClick={handleOpen}
+        data-tour="bible-action-wordmeaning"
         className="p-2 rounded-lg bg-cyan-500/10 active:bg-cyan-500/20 transition-colors"
         title="Significado Original"
       >

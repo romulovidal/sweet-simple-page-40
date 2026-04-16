@@ -70,8 +70,8 @@ const PushPermissionPrompt = () => {
   if (phase === "waiting-system") {
     return (
       <>
-        <div className="fixed inset-0 bg-black/80 z-[99] backdrop-blur-sm" />
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div data-push-prompt="true" className="fixed inset-0 bg-black/80 z-[99] backdrop-blur-sm" />
+        <div data-push-prompt="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center animate-pulse">
@@ -100,8 +100,8 @@ const PushPermissionPrompt = () => {
   // Main modal — more aggressive styling, tiny dismiss
   return (
     <>
-      <div className="fixed inset-0 bg-black/80 z-[99] backdrop-blur-sm" />
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div data-push-prompt="true" className="fixed inset-0 bg-black/80 z-[99] backdrop-blur-sm" />
+      <div data-push-prompt="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center">

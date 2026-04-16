@@ -4,8 +4,7 @@ const TOUR_KEY = "tour_completed_v1";
 
 /** Detecta se o prompt de notificação está visível na tela. */
 function isPushPromptVisible() {
-  // O prompt usa z-[100] e cobre a tela inteira; checamos pelo overlay/dialog
-  return !!document.querySelector('[class*="z-[100]"]');
+  return !!document.querySelector('[data-push-prompt="true"]');
 }
 
 export function useAppTour() {
@@ -16,22 +15,23 @@ export function useAppTour() {
     if (completed) return;
 
     let timer: number | null = null;
+    let pollTimer: number | null = null;
     let cancelled = false;
 
     const tryStart = () => {
       if (cancelled) return;
       if (isPushPromptVisible()) {
-        // Aguarda o prompt fechar
+        // Tenta novamente em breve enquanto o prompt estiver visível
+        pollTimer = window.setTimeout(tryStart, 500);
         return;
       }
       setShouldStart(true);
     };
 
-    // Tenta após 1.5s; se prompt estiver aberto, espera evento de fechamento
+    // Tenta após 1.5s; se prompt estiver aberto, segue tentando + escuta evento
     timer = window.setTimeout(tryStart, 1500);
 
     const handlePromptClosed = () => {
-      // Pequeno delay para a animação de saída
       window.setTimeout(tryStart, 400);
     };
     window.addEventListener("push-prompt:closed", handlePromptClosed);
@@ -39,6 +39,7 @@ export function useAppTour() {
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
+      if (pollTimer) window.clearTimeout(pollTimer);
       window.removeEventListener("push-prompt:closed", handlePromptClosed);
     };
   }, []);

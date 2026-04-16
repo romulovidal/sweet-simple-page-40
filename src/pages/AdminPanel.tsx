@@ -421,7 +421,7 @@ const AdminPanel = () => {
                   const verseRange = vs ? `${vs}${ve ? `-${ve}` : ""}` : "";
                   const readingTitle = (r as Record<string, unknown>).title as string;
                   return (
-                    <div key={r.id} className="flex items-center gap-3 bg-background rounded-lg p-2.5">
+                    <div key={r.id} className="flex items-center gap-3 bg-[hsl(var(--dark-bg))] rounded-lg p-2.5">
                       <div className="flex-1 min-w-0">
                         {readingTitle && <p className="text-[10px] font-semibold text-primary truncate">{readingTitle}</p>}
                         <p className="text-sm">
@@ -637,7 +637,7 @@ const AdminPanel = () => {
                       {editingUser?.id === u.id ? (
                         <div className="mt-3 pt-3 border-t border-background space-y-2">
                           <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)}
-                            placeholder="Nome do usuário" className="bg-background border-none text-sm" />
+                            placeholder="Nome do usuário" className="bg-[hsl(var(--dark-bg))] border-none text-sm" />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={async () => {
                               const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
@@ -751,20 +751,20 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">Título do dia (opcional)</label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex: A Criação do Mundo" className="bg-background border-none" maxLength={100} />
+          placeholder="Ex: A Criação do Mundo" className="bg-[hsl(var(--dark-bg))] border-none" maxLength={100} />
       </div>
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">📖 Livro da Bíblia *</label>
         <button onClick={() => setShowBookPicker(!showBookPicker)}
-          className="w-full flex items-center justify-between bg-background rounded-md px-3 py-2 text-sm">
+          className="w-full flex items-center justify-between bg-[hsl(var(--dark-bg))] rounded-md px-3 py-2 text-sm">
           <span className={selectedBookData ? "" : "text-muted-foreground"}>
             {selectedBookData ? `${selectedBookData.name} (${selectedBookData.chapters} cap.)` : "Selecionar livro..."}
           </span>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
         {showBookPicker && (
-          <div className="mt-2 bg-background rounded-xl border border-border max-h-52 overflow-y-auto">
-            <div className="p-2 sticky top-0 bg-background">
+          <div className="mt-2 bg-[hsl(var(--dark-bg))] rounded-xl border border-border max-h-52 overflow-y-auto">
+            <div className="p-2 sticky top-0 bg-[hsl(var(--dark-bg))]">
               <Input value={bookSearch} onChange={(e) => setBookSearch(e.target.value)}
                 placeholder="Buscar livro..." className="bg-muted border-none text-sm h-8" />
             </div>
@@ -787,17 +787,17 @@ const SmartAddReadingForm = ({ onAdd, dayNumber, totalDays, isAddToDay }: {
           <label className="text-xs text-muted-foreground mb-1 block">Capítulo *</label>
           <Input type="number" value={chapter} onChange={(e) => setChapter(e.target.value)}
             placeholder="1" min={1} max={selectedBookData?.chapters || 150}
-            className="bg-background border-none" />
+            className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Vers. início</label>
           <Input type="number" value={verseStart} onChange={(e) => setVerseStart(e.target.value)}
-            placeholder="—" min={1} className="bg-background border-none" />
+            placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Vers. fim</label>
           <Input type="number" value={verseEnd} onChange={(e) => setVerseEnd(e.target.value)}
-            placeholder="—" min={1} className="bg-background border-none" />
+            placeholder="—" min={1} className="bg-[hsl(var(--dark-bg))] border-none" />
         </div>
       </div>
       <Button onClick={handleSubmit} className="w-full" size="sm">

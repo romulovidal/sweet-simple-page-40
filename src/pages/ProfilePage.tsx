@@ -48,6 +48,13 @@ const ProfilePage = () => {
     isPushEnabled().then(setPushEnabled);
   }, []);
 
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      setIsAdmin(!!data);
+    });
+  }, [user]);
+
   const togglePush = async () => {
     setPushLoading(true);
     try {

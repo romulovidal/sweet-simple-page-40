@@ -21,6 +21,11 @@ import VerseImageGenerator from "@/components/VerseImageGenerator";
 import VerseCompare from "@/components/VerseCompare";
 import ShareMenu from "@/components/ShareMenu";
 import ExegetAI from "@/components/ExegetAI";
+import AIChapterSummary from "@/components/ai/AIChapterSummary";
+import AIConnections from "@/components/ai/AIConnections";
+import AIWordMeaning from "@/components/ai/AIWordMeaning";
+import AITimeline from "@/components/ai/AITimeline";
+import { useAIFeatures } from "@/hooks/useAIFeatures";
 
 const APP_URL = window.location.origin;
 
@@ -34,6 +39,7 @@ const HIGHLIGHT_COLORS = [
 ];
 
 const BiblePage = () => {
+  const { features: aiFeatures } = useAIFeatures();
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
@@ -453,6 +459,26 @@ const BiblePage = () => {
                 <button onClick={() => setShowCompare(true)} className="p-2 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30" title="Comparar versões">
                   <GitCompareArrows className="w-4 h-4 text-primary-foreground" />
                 </button>
+                {(() => {
+                  const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);
+                  const selTexts = sortedSel.map((n) => verses.find((v) => v.number === n)).filter(Boolean) as BibleVerse[];
+                  const selRanges: string[] = [];
+                  let s = sortedSel[0], e = sortedSel[0];
+                  for (let i = 1; i < sortedSel.length; i++) {
+                    if (sortedSel[i] === e + 1) { e = sortedSel[i]; }
+                    else { selRanges.push(s === e ? `${s}` : `${s}-${e}`); s = e = sortedSel[i]; }
+                  }
+                  selRanges.push(s === e ? `${s}` : `${s}-${e}`);
+                  const selRef = `${selectedBook.name} ${selectedChapter}:${selRanges.join(",")}`;
+                  const selText = selTexts.map((v) => `${v.number} ${v.text}`).join("\n");
+                  return (
+                    <>
+                      <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
+                      <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
+                      <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -481,6 +507,16 @@ const BiblePage = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* AI Chapter Summary */}
+        {!loading && !error && verses.length > 0 && (
+          <AIChapterSummary
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            text={verses.map((v) => `${v.number} ${v.text}`).join("\n")}
+            enabled={aiFeatures.summary}
+          />
         )}
 
         <div className="px-5 py-4">

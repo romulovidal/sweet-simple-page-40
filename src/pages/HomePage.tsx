@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Loader2, Play, Heart, BookOpen, FileText, Megaphone } from "lucide-react";
+import AIDevotional from "@/components/ai/AIDevotional";
+import { useAIFeatures } from "@/hooks/useAIFeatures";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import { getDailyVerse } from "@/data/bible";
@@ -36,6 +38,7 @@ const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
 const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { features: aiFeatures } = useAIFeatures();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">("hoje");
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
@@ -261,6 +264,9 @@ const HomePage = () => {
                 </div>
               ) : (
                 <VerseCard text={verse.text} reference={verse.ref} />
+              )}
+              {!verseLoading && verse && (
+                <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
               )}
             </div>
 

@@ -509,6 +509,16 @@ const BiblePage = () => {
           </div>
         )}
 
+        {/* AI Chapter Summary */}
+        {!loading && !error && verses.length > 0 && (
+          <AIChapterSummary
+            bookName={selectedBook.name}
+            chapter={selectedChapter}
+            text={verses.map((v) => `${v.number} ${v.text}`).join("\n")}
+            enabled={aiFeatures.summary}
+          />
+        )}
+
         <div className="px-5 py-4">
           {highlightedVerse && !loading && !error && !hasSelection && (
             <div className="mb-4 bg-primary/10 rounded-xl px-4 py-3">

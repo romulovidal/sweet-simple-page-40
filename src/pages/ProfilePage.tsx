@@ -28,6 +28,7 @@ type ProfileView = "overview" | "saved" | "history" | "verse-history" | "setting
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { features: appFeatures } = useAppFeatures();
   const [savedVerses, setSavedVerses] = useLocalStorage<SavedVerse[]>("saved-verses", []);
   const [streak, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress, setProgress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);

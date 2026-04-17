@@ -15,6 +15,89 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // ===== MANUAL TRIGGER (admin button) =====
+    // POST body: { schedule_id, reminder_id?, custom_message? }
+    let body: { schedule_id?: string; reminder_id?: string; custom_message?: string } = {};
+    try {
+      if (req.method === "POST") body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    if (body.schedule_id) {
+      // Verify caller is admin
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await userClient.auth.getUser();
+      if (!userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: userData.user.id,
+        _role: "admin",
+      });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: schedule, error: schedErr } = await supabase
+        .from("culto_schedules")
+        .select("*")
+        .eq("id", body.schedule_id)
+        .single();
+      if (schedErr || !schedule) {
+        return new Response(JSON.stringify({ error: "Schedule not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const [h, m] = schedule.time.split(":").map(Number);
+      const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+      const pushBody = body.custom_message?.trim()
+        ? body.custom_message.trim()
+        : `Lembrete: o culto "${schedule.name}" será às ${timeStr}. Prepare seu coração! 🙏`;
+
+      const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          title: `⛪ ${schedule.name}`,
+          body: pushBody,
+          url: "/?tab=comunidade",
+          type: "culto-reminder-manual",
+          urgency: "high",
+        }),
+      });
+
+      const pushResult = await pushResponse.json();
+      console.log("Manual culto reminder sent:", pushResult);
+
+      return new Response(
+        JSON.stringify({ ok: true, manual: true, push: pushResult }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ===== SCHEDULED CRON CHECK =====
     // Get current time in Brasilia timezone (UTC-3)
     const now = new Date();
     const brasiliaOffset = -3 * 60;
@@ -25,7 +108,6 @@ Deno.serve(async (req) => {
     const currentTotalMinutes = currentHour * 60 + currentMinute;
     const today = brasiliaTime.toISOString().split("T")[0];
 
-    // Get all active schedules for today
     const { data: schedules, error } = await supabase
       .from("culto_schedules")
       .select("*")
@@ -39,7 +121,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all reminders for today's schedules
     const scheduleIds = schedules.map(s => s.id);
     const { data: allReminders, error: remError } = await supabase
       .from("culto_reminders")
@@ -56,10 +137,8 @@ Deno.serve(async (req) => {
       const cultoTotalMinutes = h * 60 + m;
       const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-      // Get reminders for this schedule
       const scheduleReminders = (allReminders || []).filter(r => r.schedule_id === schedule.id);
 
-      // If no reminders configured, use the legacy single reminder
       const remindersToCheck = scheduleReminders.length > 0
         ? scheduleReminders
         : [{
@@ -74,9 +153,8 @@ Deno.serve(async (req) => {
       for (const reminder of remindersToCheck) {
         const reminderTime = cultoTotalMinutes - reminder.minutes_before;
 
-        // Check if it's time to send (within 15-minute window)
-        if (currentTotalMinutes >= reminderTime && currentTotalMinutes < reminderTime + 15) {
-          // Check if already sent today
+        // Widened window to 20 minutes to avoid missing due to cron jitter (cron runs every 15min)
+        if (currentTotalMinutes >= reminderTime && currentTotalMinutes < reminderTime + 20) {
           if (reminder.last_sent) {
             const lastSent = reminder.last_sent.split("T")[0];
             if (lastSent === today) continue;
@@ -86,12 +164,10 @@ Deno.serve(async (req) => {
             ? `${Math.round(reminder.minutes_before / 60)}h`
             : `${reminder.minutes_before}min`;
 
-          // Use custom message or default
           const pushBody = reminder.message && reminder.message.trim()
             ? reminder.message.trim()
             : `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`;
 
-          // Send push notification
           const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
             method: "POST",
             headers: {
@@ -110,15 +186,12 @@ Deno.serve(async (req) => {
 
           const pushResult = await pushResponse.json();
 
-          // Mark reminder as sent
           if (reminder.id.startsWith("legacy_")) {
-            // Legacy: update the schedule itself
             await supabase
               .from("culto_schedules")
               .update({ last_reminder_sent: new Date().toISOString() })
               .eq("id", schedule.id);
           } else {
-            // New: update the specific reminder
             await supabase
               .from("culto_reminders")
               .update({ last_sent: new Date().toISOString() })

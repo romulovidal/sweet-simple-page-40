@@ -85,80 +85,140 @@ const HomePage = () => {
   const [adminPosts, setAdminPosts] = useState<AdminPost[]>(() => readJsonStorage<AdminPost[]>(ADMIN_POSTS_CACHE_KEY, []));
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
-    const cached = readJsonStorage<{ date: string; version?: number; verse: { text: string; ref: string } } | null>(
-      DAILY_VERSE_CACHE_KEY,
-      null
-    );
+    let cancelled = false;
 
-    // Invalidate stale or outdated-version cache
-    if (cached && (cached.date !== today || (cached.version ?? 0) < DAILY_VERSE_CACHE_VERSION)) {
-      localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
-    }
+    const getToday = () => new Date().toISOString().split("T")[0];
 
-    if (cached?.date === today && (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION && cached.verse?.text) {
-      setVerse(cached.verse);
-      setVerseLoading(false);
-      setVerseHistory((prev) => {
-        if (prev.some((e) => e.date === today)) return prev;
-        return [{ date: today, ...cached.verse }, ...prev].slice(0, 90);
-      });
-      return;
-    }
-
-    if (!isOnline) {
-      // Offline fallback
-      setVerse(getDailyVerse());
-      setVerseLoading(false);
-      return;
-    }
-
-    setVerseLoading(true);
-
-    // Try manual verse from queue first
-    const tryManualVerse = async (): Promise<{ text: string; ref: string } | null> => {
+    const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
       try {
         const { data: settings } = await supabase
           .from("admin_settings")
           .select("value")
           .eq("key", "daily_verse_mode")
-          .single();
+          .maybeSingle();
         const mode = settings?.value ? String(settings.value).replace(/"/g, "") : "auto";
-        if (mode === "manual") {
-          const { data: queueVerse } = await supabase
-            .from("daily_verse_queue")
-            .select("verse_text, verse_ref")
-            .eq("scheduled_date", today)
-            .single();
-          if (queueVerse) {
-            return { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
-          }
+        if (mode !== "manual") return null;
+        const { data: queueVerse } = await supabase
+          .from("daily_verse_queue")
+          .select("verse_text, verse_ref")
+          .eq("scheduled_date", today)
+          .maybeSingle();
+        if (queueVerse) {
+          return { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
         }
-      } catch { /* fall through to auto */ }
+      } catch { /* fall through */ }
       return null;
     };
 
-    tryManualVerse()
-      .then(async (manualVerse) => {
-        if (manualVerse) return manualVerse;
+    const loadVerse = async (force = false) => {
+      const today = getToday();
+      const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
+      const cached = readJsonStorage<CachedDailyVerse | null>(DAILY_VERSE_CACHE_KEY, null);
+
+      // Invalidate stale or outdated-version cache
+      if (cached && (cached.date !== today || (cached.version ?? 0) < DAILY_VERSE_CACHE_VERSION)) {
+        localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
+      }
+
+      const cacheValid =
+        !force &&
+        cached?.date === today &&
+        (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION &&
+        cached.verse?.text;
+
+      // Use cache for instant render, but still revalidate manual verse in background when online
+      if (cacheValid) {
+        if (!cancelled) {
+          setVerse(cached!.verse);
+          setVerseLoading(false);
+          setVerseHistory((prev) => {
+            if (prev.some((e) => e.date === today)) return prev;
+            return [{ date: today, ...cached!.verse }, ...prev].slice(0, 90);
+          });
+        }
+        // Background revalidation: if admin set a manual verse after cache was created,
+        // pick it up without waiting for the next day.
+        if (isOnline && cached?.source !== "manual") {
+          const manual = await tryManualVerse(today);
+          if (!cancelled && manual && manual.ref !== cached?.verse.ref) {
+            setVerse(manual);
+            writeJsonStorage(
+              DAILY_VERSE_CACHE_KEY,
+              { date: today, version: DAILY_VERSE_CACHE_VERSION, source: "manual", verse: manual },
+              false,
+              "cache"
+            );
+            setVerseHistory((prev) => {
+              const filtered = prev.filter((e) => e.date !== today);
+              return [{ date: today, ...manual }, ...filtered].slice(0, 90);
+            });
+          }
+        }
+        return;
+      }
+
+      if (!isOnline) {
+        if (!cancelled) {
+          setVerse(getDailyVerse());
+          setVerseLoading(false);
+        }
+        return;
+      }
+
+      if (!cancelled) setVerseLoading(true);
+
+      let nextVerse: { text: string; ref: string };
+      let source: "manual" | "auto" = "auto";
+
+      const manual = await tryManualVerse(today);
+      if (manual) {
+        nextVerse = manual;
+        source = "manual";
+      } else {
         try {
           const data = await getRandomVerse();
-          if (data?.text) {
-            return { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` };
-          }
-        } catch { /* fallback below */ }
-        return getDailyVerse();
-      })
-      .then((v) => {
-        setVerse(v);
-        writeJsonStorage(DAILY_VERSE_CACHE_KEY, { date: today, version: DAILY_VERSE_CACHE_VERSION, verse: v }, false, "cache");
-        setVerseHistory((prev) => {
-          if (prev.some((e) => e.date === today)) return prev;
-          return [{ date: today, ...v }, ...prev].slice(0, 90);
-        });
-      })
-      .finally(() => setVerseLoading(false));
+          nextVerse = data?.text
+            ? { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` }
+            : getDailyVerse();
+        } catch {
+          nextVerse = getDailyVerse();
+        }
+      }
+
+      if (cancelled) return;
+      setVerse(nextVerse);
+      setVerseLoading(false);
+      writeJsonStorage(
+        DAILY_VERSE_CACHE_KEY,
+        { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: nextVerse },
+        false,
+        "cache"
+      );
+      setVerseHistory((prev) => {
+        const filtered = prev.filter((e) => e.date !== today);
+        return [{ date: today, ...nextVerse }, ...filtered].slice(0, 90);
+      });
+    };
+
+    loadVerse();
+
+    // Re-check when the app regains focus or comes back online — handles cases where
+    // the app stayed open across midnight or admin pushed a manual verse mid-day.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadVerse();
+    };
+    const onFocus = () => loadVerse();
+    const onOnline = () => loadVerse(true);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+    };
   }, [setVerseHistory]);
 
   // Fetch DB plans

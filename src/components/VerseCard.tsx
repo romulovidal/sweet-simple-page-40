@@ -76,7 +76,7 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
   };
 
   const handleShare = async () => {
-    const text_ = `${reference}\n\n"${text}"\n\n📖 Leia na Bíblia`;
+    const text_ = `${reference}\n\n"${text}"\n\n📖 Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: text_ });

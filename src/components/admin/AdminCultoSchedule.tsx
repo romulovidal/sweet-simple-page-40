@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Church, Bell, Loader2, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Church, Bell, Loader2, MessageSquare, Send } from "lucide-react";
 
 const DAYS_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -124,6 +124,27 @@ const AdminCultoSchedule = () => {
   const toggleActive = async (schedule: CultoSchedule) => {
     await supabase.from("culto_schedules").update({ is_active: !schedule.is_active }).eq("id", schedule.id);
     loadSchedules();
+  };
+
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const sendManualReminder = async (schedule: CultoSchedule) => {
+    if (!window.confirm(`Enviar lembrete agora para todos os usuários sobre "${schedule.name}"?`)) return;
+    setSendingId(schedule.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("culto-reminder", {
+        body: { schedule_id: schedule.id },
+      });
+      if (error) throw error;
+      const pushResult = data?.push;
+      const sent = pushResult?.sent ?? 0;
+      const failed = pushResult?.failed ?? 0;
+      toast.success(`Lembrete enviado! ${sent} entregue${sent !== 1 ? "s" : ""}${failed ? `, ${failed} falha${failed > 1 ? "s" : ""}` : ""}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao enviar lembrete");
+    } finally {
+      setSendingId(null);
+    }
   };
 
   const startEditing = (schedule?: CultoSchedule) => {

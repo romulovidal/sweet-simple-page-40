@@ -365,12 +365,20 @@ const AdminCultoSchedule = () => {
                   </div>
                   <Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} />
                 </div>
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-bg))]">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-bg))] flex-wrap">
                   <button onClick={() => startEditing(s)} className="text-xs text-primary font-medium flex items-center gap-1">
                     <Edit2 className="w-3 h-3" /> Editar
                   </button>
                   <button onClick={() => setViewingScheduleId(s.id)} className="text-xs text-primary font-medium flex items-center gap-1">
                     <Bell className="w-3 h-3" /> Lembretes
+                  </button>
+                  <button
+                    onClick={() => sendManualReminder(s)}
+                    disabled={sendingId === s.id}
+                    className="text-xs text-primary font-medium flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {sendingId === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    Lembrete desse culto
                   </button>
                   <button onClick={() => remove(s.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
                     <Trash2 className="w-3 h-3" /> Excluir

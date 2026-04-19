@@ -122,6 +122,20 @@ const AdminDashboard = () => {
         ))}
       </div>
 
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Bell className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Versículo do Dia</span>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3 leading-relaxed">
+          Reenvia agora o push do versículo do dia (mesmo conteúdo exibido no app).
+        </p>
+        <Button onClick={resendDailyVerse} disabled={resending} className="w-full" size="sm">
+          {resending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+          {resending ? "Enviando..." : "Reenviar push do versículo"}
+        </Button>
+      </div>
+
       {stats.topVerses.length > 0 && (
         <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">

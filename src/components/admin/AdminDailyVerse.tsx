@@ -33,23 +33,24 @@ const AdminDailyVerse = () => {
 
   const loadData = async () => {
     setLoading(true);
-    // Load mode setting
-    const { data: settings } = await supabase
-      .from("admin_settings")
-      .select("value")
-      .eq("key", "daily_verse_mode")
-      .single();
-    if (settings) {
-      const val = typeof settings.value === "string" ? settings.value : JSON.stringify(settings.value);
+    const [{ data: modeRow }, { data: versionRow }, { data: queueData }] = await Promise.all([
+      supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
+      supabase
+        .from("daily_verse_queue")
+        .select("*")
+        .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .order("scheduled_date", { ascending: true }),
+    ]);
+
+    if (modeRow) {
+      const val = typeof modeRow.value === "string" ? modeRow.value : JSON.stringify(modeRow.value);
       setMode(val.replace(/"/g, "") as "auto" | "manual");
     }
-
-    // Load queue
-    const { data: queueData } = await supabase
-      .from("daily_verse_queue")
-      .select("*")
-      .gte("scheduled_date", new Date().toISOString().split("T")[0])
-      .order("scheduled_date", { ascending: true });
+    if (versionRow) {
+      const val = typeof versionRow.value === "string" ? versionRow.value : JSON.stringify(versionRow.value);
+      setVersion((val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase());
+    }
     setQueue(queueData || []);
     setLoading(false);
   };
@@ -61,6 +62,14 @@ const AdminDailyVerse = () => {
       .from("admin_settings")
       .upsert({ key: "daily_verse_mode", value: JSON.stringify(newMode), updated_at: new Date().toISOString() }, { onConflict: "key" });
     toast.success(newMode === "manual" ? "Modo manual ativado" : "Modo automático ativado");
+  };
+
+  const changeVersion = async (newVersion: string) => {
+    setVersion(newVersion);
+    await supabase
+      .from("admin_settings")
+      .upsert({ key: DAILY_VERSE_VERSION_KEY, value: JSON.stringify(newVersion), updated_at: new Date().toISOString() }, { onConflict: "key" });
+    toast.success(`Versão alterada para ${BIBLE_VERSIONS.find(v => v.id === newVersion)?.shortName}`);
   };
 
   const saveVerse = async () => {

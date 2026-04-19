@@ -160,21 +160,35 @@ const HomePage = () => {
             return [{ date: today, ...cached!.verse }, ...prev].slice(0, 90);
           });
         }
-        // Background revalidation: if admin set a manual verse after cache was created,
+        // Background revalidation: if admin set a manual verse OR changed version,
         // pick it up without waiting for the next day.
-        if (isOnline && cached?.source !== "manual") {
-          const manual = await tryManualVerse(today);
-          if (!cancelled && manual && manual.ref !== cached?.verse.ref) {
-            setVerse(manual);
+        if (isOnline) {
+          const activeVersion = await getActiveVersion();
+          let candidate: { text: string; ref: string } | null = null;
+
+          if (cached?.source !== "manual") {
+            const manual = await tryManualVerse(today);
+            if (manual) candidate = await applyVersion(manual, activeVersion);
+          }
+
+          // If still no candidate, re-translate the cached ref into the active version
+          if (!candidate) {
+            const translated = await applyVersion(cached!.verse, activeVersion);
+            if (translated.text !== cached!.verse.text) candidate = translated;
+          }
+
+          if (!cancelled && candidate && candidate.text !== cached?.verse.text) {
+            const source = cached?.source === "manual" ? "manual" : (await tryManualVerse(today)) ? "manual" : "auto";
+            setVerse(candidate);
             writeJsonStorage(
               DAILY_VERSE_CACHE_KEY,
-              { date: today, version: DAILY_VERSE_CACHE_VERSION, source: "manual", verse: manual },
+              { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: candidate },
               false,
               "cache"
             );
             setVerseHistory((prev) => {
               const filtered = prev.filter((e) => e.date !== today);
-              return [{ date: today, ...manual }, ...filtered].slice(0, 90);
+              return [{ date: today, ...candidate! }, ...filtered].slice(0, 90);
             });
           }
         }

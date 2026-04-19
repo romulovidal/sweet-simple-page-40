@@ -19,6 +19,26 @@ interface DashboardStats {
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resending, setResending] = useState(false);
+
+  const resendDailyVerse = async () => {
+    setResending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-verse-push", {
+        method: "POST",
+        body: {},
+      });
+      if (error) throw error;
+      toast.success(
+        `Push reenviado! ${data?.sent || 0} entregues${data?.failed ? `, ${data.failed} falhas` : ""} • ${data?.verse || ""}`
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao reenviar versículo do dia");
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     loadStats();

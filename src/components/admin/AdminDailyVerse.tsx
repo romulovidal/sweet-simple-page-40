@@ -18,9 +18,14 @@ interface VerseQueueItem {
 
 const AdminDailyVerse = () => {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
+  const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   useEffect(() => {
     loadData();

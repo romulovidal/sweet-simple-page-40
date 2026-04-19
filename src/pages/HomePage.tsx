@@ -90,6 +90,29 @@ const HomePage = () => {
 
     const getToday = () => new Date().toISOString().split("T")[0];
 
+    const getActiveVersion = async (): Promise<string> => {
+      try {
+        const { data } = await supabase
+          .from("admin_settings")
+          .select("value")
+          .eq("key", DAILY_VERSE_VERSION_KEY)
+          .maybeSingle();
+        if (!data) return DEFAULT_DAILY_VERSION;
+        const val = typeof data.value === "string" ? data.value : JSON.stringify(data.value);
+        return (val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase();
+      } catch {
+        return DEFAULT_DAILY_VERSION;
+      }
+    };
+
+    const applyVersion = async (
+      v: { text: string; ref: string },
+      versionId: string
+    ): Promise<{ text: string; ref: string }> => {
+      const text = await getVerseTextByReference(v.ref, versionId);
+      return text ? { text, ref: v.ref } : v;
+    };
+
     const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
       try {
         const { data: settings } = await supabase

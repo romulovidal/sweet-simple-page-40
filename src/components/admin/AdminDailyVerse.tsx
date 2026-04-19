@@ -159,6 +159,29 @@ const AdminDailyVerse = () => {
         </div>
       </div>
 
+      {/* Version selector */}
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Languages className="w-4 h-4 text-primary" />
+          <p className="font-semibold text-sm">Versão da Bíblia</p>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3">
+          Versão usada no versículo do dia (app + push). Se a versão escolhida não tiver o texto, será usado ARC como fallback.
+        </p>
+        <Select value={version} onValueChange={changeVersion}>
+          <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {BIBLE_VERSIONS.map((v) => (
+              <SelectItem key={v.id} value={v.id}>
+                {v.shortName} — {v.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {mode === "manual" && (
         <>
           <Button onClick={() => setEditing({ scheduled_date: new Date().toISOString().split("T")[0] })} className="w-full">

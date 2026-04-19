@@ -223,6 +223,10 @@ const HomePage = () => {
         }
       }
 
+      // Apply admin-chosen Bible version (with ARC fallback inside the helper)
+      const activeVersion = await getActiveVersion();
+      nextVerse = await applyVersion(nextVerse, activeVersion);
+
       if (cancelled) return;
       setVerse(nextVerse);
       setVerseLoading(false);

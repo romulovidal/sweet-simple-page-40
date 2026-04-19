@@ -5,7 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const verses = [
+// Fallback verses (used only if no manual queue + API fails)
+const fallbackVerses = [
   { text: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.", ref: "João 3:16" },
   { text: "O Senhor é o meu pastor; nada me faltará.", ref: "Salmos 23:1" },
   { text: "Tudo posso naquele que me fortalece.", ref: "Filipenses 4:13" },
@@ -22,6 +23,33 @@ const verses = [
   { text: "Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.", ref: "Salmos 46:1" },
 ];
 
+async function resolveTodayVerse(
+  supabase: ReturnType<typeof createClient>
+): Promise<{ text: string; ref: string; source: string }> {
+  const today = new Date().toISOString().split("T")[0];
+
+  // 1) Try manual queue (admin scheduled)
+  try {
+    const { data: queueVerse } = await supabase
+      .from("daily_verse_queue")
+      .select("verse_text, verse_ref")
+      .eq("scheduled_date", today)
+      .maybeSingle();
+    if (queueVerse) {
+      return { text: queueVerse.verse_text, ref: queueVerse.verse_ref, source: "manual" };
+    }
+  } catch (e) {
+    console.error("Queue lookup failed:", e);
+  }
+
+  // 2) Match the app's deterministic fallback (same getDailyVerse logic: day-of-year mod length)
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  const v = fallbackVerses[dayOfYear % fallbackVerses.length];
+  return { ...v, source: "auto" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,14 +58,40 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Pick verse of the day
-    const dayOfYear = Math.floor(
-      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-    );
-    const verse = verses[dayOfYear % verses.length];
+    // Manual trigger from admin requires admin role
+    let isManualTrigger = false;
+    if (req.method === "POST") {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader && !authHeader.includes(serviceKey)) {
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const userClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user } } = await userClient.auth.getUser();
+        if (!user) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const { data: isAdmin } = await supabase.rpc("has_role", {
+          _user_id: user.id,
+          _role: "admin",
+        });
+        if (!isAdmin) {
+          return new Response(JSON.stringify({ error: "Admin only" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        isManualTrigger = true;
+      }
+    }
 
-    // Call send-push function
+    const verse = await resolveTodayVerse(supabase);
+
     const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
       method: "POST",
       headers: {
@@ -56,9 +110,20 @@ Deno.serve(async (req) => {
 
     const result = await response.json();
 
-    return new Response(JSON.stringify({ verse: verse.ref, ...result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Log when manually triggered
+    if (isManualTrigger) {
+      await supabase.from("push_log").insert({
+        title: `📖 ${verse.ref} (Versículo do dia)`,
+        body: verse.text,
+        total_sent: result?.sent || 0,
+        total_failed: result?.failed || 0,
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ verse: verse.ref, source: verse.source, ...result }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (e) {
     console.error("Error:", e);
     return new Response(JSON.stringify({ error: "Internal error" }), {

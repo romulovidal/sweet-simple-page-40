@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2 } from "lucide-react";
+import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface DashboardStats {
   totalUsers: number;
@@ -17,6 +19,26 @@ interface DashboardStats {
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resending, setResending] = useState(false);
+
+  const resendDailyVerse = async () => {
+    setResending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-verse-push", {
+        method: "POST",
+        body: {},
+      });
+      if (error) throw error;
+      toast.success(
+        `Push reenviado! ${data?.sent || 0} entregues${data?.failed ? `, ${data.failed} falhas` : ""} • ${data?.verse || ""}`
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao reenviar versículo do dia");
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     loadStats();
@@ -98,6 +120,20 @@ const AdminDashboard = () => {
             <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">{card.sub}</p>
           </div>
         ))}
+      </div>
+
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Bell className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Versículo do Dia</span>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3 leading-relaxed">
+          Reenvia agora o push do versículo do dia (mesmo conteúdo exibido no app).
+        </p>
+        <Button onClick={resendDailyVerse} disabled={resending} className="w-full" size="sm">
+          {resending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+          {resending ? "Enviando..." : "Reenviar push do versículo"}
+        </Button>
       </div>
 
       {stats.topVerses.length > 0 && (

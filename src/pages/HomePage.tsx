@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
+import { getVerseTextByReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
@@ -33,7 +34,7 @@ interface DBPlan {
 }
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 3; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 4; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;
@@ -89,6 +90,29 @@ const HomePage = () => {
 
     const getToday = () => new Date().toISOString().split("T")[0];
 
+    const getActiveVersion = async (): Promise<string> => {
+      try {
+        const { data } = await supabase
+          .from("admin_settings")
+          .select("value")
+          .eq("key", DAILY_VERSE_VERSION_KEY)
+          .maybeSingle();
+        if (!data) return DEFAULT_DAILY_VERSION;
+        const val = typeof data.value === "string" ? data.value : JSON.stringify(data.value);
+        return (val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase();
+      } catch {
+        return DEFAULT_DAILY_VERSION;
+      }
+    };
+
+    const applyVersion = async (
+      v: { text: string; ref: string },
+      versionId: string
+    ): Promise<{ text: string; ref: string }> => {
+      const text = await getVerseTextByReference(v.ref, versionId);
+      return text ? { text, ref: v.ref } : v;
+    };
+
     const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
       try {
         const { data: settings } = await supabase
@@ -136,21 +160,35 @@ const HomePage = () => {
             return [{ date: today, ...cached!.verse }, ...prev].slice(0, 90);
           });
         }
-        // Background revalidation: if admin set a manual verse after cache was created,
+        // Background revalidation: if admin set a manual verse OR changed version,
         // pick it up without waiting for the next day.
-        if (isOnline && cached?.source !== "manual") {
-          const manual = await tryManualVerse(today);
-          if (!cancelled && manual && manual.ref !== cached?.verse.ref) {
-            setVerse(manual);
+        if (isOnline) {
+          const activeVersion = await getActiveVersion();
+          let candidate: { text: string; ref: string } | null = null;
+
+          if (cached?.source !== "manual") {
+            const manual = await tryManualVerse(today);
+            if (manual) candidate = await applyVersion(manual, activeVersion);
+          }
+
+          // If still no candidate, re-translate the cached ref into the active version
+          if (!candidate) {
+            const translated = await applyVersion(cached!.verse, activeVersion);
+            if (translated.text !== cached!.verse.text) candidate = translated;
+          }
+
+          if (!cancelled && candidate && candidate.text !== cached?.verse.text) {
+            const source = cached?.source === "manual" ? "manual" : (await tryManualVerse(today)) ? "manual" : "auto";
+            setVerse(candidate);
             writeJsonStorage(
               DAILY_VERSE_CACHE_KEY,
-              { date: today, version: DAILY_VERSE_CACHE_VERSION, source: "manual", verse: manual },
+              { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: candidate },
               false,
               "cache"
             );
             setVerseHistory((prev) => {
               const filtered = prev.filter((e) => e.date !== today);
-              return [{ date: today, ...manual }, ...filtered].slice(0, 90);
+              return [{ date: today, ...candidate! }, ...filtered].slice(0, 90);
             });
           }
         }
@@ -184,6 +222,10 @@ const HomePage = () => {
           nextVerse = getDailyVerse();
         }
       }
+
+      // Apply admin-chosen Bible version (with ARC fallback inside the helper)
+      const activeVersion = await getActiveVersion();
+      nextVerse = await applyVersion(nextVerse, activeVersion);
 
       if (cancelled) return;
       setVerse(nextVerse);

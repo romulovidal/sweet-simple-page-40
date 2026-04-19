@@ -5,7 +5,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fallback verses (used only if no manual queue + API fails)
+// Public site URL where /biblias/*.json are hosted
+const APP_BASE_URL = "https://biblia.atalaias.online";
+
+const VERSION_FILES: Record<string, string> = {
+  ara: "ARA",
+  arc: "ARC",
+  acf: "ACF",
+  nvi: "NVI",
+  ntlh: "NTLH",
+  kja: "KJA",
+};
+
+const DEFAULT_VERSION = "arc";
+
+// Fallback verses (used only if no manual queue + no remote bible available)
 const fallbackVerses = [
   { text: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.", ref: "João 3:16" },
   { text: "O Senhor é o meu pastor; nada me faltará.", ref: "Salmos 23:1" },
@@ -23,12 +37,77 @@ const fallbackVerses = [
   { text: "Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.", ref: "Salmos 46:1" },
 ];
 
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+function parseRef(ref: string): { bookName: string; chapter: number; verse: number } | null {
+  const m = ref.trim().match(/^(.+?)\s+(\d+):(\d+)/);
+  if (!m) return null;
+  return { bookName: m[1].trim(), chapter: parseInt(m[2], 10), verse: parseInt(m[3], 10) };
+}
+
+const bibleCache = new Map<string, any[]>();
+
+async function fetchBibleVersion(versionId: string): Promise<any[] | null> {
+  const fileName = VERSION_FILES[versionId];
+  if (!fileName) return null;
+  const cached = bibleCache.get(fileName);
+  if (cached) return cached;
+  try {
+    const res = await fetch(`${APP_BASE_URL}/biblias/${fileName}.json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    bibleCache.set(fileName, data);
+    return data;
+  } catch (e) {
+    console.error(`Failed to fetch bible ${versionId}:`, e);
+    return null;
+  }
+}
+
+async function getVerseTextInVersion(ref: string, versionId: string): Promise<string | null> {
+  const parsed = parseRef(ref);
+  if (!parsed) return null;
+  const tryV = async (v: string) => {
+    const data = await fetchBibleVersion(v);
+    if (!data) return null;
+    const target = norm(parsed.bookName);
+    const book = data.find((b: any) => norm(b.name) === target);
+    if (!book) return null;
+    const chapter = book.chapters[parsed.chapter - 1];
+    if (!chapter) return null;
+    const text = chapter[parsed.verse - 1];
+    return text ? String(text).trim() : null;
+  };
+  const primary = await tryV(versionId);
+  if (primary) return primary;
+  if (versionId !== DEFAULT_VERSION) return await tryV(DEFAULT_VERSION);
+  return null;
+}
+
+async function getActiveVersion(supabase: ReturnType<typeof createClient>): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from("admin_settings")
+      .select("value")
+      .eq("key", "daily_verse_version")
+      .maybeSingle();
+    if (!data) return DEFAULT_VERSION;
+    const val = typeof data.value === "string" ? data.value : JSON.stringify(data.value);
+    return (val.replace(/"/g, "") || DEFAULT_VERSION).toLowerCase();
+  } catch {
+    return DEFAULT_VERSION;
+  }
+}
+
 async function resolveTodayVerse(
   supabase: ReturnType<typeof createClient>
 ): Promise<{ text: string; ref: string; source: string }> {
   const today = new Date().toISOString().split("T")[0];
 
-  // 1) Try manual queue (admin scheduled)
+  // 1) Try manual queue
+  let baseVerse: { text: string; ref: string } | null = null;
+  let source = "auto";
   try {
     const { data: queueVerse } = await supabase
       .from("daily_verse_queue")
@@ -36,18 +115,30 @@ async function resolveTodayVerse(
       .eq("scheduled_date", today)
       .maybeSingle();
     if (queueVerse) {
-      return { text: queueVerse.verse_text, ref: queueVerse.verse_ref, source: "manual" };
+      baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
+      source = "manual";
     }
   } catch (e) {
     console.error("Queue lookup failed:", e);
   }
 
-  // 2) Match the app's deterministic fallback (same getDailyVerse logic: day-of-year mod length)
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-  );
-  const v = fallbackVerses[dayOfYear % fallbackVerses.length];
-  return { ...v, source: "auto" };
+  // 2) Deterministic fallback (matches app)
+  if (!baseVerse) {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+    );
+    baseVerse = fallbackVerses[dayOfYear % fallbackVerses.length];
+  }
+
+  // 3) Translate to admin-selected version (ARC fallback inside helper)
+  const versionId = await getActiveVersion(supabase);
+  const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
+
+  return {
+    ref: baseVerse.ref,
+    text: versionedText || baseVerse.text,
+    source: `${source}/${versionId}`,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -60,7 +151,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Manual trigger from admin requires admin role
     let isManualTrigger = false;
     if (req.method === "POST") {
       const authHeader = req.headers.get("Authorization");
@@ -110,7 +200,6 @@ Deno.serve(async (req) => {
 
     const result = await response.json();
 
-    // Log when manually triggered
     if (isManualTrigger) {
       await supabase.from("push_log").insert({
         title: `📖 ${verse.ref} (Versículo do dia)`,

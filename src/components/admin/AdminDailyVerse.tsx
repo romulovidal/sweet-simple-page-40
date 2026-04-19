@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, BookOpen, Loader2, Calendar } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
 interface VerseQueueItem {
   id: string;
@@ -16,6 +18,7 @@ interface VerseQueueItem {
 
 const AdminDailyVerse = () => {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
+  const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
@@ -24,25 +27,30 @@ const AdminDailyVerse = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
   const loadData = async () => {
     setLoading(true);
-    // Load mode setting
-    const { data: settings } = await supabase
-      .from("admin_settings")
-      .select("value")
-      .eq("key", "daily_verse_mode")
-      .single();
-    if (settings) {
-      const val = typeof settings.value === "string" ? settings.value : JSON.stringify(settings.value);
+    const [{ data: modeRow }, { data: versionRow }, { data: queueData }] = await Promise.all([
+      supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
+      supabase
+        .from("daily_verse_queue")
+        .select("*")
+        .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .order("scheduled_date", { ascending: true }),
+    ]);
+
+    if (modeRow) {
+      const val = typeof modeRow.value === "string" ? modeRow.value : JSON.stringify(modeRow.value);
       setMode(val.replace(/"/g, "") as "auto" | "manual");
     }
-
-    // Load queue
-    const { data: queueData } = await supabase
-      .from("daily_verse_queue")
-      .select("*")
-      .gte("scheduled_date", new Date().toISOString().split("T")[0])
-      .order("scheduled_date", { ascending: true });
+    if (versionRow) {
+      const val = typeof versionRow.value === "string" ? versionRow.value : JSON.stringify(versionRow.value);
+      setVersion((val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase());
+    }
     setQueue(queueData || []);
     setLoading(false);
   };
@@ -54,6 +62,14 @@ const AdminDailyVerse = () => {
       .from("admin_settings")
       .upsert({ key: "daily_verse_mode", value: JSON.stringify(newMode), updated_at: new Date().toISOString() }, { onConflict: "key" });
     toast.success(newMode === "manual" ? "Modo manual ativado" : "Modo automático ativado");
+  };
+
+  const changeVersion = async (newVersion: string) => {
+    setVersion(newVersion);
+    await supabase
+      .from("admin_settings")
+      .upsert({ key: DAILY_VERSE_VERSION_KEY, value: JSON.stringify(newVersion), updated_at: new Date().toISOString() }, { onConflict: "key" });
+    toast.success(`Versão alterada para ${BIBLE_VERSIONS.find(v => v.id === newVersion)?.shortName}`);
   };
 
   const saveVerse = async () => {
@@ -141,6 +157,29 @@ const AdminDailyVerse = () => {
             <Switch checked={mode === "manual"} onCheckedChange={toggleMode} />
           </div>
         </div>
+      </div>
+
+      {/* Version selector */}
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Languages className="w-4 h-4 text-primary" />
+          <p className="font-semibold text-sm">Versão da Bíblia</p>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3">
+          Versão usada no versículo do dia (app + push). Se a versão escolhida não tiver o texto, será usado ARC como fallback.
+        </p>
+        <Select value={version} onValueChange={changeVersion}>
+          <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {BIBLE_VERSIONS.map((v) => (
+              <SelectItem key={v.id} value={v.id}>
+                {v.shortName} — {v.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {mode === "manual" && (

@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
+import { getVerseTextByReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 

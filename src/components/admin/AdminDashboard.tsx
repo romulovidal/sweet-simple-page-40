@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2 } from "lucide-react";
+import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface DashboardStats {
   totalUsers: number;

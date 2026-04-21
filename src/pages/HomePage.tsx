@@ -33,7 +33,7 @@ interface DBPlan {
 }
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 4; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 5; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;

@@ -107,10 +107,29 @@ serve(async (req) => {
       }
     }
 
-    // Get prompt
+    // Get prompt — start from default, override with admin custom prompt if present.
     let systemPrompt = TOOL_PROMPTS[tool];
 
-    // For ask-bible, load custom prompt from admin_settings
+    // Generic per-tool overrides stored in admin_settings.ai_tool_prompts = { [tool]: "..." }
+    // Applies to: summary, devotional, connections, word-meaning, timeline, plan-generator
+    if (tool !== "ask-bible") {
+      try {
+        const { data: promptsRow } = await supabase
+          .from("admin_settings")
+          .select("value")
+          .eq("key", "ai_tool_prompts")
+          .maybeSingle();
+        const prompts = (promptsRow?.value as Record<string, string>) || {};
+        const custom = prompts?.[tool];
+        if (typeof custom === "string" && custom.trim().length > 0) {
+          systemPrompt = custom;
+        }
+      } catch (e) {
+        console.error("Failed to load custom tool prompts:", e);
+      }
+    }
+
+    // For ask-bible, load custom prompt from admin_settings (legacy key)
     if (tool === "ask-bible") {
       const DEFAULT_ASK_PROMPT = `Você é um teólogo e pastor experiente. O usuário fará perguntas sobre a Bíblia, doutrina cristã, vida espiritual e temas relacionados.
 Responda de forma:

@@ -579,6 +579,7 @@ const AdminPanel = () => {
             {tab === "cultos" && <AdminCultoSchedule />}
             {tab === "exegetai" && <AdminExegetAI />}
             {tab === "ai" && <AdminAISettings />}
+            {tab === "ai-prompts" && <AdminAIPrompts />}
             {tab === "app-features" && <AdminAppFeatures />}
             {tab === "ask-bible-prompt" && <AdminAskBiblePrompt />}
             {tab === "prayers" && <AdminPrayerRequests />}

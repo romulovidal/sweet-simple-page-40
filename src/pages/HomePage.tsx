@@ -7,7 +7,6 @@ import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
 import { getDailyVerse } from "@/data/bible";
-import { getRandomVerse } from "@/services/bibleApi";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +33,7 @@ interface DBPlan {
 }
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 4; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 5; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;
@@ -213,14 +212,8 @@ const HomePage = () => {
         nextVerse = manual;
         source = "manual";
       } else {
-        try {
-          const data = await getRandomVerse();
-          nextVerse = data?.text
-            ? { text: data.text, ref: `${data.book.name} ${data.chapter}:${data.number}` }
-            : getDailyVerse();
-        } catch {
-          nextVerse = getDailyVerse();
-        }
+        // Determinístico (mesmo índice usado pelo edge function de push)
+        nextVerse = getDailyVerse();
       }
 
       // Apply admin-chosen Bible version (with ARC fallback inside the helper)

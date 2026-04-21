@@ -24,6 +24,7 @@ import AdminAISettings from "@/components/admin/AdminAISettings";
 import AdminAppFeatures from "@/components/admin/AdminAppFeatures";
 import AdminAskBiblePrompt from "@/components/admin/AdminAskBiblePrompt";
 import AdminPrayerRequests from "@/components/admin/AdminPrayerRequests";
+import AdminAIPrompts from "@/components/admin/AdminAIPrompts";
 import {
   Sheet,
   SheetContent,
@@ -56,7 +57,7 @@ const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas",
 
 const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "app-features" | "ask-bible-prompt" | "prayers";
+type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
 
 const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },
@@ -70,6 +71,7 @@ const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] 
   { id: "cultos", label: "Cultos", icon: Calendar },
   { id: "prayers", label: "Orações", icon: HandHeart },
   { id: "ai", label: "IA", icon: BrainCircuit },
+  { id: "ai-prompts", label: "Prompts IA", icon: Sparkles },
   { id: "app-features", label: "Funcionalidades", icon: Settings2 },
   { id: "exegetai", label: "ExegettAI", icon: Sparkles },
   { id: "ask-bible-prompt", label: "Pergunte à Bíblia", icon: MessageCircleQuestion },
@@ -577,6 +579,7 @@ const AdminPanel = () => {
             {tab === "cultos" && <AdminCultoSchedule />}
             {tab === "exegetai" && <AdminExegetAI />}
             {tab === "ai" && <AdminAISettings />}
+            {tab === "ai-prompts" && <AdminAIPrompts />}
             {tab === "app-features" && <AdminAppFeatures />}
             {tab === "ask-bible-prompt" && <AdminAskBiblePrompt />}
             {tab === "prayers" && <AdminPrayerRequests />}

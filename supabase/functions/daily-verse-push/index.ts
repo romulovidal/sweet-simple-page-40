@@ -12,7 +12,8 @@ const VERSION_FILES: Record<string, string> = {
 };
 const DEFAULT_VERSION = "arc";
 
-const fallbackVerses = [
+// LISTA OFICIAL E DETERMINÍSTICA (IDÊNTICA AO APP)
+const officialVerses = [
   { text: "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.", ref: "João 3:16" },
   { text: "O Senhor é o meu pastor; nada me faltará.", ref: "Salmos 23:1" },
   { text: "Tudo posso naquele que me fortalece.", ref: "Filipenses 4:13" },
@@ -77,14 +78,12 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get settings
     const { data: settings } = await supabase.from("admin_settings").select("key, value");
     const getSetting = (k: string) => settings?.find(s => s.key === k)?.value;
     
     const configTime = String(getSetting("daily_verse_push_time") || "08:00").replace(/"/g, "");
     const versionId = String(getSetting("daily_verse_version") || DEFAULT_VERSION).replace(/"/g, "").toLowerCase();
 
-    // Check if it's manual trigger (from Admin button)
     const authHeader = req.headers.get("Authorization");
     const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
 
@@ -99,22 +98,26 @@ serve(async (req) => {
       }
     }
 
-    // Resolve Verse
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(new Date()).split("/").reverse().join("-");
+
     let baseVerse: { text: string; ref: string } | null = null;
     
     const { data: queueVerse } = await supabase.from("daily_verse_queue").select("verse_text, verse_ref").eq("scheduled_date", today).maybeSingle();
+    
     if (queueVerse) {
       baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
     } else {
-      const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-      baseVerse = fallbackVerses[dayOfYear % fallbackVerses.length];
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 0);
+      const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
+      baseVerse = officialVerses[dayOfYear % officialVerses.length];
     }
 
     const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
     const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
 
-    // Send Push
     const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
@@ -128,7 +131,7 @@ serve(async (req) => {
     });
 
     const pushResult = await response.json();
-    return new Response(JSON.stringify({ success: true, verse: finalVerse.ref, pushResult }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ success: true, date: today, verse: finalVerse.ref, pushResult }), { headers: corsHeaders });
   } catch (e) {
     console.error(e);
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });

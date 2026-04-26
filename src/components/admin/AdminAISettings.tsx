@@ -8,7 +8,7 @@ import {
 import type { AIFeatures } from "@/hooks/useAIFeatures";
 
 const FEATURES_CONFIG: { key: keyof AIFeatures; label: string; description: string; icon: typeof BrainCircuit; color: string }[] = [
-  { key: "exegetai", label: "ExegettAI", description: "Exegese bíblica completa com inteligência artificial", icon: BrainCircuit, color: "text-amber-400" },
+  { key: "exegetai", label: "ExegettAI", description: "Exegese bíblica completa com inteligência espiritual", icon: BrainCircuit, color: "text-amber-400" },
   { key: "summary", label: "Resumo do Capítulo", description: "Gera um resumo acadêmico ao abrir um capítulo", icon: BookOpen, color: "text-blue-400" },
   { key: "devotional", label: "Devocional Diário", description: "Reflexão devocional para o versículo do dia", icon: Heart, color: "text-purple-400" },
   { key: "connections", label: "Conexões Bíblicas", description: "Referências cruzadas e paralelos temáticos", icon: Link2, color: "text-emerald-400" },
@@ -79,8 +79,8 @@ const AdminAISettings = () => {
           <BrainCircuit className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold">Recursos de IA</h2>
-          <p className="text-xs text-[hsl(var(--dark-muted))]">Ative ou desative cada recurso de inteligência artificial</p>
+          <h2 className="text-lg font-bold">Recursos de Inteligência Espiritual</h2>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">Ative ou desative cada recurso inteligente</p>
         </div>
       </div>
 

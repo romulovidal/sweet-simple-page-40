@@ -121,7 +121,7 @@ const AskBible = ({ enabled }: AskBibleProps) => {
         </div>
         <div className="text-left flex-1">
           <p className="text-sm font-semibold">Pergunte à Bíblia</p>
-          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Tire suas dúvidas com IA</p>
+          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Tire suas dúvidas com Inteligência Espiritual</p>
         </div>
       </button>
 

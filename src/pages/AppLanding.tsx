@@ -5,7 +5,7 @@ const APP_URL = "https://biblia.atalaias.online/";
 
 const features = [
   { icon: BookOpen, title: "Bíblia Completa", desc: "Acesso a múltiplas versões (ACF, ARA, ARC, KJA, NTLH, NVI) com leitura offline." },
-  { icon: Sparkles, title: "Inteligência com a Palavra", desc: "Pergunte à Bíblia, receba devocionais, resumos de capítulos e exegese com IA." },
+  { icon: Sparkles, title: "Inteligência Espiritual", desc: "Pergunte à Bíblia, receba devocionais, resumos de capítulos e exegese com inteligência espiritual." },
   { icon: HandHeart, title: "Pedidos de Oração", desc: "Compartilhe e interceda pela comunidade — públicos ou privados." },
   { icon: Bell, title: "Versículo do Dia", desc: "Notificações diárias com a Palavra para edificar seu caminhar." },
   { icon: Users, title: "Horários de Culto", desc: "Acompanhe os cultos do Ministério Atalaias de Betel e receba lembretes." },

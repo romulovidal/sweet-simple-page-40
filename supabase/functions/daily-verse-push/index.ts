@@ -125,10 +125,29 @@ serve(async (req) => {
       }),
     });
 
-    const pushResult = await response.json();
-    return new Response(JSON.stringify({ success: true, date: todayBR, verse: finalVerse.ref, pushResult }), { 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+     const pushResult = await response.json();
+ 
+     // Send motivational message as a second notification if configured or just as a variation
+     const motivationalMsgs = getSetting("motivational_messages");
+     if (motivationalMsgs && Array.isArray(motivationalMsgs) && motivationalMsgs.length > 0) {
+       const randomMsg = motivationalMsgs[Math.floor(Math.random() * motivationalMsgs.length)];
+       
+       await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+         body: JSON.stringify({
+           title: "Atalaia: Mensagem de ânimo",
+           body: randomMsg,
+           url: "/",
+           type: "motivational",
+           ttl: 43200, // 12 hours
+         }),
+       });
+     }
+ 
+     return new Response(JSON.stringify({ success: true, date: todayBR, verse: finalVerse.ref, pushResult }), { 
+       headers: { ...corsHeaders, "Content-Type": "application/json" } 
+     });
   } catch (e) {
     console.error(e);
     const errorMessage = e instanceof Error ? e.message : "Internal error";

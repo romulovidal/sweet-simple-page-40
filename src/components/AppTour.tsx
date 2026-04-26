@@ -52,7 +52,7 @@ const STEPS: Step[] = [
   {
     title: "📖 Bem-vindo à Bíblia do Atalaia",
     description:
-      "Em ~2 minutos vamos te mostrar TUDO: as 5 abas, leitura com áudio, IA, planos, comunidade e configurações. Você pode pular a qualquer momento.",
+      "Em ~2 minutos vamos te mostrar TUDO: as 5 abas, leitura com áudio, Inteligência Espiritual, planos, comunidade e configurações. Você pode pular a qualquer momento.",
     showDontShow: true,
     before: () => {
       if (window.location.pathname !== "/") {
@@ -80,7 +80,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="home-verse-of-day"]',
     title: "✨ Versículo do dia",
     description:
-      "Todo dia um versículo novo, com botão para gerar Devocional com IA, salvar, compartilhar e criar uma imagem bonita.",
+      "Todo dia um versículo novo, com botão para gerar Devocional com Inteligência Espiritual, salvar, compartilhar e criar uma imagem bonita.",
   },
   {
     selector: '[data-tour="home-continue"]',
@@ -116,7 +116,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="nav-bible"]',
     title: "📖 Aba Bíblia",
     description:
-      "Vamos abrir agora! Leia em 6 traduções (ARA, ARC, ACF, NVI, NTLH, KJA), com áudio, modo offline e ferramentas de estudo com IA.",
+      "Vamos abrir agora! Leia em 6 traduções (ARA, ARC, ACF, NVI, NTLH, KJA), com áudio, modo offline e ferramentas de estudo com Inteligência Espiritual.",
   },
 
   // ===== BIBLE: João 3:16 demo =====
@@ -151,7 +151,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="bible-action-bar"]',
     title: "🎨 Barra de ações do versículo",
     description:
-      "Selecionei João 3:16 para você. Aparecem: cor de destaque, compartilhar, salvar, gerar imagem, comparar versões e botões de IA.",
+      "Selecionei João 3:16 para você. Aparecem: cor de destaque, compartilhar, salvar, gerar imagem, comparar versões e botões de Inteligência Espiritual.",
     before: simulateSelectVerse16,
     waitMs: 400,
   },
@@ -187,27 +187,27 @@ const STEPS: Step[] = [
   },
   {
     selector: '[data-tour="bible-action-connections"]',
-    title: "🔗 Conexões Bíblicas (IA)",
+    title: "🔗 Conexões Bíblicas (Inteligência Espiritual)",
     description:
-      "Este botão verde mostra outras passagens da Bíblia conectadas ao versículo selecionado — referências cruzadas, paralelos no AT/NT e textos que se complementam, gerados por IA.",
+      "Este botão verde mostra outras passagens da Bíblia conectadas ao versículo selecionado — referências cruzadas, paralelos no AT/NT e textos que se complementam, gerados por Inteligência Espiritual.",
   },
   {
     selector: '[data-tour="bible-action-wordmeaning"]',
-    title: "🔤 Significado Original (IA)",
+    title: "🔤 Significado Original (Inteligência Espiritual)",
     description:
       "Este botão azul-ciano traz o sentido das palavras-chave em hebraico (AT) ou grego (NT): transliteração, significado original e nuances que se perdem na tradução.",
   },
   {
     selector: '[data-tour="bible-action-timeline"]',
-    title: "⏳ Linha do Tempo (IA)",
+    title: "⏳ Linha do Tempo (Inteligência Espiritual)",
     description:
       "Este botão laranja monta uma linha do tempo histórica do trecho: contexto, datas aproximadas, personagens e o que aconteceu antes/depois — perfeito para entender o pano de fundo.",
   },
   {
     selector: '[data-tour="bible-chapter-summary"]',
-    title: "✨ Resumo do Capítulo (IA)",
+    title: "✨ Resumo do Capítulo (Inteligência Espiritual)",
     description:
-      "Este botão azul no topo do capítulo gera um resumo completo com IA: contexto, temas principais e aplicação prática.",
+      "Este botão azul no topo do capítulo gera um resumo completo com Inteligência Espiritual: contexto, temas principais e aplicação prática.",
     before: deselectVerse16,
     waitMs: 300,
     side: "bottom",
@@ -216,7 +216,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="exegetai-fab"]',
     title: "🔮 ExegetAI (botão flutuante)",
     description:
-      "Este botão dourado flutuante no canto inferior direito abre o **ExegetAI**: exegese profunda do trecho aberto — análise teológica, contexto histórico e linguístico gerados por IA.",
+      "Este botão dourado flutuante no canto inferior direito abre o **ExegetAI**: exegese profunda do trecho aberto — análise teológica, contexto histórico e linguístico gerados por Inteligência Espiritual.",
     side: "left",
   },
   // ===== PLANS =====
@@ -276,7 +276,7 @@ const STEPS: Step[] = [
     selector: '[data-tour="ask-bible"]',
     title: "🙋 Pergunte à Bíblia",
     description:
-      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com IA para tirar dúvidas teológicas com base nas Escrituras.",
+      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com Inteligência Espiritual para tirar dúvidas teológicas com base nas Escrituras.",
     side: "top",
   },
 

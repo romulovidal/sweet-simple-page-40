@@ -472,21 +472,52 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
   const handleAIGenerate = async () => {
     setGeneratingAI(true);
     try {
-      const prompt = `background image for bible verse: "${text}" ${reference}. highly spiritual, cinematic, 4k, inspiring.`;
-      const keywords = ["faith", "spiritual", "light", "cross", "nature", "hope", "peace", "sky"];
-      const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
-      const imageUrl = `https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1200&q=80&sig=${Date.now()}`;
+      // Identifica palavras-chave no versículo para buscar uma imagem relevante
+      const verseWords = text.toLowerCase().split(/\W+/);
+      const keywords = [
+        { key: "amor", search: "love" },
+        { key: "paz", search: "peace" },
+        { key: "luz", search: "light" },
+        { key: "coração", search: "heart" },
+        { key: "fé", search: "faith" },
+        { key: "esperança", search: "hope" },
+        { key: "céu", search: "sky" },
+        { key: "mar", search: "ocean" },
+        { key: "montanha", search: "mountain" },
+        { key: "fogo", search: "fire" },
+        { key: "água", search: "water" },
+        { key: "espírito", search: "spiritual" },
+        { key: "jesus", search: "cross" },
+        { key: "deus", search: "nature" },
+        { key: "oração", search: "prayer" },
+        { key: "liberdade", search: "freedom" },
+        { key: "cadeias", search: "chains" },
+        { key: "força", search: "strength" },
+        { key: "caminho", search: "path" },
+        { key: "vida", search: "life" }
+      ];
+
+      const foundKeyword = keywords.find(k => verseWords.includes(k.key));
+      const searchQuery = foundKeyword ? foundKeyword.search : "nature,spiritual";
       
+      // Usando o Unsplash Source API para obter uma imagem aleatória baseada no contexto do versículo
+      const imageUrl = `https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1200&q=80&sig=${Date.now()}&query=${encodeURIComponent(searchQuery)}`;
+      
+      // Para garantir que a imagem mude, vamos tentar pegar um ID diferente via Unsplash
+      // Como não temos API Key real aqui, usamos o parâmetro de query e sig (cache buster)
+      // que o Unsplash aceita em algumas rotas de redirecionamento ou simulamos via keywords
+      const finalUrl = `https://source.unsplash.com/featured/1080x1080?${searchQuery}&sig=${Date.now()}`;
+
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",
-        value: imageUrl,
+        value: finalUrl,
         label: "IA Sugestão",
         fallback: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
       };
       
       setSelectedBg(newBg);
-      toast.success("Imagem sugerida com sucesso!");
+      toast.success(`Imagem sugerida baseada em "${foundKeyword ? foundKeyword.key : 'contexto'}"!`);
     } catch (error) {
       toast.error("Erro ao gerar sugestão de imagem");
     } finally {

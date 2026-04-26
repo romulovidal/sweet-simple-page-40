@@ -25,14 +25,13 @@ const BibleVersionPicker = ({
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const checkStatus = () => {
-      if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true) {
-        setIsInstalled(true);
-        return;
-      }
+    const checkStatus = async () => {
+      const installed = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+      setIsInstalled(installed);
+      if (installed) return;
 
       const handler = (e: Event) => {
-        e.preventDefault();
+        console.log("Install prompt event captured");
         setDeferredPrompt(e as BeforeInstallPromptEvent);
       };
 

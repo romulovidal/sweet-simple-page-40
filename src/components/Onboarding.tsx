@@ -17,7 +17,7 @@ const Onboarding = () => {
     isPushEnabled().then(setPushEnabled);
   }, []);
 
-  if (!show) return <div id="onboarding-hidden" className="hidden" />;
+  if (!show) return null;
 
   const next = () => setStep(s => s + 1);
   const finish = () => {

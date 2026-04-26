@@ -92,31 +92,60 @@ const ManualPage = () => {
   };
 
   return (
-    <div className="pb-24 min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+    <div className="min-h-screen bg-[#0a0612] text-white overflow-x-hidden">
+      {/* Ambient background glows */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-amber-500/10 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[120px]" />
+      </div>
+
       {/* Hero Header */}
-      <div className="relative h-64 overflow-hidden flex items-end">
+      <div className="relative h-[450px] flex items-center justify-center text-center px-5">
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1200&q=80" 
-            className="w-full h-full object-cover opacity-30 scale-110"
+            src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1600&q=80" 
+            className="w-full h-full object-cover opacity-20"
             alt="Bíblia Manual"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--dark-bg))] via-[hsl(var(--dark-bg))/0.8] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0612]/80 to-[#0a0612]" />
         </div>
         
-        <div className="px-5 pb-8 relative z-10 w-full max-w-4xl mx-auto">
-          <button 
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-6 hover:bg-white/20 transition-colors"
+        <div className="relative z-10 max-w-3xl space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(251,191,36,0.1)]"
           >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-3xl font-black tracking-tight">Manual Completo</h1>
-          <p className="text-primary font-bold text-sm uppercase tracking-widest mt-1">Guia de Funcionalidades</p>
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-bold tracking-[0.2em] uppercase text-amber-200/90">
+              Guia Oficial do Usuário
+            </span>
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]"
+          >
+            Manual <br />
+            <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-amber-400 bg-clip-text text-transparent">
+              Completo
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg text-white/60 max-w-xl mx-auto leading-relaxed"
+          >
+            Aprenda a utilizar todas as ferramentas de inteligência espiritual e comunhão da Bíblia do Atalaia.
+          </motion.p>
         </div>
       </div>
 
-      <div className="px-5 max-w-4xl mx-auto -mt-6 relative z-20">
+      <div className="px-5 max-w-5xl mx-auto relative z-20 pb-20">
         <motion.div 
           variants={container}
           initial="hidden"

@@ -27,6 +27,7 @@ interface PlanProgress {
 type ProfileView = "overview" | "saved" | "history" | "verse-history" | "settings" | "auth";
 
 const ProfilePage = () => {
+  const graduationCapIcon = GraduationCap;
   const navigate = useNavigate();
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { features: appFeatures } = useAppFeatures();
@@ -76,6 +77,14 @@ const ProfilePage = () => {
       toast.error("Erro ao alterar notificações");
     }
     setPushLoading(false);
+  };
+
+  const handleMenuClick = (key: string) => {
+    if (key === "manual") {
+      navigate("/manual");
+    } else {
+      setView(key as ProfileView);
+    }
   };
 
   const activePlansCount = useMemo(
@@ -508,9 +517,10 @@ const ProfilePage = () => {
           { key: "saved", label: "Versículos salvos", icon: BookmarkCheck, value: String(savedVerses.length) },
           { key: "verse-history", label: "Versículos do dia", icon: Sparkles, value: verseHistory.length ? `${verseHistory.length} dias` : "Vazio" },
           { key: "history", label: "Histórico de leitura", icon: Clock3, value: readingHistory.length ? formatDate(readingHistory[0]) : "Vazio" },
+          { key: "manual", label: "Manual do Usuário", icon: graduationCapIcon, value: "Aprender" },
           { key: "settings", label: "Configurações", icon: Settings, value: "Gerenciar" },
         ].map((item) => (
-          <button key={item.key} onClick={() => setView(item.key as ProfileView)}
+          <button key={item.key} onClick={() => handleMenuClick(item.key)}
             className="w-full flex items-center gap-4 py-4 px-4 rounded-xl active:bg-dark-card transition-colors text-left">
             <item.icon className="w-5 h-5 text-dark-muted" />
             <span className="flex-1 text-sm font-medium">{item.label}</span>

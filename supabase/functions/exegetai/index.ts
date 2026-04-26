@@ -26,6 +26,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Use a model confirmed by the error logs
+    const MODEL = "google/gemini-2.5-flash";
+
     if (mode === "image_prompt") {
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -34,7 +37,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-4o-mini",
+          model: MODEL,
           messages: [
             { 
               role: "system", 
@@ -89,7 +92,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           {

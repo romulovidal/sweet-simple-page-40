@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { BIBLE_VERSIONS, DEFAULT_VERSION_ID } from "@/services/bibleApi";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Check, ChevronRight, Bell, BookOpen, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Bell, BookOpen, Sparkles, Download } from "lucide-react";
 import { registerPushNotifications, isPushEnabled } from "@/lib/pushNotifications";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,12 +12,43 @@ const Onboarding = () => {
   const [step, setStep] = useState(1);
   const [selectedVersion, setBibleVersion] = useLocalStorage<string>("bible-version", DEFAULT_VERSION_ID);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true
+  );
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setIsInstalled(true));
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
   }, []);
 
   if (!show) return null;
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert("Para instalar: toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'.");
+      }
+    }
+  };
 
   const next = () => setStep(s => s + 1);
   const finish = () => {
@@ -57,9 +88,28 @@ const Onboarding = () => {
                 Sua jornada de fé com inteligência espiritual e comunidade. Vamos configurar sua experiência em 1 minuto?
               </p>
             </div>
-            <Button onClick={next} className="w-full h-12 text-base font-semibold rounded-xl">
-              Começar <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            
+            <div className="space-y-3">
+              {!isInstalled && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleInstall}
+                  className="w-full h-12 text-base font-semibold rounded-xl border-primary text-primary hover:bg-primary/10 gap-2"
+                >
+                  <Download className="w-4 h-4" /> Instalar App
+                </Button>
+              )}
+              
+              <Button onClick={next} className="w-full h-12 text-base font-semibold rounded-xl">
+                Começar <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+
+              {!isInstalled && (
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-2">
+                  * Instale para a melhor utilização e acesso offline
+                </p>
+              )}
+            </div>
           </motion.div>
         )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  LogOut, Plus, Trash2, Edit2, Save, X, ChevronLeft, Eye, EyeOff,
-  FileText, Video, BookOpen, Heart, Megaphone, Loader2, ChevronDown, Calendar, Users,
-  LayoutDashboard, Bell, Shield, Clock, Download, BookMarked, Menu, Home, Sparkles, BrainCircuit,
-  Settings2, MessageCircleQuestion, HandHeart,
+  LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
+  Clock, BookMarked, Menu, Home, Sparkles, BrainCircuit,
+  Settings2, MessageCircleQuestion, HandHeart, FileText, BookOpen
 } from "lucide-react";
-import { bibleBooks } from "@/data/bible";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminDailyVerse from "@/components/admin/AdminDailyVerse";
@@ -25,6 +23,9 @@ import AdminAppFeatures from "@/components/admin/AdminAppFeatures";
 import AdminAskBiblePrompt from "@/components/admin/AdminAskBiblePrompt";
 import AdminPrayerRequests from "@/components/admin/AdminPrayerRequests";
 import AdminAIPrompts from "@/components/admin/AdminAIPrompts";
+import AdminPosts from "@/components/admin/AdminPosts";
+import AdminPlans from "@/components/admin/AdminPlans";
+import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
 import {
   Sheet,
   SheetContent,
@@ -35,27 +36,6 @@ import {
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
-type PlanReading = Database["public"]["Tables"]["admin_plan_readings"]["Row"];
-
-interface UserProfile {
-  id: string;
-  user_id: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  created_at: string;
-}
-
-const POST_TYPES = [
-  { value: "versiculo", label: "Versículo", icon: BookOpen },
-  { value: "oracao", label: "Oração", icon: Heart },
-  { value: "video", label: "Vídeo YouTube", icon: Video },
-  { value: "devocional", label: "Devocional", icon: FileText },
-  { value: "anuncio", label: "Anúncio", icon: Megaphone },
-];
-
-const PLAN_CATEGORIES = ["Geral", "Iniciante", "Salmos", "Evangelhos", "Cartas", "Profetas", "Devocional", "Temático"];
-
-const POST_PUSH_TTL_SECONDS = 60 * 60 * 24;
 
 type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
 
@@ -87,17 +67,9 @@ const AdminPanel = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
-  const [editingPlan, setEditingPlan] = useState<Partial<Plan & { devotional?: string; total_days?: number }> | null>(null);
-  const [planReadings, setPlanReadings] = useState<PlanReading[]>([]);
-  const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [editUserName, setEditUserName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     const [postsRes, plansRes, usersRes] = await Promise.all([
       supabase.from("admin_posts").select("*").order("sort_order", { ascending: true }),
@@ -108,156 +80,11 @@ const AdminPanel = () => {
     if (plansRes.data) setPlans(plansRes.data);
     if (usersRes.data) setUsers(usersRes.data as UserProfile[]);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
-
-  const exportUsersCSV = () => {
-    const headers = ["Nome", "Data de Cadastro"];
-    const rows = users.map(u => [u.display_name || "Sem nome", new Date(u.created_at).toLocaleDateString("pt-BR")]);
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `usuarios_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("CSV exportado!");
-  };
-
-  const sendPostPush = async (postData: Pick<Post, "title" | "content" | "type">) => {
-    const postTypeLabel = POST_TYPES.find((t) => t.value === postData.type)?.label || "Post";
-
-    await supabase.functions.invoke("send-push", {
-      body: {
-        title: `📢 ${postTypeLabel}: ${postData.title.substring(0, 60)}`,
-        body: postData.content.substring(0, 120) + (postData.content.length > 120 ? "..." : ""),
-        url: "/",
-        ttl: POST_PUSH_TTL_SECONDS,
-        urgency: "high",
-        type: "post",
-      },
-    });
-  };
-
-  // ---- POSTS ----
-  const savePost = async () => {
-    if (!editingPost?.title?.trim() || !editingPost?.content?.trim()) { toast.error("Título e conteúdo são obrigatórios"); return; }
-    const data = {
-      title: editingPost.title.trim(), content: editingPost.content.trim(),
-      type: editingPost.type || "devocional", youtube_url: editingPost.youtube_url?.trim() || null,
-      bible_reference: editingPost.bible_reference?.trim() || null, image_url: editingPost.image_url?.trim() || null,
-      is_active: editingPost.is_active ?? true, sort_order: editingPost.sort_order ?? 0,
-    };
-    const isNew = !editingPost.id;
-    if (editingPost.id) {
-      const { error } = await supabase.from("admin_posts").update(data).eq("id", editingPost.id);
-      if (error) { toast.error("Erro ao salvar"); return; }
-      toast.success("Postagem atualizada!");
-    } else {
-      const { error } = await supabase.from("admin_posts").insert(data);
-      if (error) { toast.error("Erro ao criar"); return; }
-      toast.success("Postagem criada!");
-    }
-    // Auto-send push notification for new active posts
-    if (isNew && data.is_active) {
-      try {
-        await sendPostPush(data);
-        toast.success("Notificação push enviada automaticamente!");
-      } catch (e) {
-        console.error("Push auto-send error:", e);
-        toast.error("Post criado, mas falha ao enviar push");
-      }
-    }
-    setEditingPost(null); fetchData();
-  };
-
-  const deletePost = async (id: string) => {
-    const { error } = await supabase.from("admin_posts").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir"); return; }
-    toast.success("Postagem excluída"); fetchData();
-  };
-
-  const togglePostActive = async (post: Post) => {
-    const nextIsActive = !post.is_active;
-
-    const { error } = await supabase.from("admin_posts").update({ is_active: nextIsActive }).eq("id", post.id);
-
-    if (error) {
-      toast.error("Erro ao atualizar visibilidade");
-      return;
-    }
-
-    if (!post.is_active && nextIsActive) {
-      try {
-        await sendPostPush(post);
-        toast.success("Aviso exibido novamente e push enviado!");
-      } catch (e) {
-        console.error("Push resend error:", e);
-        toast.error("Aviso exibido, mas falha ao reenviar push");
-      }
-    } else {
-      toast.success("Visibilidade do aviso atualizada!");
-    }
-
-    fetchData();
-  };
-
-  // ---- PLANS ----
-  const savePlan = async () => {
-    if (!editingPlan?.title?.trim() || !editingPlan?.description?.trim()) { toast.error("Título e descrição são obrigatórios"); return; }
-    const data = {
-      title: editingPlan.title.trim(), description: editingPlan.description.trim(),
-      image_emoji: editingPlan.image_emoji || "📖", category: editingPlan.category || "Geral",
-      is_active: editingPlan.is_active ?? true, sort_order: editingPlan.sort_order ?? 0,
-      devotional: (editingPlan as { devotional?: string }).devotional || "",
-      total_days: (editingPlan as { total_days?: number }).total_days || 7,
-    };
-    let planId = editingPlan.id;
-    if (planId) {
-      const { error } = await supabase.from("admin_plans").update(data).eq("id", planId);
-      if (error) { toast.error("Erro ao salvar"); return; }
-      toast.success("Plano atualizado!");
-    } else {
-      const { data: newPlan, error } = await supabase.from("admin_plans").insert(data).select().single();
-      if (error || !newPlan) { toast.error("Erro ao criar"); return; }
-      planId = newPlan.id;
-      toast.success("Plano criado! Agora adicione as leituras.");
-    }
-    setEditingPlan(null);
-    fetchData();
-    if (planId) fetchReadings(planId);
-  };
-
-  const deletePlan = async (id: string) => {
-    const { error } = await supabase.from("admin_plans").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir"); return; }
-    toast.success("Plano excluído"); fetchData();
-  };
-
-  // ---- PLAN READINGS ----
-  const fetchReadings = async (planId: string) => {
-    setViewingPlanId(planId);
-    const { data } = await supabase.from("admin_plan_readings").select("*").eq("plan_id", planId).order("day_number", { ascending: true });
-    setPlanReadings(data || []);
-  };
-
-  const addReading = async (planId: string, reading: { dayNumber: number; bookAbbrev: string; chapter: number; title: string; verseStart?: number; verseEnd?: number }) => {
-    const { error } = await supabase.from("admin_plan_readings").insert({
-      plan_id: planId, day_number: reading.dayNumber, book_abbrev: reading.bookAbbrev.trim(),
-      chapter: reading.chapter, title: reading.title.trim(),
-      verse_start: reading.verseStart || null, verse_end: reading.verseEnd || null,
-    });
-    if (error) { toast.error("Erro ao adicionar leitura"); return; }
-    toast.success(`Leitura adicionada ao Dia ${reading.dayNumber}`);
-    fetchReadings(planId);
-  };
-
-  const deleteReading = async (id: string) => {
-    await supabase.from("admin_plan_readings").delete().eq("id", id);
-    if (viewingPlanId) fetchReadings(viewingPlanId);
-  };
 
   const isMoreTab = MORE_TABS.some(t => t.id === tab);
   const currentTabLabel = [...BOTTOM_TABS, ...MORE_TABS].find(t => t.id === tab)?.label || "";

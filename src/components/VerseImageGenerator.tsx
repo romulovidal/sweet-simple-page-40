@@ -28,6 +28,8 @@ type ImageBackground = {
 type BackgroundOption = GradientBackground | ImageBackground;
 
 const BACKGROUNDS: BackgroundOption[] = [
+  { id: "grad_dark", type: "gradient", value: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)", label: "Black" },
+  { id: "grad_gold", type: "gradient", value: "linear-gradient(135deg, #bf953f 0%, #fcf6ba 50%, #b38728 100%)", label: "Dourado" },
   { id: "gradient1", type: "gradient", value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", label: "Roxo" },
   { id: "gradient2", type: "gradient", value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", label: "Rosa" },
   { id: "gradient3", type: "gradient", value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", label: "Azul" },
@@ -38,6 +40,13 @@ const BACKGROUNDS: BackgroundOption[] = [
   { id: "gradient8", type: "gradient", value: "linear-gradient(135deg, #0c3483 0%, #a2b6df 100%, #6b8cce 100%)", label: "Oceano" },
   { id: "gradient9", type: "gradient", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", label: "Noturno" },
   { id: "gradient10", type: "gradient", value: "linear-gradient(135deg, #f5f0e8 0%, #dce5d4 50%, #a8c0a0 100%)", label: "Sereno" },
+  {
+    id: "image_pray",
+    type: "image",
+    value: "https://images.unsplash.com/photo-1544717297-fa2346ee479c?auto=format&fit=crop&w=1200&q=80",
+    label: "Oração",
+    fallback: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+  },
   {
     id: "image1",
     type: "image",
@@ -252,13 +261,18 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     ctx.fillText(`— ${reference}`, textX, startY + totalTextHeight + lineHeight);
     ctx.globalAlpha = 1;
 
-    // Watermark
+    // Watermark / Logo
     ctx.textAlign = "center";
-    ctx.font = "12px Inter, sans-serif";
-    ctx.globalAlpha = 0.4;
-    ctx.fillText("Biblia App", WIDTH / 2, HEIGHT - 40);
+    ctx.font = "bold 24px Inter, sans-serif";
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = selectedColor.value;
+    ctx.fillText("BÍBLIA ATALAIA", WIDTH / 2, HEIGHT - 80);
+    
+    ctx.font = "18px Inter, sans-serif";
+    ctx.globalAlpha = 0.3;
+    ctx.fillText("biblia.atalaias.online", WIDTH / 2, HEIGHT - 50);
     ctx.globalAlpha = 1;
-  }, [fontSize, loadedImage, reference, selectedBg, selectedColor.value, selectedFont.family, text, textAlign]);
+  }, [WIDTH, HEIGHT, fontSize, loadedImage, reference, selectedBg, selectedColor.value, selectedFont.family, text, textAlign]);
 
   useEffect(() => {
     if (open) drawCanvas();

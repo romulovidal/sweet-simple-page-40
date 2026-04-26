@@ -145,101 +145,64 @@ const HomePage = () => {
       const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
       const cached = readJsonStorage<CachedDailyVerse | null>(DAILY_VERSE_CACHE_KEY, null);
 
-      const cacheValid =
-        !force &&
-        cached?.date === today &&
-        (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION &&
-        cached.verse?.text;
+      const isCacheValid = !force && cached?.date === today && (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION && !!cached.verse?.text;
 
-      // Invalidate stale cache
-      if (cached && !cacheValid) {
-        localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
+      // 1. Mostrar o cache imediatamente se for válido (velocidade)
+      if (isCacheValid && !cancelled) {
+        setVerse(cached.verse);
+        setVerseLoading(false);
+        setVerseHistory((prev) => {
+          if (prev.some((e) => e.date === today)) return prev;
+          return [{ date: today, ...cached.verse }, ...prev].slice(0, 90);
+        });
+      } else if (!cancelled) {
+        // Se não tem cache do dia, mostra o estático enquanto carrega o real
+        setVerse(getDailyVerse());
+        setVerseLoading(true);
       }
 
-      // Use cache for instant render, but still revalidate manual verse in background when online
-      if (cacheValid) {
-        if (!cancelled) {
-          setVerse(cached!.verse);
-          setVerseLoading(false);
-          setVerseHistory((prev) => {
-            if (prev.some((e) => e.date === today)) return prev;
-            return [{ date: today, ...cached!.verse }, ...prev].slice(0, 90);
-          });
-        }
-        // Background revalidation: if admin set a manual verse OR changed version,
-        // pick it up without waiting for the next day.
-        if (isOnline) {
+      // 2. Se estiver online, sempre buscar a versão atual (Tempo Real)
+      if (isOnline) {
+        try {
           const activeVersion = await getActiveVersion();
-          let candidate: { text: string; ref: string } | null = null;
+          const manual = await tryManualVerse(today);
+          
+          let finalVerse: { text: string; ref: string };
+          let source: "manual" | "auto" = "auto";
 
-          if (cached?.source !== "manual") {
-            const manual = await tryManualVerse(today);
-            if (manual) candidate = await applyVersion(manual, activeVersion);
+          if (manual) {
+            finalVerse = await applyVersion(manual, activeVersion);
+            source = "manual";
+          } else {
+            finalVerse = await applyVersion(getDailyVerse(), activeVersion);
           }
 
-          // If still no candidate, re-translate the cached ref into the active version
-          if (!candidate) {
-            const translated = await applyVersion(cached!.verse, activeVersion);
-            if (translated.text !== cached!.verse.text) candidate = translated;
+          if (!cancelled) {
+            setVerse({ ...finalVerse, versionShortName: activeVersion.toUpperCase() });
+            setVerseLoading(false);
+            
+            // Atualizar cache se algo mudou ou se é um novo dia
+            if (!isCacheValid || cached?.verse.text !== finalVerse.text) {
+              writeJsonStorage(
+                DAILY_VERSE_CACHE_KEY,
+                { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: finalVerse },
+                false,
+                "cache"
+              );
+              
+              setVerseHistory((prev) => {
+                const filtered = prev.filter((e) => e.date !== today);
+                return [{ date: today, ...finalVerse }, ...filtered].slice(0, 90);
+              });
+            }
           }
-
-          if (!cancelled && candidate && candidate.text !== cached?.verse.text) {
-            const source = cached?.source === "manual" ? "manual" : (await tryManualVerse(today)) ? "manual" : "auto";
-            setVerse({ ...candidate, versionShortName: activeVersion.toUpperCase() });
-            writeJsonStorage(
-              DAILY_VERSE_CACHE_KEY,
-              { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: candidate },
-              false,
-              "cache"
-            );
-            setVerseHistory((prev) => {
-              const filtered = prev.filter((e) => e.date !== today);
-              return [{ date: today, ...candidate! }, ...filtered].slice(0, 90);
-            });
-          }
+        } catch (err) {
+          console.error("Erro ao carregar versículo em tempo real:", err);
+          if (!cancelled && !isCacheValid) setVerseLoading(false);
         }
-        return;
-      }
-
-      if (!isOnline) {
-        if (!cancelled) {
-          setVerse(getDailyVerse());
-          setVerseLoading(false);
-        }
-        return;
-      }
-
-      if (!cancelled) setVerseLoading(true);
-
-      let nextVerse: { text: string; ref: string };
-      let source: "manual" | "auto" = "auto";
-
-      const manual = await tryManualVerse(today);
-      if (manual) {
-        nextVerse = manual;
-        source = "manual";
       } else {
-        // Determinístico (mesmo índice usado pelo edge function de push)
-        nextVerse = getDailyVerse();
+        if (!cancelled) setVerseLoading(false);
       }
-
-      // Apply admin-chosen Bible version (with ARC fallback inside the helper)
-      const activeVersion = await getActiveVersion();
-      nextVerse = await applyVersion(nextVerse, activeVersion);
-
-      if (cancelled) return;
-      setVerse(nextVerse);
-      setVerseLoading(false);
-      writeJsonStorage(
-        DAILY_VERSE_CACHE_KEY,
-        { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: nextVerse },
-        false,
-        "cache"
-      );
-      setVerseHistory((prev) => {
-        const filtered = prev.filter((e) => e.date !== today);
-        return [{ date: today, ...nextVerse }, ...filtered].slice(0, 90);
-      });
     };
 
     loadVerse();

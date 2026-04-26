@@ -708,6 +708,7 @@ const BiblePage = () => {
           <VerseImageGenerator
             text={imageVerse.text}
             reference={imageVerse.reference}
+            version={getVersionById(bibleVersion).shortName}
             open={!!imageVerse}
             onClose={() => setImageVerse(null)}
           />

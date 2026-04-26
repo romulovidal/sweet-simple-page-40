@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
@@ -18,35 +18,35 @@ interface VerseQueueItem {
 
 const AdminDailyVerse = () => {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
-   const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
-   const [pushTime, setPushTime] = useState<string>("08:00");
-   const [motivationalEnabled, setMotivationalEnabled] = useState(true);
-   const [motivationalTime, setMotivationalTime] = useState("10:00");
-   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
+  const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
+  const [pushTime, setPushTime] = useState<string>("08:00");
+  const [motivationalEnabled, setMotivationalEnabled] = useState(true);
+  const [motivationalTime, setMotivationalTime] = useState("10:00");
+  const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-     const [
-       { data: modeRow }, 
-       { data: versionRow }, 
-       { data: timeRow }, 
-       { data: motEnabledRow },
-       { data: motTimeRow },
-       { data: queueData }
-     ] = await Promise.all([
-       supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
-       supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
-       supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
-       supabase.from("admin_settings").select("value").eq("key", "motivational_push_enabled").maybeSingle(),
-       supabase.from("admin_settings").select("value").eq("key", "motivational_push_time").maybeSingle(),
-       supabase
-         .from("daily_verse_queue")
-         .select("*")
-         .gte("scheduled_date", new Date().toISOString().split("T")[0])
-         .order("scheduled_date", { ascending: true }),
-     ]);
+    const [
+      { data: modeRow }, 
+      { data: versionRow }, 
+      { data: timeRow }, 
+      { data: motEnabledRow },
+      { data: motTimeRow },
+      { data: queueData }
+    ] = await Promise.all([
+      supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", "motivational_push_enabled").maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", "motivational_push_time").maybeSingle(),
+      supabase
+        .from("daily_verse_queue")
+        .select("*")
+        .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .order("scheduled_date", { ascending: true }),
+    ]);
 
     if (modeRow) {
       const val = typeof modeRow.value === "string" ? modeRow.value : JSON.stringify(modeRow.value);
@@ -59,6 +59,14 @@ const AdminDailyVerse = () => {
     if (timeRow) {
       const val = typeof timeRow.value === "string" ? timeRow.value : JSON.stringify(timeRow.value);
       setPushTime(val.replace(/"/g, "") || "08:00");
+    }
+    if (motEnabledRow) {
+      const val = typeof motEnabledRow.value === "string" ? motEnabledRow.value : JSON.stringify(motEnabledRow.value);
+      setMotivationalEnabled(val.replace(/"/g, "") === "true");
+    }
+    if (motTimeRow) {
+      const val = typeof motTimeRow.value === "string" ? motTimeRow.value : JSON.stringify(motTimeRow.value);
+      setMotivationalTime(val.replace(/"/g, "") || "10:00");
     }
     setQueue(queueData || []);
     setLoading(false);
@@ -91,6 +99,22 @@ const AdminDailyVerse = () => {
       .from("admin_settings")
       .upsert({ key: "daily_verse_push_time", value: JSON.stringify(newTime), updated_at: new Date().toISOString() }, { onConflict: "key" });
     toast.success(`Horário do push alterado para ${newTime}`);
+  };
+
+  const toggleMotivational = async (checked: boolean) => {
+    setMotivationalEnabled(checked);
+    await supabase
+      .from("admin_settings")
+      .upsert({ key: "motivational_push_enabled", value: JSON.stringify(checked), updated_at: new Date().toISOString() }, { onConflict: "key" });
+    toast.success(checked ? "Mensagens motivacionais ativadas" : "Mensagens motivacionais desativadas");
+  };
+
+  const changeMotivationalTime = async (newTime: string) => {
+    setMotivationalTime(newTime);
+    await supabase
+      .from("admin_settings")
+      .upsert({ key: "motivational_push_time", value: JSON.stringify(newTime), updated_at: new Date().toISOString() }, { onConflict: "key" });
+    toast.success(`Horário motivacional alterado para ${newTime}`);
   };
 
   const saveVerse = async () => {
@@ -228,6 +252,38 @@ const AdminDailyVerse = () => {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Motivational Push Settings Section */}
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-4 border border-primary/20 shadow-lg shadow-primary/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+            <div>
+              <p className="font-bold text-sm text-[hsl(var(--dark-text))]">Mensagens de Ânimo (Devocional)</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))]">Envio diário de frases encorajadoras.</p>
+            </div>
+          </div>
+          <Switch checked={motivationalEnabled} onCheckedChange={toggleMotivational} />
+        </div>
+
+        {motivationalEnabled && (
+          <div className="flex items-center gap-4 pl-7 pt-3 border-t border-[hsl(var(--dark-card-hover))]">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium">Horário de envio:</span>
+            </div>
+            <Input
+              type="time"
+              value={motivationalTime}
+              onChange={(e) => changeMotivationalTime(e.target.value)}
+              className="bg-[hsl(var(--dark-bg))] border-primary/30 w-32 h-9 text-sm font-bold text-primary focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-[10px] text-[hsl(var(--dark-muted))] italic bg-white/5 px-2 py-1 rounded">
+              Brasília
+            </span>
+          </div>
+        )}
       </div>
 
       {mode === "manual" && (

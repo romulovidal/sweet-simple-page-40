@@ -44,7 +44,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image_pray",
     type: "image",
-    value: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=1200&q=80",
     label: "Oração",
     fallback: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
   },
@@ -163,14 +163,14 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image17",
     type: "image",
-    value: "https://images.unsplash.com/photo-1444464666168-49d633b867ad?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?auto=format&fit=crop&w=1200&q=80",
     label: "Passarinho",
     fallback: "linear-gradient(135deg, #2980b9 0%, #2ecc71 100%)",
   },
   {
     id: "image18",
     type: "image",
-    value: "https://images.unsplash.com/photo-1502082553245-938f97adcb27?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1441333391268-bd846bfe4676?auto=format&fit=crop&w=1200&q=80",
     label: "Raízes",
     fallback: "linear-gradient(135deg, #3e2723 0%, #2e7d32 100%)",
   },
@@ -226,7 +226,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image26",
     type: "image",
-    value: "https://images.unsplash.com/photo-1433086466838-d73e737de4d6?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1544198365-f5d60b6d8190?auto=format&fit=crop&w=1200&q=80",
     label: "Cascata",
     fallback: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
   },
@@ -247,7 +247,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image29",
     type: "image",
-    value: "https://images.unsplash.com/photo-1464226184884-fa280b87c3a9?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=1200&q=80",
     label: "Jardim",
     fallback: "linear-gradient(135deg, #556b2f 0%, #8fbc8f 100%)",
   },

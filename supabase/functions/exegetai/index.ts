@@ -34,7 +34,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-exp",
+          model: "openai/gpt-4o-mini",
           messages: [
             { 
               role: "system", 
@@ -48,7 +48,12 @@ serve(async (req) => {
         }),
       });
 
-      if (!response.ok) throw new Error("AI error");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error (image_prompt):", response.status, errorText);
+        throw new Error(`AI error: ${response.status} ${errorText}`);
+      }
+      
       const data = await response.json();
       const prompt = data.choices[0].message.content.trim();
       return new Response(JSON.stringify({ prompt }), {
@@ -84,7 +89,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -98,7 +103,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      console.error("AI gateway error (exegesis):", response.status, t);
       return new Response(JSON.stringify({ error: "Erro ao gerar exegese" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

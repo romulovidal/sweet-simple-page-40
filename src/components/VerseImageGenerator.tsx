@@ -483,9 +483,12 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
       });
 
       if (!resp.ok) throw new Error("IA error");
-      const { prompt } = await resp.json();
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      const prompt = data.prompt || "spiritual,bible";
       
-      const finalUrl = `https://images.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt)}&sig=${Math.random()}`;
+      // Usamos source.unsplash.com que é mais confiável para redirecionamento de busca
+      const finalUrl = `https://source.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt)}&sig=${Math.random()}`;
 
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),

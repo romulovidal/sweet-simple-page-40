@@ -537,14 +537,73 @@ const HomePage = () => {
             )}
           </>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pb-6">
-            <div className="space-y-6">
-              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Próximos Cultos</h2>
-              <CultoScheduleList />
-            </div>
-            <div className="space-y-6">
-              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Mural de Orações</h2>
-              <PrayerRequests enabled={true} />
+          <div className="space-y-8 pb-6">
+            {/* Destaques e Avisos (Comunidade) */}
+            {adminPosts.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                  Destaques e Avisos
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {adminPosts.map((post) => {
+                  const Icon = postIcon(post.type);
+                  const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
+                  return (
+                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5">
+                      {post.type === "video" && embedUrl && (
+                        <div className="aspect-video">
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full"
+                            allowFullScreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            title={post.title}
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="w-4 h-4 text-primary" />
+                          <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">
+                            {POST_TYPES_LABELS[post.type] || post.type}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-sm mb-1">{post.title}</h3>
+                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed">{post.content}</p>
+                        {post.bible_reference && (
+                          <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                            <span className="text-xs font-bold text-primary">{post.bible_reference}</span>
+                            <button 
+                              onClick={() => {
+                                const params = new URLSearchParams({ 
+                                  book: post.bible_reference?.split(' ')[0].toLowerCase() || '', 
+                                  chapter: post.bible_reference?.split(' ')[1]?.split(':')[0] || '1' 
+                                });
+                                navigate(`/biblia?${params.toString()}`);
+                              }}
+                              className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md font-bold uppercase"
+                            >
+                              Ler na Bíblia
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-6">
+                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Escala de Cultos</h2>
+                <CultoScheduleList />
+              </div>
+              <div className="space-y-6">
+                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Mural de Orações</h2>
+                <PrayerRequests enabled={true} />
+              </div>
             </div>
           </div>
         )}

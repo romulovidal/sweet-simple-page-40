@@ -160,6 +160,7 @@ const ManualPage = () => {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             </motion.section>
           ))}

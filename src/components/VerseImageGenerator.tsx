@@ -191,7 +191,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image18",
     type: "image",
-    value: "https://images.unsplash.com/photo-1441333391268-bd846bfe4676?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1502082553245-938f97adcb27?auto=format&fit=crop&w=1200&q=80",
     label: "Raízes",
     fallback: "linear-gradient(135deg, #3e2723 0%, #2e7d32 100%)",
   },

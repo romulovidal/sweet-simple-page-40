@@ -36,13 +36,23 @@ const PushPermissionPrompt = () => {
       // If denied, nothing we can do
       if (Notification.permission === "denied") return;
 
-      // If Onboarding hasn't been completed yet, don't show the separate prompt.
-      // Onboarding step 3 already handles push registration.
-      const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
-      if (!onboardingCompleted) return;
+      const checkAndShow = async () => {
+        // If Onboarding hasn't been completed yet, don't show the separate prompt.
+        const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
+        if (!onboardingCompleted) return;
 
-      // Show modal after a delay if not in onboarding
-      setTimeout(() => setPhase("modal"), 2000);
+        // Check if browser already has permission (no need to show modal)
+        if (Notification.permission === "granted" || Notification.permission === "denied") return;
+
+        // Double check with service worker if push is enabled
+        const enabled = await isPushEnabled();
+        if (enabled) return;
+
+        // Show modal after a delay if not in onboarding and push is truly missing
+        setTimeout(() => setPhase("modal"), 3000);
+      };
+
+      checkAndShow();
     };
 
     check();

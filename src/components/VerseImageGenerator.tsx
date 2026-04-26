@@ -299,7 +299,11 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
 
       if (navigator.share && navigator.canShare) {
         const file = new File([blob], `${reference}.png`, { type: "image/png" });
-        const shareData = { files: [file], title: reference, text: `"${text}" - ${reference}` };
+        const shareData = { 
+          files: [file], 
+          title: reference, 
+          text: `"${text}" - ${reference}\n\nLeia mais em: https://biblia.atalaias.online/` 
+        };
 
         if (navigator.canShare(shareData)) {
           await navigator.share(shareData);

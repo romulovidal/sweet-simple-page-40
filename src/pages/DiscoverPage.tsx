@@ -6,8 +6,6 @@ import { searchVerses } from "@/services/bibleApi";
 import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
-import PrayerRequests from "@/components/PrayerRequests";
-
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -349,9 +347,6 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          <div className="px-5 mb-10 max-w-4xl mx-auto">
-            <PrayerRequests enabled={appFeatures.prayer_requests} />
-          </div>
         </>
       )}
     </div>

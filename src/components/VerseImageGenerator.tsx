@@ -41,7 +41,6 @@ const BACKGROUNDS: BackgroundOption[] = [
   { id: "gradient9", type: "gradient", value: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", label: "Noturno" },
   { id: "gradient10", type: "gradient", value: "linear-gradient(135deg, #f5f0e8 0%, #dce5d4 50%, #a8c0a0 100%)", label: "Sereno" },
   {
-  {
     id: "image_pray",
     type: "image",
     value: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=1200&q=80",

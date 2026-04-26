@@ -258,7 +258,8 @@ const BiblePage = () => {
   const handleShareSelected = async () => {
     const { text, reference, link } = buildShareContent();
     if (!reference) return;
-    const shareText = `${reference}\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
+    const versionShort = getVersionById(bibleVersion).shortName;
+    const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });
@@ -383,7 +384,8 @@ const BiblePage = () => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
     const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${verse.number}`;
-    const shareText = `${reference}\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
+    const versionShort = getVersionById(bibleVersion).shortName;
+    const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });

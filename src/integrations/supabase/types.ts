@@ -190,6 +190,36 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string
+          icon: string
+          id: string
+          name: string
+          requirement_days: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description: string
+          icon: string
+          id?: string
+          name: string
+          requirement_days: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          requirement_days?: number
+        }
+        Relationships: []
+      }
       culto_reminders: {
         Row: {
           created_at: string
@@ -463,6 +493,35 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_notes: {
         Row: {

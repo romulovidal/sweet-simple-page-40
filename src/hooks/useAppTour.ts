@@ -4,7 +4,7 @@ const TOUR_KEY = "tour_completed_v1";
 
 /** Detecta se o prompt de notificação está visível na tela. */
 function isPushPromptVisible() {
-  return !!document.querySelector('[data-push-prompt="true"]');
+  return !!document.querySelector('[data-push-prompt="true"]') || !!document.querySelector('[data-onboarding-active="true"]');
 }
 
 export function useAppTour() {
@@ -34,13 +34,16 @@ export function useAppTour() {
     const handlePromptClosed = () => {
       window.setTimeout(tryStart, 400);
     };
+    
     window.addEventListener("push-prompt:closed", handlePromptClosed);
+    window.addEventListener("onboarding:closed", handlePromptClosed);
 
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       if (pollTimer) window.clearTimeout(pollTimer);
       window.removeEventListener("push-prompt:closed", handlePromptClosed);
+      window.removeEventListener("onboarding:closed", handlePromptClosed);
     };
   }, []);
 

@@ -145,7 +145,7 @@ const AdminPanel = () => {
                     {section.tabs.map((t) => (
                       <button
                         key={t.id}
-                        onClick={() => { setTab(t.id as TabType); setMenuOpen(false); }}
+                        onClick={() => { setTab(t.id as any); setMenuOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                           tab === t.id 
                             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 

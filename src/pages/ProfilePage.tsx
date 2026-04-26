@@ -244,12 +244,12 @@ const ProfilePage = () => {
   // Verse history view
   if (view === "verse-history") {
     return (
-      <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-6 flex items-center gap-3">
+    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto">
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Versículos do Dia</h1>
         </header>
-        <div className="px-5 space-y-3">
+        <div className="px-5 space-y-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 max-w-4xl mx-auto">
           {verseHistory.length === 0 ? (
             <p className="text-sm text-dark-muted text-center py-10">Nenhum versículo do dia registrado ainda.</p>
           ) : (
@@ -270,8 +270,8 @@ const ProfilePage = () => {
 
   if (view === "saved") {
     return (
-      <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-6 flex items-center gap-3">
+      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+        <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto">
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Versículos Salvos</h1>
         </header>
@@ -302,7 +302,7 @@ const ProfilePage = () => {
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Histórico de Leitura</h1>
         </header>
-        <div className="px-5 space-y-4">
+        <div className="px-5 space-y-4 max-w-2xl mx-auto">
           <div className="bg-dark-card rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wider text-dark-muted mb-2">Última leitura</p>
             <p className="font-semibold text-sm">{progress ? `${progress.bookName} ${progress.chapter}` : "Nenhuma leitura recente"}</p>
@@ -330,12 +330,12 @@ const ProfilePage = () => {
 
   if (view === "settings") {
     return (
-      <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-6 flex items-center gap-3">
+      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+        <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto">
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Configurações</h1>
         </header>
-        <div className="px-5 space-y-3">
+        <div className="px-5 space-y-3 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
           <button onClick={togglePush} disabled={pushLoading}
             className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3">
             {pushEnabled ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-dark-muted" />}
@@ -407,12 +407,12 @@ const ProfilePage = () => {
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   return (
-    <div className="pb-20 min-h-screen">
-      <header className="px-5 pt-12 pb-6">
+    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Você</h1>
       </header>
 
-      <div className="px-5 mb-6">
+      <div className="px-5 mb-6 max-w-2xl mx-auto">
         <div className="bg-dark-card rounded-2xl p-5 flex items-center gap-4">
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover" />
@@ -430,7 +430,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="px-5 grid grid-cols-2 gap-3 mb-6" data-tour="profile-stats">
+      <div className="px-5 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8" data-tour="profile-stats">
         <div className="bg-dark-card rounded-2xl p-4">
           <div className="flex items-center gap-2 text-primary mb-2">
             <Flame className="w-4 h-4" />
@@ -468,17 +468,19 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Reading Goals */}
-      <div className="px-5 mb-6" data-tour="profile-goals">
-        <ReadingGoals enabled={appFeatures.reading_goals} />
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-5 mb-8">
+        {/* Reading Goals */}
+        <div data-tour="profile-goals">
+          <ReadingGoals enabled={appFeatures.reading_goals} />
+        </div>
 
-      <div className="px-5 mb-6">
-        <button onClick={handleContinueReading}
-          className="w-full bg-primary text-primary-foreground rounded-2xl p-4 text-left active:opacity-90 transition-opacity">
-          <p className="font-semibold text-sm">Continuar leitura</p>
-          <p className="text-xs opacity-90 mt-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Abrir Gênesis 1 agora"}</p>
-        </button>
+        <div>
+          <button onClick={handleContinueReading}
+            className="w-full bg-primary text-primary-foreground rounded-2xl p-4 h-full text-left active:opacity-90 transition-opacity flex flex-col justify-center">
+            <p className="font-semibold text-sm">Continuar leitura</p>
+            <p className="text-xs opacity-90 mt-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Abrir Gênesis 1 agora"}</p>
+          </button>
+        </div>
       </div>
 
 
@@ -501,7 +503,7 @@ const ProfilePage = () => {
         </div>
       )}
 
-      <div className="px-5 space-y-1" data-tour="profile-menu">
+      <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6" data-tour="profile-menu">
         {[
           { key: "saved", label: "Versículos salvos", icon: BookmarkCheck, value: String(savedVerses.length) },
           { key: "verse-history", label: "Versículos do dia", icon: Sparkles, value: verseHistory.length ? `${verseHistory.length} dias` : "Vazio" },

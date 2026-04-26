@@ -34,7 +34,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-exp",
+          model: "openai/gpt-4o-mini",
           messages: [
             { 
               role: "system", 
@@ -89,7 +89,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {

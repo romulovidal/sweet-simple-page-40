@@ -393,7 +393,11 @@ const HomePage = () => {
                       <Loader2 className="w-6 h-6 animate-spin text-white" />
                     </div>
                   ) : (
-                    <VerseCard text={verse.text} reference={verse.ref} />
+                    <VerseCard 
+                      text={verse.text} 
+                      reference={verse.ref} 
+                      version={verse.versionShortName} 
+                    />
                   )}
                   {!verseLoading && verse && (
                     <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />

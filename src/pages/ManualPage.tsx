@@ -22,7 +22,7 @@ const ManualPage = () => {
       image: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Versículo do Dia", description: "Um versículo selecionado diariamente para sua meditação.", icon: BookMarked },
-        { label: "Reflexão IA", description: "Um devocional gerado por Inteligência Espiritual baseado no versículo do dia.", icon: Sparkles },
+        { label: "Reflexão Inteligente", description: "Um devocional gerado por Inteligência Espiritual baseado no versículo do dia.", icon: Sparkles },
         { label: "Ofensiva (Streak)", description: "Acompanhe quantos dias seguidos você está meditando na Palavra.", icon: Flame },
         { label: "Progresso de Leitura", description: "Retome sua última leitura bíblica com apenas um toque.", icon: Clock },
       ]
@@ -46,7 +46,7 @@ const ManualPage = () => {
       image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Exegese Bíblica", description: "Análise profunda do contexto original e aplicação prática.", icon: BrainCircuit },
-        { label: "Resumo de Capítulo", description: "A IA sintetiza os pontos principais de qualquer capítulo bíblico.", icon: LayoutDashboard },
+        { label: "Resumo de Capítulo", description: "A Inteligência Espiritual sintetiza os pontos principais de qualquer capítulo bíblico.", icon: LayoutDashboard },
         { label: "Conexões Bíblicas", description: "Descubra como um texto se conecta com outras partes das Escrituras.", icon: Compass },
         { label: "Linha do Tempo", description: "Veja onde os eventos do texto se encaixam na história bíblica.", icon: Clock },
       ]

@@ -58,12 +58,12 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
   return { userId: user.id };
 }
 
-async function sendToSubscription(
-  supabase: ReturnType<typeof createClient>,
-  sub: { id: string; endpoint: string; p256dh: string; auth: string },
-  payload: string,
-  options: webpush.RequestOptions,
-) {
+ async function sendToSubscription(
+   supabase: any,
+   sub: { id: string; endpoint: string; p256dh: string; auth: string },
+   payload: string,
+   options: any,
+ ) {
   try {
     await webpush.sendNotification(
       {

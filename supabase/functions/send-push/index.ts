@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-import webpush from "web-push";
+import webpush from "npm:web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 
 const PushPayloadSchema = z.object({
@@ -150,11 +150,14 @@ Deno.serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    for (const sub of subs || []) {
-      const result = await sendToSubscription(supabase, sub, payload, requestOptions);
-      sent += result.sent;
-      failed += result.failed;
-    }
+    const results = await Promise.all((subs || []).map(sub => 
+      sendToSubscription(supabase, sub, payload, requestOptions)
+    ));
+    
+    results.forEach(res => {
+      sent += res.sent;
+      failed += res.failed;
+    });
 
     return new Response(
       JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency }),

@@ -87,7 +87,14 @@ const HomePage = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const getToday = () => new Date().toISOString().split("T")[0];
+    const getToday = () => {
+      const now = new Date();
+      // Use local date to avoid timezone issues that make it look like "yesterday" late at night
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     const getActiveVersion = async (): Promise<string> => {
       try {
@@ -138,16 +145,16 @@ const HomePage = () => {
       const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
       const cached = readJsonStorage<CachedDailyVerse | null>(DAILY_VERSE_CACHE_KEY, null);
 
-      // Invalidate stale or outdated-version cache
-      if (cached && (cached.date !== today || (cached.version ?? 0) < DAILY_VERSE_CACHE_VERSION)) {
-        localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
-      }
-
       const cacheValid =
         !force &&
         cached?.date === today &&
         (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION &&
         cached.verse?.text;
+
+      // Invalidate stale cache
+      if (cached && !cacheValid) {
+        localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
+      }
 
       // Use cache for instant render, but still revalidate manual verse in background when online
       if (cacheValid) {

@@ -87,31 +87,26 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
 
-    if (!isManual) {
-      const now = new Date();
-      const brTime = new Intl.DateTimeFormat("pt-BR", {
-        timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false,
-      }).format(now);
+    const nowBR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const brTimeStr = new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).format(nowBR);
 
-      if (brTime !== configTime) {
-        return new Response(JSON.stringify({ skipped: true, brTime, target: configTime }), { headers: corsHeaders });
-      }
+    if (!isManual && brTimeStr !== configTime) {
+      return new Response(JSON.stringify({ skipped: true, brTime: brTimeStr, target: configTime }), { headers: corsHeaders });
     }
 
-    const today = new Intl.DateTimeFormat("pt-BR", {
-      timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit"
-    }).format(new Date()).split("/").reverse().join("-");
+    const todayBR = nowBR.toISOString().split("T")[0];
 
     let baseVerse: { text: string; ref: string } | null = null;
-    
-    const { data: queueVerse } = await supabase.from("daily_verse_queue").select("verse_text, verse_ref").eq("scheduled_date", today).maybeSingle();
+    const { data: queueVerse } = await supabase.from("daily_verse_queue").select("verse_text, verse_ref").eq("scheduled_date", todayBR).maybeSingle();
     
     if (queueVerse) {
       baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
     } else {
-      const now = new Date();
-      const startOfYear = new Date(now.getFullYear(), 0, 0);
-      const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
+      const startOfYear = new Date(nowBR.getFullYear(), 0, 0);
+      const diff = nowBR.getTime() - startOfYear.getTime();
+      const dayOfYear = Math.floor(diff / 86400000);
       baseVerse = officialVerses[dayOfYear % officialVerses.length];
     }
 
@@ -131,7 +126,7 @@ serve(async (req) => {
     });
 
     const pushResult = await response.json();
-    return new Response(JSON.stringify({ success: true, date: today, verse: finalVerse.ref, pushResult }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ success: true, date: todayBR, verse: finalVerse.ref, pushResult }), { headers: corsHeaders });
   } catch (e) {
     console.error(e);
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });

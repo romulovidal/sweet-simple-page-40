@@ -218,8 +218,12 @@ export function getDailyVerse(): { text: string; ref: string } {
     { text: "O amor é paciente, o amor é bondoso. Não inveja, não se vangloria, não se orgulha.", ref: "1 Coríntios 13:4" },
     { text: "Levantarei os meus olhos para os montes; de onde me vem o socorro? O meu socorro vem do Senhor, que fez o céu e a terra.", ref: "Salmos 121:1-2" },
   ];
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-  return verses[dayOfYear % verses.length];
+  const today = new Date();
+  // Normalize to midnight UTC to ensure consistency across the day
+  const start = new Date(today.getFullYear(), 0, 0);
+  const diff = (today.getTime() - start.getTime()) + ((start.getTimezoneOffset() - today.getTimezoneOffset()) * 60 * 1000);
+  const oneDay = 1000 * 60 * 60 * 24;
+  const day = Math.floor(diff / oneDay);
+  
+  return verses[day % verses.length];
 }

@@ -35,18 +35,25 @@ const Onboarding = () => {
   if (!show) return null;
 
   const handleInstall = async () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
     if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setIsInstalled(true);
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          setIsInstalled(true);
+          toast.success("Instalação iniciada!");
+        }
+        setDeferredPrompt(null);
+      } catch (err) {
+        console.error("Erro ao instalar:", err);
+        toast.error("Erro ao abrir instalador.");
       }
-      setDeferredPrompt(null);
+    } else if (isIOS) {
+      alert("Para instalar no iOS: toque no ícone 'Compartilhar' (seta para cima) na barra do navegador e selecione 'Adicionar à Tela de Início'.");
     } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        alert("Para instalar: toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'.");
-      }
+      toast.info("Aguardando o navegador liberar a instalação. Tente novamente em alguns segundos ou use o menu do navegador.");
     }
   };
 

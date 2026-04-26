@@ -92,31 +92,60 @@ const ManualPage = () => {
   };
 
   return (
-    <div className="pb-24 min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+    <div className="min-h-screen bg-[#0a0612] text-white overflow-x-hidden">
+      {/* Ambient background glows */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-amber-500/10 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[120px]" />
+      </div>
+
       {/* Hero Header */}
-      <div className="relative h-64 overflow-hidden flex items-end">
+      <div className="relative h-[450px] flex items-center justify-center text-center px-5">
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1200&q=80" 
-            className="w-full h-full object-cover opacity-30 scale-110"
+            src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1600&q=80" 
+            className="w-full h-full object-cover opacity-20"
             alt="Bíblia Manual"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--dark-bg))] via-[hsl(var(--dark-bg))/0.8] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0612]/80 to-[#0a0612]" />
         </div>
         
-        <div className="px-5 pb-8 relative z-10 w-full max-w-4xl mx-auto">
-          <button 
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md mb-6 hover:bg-white/20 transition-colors"
+        <div className="relative z-10 max-w-3xl space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(251,191,36,0.1)]"
           >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-3xl font-black tracking-tight">Manual Completo</h1>
-          <p className="text-primary font-bold text-sm uppercase tracking-widest mt-1">Guia de Funcionalidades</p>
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-bold tracking-[0.2em] uppercase text-amber-200/90">
+              Guia Oficial do Usuário
+            </span>
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]"
+          >
+            Manual <br />
+            <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-amber-400 bg-clip-text text-transparent">
+              Completo
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg text-white/60 max-w-xl mx-auto leading-relaxed"
+          >
+            Aprenda a utilizar todas as ferramentas de inteligência espiritual e comunhão da Bíblia do Atalaia.
+          </motion.p>
         </div>
       </div>
 
-      <div className="px-5 max-w-4xl mx-auto -mt-6 relative z-20">
+      <div className="px-5 max-w-5xl mx-auto relative z-20 pb-20">
         <motion.div 
           variants={container}
           initial="hidden"
@@ -129,11 +158,11 @@ const ManualPage = () => {
               variants={item}
               className="space-y-4"
             >
-              <div className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-[2rem] overflow-hidden shadow-xl">
-                <div className="relative h-40">
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:border-amber-400/20">
+                <div className="relative h-48">
                   <img src={section.image} className="w-full h-full object-cover opacity-50" alt={section.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--dark-card))] to-transparent" />
-                  <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0612] via-[#0a0612]/40 to-transparent" />
+                  <div className="absolute bottom-6 left-8 flex items-center gap-4">
                     <div className={`p-2.5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 ${section.color}`}>
                       <section.icon className="w-6 h-6" />
                     </div>
@@ -141,11 +170,11 @@ const ManualPage = () => {
                   </div>
                 </div>
 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {section.items.map((sub, iIdx) => (
                   <div 
                     key={sub.label} 
-                    className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-2xl p-5 hover:bg-[hsl(var(--dark-card-hover))] transition-all group"
+                    className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.08] hover:border-white/10 transition-all group"
                   >
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -170,20 +199,24 @@ const ManualPage = () => {
             variants={item}
             className="pt-10 pb-6 text-center space-y-6"
           >
-            <div className="bg-primary/10 border border-primary/20 rounded-3xl p-8 space-y-4">
-              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
-                <ShieldCheck className="w-8 h-8 text-primary-foreground" />
+            <div className="bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[3rem] p-12 space-y-6 relative overflow-hidden shadow-2xl">
+              <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full" />
+              
+              <div className="w-20 h-20 bg-gradient-to-r from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-amber-500/20 rotate-3">
+                <ShieldCheck className="w-10 h-10 text-amber-950" />
               </div>
               <h3 className="text-xl font-bold">Pronto para começar?</h3>
               <p className="text-sm text-[hsl(var(--dark-muted))] max-w-xs mx-auto">
                 A Bíblia do Atalaia foi desenvolvida para ser sua ferramenta definitiva de estudo e comunhão.
               </p>
-              <Button 
-                onClick={() => navigate("/")}
-                className="rounded-full px-10 py-6 h-auto text-base font-bold shadow-xl hover:scale-105 transition-transform"
-              >
-                Abrir Aplicativo
-              </Button>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => navigate("/")}
+                  className="rounded-full px-12 py-8 h-auto text-lg font-bold bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-amber-950 shadow-[0_0_60px_rgba(251,191,36,0.3)] hover:scale-105 transition-all"
+                >
+                  Acessar o Aplicativo agora
+                </Button>
+              </div>
             </div>
 
             <p className="text-[10px] font-bold text-[hsl(var(--dark-muted))] uppercase tracking-[0.2em]">

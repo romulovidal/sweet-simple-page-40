@@ -32,7 +32,7 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
-  const isLanding = location.pathname === "/app";
+  const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
 
   useManifestSwap();

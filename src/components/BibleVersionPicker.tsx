@@ -66,10 +66,13 @@ const BibleVersionPicker = ({
 
   if (!open) return null;
 
-  // Show install button if not installed
-  // We keep it visible even if deferredPrompt is null to handle cases where it might take a second to load
-  // or to provide manual instructions (like on iOS)
-  const showInstallPrompt = !isInstalled;
+  // ALWAYS show the prompt for debugging/visibility if not in standalone mode
+  // Using a more robust check for standalone mode
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || 
+                      (navigator as any).standalone === true ||
+                      document.referrer.includes('android-app://');
+  
+  const showInstallPrompt = !isStandalone;
 
   return (
     <div

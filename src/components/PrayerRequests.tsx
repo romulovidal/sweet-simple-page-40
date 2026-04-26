@@ -218,9 +218,6 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
         ))}
       </div>
 
-      {/* Horários de culto (apenas na aba Comunidade) */}
-      {tab === "public" && <CultoScheduleList />}
-
       {/* New request form */}
       {showForm && user && (
         <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">

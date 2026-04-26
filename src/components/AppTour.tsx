@@ -421,10 +421,7 @@ const AppTour = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     timerRef.current = window.setTimeout(async () => {
-      // Dupla verificação para evitar loopings:
-      // 1. Se já está destruindo ou finalizando
       if (finishingRef.current) return;
-      // 2. Se o Onboarding ainda está ativo
       if (document.querySelector('[data-onboarding-active="true"]')) {
         hasStartedRef.current = false;
         return;

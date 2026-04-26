@@ -54,7 +54,7 @@ const Onboarding = () => {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold tracking-tight">Bem-vindo à Bíblia Atalaia</h1>
               <p className="text-[hsl(var(--dark-muted))] text-sm">
-                Sua jornada de fé com inteligência e comunidade. Vamos configurar sua experiência em 1 minuto?
+                Sua jornada de fé com inteligência espiritual e comunidade. Vamos configurar sua experiência em 1 minuto?
               </p>
             </div>
             <Button onClick={next} className="w-full h-12 text-base font-semibold rounded-xl">

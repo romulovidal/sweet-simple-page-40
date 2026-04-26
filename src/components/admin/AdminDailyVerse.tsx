@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
@@ -19,23 +19,17 @@ interface VerseQueueItem {
 const AdminDailyVerse = () => {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
+  const [pushTime, setPushTime] = useState<string>("08:00");
   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: modeRow }, { data: versionRow }, { data: queueData }] = await Promise.all([
+    const [{ data: modeRow }, { data: versionRow }, { data: timeRow }, { data: queueData }] = await Promise.all([
       supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
       supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
+      supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
       supabase
         .from("daily_verse_queue")
         .select("*")
@@ -51,9 +45,17 @@ const AdminDailyVerse = () => {
       const val = typeof versionRow.value === "string" ? versionRow.value : JSON.stringify(versionRow.value);
       setVersion((val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase());
     }
+    if (timeRow) {
+      const val = typeof timeRow.value === "string" ? timeRow.value : JSON.stringify(timeRow.value);
+      setPushTime(val.replace(/"/g, "") || "08:00");
+    }
     setQueue(queueData || []);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const toggleMode = async (checked: boolean) => {
     const newMode = checked ? "manual" : "auto";
@@ -70,6 +72,14 @@ const AdminDailyVerse = () => {
       .from("admin_settings")
       .upsert({ key: DAILY_VERSE_VERSION_KEY, value: JSON.stringify(newVersion), updated_at: new Date().toISOString() }, { onConflict: "key" });
     toast.success(`Versão alterada para ${BIBLE_VERSIONS.find(v => v.id === newVersion)?.shortName}`);
+  };
+
+  const changePushTime = async (newTime: string) => {
+    setPushTime(newTime);
+    await supabase
+      .from("admin_settings")
+      .upsert({ key: "daily_verse_push_time", value: JSON.stringify(newTime), updated_at: new Date().toISOString() }, { onConflict: "key" });
+    toast.success(`Horário do push alterado para ${newTime}`);
   };
 
   const saveVerse = async () => {
@@ -159,27 +169,54 @@ const AdminDailyVerse = () => {
         </div>
       </div>
 
-      {/* Version selector */}
-      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Languages className="w-4 h-4 text-primary" />
-          <p className="font-semibold text-sm">Versão da Bíblia</p>
+      {/* Settings section */}
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-6">
+        {/* Bible Version */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Languages className="w-4 h-4 text-primary" />
+            <p className="font-semibold text-sm">Versão da Bíblia</p>
+          </div>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">
+            Versão usada no versículo do dia (app + push).
+          </p>
+          <Select value={version} onValueChange={changeVersion}>
+            <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BIBLE_VERSIONS.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.shortName} — {v.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3">
-          Versão usada no versículo do dia (app + push). Se a versão escolhida não tiver o texto, será usado ARC como fallback.
-        </p>
-        <Select value={version} onValueChange={changeVersion}>
-          <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {BIBLE_VERSIONS.map((v) => (
-              <SelectItem key={v.id} value={v.id}>
-                {v.shortName} — {v.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        <div className="border-t border-[hsl(var(--dark-card-hover))]" />
+
+        {/* Push Notification Time */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary" />
+            <p className="font-semibold text-sm">Horário da Notificação</p>
+          </div>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">
+            Horário em que o push automático do versículo será enviado diariamente.
+          </p>
+          <div className="flex items-center gap-3">
+            <Input
+              type="time"
+              value={pushTime}
+              onChange={(e) => changePushTime(e.target.value)}
+              className="bg-[hsl(var(--dark-bg))] border-none w-32"
+            />
+            <span className="text-xs text-[hsl(var(--dark-muted))] italic">
+              (Horário de Brasília)
+            </span>
+          </div>
+        </div>
       </div>
 
       {mode === "manual" && (

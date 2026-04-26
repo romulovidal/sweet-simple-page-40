@@ -43,7 +43,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image_pray",
     type: "image",
-    value: "https://images.unsplash.com/photo-1544717297-fa2346ee479c?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=1200&q=80",
     label: "Oração",
     fallback: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
   },

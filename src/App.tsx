@@ -37,7 +37,7 @@ const AppContent = () => {
   useManifestSwap();
 
   return (
-    <div className={isAdmin || isLanding ? "min-h-screen" : "max-w-4xl mx-auto relative min-h-screen md:px-6"}>
+    <div className={isAdmin || isLanding ? "min-h-screen" : "max-w-6xl mx-auto relative min-h-screen lg:px-8"}>
       <ScrollToTop />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname + resetKey}>

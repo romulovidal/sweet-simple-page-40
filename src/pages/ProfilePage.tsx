@@ -302,7 +302,7 @@ const ProfilePage = () => {
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Histórico de Leitura</h1>
         </header>
-        <div className="px-5 space-y-4 max-w-2xl mx-auto">
+        <div className="px-5 space-y-4 max-w-4xl mx-auto">
           <div className="bg-dark-card rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wider text-dark-muted mb-2">Última leitura</p>
             <p className="font-semibold text-sm">{progress ? `${progress.bookName} ${progress.chapter}` : "Nenhuma leitura recente"}</p>

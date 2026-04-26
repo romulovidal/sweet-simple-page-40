@@ -12,7 +12,7 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings, StickyNote } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
@@ -410,7 +410,7 @@ const BiblePage = () => {
 
     return (
       <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10 max-w-4xl mx-auto w-full">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8">
           <button
             onClick={() => {
               setSelectedChapter(null);
@@ -561,7 +561,8 @@ const BiblePage = () => {
           />
         )}
 
-        <div className="px-5 py-4 max-w-4xl mx-auto">
+        <div className="px-5 py-4 max-w-6xl mx-auto lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:px-8">
+          <div className="space-y-4">
           {highlightedVerse && !loading && !error && !hasSelection && (
             <div className="mb-4 bg-primary/10 rounded-xl px-4 py-3">
               <p className="text-xs text-primary font-semibold">Versículo em destaque: {highlightedVerse}</p>
@@ -594,7 +595,7 @@ const BiblePage = () => {
             </div>
           )}
 
-          {!loading && !error && verses.length > 0 && (
+            {!loading && !error && verses.length > 0 && (
             <div className="space-y-0.5">
               {verses.map((verse) => {
                 const verseEpigraphs = epigraphs.filter((epigraph) => epigraph.displayVerse === verse.number);
@@ -635,9 +636,9 @@ const BiblePage = () => {
                 );
               })}
             </div>
-          )}
+            )}
 
-          {!loading && verses.length > 0 && (
+            {!loading && verses.length > 0 && (
             <div className="flex items-center justify-between mt-10 pt-6 border-t border-dark-card">
               <button
                 onClick={() => {
@@ -664,6 +665,42 @@ const BiblePage = () => {
                 Capítulo {selectedChapter + 1} →
               </button>
             </div>
+            )}
+          </div>
+
+          {/* Desktop Sidebar Tools */}
+          {!loading && verses.length > 0 && (
+            <aside className="hidden lg:block space-y-6 sticky top-24 self-start">
+              <div className="bg-dark-card rounded-2xl p-5 border border-white/5">
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-primary" /> Opções de Estudo
+                </h3>
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => setShowVersionPicker(true)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-dark-bg hover:bg-dark-card-hover transition-colors text-xs font-semibold"
+                  >
+                    <span>Versão: {currentVersion.shortName}</span>
+                    <ChevronDown className="w-4 h-4 opacity-40" />
+                  </button>
+                  <div className="p-3 rounded-xl bg-dark-bg">
+                    <p className="text-[10px] uppercase tracking-wider text-dark-muted mb-2">Tamanho da Fonte</p>
+                    <FontSizeControls fontSize={fontSize} canIncrease={canIncFont} canDecrease={canDecFont} onIncrease={incFont} onDecrease={decFont} />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-dark-card rounded-2xl p-5 border border-white/5">
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2 text-dark-text">
+                  <StickyNote className="w-4 h-4 text-yellow-500" /> Suas Anotações
+                </h3>
+                <p className="text-xs text-dark-muted mb-4">Clique no ícone de nota em cada versículo ou abra o painel geral.</p>
+                <PersonalNotes 
+                  bookAbbrev={selectedBook.apiAbbrev} 
+                  chapter={selectedChapter} 
+                  enabled={appFeatures.personal_notes} 
+                />
+              </div>
+            </aside>
           )}
         </div>
 

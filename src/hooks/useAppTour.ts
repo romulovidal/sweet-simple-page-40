@@ -32,10 +32,13 @@ export function useAppTour() {
     timer = window.setTimeout(tryStart, 1500);
 
     const handleTriggerStart = () => {
-      // Quando o Onboarding fecha, esperamos um pouco e tentamos iniciar
+      if (cancelled) return;
+      // Quando algo fecha, tentamos iniciar
+      setShouldStart(false);
       window.setTimeout(() => {
-        setShouldStart(true);
-      }, 500);
+        const completed = localStorage.getItem(TOUR_KEY);
+        if (!completed) setShouldStart(true);
+      }, 600);
     };
 
     window.addEventListener("push-prompt:closed", handleTriggerStart);
@@ -65,9 +68,4 @@ export function useAppTour() {
   }, []);
 
   return { shouldStart, finishTour, restartTour };
-}
-
-export function triggerAppTour() {
-  localStorage.removeItem(TOUR_KEY);
-  window.dispatchEvent(new CustomEvent("app-tour:restart"));
 }

@@ -657,15 +657,15 @@ const VerseImageGenerator = ({ text, reference, open, onClose, version }: VerseI
                                   <ImageOff className="h-4 w-4 text-white/60" />
                                 </div>
                               )}
-                              {isSelected && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                  <Check className="h-4 w-4 text-white" />
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
+                                {isSelected && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                    <Check className="h-4 w-4 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>

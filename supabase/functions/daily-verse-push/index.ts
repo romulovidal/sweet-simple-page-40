@@ -81,71 +81,95 @@ serve(async (req) => {
     const { data: settings } = await supabase.from("admin_settings").select("key, value");
     const getSetting = (k: string) => settings?.find(s => s.key === k)?.value;
     
-    const configTime = String(getSetting("daily_verse_push_time") || "08:00").replace(/"/g, "");
-    const versionId = String(getSetting("daily_verse_version") || DEFAULT_VERSION).replace(/"/g, "").toLowerCase();
-
-    const authHeader = req.headers.get("Authorization");
-    const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
-
-    const nowBR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const brTimeStr = new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit", minute: "2-digit", hour12: false,
-    }).format(nowBR);
-
-    if (!isManual && brTimeStr !== configTime) {
-      return new Response(JSON.stringify({ skipped: true, brTime: brTimeStr, target: configTime }), { headers: corsHeaders });
-    }
-
-    const todayBR = nowBR.toISOString().split("T")[0];
-
-    let baseVerse: { text: string; ref: string } | null = null;
-    const { data: queueVerse } = await supabase.from("daily_verse_queue").select("verse_text, verse_ref").eq("scheduled_date", todayBR).maybeSingle();
-    
-    if (queueVerse) {
-      baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
-    } else {
-      const startOfYear = new Date(nowBR.getFullYear(), 0, 0);
-      const diff = nowBR.getTime() - startOfYear.getTime();
-      const dayOfYear = Math.floor(diff / 86400000);
-      baseVerse = officialVerses[dayOfYear % officialVerses.length];
-    }
-
-    const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
-    const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-      body: JSON.stringify({
-        title: `📖 ${finalVerse.ref}`,
-        body: finalVerse.text.substring(0, 120),
-        url: "/",
-        type: "daily-verse",
-        ttl: 86400,
-      }),
-    });
-
-     const pushResult = await response.json();
+     const getVal = (k: string) => {
+       const val = getSetting(k);
+       if (val === undefined || val === null) return "";
+       return typeof val === "string" ? val.replace(/"/g, "") : JSON.stringify(val).replace(/"/g, "");
+     };
  
-     // Send motivational message as a second notification if configured or just as a variation
-     const motivationalMsgs = getSetting("motivational_messages");
-     if (motivationalMsgs && Array.isArray(motivationalMsgs) && motivationalMsgs.length > 0) {
-       const randomMsg = motivationalMsgs[Math.floor(Math.random() * motivationalMsgs.length)];
+     const verseTime = getVal("daily_verse_push_time") || "08:00";
+     const versionId = getVal("daily_verse_version") || DEFAULT_VERSION;
+     const motivationalEnabled = getVal("motivational_push_enabled") === "true";
+     const motivationalTime = getVal("motivational_push_time") || "10:00";
+     const lastVerseDate = getVal("last_daily_verse_push_date") || "";
+     const lastMotivationalDate = getVal("last_motivational_push_date") || "";
+ 
+     const authHeader = req.headers.get("Authorization");
+     const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
+ 
+     const nowBR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+     const brTimeStr = new Intl.DateTimeFormat("pt-BR", {
+       hour: "2-digit", minute: "2-digit", hour12: false,
+     }).format(nowBR);
+     const todayBR = nowBR.toISOString().split("T")[0];
+ 
+     const results: any = { brTime: brTimeStr, date: todayBR };
+ 
+     // 1. Check Daily Verse Push
+     if (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR)) {
+       let baseVerse: { text: string; ref: string } | null = null;
+       const { data: queueVerse } = await supabase.from("daily_verse_queue").select("verse_text, verse_ref").eq("scheduled_date", todayBR).maybeSingle();
        
-       await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+       if (queueVerse) {
+         baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
+       } else {
+         const startOfYear = new Date(nowBR.getFullYear(), 0, 0);
+         const diff = nowBR.getTime() - startOfYear.getTime();
+         const dayOfYear = Math.floor(diff / 86400000);
+         baseVerse = officialVerses[dayOfYear % officialVerses.length];
+       }
+ 
+       const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
+       const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
+ 
+       const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
          method: "POST",
          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
          body: JSON.stringify({
-           title: "Atalaia: Mensagem de ânimo",
-           body: randomMsg,
+           title: `📖 ${finalVerse.ref}`,
+           body: finalVerse.text.substring(0, 120),
            url: "/",
-           type: "motivational",
-           ttl: 43200, // 12 hours
+           type: "daily-verse",
+           ttl: 86400,
          }),
        });
+       results.verse = await response.json();
+       
+       if (!isManual) {
+         await supabase.from("admin_settings").upsert({ key: "last_daily_verse_push_date", value: JSON.stringify(todayBR) });
+       }
      }
  
-     return new Response(JSON.stringify({ success: true, date: todayBR, verse: finalVerse.ref, pushResult }), { 
+     // 2. Check Motivational Push
+     if (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR))) {
+       const motivationalMsgs = getSetting("motivational_messages");
+       if (Array.isArray(motivationalMsgs) && motivationalMsgs.length > 0) {
+         const randomMsg = motivationalMsgs[Math.floor(Math.random() * motivationalMsgs.length)];
+         
+         const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+           body: JSON.stringify({
+             title: "Atalaia: Mensagem de ânimo",
+             body: randomMsg,
+             url: "/",
+             type: "motivational",
+             ttl: 43200,
+           }),
+         });
+         results.motivational = await response.json();
+ 
+         if (!isManual) {
+           await supabase.from("admin_settings").upsert({ key: "last_motivational_push_date", value: JSON.stringify(todayBR) });
+         }
+       }
+     }
+ 
+     if (!results.verse && !results.motivational) {
+       return new Response(JSON.stringify({ skipped: true, ...results }), { headers: corsHeaders });
+     }
+ 
+     return new Response(JSON.stringify({ success: true, ...results }), { 
        headers: { ...corsHeaders, "Content-Type": "application/json" } 
      });
   } catch (e) {

@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { reference, text } = await req.json();
+    const { reference, text, mode } = await req.json();
     if (!reference || !text) {
       return new Response(JSON.stringify({ error: "reference and text are required" }), {
         status: 400,
@@ -22,11 +22,41 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Fetch custom prompt from admin_settings
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    if (mode === "image_prompt") {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.0-flash-exp",
+          messages: [
+            { 
+              role: "system", 
+              content: "Você é um assistente criativo. Sua tarefa é criar palavras-chave em inglês (máximo 4) para buscar uma imagem no Unsplash que capture a essência espiritual do versículo bíblico fornecido. Retorne apenas as palavras separadas por vírgula." 
+            },
+            {
+              role: "user",
+              content: `Versículo: ${reference} - "${text}"`,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) throw new Error("AI error");
+      const data = await response.json();
+      const prompt = data.choices[0].message.content.trim();
+      return new Response(JSON.stringify({ prompt }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: Exegesis mode
     let systemPrompt =
       "Você é um exegeta bíblico acadêmico. Ao receber um texto bíblico, faça uma exegese completa incluindo:\n" +
       "1) **Contexto histórico e cultural** da época em que o texto foi escrito\n" +
@@ -54,7 +84,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.0-flash-exp",
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -67,18 +97,6 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "Erro ao gerar exegese" }), {

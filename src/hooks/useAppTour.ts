@@ -31,19 +31,27 @@ export function useAppTour() {
     // Tenta após 1.5s; se prompt estiver aberto, segue tentando + escuta evento
     timer = window.setTimeout(tryStart, 1500);
 
-    const handlePromptClosed = () => {
-      window.setTimeout(tryStart, 400);
+    const handleTriggerStart = () => {
+      if (cancelled) return;
+      // Quando algo fecha, tentamos iniciar
+      setShouldStart(false);
+      window.setTimeout(() => {
+        const completed = localStorage.getItem(TOUR_KEY);
+        if (!completed) setShouldStart(true);
+      }, 600);
     };
-    
-    window.addEventListener("push-prompt:closed", handlePromptClosed);
-    window.addEventListener("onboarding:closed", handlePromptClosed);
+
+    window.addEventListener("push-prompt:closed", handleTriggerStart);
+    window.addEventListener("onboarding:closed", handleTriggerStart);
+    window.addEventListener("app-tour:restart", handleTriggerStart);
 
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       if (pollTimer) window.clearTimeout(pollTimer);
-      window.removeEventListener("push-prompt:closed", handlePromptClosed);
-      window.removeEventListener("onboarding:closed", handlePromptClosed);
+      window.removeEventListener("push-prompt:closed", handleTriggerStart);
+      window.removeEventListener("onboarding:closed", handleTriggerStart);
+      window.removeEventListener("app-tour:restart", handleTriggerStart);
     };
   }, []);
 

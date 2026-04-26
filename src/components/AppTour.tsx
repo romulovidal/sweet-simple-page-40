@@ -417,7 +417,14 @@ const AppTour = () => {
       navigate("/", { replace: false, state: { reset: Date.now() } });
     }
 
-    timerRef.current = window.setTimeout(() => {
+    // Pequeno delay para garantir que o Onboarding saiu completamente do DOM
+    timerRef.current = window.setTimeout(async () => {
+      // Se o Onboarding ainda estiver visível por algum motivo, não inicia
+      if (document.querySelector('[data-onboarding-active="true"]')) {
+        hasStartedRef.current = false;
+        return;
+      }
+
       const driverSteps = STEPS.map((step, idx) => ({
         ...(step.selector ? { element: step.selector } : {}),
         popover: {
@@ -483,7 +490,7 @@ const AppTour = () => {
 
       driverRef.current = instance;
       instance.drive();
-    }, location.pathname === "/" ? 200 : 500);
+    }, 600);
   }, [completeTour, finishTour, injectDontShowCheckbox, location.pathname, navigate]);
 
   useEffect(() => {

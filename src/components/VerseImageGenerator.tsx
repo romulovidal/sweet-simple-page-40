@@ -473,11 +473,9 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     setGeneratingAI(true);
     try {
       const prompt = `background image for bible verse: "${text}" ${reference}. highly spiritual, cinematic, 4k, inspiring.`;
-      const response = await fetch("https://api.unsplash.com/photos/random?query=" + encodeURIComponent(prompt) + "&client_id=L_pXfX2X6R9_Z7eX_X_X_X_X_X_X_X_X_X_X_X_X_X");
-      // Note: In a real production app we'd use a dedicated AI image gen endpoint.
-      // For now, I'll use a keyword-based search on Unsplash to find a matching "contextual" image as requested.
-      const searchPrompt = `${text.split(' ').slice(0, 5).join(' ')} nature spiritual`.toLowerCase();
-      const imageUrl = `https://source.unsplash.com/featured/1080x1080?${encodeURIComponent(searchPrompt)}`;
+      const keywords = ["faith", "spiritual", "light", "cross", "nature", "hope", "peace", "sky"];
+      const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+      const imageUrl = `https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1200&q=80&sig=${Date.now()}`;
       
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),

@@ -490,7 +490,7 @@ const AppTour = () => {
 
       driverRef.current = instance;
       instance.drive();
-    }, location.pathname === "/" ? 200 : 500);
+    }, 600);
   }, [completeTour, finishTour, injectDontShowCheckbox, location.pathname, navigate]);
 
   useEffect(() => {

@@ -417,11 +417,12 @@ const AppTour = () => {
       navigate("/", { replace: false, state: { reset: Date.now() } });
     }
 
-    // Cancela qualquer timer pendente para evitar execuções múltiplas
     if (timerRef.current) window.clearTimeout(timerRef.current);
 
     timerRef.current = window.setTimeout(async () => {
       if (finishingRef.current) return;
+      
+      // Se o Onboarding ainda está no DOM, não inicia de jeito nenhum
       if (document.querySelector('[data-onboarding-active="true"]')) {
         hasStartedRef.current = false;
         return;

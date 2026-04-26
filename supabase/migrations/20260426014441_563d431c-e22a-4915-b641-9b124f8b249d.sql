@@ -1,0 +1,2 @@
+-- No migration needed for this change, just edge function update.
+-- Adding a comment to track this was requested.

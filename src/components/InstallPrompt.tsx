@@ -9,32 +9,15 @@ interface BeforeInstallPromptEvent extends Event {
 const InstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+  });
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
     const checkStatus = async () => {
-      // Check if already installed (standalone mode)
-      if (window.matchMedia("(display-mode: standalone)").matches) {
-        setIsInstalled(true);
-        return;
-      }
-      // iOS standalone
-      if ((navigator as any).standalone === true) {
-        setIsInstalled(true);
-        return;
-      }
-
-      // If Onboarding is active, hide the install prompt to avoid UI clutter
-      const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
-      if (!onboardingCompleted) {
-        setDismissed(true);
-        return;
-      }
+      const installed = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+      setIsInstalled(installed);
+      if (installed) return;
 
       // Check if user previously dismissed
       const dismissedAt = localStorage.getItem("install-prompt-dismissed");
@@ -80,10 +63,13 @@ const InstallPrompt = () => {
   // Don't show if installed, dismissed, or no prompt available
   // On iOS, show manual instructions since beforeinstallprompt isn't supported
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  // Show if not installed, not dismissed
+  // On Android/Chrome we wait for deferredPrompt, on iOS we show instructions
   const showIOSHint = isIOS && !isInstalled && !dismissed;
-  const showPrompt = !isInstalled && !dismissed && deferredPrompt;
+  const showAndroidPrompt = !isIOS && !isInstalled && !dismissed; // Keep it true to show something even if deferredPrompt hasn't fired yet
 
-  if (!showPrompt && !showIOSHint) return null;
+  if (!showAndroidPrompt && !showIOSHint) return null;
 
   return (
     <div className="fixed bottom-20 left-2 right-2 max-w-lg mx-auto z-40 animate-in slide-in-from-bottom-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-xs">
@@ -103,13 +89,14 @@ const InstallPrompt = () => {
               Acesse offline, receba notificações e tenha acesso rápido na tela inicial.
             </p>
           )}
-          {showPrompt && (
-            <button
-              onClick={handleInstall}
-              className="mt-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-2 rounded-lg active:opacity-90"
-            >
-              Instalar agora
-            </button>
+          {!isIOS && !isInstalled && (
+             <button
+               onClick={handleInstall}
+               disabled={!deferredPrompt}
+               className="mt-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-2 rounded-lg active:opacity-90 disabled:opacity-50"
+             >
+               {deferredPrompt ? "Instalar agora" : "Aguardando navegador..."}
+             </button>
           )}
         </div>
         <button onClick={handleDismiss} className="text-muted-foreground p-1">

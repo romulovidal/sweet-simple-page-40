@@ -178,7 +178,7 @@ const HomePage = () => {
 
           if (!cancelled && candidate && candidate.text !== cached?.verse.text) {
             const source = cached?.source === "manual" ? "manual" : (await tryManualVerse(today)) ? "manual" : "auto";
-            setVerse(candidate);
+            setVerse({ ...candidate, versionShortName: activeVersion.toUpperCase() });
             writeJsonStorage(
               DAILY_VERSE_CACHE_KEY,
               { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: candidate },

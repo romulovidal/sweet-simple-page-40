@@ -79,8 +79,8 @@ const AdminAISettings = () => {
           <BrainCircuit className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold">Recursos de IA</h2>
-          <p className="text-xs text-[hsl(var(--dark-muted))]">Ative ou desative cada recurso de inteligência espiritual</p>
+          <h2 className="text-lg font-bold">Recursos de Inteligência Espiritual</h2>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">Ative ou desative cada recurso inteligente</p>
         </div>
       </div>
 

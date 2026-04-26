@@ -65,7 +65,7 @@ const ADMIN_SECTIONS = [
     ]
   },
   {
-    title: "Inteligência Artificial",
+    title: "Inteligência Espiritual",
     tabs: [
       { id: "ai", label: "Configuração IA", icon: BrainCircuit },
       { id: "ai-prompts", label: "Prompts da IA", icon: Sparkles },

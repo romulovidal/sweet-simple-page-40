@@ -1,5 +1,12 @@
-import { Check, X } from "lucide-react";
+import { Check, X, Download } from "lucide-react";
 import { BIBLE_VERSIONS } from "@/services/bibleApi";
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 interface BibleVersionPickerProps {
   open: boolean;
@@ -14,7 +21,55 @@ const BibleVersionPicker = ({
   onClose,
   onSelect,
 }: BibleVersionPickerProps) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = () => {
+      if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true) {
+        setIsInstalled(true);
+        return;
+      }
+
+      const handler = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+      };
+
+      window.addEventListener("beforeinstallprompt", handler);
+      window.addEventListener("appinstalled", () => {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+      });
+
+      return () => window.removeEventListener("beforeinstallprompt", handler);
+    };
+
+    checkStatus();
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Fallback or manual instruction check
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert("Para instalar: toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'.");
+      }
+    }
+  };
+
   if (!open) return null;
+
+  // Show install button if not installed and prompt is available OR if it's iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const showInstallPrompt = !isInstalled && (deferredPrompt || isIOS);
 
   return (
     <div
@@ -38,6 +93,25 @@ const BibleVersionPicker = ({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {showInstallPrompt && (
+          <div className="px-5 py-4 bg-primary/10 border-b border-primary/20 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm">Instale o app para a melhor utilização</p>
+                <p className="text-xs text-dark-muted mt-0.5">
+                  Acesso rápido, offline e melhor performance.
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleInstall} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-10">
+              Instalar App
+            </Button>
+          </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="space-y-1">

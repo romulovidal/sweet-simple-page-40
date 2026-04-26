@@ -72,10 +72,10 @@ const AdminExegetAI = () => {
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="w-5 h-5 text-amber-500" />
-        <h2 className="text-lg font-bold text-[hsl(var(--dark-text))]">Prompt da ExegettAI</h2>
+        <h2 className="text-lg font-bold text-[hsl(var(--dark-text))]">Instrução ExegettAI</h2>
       </div>
       <p className="text-sm text-[hsl(var(--dark-muted))]">
-        Personalize o prompt que a IA usa para gerar as exegeses. Este texto será enviado como instrução do sistema.
+        Personalize a instrução que a Inteligência Espiritual usa para gerar as exegeses.
       </p>
 
       <Textarea

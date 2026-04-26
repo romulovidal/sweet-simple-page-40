@@ -199,20 +199,24 @@ const ManualPage = () => {
             variants={item}
             className="pt-10 pb-6 text-center space-y-6"
           >
-            <div className="bg-primary/10 border border-primary/20 rounded-3xl p-8 space-y-4">
-              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
-                <ShieldCheck className="w-8 h-8 text-primary-foreground" />
+            <div className="bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[3rem] p-12 space-y-6 relative overflow-hidden shadow-2xl">
+              <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full" />
+              
+              <div className="w-20 h-20 bg-gradient-to-r from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-amber-500/20 rotate-3">
+                <ShieldCheck className="w-10 h-10 text-amber-950" />
               </div>
               <h3 className="text-xl font-bold">Pronto para começar?</h3>
               <p className="text-sm text-[hsl(var(--dark-muted))] max-w-xs mx-auto">
                 A Bíblia do Atalaia foi desenvolvida para ser sua ferramenta definitiva de estudo e comunhão.
               </p>
-              <Button 
-                onClick={() => navigate("/")}
-                className="rounded-full px-10 py-6 h-auto text-base font-bold shadow-xl hover:scale-105 transition-transform"
-              >
-                Abrir Aplicativo
-              </Button>
+              <div className="pt-4">
+                <Button 
+                  onClick={() => navigate("/")}
+                  className="rounded-full px-12 py-8 h-auto text-lg font-bold bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-amber-950 shadow-[0_0_60px_rgba(251,191,36,0.3)] hover:scale-105 transition-all"
+                >
+                  Acessar o Aplicativo agora
+                </Button>
+              </div>
             </div>
 
             <p className="text-[10px] font-bold text-[hsl(var(--dark-muted))] uppercase tracking-[0.2em]">

@@ -227,7 +227,7 @@ const AdminPanel = () => {
             return (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(t.id as any)}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
                   active ? "text-primary" : "text-[hsl(var(--dark-muted))]"
                 }`}

@@ -473,48 +473,33 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
   const handleAIGenerate = async () => {
     setGeneratingAI(true);
     try {
-      // Identifica palavras-chave no versículo para buscar uma imagem relevante
-      const verseWords = text.toLowerCase().split(/\W+/);
-      const keywords = [
-        { key: "amor", search: "love" },
-        { key: "paz", search: "peace" },
-        { key: "luz", search: "light" },
-        { key: "coração", search: "heart" },
-        { key: "fé", search: "faith" },
-        { key: "esperança", search: "hope" },
-        { key: "céu", search: "sky" },
-        { key: "mar", search: "ocean" },
-        { key: "montanha", search: "mountain" },
-        { key: "fogo", search: "fire" },
-        { key: "água", search: "water" },
-        { key: "espírito", search: "spiritual" },
-        { key: "jesus", search: "cross" },
-        { key: "deus", search: "nature" },
-        { key: "oração", search: "prayer" },
-        { key: "liberdade", search: "freedom" },
-        { key: "cadeias", search: "chains" },
-        { key: "força", search: "strength" },
-        { key: "caminho", search: "path" },
-        { key: "vida", search: "life" }
-      ];
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exegetai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ reference, text, mode: "image_prompt" }),
+      });
 
-      const foundKeyword = keywords.find(k => verseWords.includes(k.key));
-      const searchQuery = foundKeyword ? foundKeyword.search : "nature,spiritual";
+      if (!resp.ok) throw new Error("IA error");
+      const { prompt } = await resp.json();
       
-      const finalUrl = `https://source.unsplash.com/featured/1080x1080/?${searchQuery}&sig=${Math.random()}`;
+      const finalUrl = `https://images.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt)}&sig=${Math.random()}`;
 
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",
         value: finalUrl,
-        label: "IA Sugestão",
+        label: "IA Gerada",
         fallback: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
       };
       
       setSelectedBg(newBg);
-      toast.success(`Imagem sugerida baseada em "${foundKeyword ? foundKeyword.key : 'contexto'}"!`);
+      toast.success(`Imagem gerada: ${prompt}`);
     } catch (error) {
-      toast.error("Erro ao gerar sugestão de imagem");
+      console.error("AI Generation error:", error);
+      toast.error("Erro ao gerar imagem com IA");
     } finally {
       setGeneratingAI(false);
     }

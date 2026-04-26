@@ -244,22 +244,22 @@ const ProfilePage = () => {
   // Verse history view
   if (view === "verse-history") {
     return (
-    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
-      <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto">
+      <div className="pb-20 min-h-screen max-w-6xl mx-auto">
+        <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto lg:pt-8">
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Versículos do Dia</h1>
         </header>
-        <div className="px-5 space-y-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 max-w-4xl mx-auto">
+        <div className="px-5 space-y-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {verseHistory.length === 0 ? (
-            <p className="text-sm text-dark-muted text-center py-10">Nenhum versículo do dia registrado ainda.</p>
+            <p className="text-sm text-dark-muted text-center py-10 col-span-full">Nenhum versículo do dia registrado ainda.</p>
           ) : (
             verseHistory.map((entry) => (
-              <div key={entry.date} className="bg-dark-card rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-primary">{entry.ref}</span>
-                  <span className="text-[10px] text-dark-muted">{formatDate(entry.date)}</span>
+              <div key={entry.date} className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-2xl p-5 hover:bg-[hsl(var(--dark-card-hover))] transition-colors shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold text-primary">{entry.ref}</span>
+                  <span className="text-[10px] font-medium text-[hsl(var(--dark-muted))] bg-white/5 px-2 py-0.5 rounded-full">{formatDate(entry.date)}</span>
                 </div>
-                <p className="text-sm leading-relaxed text-dark-text/90">"{entry.text}"</p>
+                <p className="text-sm leading-relaxed text-[hsl(var(--dark-text))]/90 italic">"{entry.text}"</p>
               </div>
             ))
           )}
@@ -270,22 +270,22 @@ const ProfilePage = () => {
 
   if (view === "saved") {
     return (
-      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
-        <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto">
+      <div className="pb-20 min-h-screen max-w-6xl mx-auto">
+        <header className="px-5 pt-12 pb-6 flex items-center gap-3 max-w-2xl mx-auto lg:pt-8">
           <button onClick={() => setView("overview")} className="text-primary text-sm font-semibold">← Voltar</button>
           <h1 className="text-lg font-bold">Versículos Salvos</h1>
         </header>
-        <div className="px-5 space-y-3">
+        <div className="px-5 space-y-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedVerses.length === 0 ? (
-            <p className="text-sm text-dark-muted text-center py-10">Nenhum versículo salvo ainda.</p>
+            <p className="text-sm text-dark-muted text-center py-10 col-span-full">Nenhum versículo salvo ainda.</p>
           ) : (
             [...savedVerses].sort((a, b) => b.savedAt.localeCompare(a.savedAt)).map((verse) => (
-              <div key={`${verse.reference}-${verse.savedAt}`} className="bg-dark-card rounded-xl p-4">
-                <p className="text-xs font-semibold text-primary mb-2">{verse.reference}</p>
-                <p className="text-sm leading-relaxed">"{verse.text}"</p>
+              <div key={`${verse.reference}-${verse.savedAt}`} className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-2xl p-5 hover:bg-[hsl(var(--dark-card-hover))] transition-colors shadow-sm flex flex-col h-full">
+                <p className="text-sm font-bold text-primary mb-3">{verse.reference}</p>
+                <p className="text-sm leading-relaxed mb-4 flex-1">"{verse.text}"</p>
                 <button onClick={() => setSavedVerses((prev) => prev.filter((item) => item.savedAt !== verse.savedAt))}
-                  className="mt-3 flex items-center gap-1 text-xs text-destructive">
-                  <Trash2 className="w-3 h-3" /> Remover
+                  className="mt-auto flex items-center gap-1.5 text-xs text-destructive hover:opacity-80 transition-opacity font-medium">
+                  <Trash2 className="w-3.5 h-3.5" /> Remover
                 </button>
               </div>
             ))

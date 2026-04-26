@@ -1,5 +1,4 @@
-// Bump this version to force update on all devices
-var SW_VERSION = "v10";
+var SW_VERSION = "v11";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
@@ -162,19 +161,29 @@ self.addEventListener("fetch", function(event) {
 
   if (!isCacheableRequest(url)) return;
 
-  // Bible data: network-first
-  if (isBibleRequest(url)) {
+  // Navigation & Bible data & API: always network-first
+  // This ensures the Daily Verse update check isn't trapped in cache
+  if (request.mode === "navigate" || isBibleRequest(url) || url.pathname.indexOf("/functions/v1/") !== -1) {
     event.respondWith(
-      caches.open(RUNTIME_CACHE).then(function(cache) {
-        return fetch(request, { cache: "no-store" }).then(function(response) {
-          if (response && response.ok) cache.put(request, response.clone());
-          return response;
-        }).catch(function() {
-          return cache.match(request).then(function(cached) {
-            return cached || Response.error();
+      (function() {
+        var targetCacheName = isBibleRequest(url) ? RUNTIME_CACHE : SHELL_CACHE;
+        return caches.open(targetCacheName).then(function(cache) {
+          // fetch with short timeout to not hang UI if internet is very slow
+          return fetch(request, { cache: "no-store" }).then(function(response) {
+            if (response && response.ok) {
+              cache.put(request, response.clone());
+              if (request.mode === "navigate") cache.put("/index.html", response.clone());
+            }
+            return response;
+          }).catch(function() {
+            return cache.match(request).then(function(cached) {
+              if (cached) return cached;
+              if (request.mode === "navigate") return cache.match("/index.html");
+              return Response.error();
+            });
           });
         });
-      })
+      })()
     );
     return;
   }

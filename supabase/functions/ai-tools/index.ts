@@ -42,6 +42,12 @@ const TOOL_PROMPTS: Record<string, string> = {
     "IMPORTANTE: Retorne APENAS um JSON válido no formato:\n" +
     '{"title":"...","description":"...","category":"Temático","emoji":"📖","readings":[{"day":1,"title":"...","book_abbrev":"gn","chapter":1,"verse_start":1,"verse_end":31}]}\n\n' +
     "Abreviações válidas: gn,ex,lv,nm,dt,js,jz,rt,1sm,2sm,1rs,2rs,1cr,2cr,ed,ne,et,jó,sl,pv,ec,ct,is,jr,lm,ez,dn,os,jl,am,ob,jn,mq,na,hc,sf,ag,zc,ml,mt,mc,lc,jo,at,rm,1co,2co,gl,ef,fp,cl,1ts,2ts,1tm,2tm,tt,fm,hb,tg,1pe,2pe,1jo,2jo,3jo,jd,ap",
+  "semantic-search":
+    "Você é um especialista em busca bíblica. O usuário descreverá um sentimento, situação ou dúvida.\n" +
+    "Sua tarefa é sugerir 4-6 versículos bíblicos que se apliquem diretamente ao contexto.\n" +
+    "Retorne APENAS um JSON válido no formato:\n" +
+    '[{"ref": "João 3:16", "text": "...", "explanation": "Por que este versículo é relevante"}, ...]\n\n' +
+    "Responda em português brasileiro.",
   "ask-bible": "", // placeholder — loaded from admin_settings
 };
 
@@ -152,7 +158,7 @@ Use markdown para formatação. Responda em português brasileiro.`;
       }
     }
 
-    const isJsonTool = tool === "plan-generator";
+    const isJsonTool = tool === "plan-generator" || tool === "semantic-search";
 
     const userContent = reference
       ? `**${reference}**\n\n"${text}"`

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Search, Sparkles } from "lucide-react";
 import { searchVerses } from "@/services/bibleApi";
@@ -9,7 +10,7 @@ import PrayerRequests from "@/components/PrayerRequests";
 
 type DiscoverResult = {
   id: string;
-  type: "referencia" | "tema" | "versiculo";
+  type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
   title: string;
   subtitle: string;
   excerpt: string;
@@ -51,6 +52,34 @@ const dedupeResults = (items: DiscoverResult[]) =>
           candidate.type === item.type
       ) === index
   );
+
+const semanticSearch = async (query: string): Promise<DiscoverResult[]> => {
+  try {
+    const { data, error } = await supabase.functions.invoke("ai-tools", {
+      body: { tool: "semantic-search", text: query },
+    });
+    if (error || !data?.result) return [];
+    const suggestions = JSON.parse(data.result);
+    if (!Array.isArray(suggestions)) return [];
+
+    return suggestions.map((s: any, idx: number) => {
+      const ref = parseBibleReference(s.ref);
+      return {
+        id: `ai-${idx}-${Date.now()}`,
+        type: "ai-sugestao",
+        title: s.ref,
+        subtitle: "Sugestão da IA",
+        excerpt: s.explanation || s.text,
+        bookAbbrev: ref?.book.apiAbbrev || "jo",
+        chapter: ref?.chapter || 1,
+        verse: ref?.verse,
+      };
+    });
+  } catch (e) {
+    console.error("Semantic search failed:", e);
+    return [];
+  }
+};
 
 const DiscoverPage = () => {
   const { features: appFeatures } = useAppFeatures();
@@ -156,7 +185,13 @@ const DiscoverPage = () => {
         })
         .filter((item): item is DiscoverResult => !!item);
 
-      setResults(dedupeResults([...smartMatches, ...verseResults]).slice(0, 20));
+      let aiResults: DiscoverResult[] = [];
+      // Se não for uma referência direta e for uma busca por "sentimento" (frases mais longas ou palavras semânticas)
+      if (rawQuery.split(" ").length >= 2 || ["triste", "feliz", "ansiedade", "medo", "amor", "paz"].includes(normalizedQuery)) {
+        aiResults = await semanticSearch(rawQuery);
+      }
+
+      setResults(dedupeResults([...aiResults, ...smartMatches, ...verseResults]).slice(0, 25));
     } catch {
       if (latestRequest.current !== requestId) return;
       setResults(dedupeResults(smartMatches));

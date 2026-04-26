@@ -232,7 +232,7 @@ const DiscoverPage = () => {
 
   return (
     <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
-      <header className="px-5 pt-12 pb-4 max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-4 max-w-4xl mx-auto lg:pt-8">
         <h1 className="text-2xl font-bold">Descubra</h1>
         <p className="text-sm text-dark-muted mt-1">
           Busque por tema, capítulo ou referência como João 3:16.

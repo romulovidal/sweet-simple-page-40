@@ -225,8 +225,8 @@ const PlansPage = () => {
     const currentVersion = getVersionById(bibleVersion);
 
     return (
-      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10 w-full">
+    <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
+      <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-[hsl(var(--dark-bg))] z-10 w-full lg:pt-8">
           <button onClick={() => { setSelectedDay(null); setDayVerses([]); setDayEpigraphs([]); setReadingIndexInDay(0); }}
             className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
             <ChevronLeft className="w-5 h-5" />

@@ -328,14 +328,14 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
   const imageBgs = BACKGROUNDS.filter((b) => b.type === "image");
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm">
-      <div className="flex h-full flex-col">
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center sm:p-4">
+      <div className="flex h-full w-full flex-col bg-[hsl(var(--dark-bg))] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-3xl sm:overflow-hidden sm:border sm:border-white/10 sm:shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-black/80 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 sm:px-6">
           <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-white/10">
             <X className="h-5 w-5" />
           </button>
-          <h2 className="text-sm font-bold">Criar Imagem</h2>
+          <h2 className="text-sm font-bold sm:text-base">Criar Imagem</h2>
           <div className="flex gap-2">
             <button onClick={handleDownload} className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Download className="h-4 w-4" />
@@ -346,31 +346,36 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex min-h-0 flex-1 flex-col">
-          {/* Preview */}
-          <div className="flex shrink-0 items-center justify-center px-4 py-4">
-            <canvas
-              ref={canvasRef}
-              className="h-[min(55vw,16rem)] w-[min(55vw,16rem)] rounded-2xl shadow-2xl sm:h-[min(50vw,22rem)] sm:w-[min(50vw,22rem)]"
-            />
+        {/* Content Container */}
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+          {/* Left Side: Preview */}
+          <div className="flex flex-col items-center justify-center p-4 sm:flex-1 sm:p-8 sm:bg-black/20">
+            <div className="relative">
+              <canvas
+                ref={canvasRef}
+                className="h-[min(65vw,20rem)] w-[min(65vw,20rem)] rounded-2xl shadow-2xl sm:h-[30rem] sm:w-[30rem] transition-all"
+              />
+              
+              {selectedBg.type === "image" && imageStatus === "loading" && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 backdrop-blur-sm">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="text-xs text-white/60">Carregando fundo...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedImageUnavailable && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200">
+                <ImageOff className="h-3.5 w-3.5" />
+                Fundo indisponível, usando fallback.
+              </div>
+            )}
           </div>
 
-          {selectedBg.type === "image" && imageStatus === "loading" && (
-            <div className="mx-auto mb-2 flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/60">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Carregando fundo...
-            </div>
-          )}
-          {selectedImageUnavailable && (
-            <div className="mx-auto mb-2 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200">
-              <ImageOff className="h-3.5 w-3.5" />
-              Fundo indisponível, usando fallback.
-            </div>
-          )}
-
-          {/* Controls panel */}
-          <div className="flex min-h-0 flex-1 flex-col rounded-t-3xl border-t border-white/10 bg-[hsl(var(--dark-bg))]">
+          {/* Right Side: Controls panel */}
+          <div className="flex min-h-0 flex-1 flex-col border-t border-white/10 bg-[hsl(var(--dark-bg))] sm:max-w-xs sm:border-l sm:border-t-0">
             {/* Tabs */}
             <div className="grid grid-cols-3 border-b border-white/5">
               {[

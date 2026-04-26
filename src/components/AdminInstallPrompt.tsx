@@ -64,7 +64,7 @@ const AdminInstallPrompt = () => {
   // Native install available
   if (deferredPrompt) {
     return (
-      <div className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4">
+      <div className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-xs">
         <div className="bg-card border border-border rounded-2xl p-4 shadow-lg flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600/15 flex items-center justify-center shrink-0">
             <Smartphone className="w-5 h-5 text-blue-500" />

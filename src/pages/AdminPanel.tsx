@@ -39,25 +39,55 @@ type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
 type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
 
-const BOTTOM_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
+const ADMIN_SECTIONS = [
+  {
+    title: "Geral",
+    tabs: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "app-features", label: "Funcionalidades", icon: Settings2 },
+      { id: "log", label: "Logs", icon: Clock },
+    ]
+  },
+  {
+    title: "Conteúdo",
+    tabs: [
+      { id: "posts", label: "Posts", icon: FileText },
+      { id: "plans", label: "Planos de Leitura", icon: BookOpen },
+      { id: "verse", label: "Versículo do Dia", icon: BookMarked },
+      { id: "cultos", label: "Escala de Cultos", icon: Calendar },
+    ]
+  },
+  {
+    title: "Interação",
+    tabs: [
+      { id: "push", label: "Notificações Push", icon: Bell },
+      { id: "prayers", label: "Pedidos de Oração", icon: HandHeart },
+    ]
+  },
+  {
+    title: "Inteligência Artificial",
+    tabs: [
+      { id: "ai", label: "Configuração IA", icon: BrainCircuit },
+      { id: "ai-prompts", label: "Prompts da IA", icon: Sparkles },
+      { id: "exegetai", label: "ExegettAI", icon: Sparkles },
+      { id: "ask-bible-prompt", label: "Pergunte à Bíblia", icon: MessageCircleQuestion },
+    ]
+  },
+  {
+    title: "Sistema e Acesso",
+    tabs: [
+      { id: "users", label: "Usuários App", icon: Users },
+      { id: "roles", label: "Administradores", icon: Shield },
+    ]
+  }
+];
+
+const ALL_TABS = ADMIN_SECTIONS.flatMap(s => s.tabs);
+const BOTTOM_TABS = [
   { id: "dashboard", label: "Início", icon: LayoutDashboard },
   { id: "posts", label: "Posts", icon: FileText },
   { id: "plans", label: "Planos", icon: BookOpen },
   { id: "verse", label: "Versículo", icon: BookMarked },
-  { id: "push", label: "Push", icon: Bell },
-];
-
-const MORE_TABS: { id: TabType; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "cultos", label: "Cultos", icon: Calendar },
-  { id: "prayers", label: "Orações", icon: HandHeart },
-  { id: "ai", label: "IA", icon: BrainCircuit },
-  { id: "ai-prompts", label: "Prompts IA", icon: Sparkles },
-  { id: "app-features", label: "Funcionalidades", icon: Settings2 },
-  { id: "exegetai", label: "ExegettAI", icon: Sparkles },
-  { id: "ask-bible-prompt", label: "Pergunte à Bíblia", icon: MessageCircleQuestion },
-  { id: "users", label: "Usuários", icon: Users },
-  { id: "roles", label: "Administradores", icon: Shield },
-  { id: "log", label: "Log de Atividades", icon: Clock },
 ];
 
 const AdminPanel = () => {
@@ -86,8 +116,7 @@ const AdminPanel = () => {
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
 
-  const isMoreTab = MORE_TABS.some(t => t.id === tab);
-  const currentTabLabel = [...BOTTOM_TABS, ...MORE_TABS].find(t => t.id === tab)?.label || "";
+  const currentTabLabel = ALL_TABS.find(t => t.id === tab)?.label || "Painel Admin";
 
   // ---- MAIN PANEL (Mobile-first with bottom nav) ----
   return (
@@ -102,46 +131,57 @@ const AdminPanel = () => {
                 <Menu className="w-5 h-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] p-0">
-              <SheetHeader className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))]">
-                <SheetTitle className="text-left text-base text-[hsl(var(--dark-text))]">Menu Admin</SheetTitle>
+            <SheetContent side="left" className="w-80 bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] p-0 flex flex-col">
+              <SheetHeader className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))] shrink-0">
+                <SheetTitle className="text-left text-lg font-bold text-primary">Menu Administrativo</SheetTitle>
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] text-left uppercase tracking-wider">A Bíblia do Atalaia</p>
               </SheetHeader>
-              <div className="px-3 py-4 space-y-1">
-                {MORE_TABS.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setTab(t.id); setMenuOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      tab === t.id ? "bg-primary text-primary-foreground" : "text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
-                    }`}
-                  >
-                    <t.icon className="w-5 h-5" />
-                    {t.label}
-                  </button>
+              <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+                {ADMIN_SECTIONS.map((section) => (
+                  <div key={section.title} className="space-y-1.5">
+                    <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--dark-muted))] mb-2">
+                      {section.title}
+                    </h3>
+                    {section.tabs.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => { setTab(t.id as any); setMenuOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                          tab === t.id 
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                            : "text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
+                        }`}
+                      >
+                        <t.icon className={`w-4.5 h-4.5 ${tab === t.id ? "animate-pulse" : "opacity-70"}`} />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                 ))}
-                <div className="border-t border-[hsl(var(--dark-card))] my-3" />
+              </div>
+              <div className="p-4 bg-[hsl(var(--dark-card))]/30 border-t border-[hsl(var(--dark-card))] shrink-0 space-y-2">
                 <button
                   onClick={() => { setMenuOpen(false); navigate("/"); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
                 >
-                  <Home className="w-5 h-5" />
+                  <Home className="w-4 h-4" />
                   Voltar para a Bíblia
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-4 h-4" />
                   Sair
                 </button>
               </div>
             </SheetContent>
           </Sheet>
-          <div>
-            <h1 className="text-lg font-bold leading-tight text-[hsl(var(--dark-text))]">
-              {isMoreTab ? currentTabLabel : "Painel Admin"}
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold leading-tight text-primary uppercase tracking-tight">
+              {currentTabLabel}
             </h1>
-            {!isMoreTab && <p className="text-[11px] text-[hsl(var(--dark-muted))]">A Bíblia do Atalaia</p>}
+            <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium">Administração</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -187,7 +227,7 @@ const AdminPanel = () => {
             return (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(t.id as any)}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
                   active ? "text-primary" : "text-[hsl(var(--dark-muted))]"
                 }`}

@@ -126,7 +126,7 @@ const AskBible = ({ enabled }: AskBibleProps) => {
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] h-[85vh] flex flex-col p-0 [&>button.absolute]:hidden">
+        <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] h-[85vh] flex flex-col p-0 [&>button.absolute]:hidden sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-[600px] sm:max-w-[500px] sm:rounded-3xl sm:border sm:shadow-2xl">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-[hsl(var(--dark-card))]">
             <div className="flex items-center justify-between">
               <SheetTitle className="text-[hsl(var(--dark-text))] flex items-center gap-2">

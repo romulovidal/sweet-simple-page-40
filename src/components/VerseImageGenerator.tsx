@@ -65,7 +65,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image_break_chains",
     type: "image",
-    value: "https://images.unsplash.com/photo-1522071823945-8167823f640c?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1499209974431-9dac3adaf471?auto=format&fit=crop&w=1200&q=80",
     label: "Liberdade",
     fallback: "linear-gradient(135deg, #1e1e2e 0%, #c31432 100%)",
   },
@@ -191,7 +191,7 @@ const BACKGROUNDS: BackgroundOption[] = [
   {
     id: "image18",
     type: "image",
-    value: "https://images.unsplash.com/photo-1502082553245-938f97adcb27?auto=format&fit=crop&w=1200&q=80",
+    value: "https://images.unsplash.com/photo-1440613905118-99b921706b5c?auto=format&fit=crop&w=1200&q=80",
     label: "Raízes",
     fallback: "linear-gradient(135deg, #3e2723 0%, #2e7d32 100%)",
   },

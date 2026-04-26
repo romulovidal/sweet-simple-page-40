@@ -12,7 +12,7 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
@@ -689,11 +689,17 @@ const BiblePage = () => {
                   </div>
                 </div>
               </div>
-              <PersonalNotes 
-                bookName={selectedBook.name} 
-                chapter={selectedChapter} 
-                enabled={appFeatures.personal_notes} 
-              />
+              <div className="bg-dark-card rounded-2xl p-5 border border-white/5">
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2 text-dark-text">
+                  <StickyNote className="w-4 h-4 text-yellow-500" /> Suas Anotações
+                </h3>
+                <p className="text-xs text-dark-muted mb-4">Clique no ícone de nota em cada versículo ou abra o painel geral.</p>
+                <PersonalNotes 
+                  bookAbbrev={selectedBook.apiAbbrev} 
+                  chapter={selectedChapter} 
+                  enabled={appFeatures.personal_notes} 
+                />
+              </div>
             </aside>
           )}
         </div>

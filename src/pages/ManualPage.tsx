@@ -19,6 +19,7 @@ const ManualPage = () => {
       title: "Página Inicial (Hoje)",
       icon: LayoutDashboard,
       color: "text-blue-400",
+      image: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Versículo do Dia", description: "Um versículo selecionado diariamente para sua meditação.", icon: BookMarked },
         { label: "Reflexão IA", description: "Um devocional gerado por Inteligência Artificial baseado no versículo do dia.", icon: Sparkles },
@@ -30,6 +31,7 @@ const ManualPage = () => {
       title: "Leitura Bíblica",
       icon: BookOpen,
       color: "text-emerald-400",
+      image: "https://images.unsplash.com/photo-1507434965515-61970f2bd7c6?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Seleção de Versão", description: "Escolha entre ARA, ARC, NVI, NTLH e outras versões consagradas.", icon: Languages },
         { label: "Letras Vermelhas", description: "Destaque automático das falas de Jesus para facilitar o estudo.", icon: AlignCenter },
@@ -41,6 +43,7 @@ const ManualPage = () => {
       title: "Inteligência Artificial (ExegettAI)",
       icon: Sparkles,
       color: "text-amber-400",
+      image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Exegese Bíblica", description: "Análise profunda do contexto original e aplicação prática.", icon: BrainCircuit },
         { label: "Resumo de Capítulo", description: "A IA sintetiza os pontos principais de qualquer capítulo bíblico.", icon: LayoutDashboard },
@@ -52,6 +55,7 @@ const ManualPage = () => {
       title: "Gerador de Imagens",
       icon: ImageIcon,
       color: "text-pink-400",
+      image: "https://images.unsplash.com/photo-1499209974431-9dac3adaf471?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Fundos Personalizados", description: "Escolha entre dezenas de imagens temáticas ou gradientes modernos.", icon: ImageIcon },
         { label: "Ajuste de Estilo", description: "Mude a fonte, o tamanho e a cor do texto para combinar com sua arte.", icon: Settings },
@@ -63,21 +67,11 @@ const ManualPage = () => {
       title: "Comunidade",
       icon: Users,
       color: "text-purple-400",
+      image: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Mural de Orações", description: "Compartilhe seus pedidos ou interceda pelos irmãos clicando em 'Orei'.", icon: Heart },
         { label: "Escala de Cultos", description: "Fique por dentro dos dias e horários de todas as reuniões da igreja.", icon: Clock },
         { label: "Avisos e Destaques", description: "Receba comunicações importantes diretamente da liderança no seu feed.", icon: Bell },
-      ]
-    },
-    {
-      title: "Recursos Avançados",
-      icon: Settings,
-      color: "text-orange-400",
-      items: [
-        { label: "Uso Offline", description: "Baixe a Bíblia completa para ler mesmo sem conexão com a internet.", icon: Download },
-        { label: "Busca Inteligente", description: "Busque por temas como 'ansiedade' ou 'família' e receba sugestões da IA.", icon: Search },
-        { label: "Sincronização", description: "Suas marcações e progresso são salvos de forma segura em sua conta.", icon: Shield },
-        { label: "Notificações", description: "Receba o versículo do dia pontualmente às 08h da manhã.", icon: Bell },
       ]
     }
   ];
@@ -135,14 +129,19 @@ const ManualPage = () => {
               variants={item}
               className="space-y-4"
             >
-              <div className="flex items-center gap-3 px-2">
-                <div className={`p-2 rounded-xl bg-white/5 ${section.color}`}>
-                  <section.icon className="w-6 h-6" />
+              <div className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-[2rem] overflow-hidden shadow-xl">
+                <div className="relative h-40">
+                  <img src={section.image} className="w-full h-full object-cover opacity-50" alt={section.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--dark-card))] to-transparent" />
+                  <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                    <div className={`p-2.5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 ${section.color}`}>
+                      <section.icon className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight">{section.title}</h2>
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold">{section.title}</h2>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {section.items.map((sub, iIdx) => (
                   <div 
                     key={sub.label} 

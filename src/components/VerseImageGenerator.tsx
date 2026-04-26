@@ -420,9 +420,10 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     ctx.fillText("\u201C", textX, HEIGHT * 0.18);
     ctx.globalAlpha = 1;
 
-    // Verse text
+    // Verse text (limpando número inicial se houver)
     ctx.font = `italic ${scaledFontSize}px ${selectedFont.family}`;
-    const words = text.split(" ");
+    const cleanText = text.replace(/^\d+\s*/, "");
+    const words = cleanText.split(" ");
     const lines: string[] = [];
     let currentLine = "";
 
@@ -500,8 +501,8 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
       const foundKeyword = keywords.find(k => verseWords.includes(k.key));
       const searchQuery = foundKeyword ? foundKeyword.search : "nature,spiritual";
       
-      const finalUrl = `https://images.unsplash.com/featured/1080x1080?${searchQuery}&sig=${Math.random()}`;
-      
+      const finalUrl = `https://source.unsplash.com/featured/1080x1080/?${searchQuery}&sig=${Math.random()}`;
+
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",

@@ -95,8 +95,12 @@ export function getDisplayStreak(streak: StreakData): number {
 
   if (streak.lastDate === yesterdayStr) return streak.current;
 
-  // No contact today or yesterday → streak is zero
-  return 0;
+  // Check if there are any activities in history for today or yesterday
+  const hasActivityTodayOrYesterday = streak.history.some(date => date === today || date === yesterdayStr);
+  
+  // If we have activity today or yesterday, keep the current count.
+  // If lastDate was more than 1 day ago, the streak is broken (0).
+  return hasActivityTodayOrYesterday ? streak.current : 0;
 }
 
 export function updateStreak(streak: StreakData): StreakData {

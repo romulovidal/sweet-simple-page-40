@@ -417,15 +417,20 @@ const AppTour = () => {
       navigate("/", { replace: false, state: { reset: Date.now() } });
     }
 
-    // Pequeno delay para garantir que o Onboarding saiu completamente do DOM
+    // Cancela qualquer timer pendente para evitar execuções múltiplas
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+
     timerRef.current = window.setTimeout(async () => {
-      // Se o Onboarding ainda estiver visível por algum motivo, não inicia
+      // Dupla verificação para evitar loopings:
+      // 1. Se já está destruindo ou finalizando
+      if (finishingRef.current) return;
+      // 2. Se o Onboarding ainda está ativo
       if (document.querySelector('[data-onboarding-active="true"]')) {
         hasStartedRef.current = false;
         return;
       }
 
-      const driverSteps = STEPS.map((step, idx) => ({
+      const driverSteps = STEPS.map((step) => ({
         ...(step.selector ? { element: step.selector } : {}),
         popover: {
           title: step.title,
@@ -462,17 +467,18 @@ const AppTour = () => {
         popoverClass: "atalaias-tour-popover",
         steps: driverSteps,
         onDestroyed: () => {
+          const wasFinishing = finishingRef.current;
+          const lastIndex = instance.getActiveIndex();
+          
           driverRef.current = null;
-          if (finishingRef.current) {
-            hasStartedRef.current = false;
-            return;
-          }
-          // Tour foi até o fim
-          const isLastStep = instance.getActiveIndex() >= STEPS.length - 1;
-          if (isLastStep) {
-            finishTour(dontShowRef.current);
-          }
           hasStartedRef.current = false;
+
+          if (wasFinishing) return;
+
+          // Se o tour fechou, marcamos como concluído para não entrar em looping
+          // mesmo que não tenha ido até o último passo (evita re-trigger imediato)
+          finishTour(dontShowRef.current);
+          
           // Limpa params da Bíblia se sobrou
           if (window.location.search.includes("book=jo")) {
             window.history.replaceState({}, "", window.location.pathname);

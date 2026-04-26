@@ -9,11 +9,12 @@ import { useBackHandler } from "@/hooks/useBackHandler";
 interface ExegetAIProps {
   reference: string;
   text: string;
+  version?: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exegetai`;
 
-const ExegetAI = ({ reference, text }: ExegetAIProps) => {
+const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -91,7 +92,7 @@ const ExegetAI = ({ reference, text }: ExegetAIProps) => {
     }
   }, [reference, text]);
 
-  const shareText = `🧠 ExegettAI — ${reference}\n\n${content}\n\n— Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+  const shareText = `🧠 ExegettAI — ${reference} (${version || 'ARC'})\n\n${content}\n\n— Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
 
   const handleShare = async () => {
     try {

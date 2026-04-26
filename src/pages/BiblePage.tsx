@@ -750,6 +750,7 @@ const BiblePage = () => {
               <ExegetAI
                 reference={ref}
                 text={targetVerses.map((v) => `${v.number} ${v.text}`).join("\n")}
+                version={getVersionById(bibleVersion).shortName}
               />
             ) : null;
         })()}

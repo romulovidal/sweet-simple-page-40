@@ -666,12 +666,10 @@ const VerseImageGenerator = ({ text, reference, open, onClose, version }: VerseI
                             </button>
                           );
                         })}
-                      </div>
                     </div>
                   </div>
                 </div>
               )}
-
               {activeTab === "font" && (
                 <div className="space-y-5">
                   {/* Font family */}

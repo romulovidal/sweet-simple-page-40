@@ -407,8 +407,8 @@ const ProfilePage = () => {
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   return (
-    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
-      <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto">
+    <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
+      <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto lg:pt-8 lg:mx-0">
         <h1 className="text-2xl font-bold">Você</h1>
       </header>
 

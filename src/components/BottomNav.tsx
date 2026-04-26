@@ -30,7 +30,7 @@ const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[hsl(var(--dark-card))] border-t border-[hsl(var(--dark-card-hover))] safe-area-bottom">
-      <div className="flex items-center justify-around max-w-lg mx-auto h-16">
+      <div className="flex items-center justify-around max-w-4xl mx-auto h-16">
         {tabs.map(({ to, icon: Icon, label, tour }) => (
           <NavLink
             key={to}

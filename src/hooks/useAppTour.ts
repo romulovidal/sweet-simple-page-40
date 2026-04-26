@@ -69,3 +69,8 @@ export function useAppTour() {
 
   return { shouldStart, finishTour, restartTour };
 }
+
+export function triggerAppTour() {
+  localStorage.removeItem(TOUR_KEY);
+  window.dispatchEvent(new CustomEvent("app-tour:restart"));
+}

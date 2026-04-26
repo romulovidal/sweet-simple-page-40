@@ -457,7 +457,7 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     ctx.font = "bold 24px Inter, sans-serif";
     ctx.globalAlpha = 0.5;
     ctx.fillStyle = selectedColor.value;
-    ctx.fillText("BÍBLIA ATALAIA", WIDTH / 2, HEIGHT - 80);
+    ctx.fillText("A BÍBLIA DO ATALAIA", WIDTH / 2, HEIGHT - 80);
     
     ctx.font = "18px Inter, sans-serif";
     ctx.globalAlpha = 0.3;
@@ -663,8 +663,6 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
                                 </div>
                               )}
                             </div>
-                            <p className="py-1 text-center text-[10px] font-medium text-white/60">{bg.label}</p>
-                          </button>
                         );
                       })}
                     </div>

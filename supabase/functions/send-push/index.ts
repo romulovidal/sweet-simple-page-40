@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-import webpush from "npm:web-push@3.6.7";
+ import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 
 const PushPayloadSchema = z.object({
@@ -58,12 +58,12 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
   return { userId: user.id };
 }
 
-async function sendToSubscription(
-  supabase: ReturnType<typeof createClient>,
-  sub: { id: string; endpoint: string; p256dh: string; auth: string },
-  payload: string,
-  options: webpush.RequestOptions,
-) {
+ async function sendToSubscription(
+   supabase: any,
+   sub: { id: string; endpoint: string; p256dh: string; auth: string },
+   payload: string,
+   options: any,
+ ) {
   try {
     await webpush.sendNotification(
       {

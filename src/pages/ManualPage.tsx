@@ -55,7 +55,7 @@ const ManualPage = () => {
       title: "Gerador de Imagens",
       icon: ImageIcon,
       color: "text-pink-400",
-      image: "https://images.unsplash.com/photo-1499209974431-9dac3adaf471?auto=format&fit=crop&w=800&q=80",
+      image: "https://images.unsplash.com/photo-1544662227-ca175a405337?auto=format&fit=crop&w=800&q=80",
       items: [
         { label: "Fundos Personalizados", description: "Escolha entre dezenas de imagens temáticas ou gradientes modernos.", icon: ImageIcon },
         { label: "Ajuste de Estilo", description: "Mude a fonte, o tamanho e a cor do texto para combinar com sua arte.", icon: Settings },

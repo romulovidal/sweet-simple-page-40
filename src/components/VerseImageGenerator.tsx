@@ -329,7 +329,7 @@ function drawGradientBackground(
   ctx.fillRect(0, 0, width, height);
 }
 
-const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGeneratorProps) => {
+const VerseImageGenerator = ({ text, reference, open, onClose, version }: VerseImageGeneratorProps) => {
   useBackHandler(open, onClose);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedBg, setSelectedBg] = useState<BackgroundOption>(BACKGROUNDS[0]);
@@ -493,7 +493,7 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
         const shareData = { 
           files: [file], 
           title: reference, 
-          text: `"${text}" - ${reference}\n\nLeia mais em: https://biblia.atalaias.online/app` 
+          text: `"${text}" - ${reference} (${version || 'ARC'})\n\nLeia mais em: https://biblia.atalaias.online/app` 
         };
 
         if (navigator.canShare(shareData)) {

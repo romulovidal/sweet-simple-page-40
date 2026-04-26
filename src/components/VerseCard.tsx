@@ -18,6 +18,7 @@ const HIGHLIGHT_COLORS = [
 interface VerseCardProps {
   text: string;
   reference: string;
+  version?: string;
 }
 
 function parseReference(ref: string): { book: string; chapter: number; verse: number } | null {
@@ -47,7 +48,7 @@ const bookNameToAbbrev: Record<string, string> = {
   "1 João": "1jo", "2 João": "2jo", "3 João": "3jo", "Judas": "jd", "Apocalipse": "ap",
 };
 
-const VerseCard = ({ text, reference }: VerseCardProps) => {
+const VerseCard = ({ text, reference, version }: VerseCardProps) => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showColors, setShowColors] = useState(false);
@@ -76,7 +77,7 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
   };
 
   const handleShare = async () => {
-    const text_ = `${reference}\n\n"${text}"\n\n📖 Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+    const text_ = `${reference} (${version || 'ARC'})\n\n"${text}"\n\n📖 Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: text_ });
@@ -168,6 +169,7 @@ const VerseCard = ({ text, reference }: VerseCardProps) => {
           reference={reference}
           open={showImageGen}
           onClose={() => setShowImageGen(false)}
+          version={version}
         />
       )}
       <ShareMenu text={shareText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />

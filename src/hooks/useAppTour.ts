@@ -31,14 +31,19 @@ export function useAppTour() {
     // Tenta após 1.5s; se prompt estiver aberto, segue tentando + escuta evento
     timer = window.setTimeout(tryStart, 1500);
 
+    let triggerTimer: number | null = null;
     const handleTriggerStart = () => {
       if (cancelled) return;
-      // Quando algo fecha, tentamos iniciar
+      if (triggerTimer) window.clearTimeout(triggerTimer);
+      
+      // Se o tour já foi concluído, ignoramos gatilhos automáticos
+      const completed = localStorage.getItem(TOUR_KEY);
+      if (completed) return;
+
       setShouldStart(false);
-      window.setTimeout(() => {
-        const completed = localStorage.getItem(TOUR_KEY);
-        if (!completed) setShouldStart(true);
-      }, 600);
+      triggerTimer = window.setTimeout(() => {
+        if (!cancelled) setShouldStart(true);
+      }, 800);
     };
 
     window.addEventListener("push-prompt:closed", handleTriggerStart);
@@ -49,6 +54,7 @@ export function useAppTour() {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       if (pollTimer) window.clearTimeout(pollTimer);
+      if (triggerTimer) window.clearTimeout(triggerTimer);
       window.removeEventListener("push-prompt:closed", handleTriggerStart);
       window.removeEventListener("onboarding:closed", handleTriggerStart);
       window.removeEventListener("app-tour:restart", handleTriggerStart);

@@ -12,7 +12,7 @@ import {
   getVersionById,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings, StickyNote } from "lucide-react";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";

@@ -8,6 +8,7 @@ interface VerseImageGeneratorProps {
   reference: string;
   open: boolean;
   onClose: () => void;
+  version?: string;
 }
 
 type GradientBackground = {

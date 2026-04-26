@@ -1,5 +1,3 @@
-import ManualPage from "@/pages/ManualPage";
-          <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -26,6 +24,7 @@ import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import AppLanding from "@/pages/AppLanding";
+import ManualPage from "@/pages/ManualPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +47,7 @@ const AppContent = () => {
           <Route path="/planos" element={<PageTransition><PlansPage /></PageTransition>} />
           <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
           <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
+          <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/app" element={<AppLanding />} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />

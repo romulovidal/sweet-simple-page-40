@@ -67,9 +67,10 @@ const BibleVersionPicker = ({
 
   if (!open) return null;
 
-  // Show install button if not installed and prompt is available OR if it's iOS
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const showInstallPrompt = !isInstalled && (deferredPrompt || isIOS);
+  // Show install button if not installed
+  // We keep it visible even if deferredPrompt is null to handle cases where it might take a second to load
+  // or to provide manual instructions (like on iOS)
+  const showInstallPrompt = !isInstalled;
 
   return (
     <div

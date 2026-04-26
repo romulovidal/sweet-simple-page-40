@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-  Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap,
+   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { triggerAppTour } from "@/hooks/useAppTour";

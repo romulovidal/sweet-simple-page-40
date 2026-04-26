@@ -665,7 +665,6 @@ const VerseImageGenerator = ({ text, reference, open, onClose, version }: VerseI
                               </div>
                             </button>
                           );
-                          );
                         })}
                       </div>
                     </div>

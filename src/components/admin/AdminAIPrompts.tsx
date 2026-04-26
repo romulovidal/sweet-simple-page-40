@@ -102,9 +102,9 @@ const AdminAIPrompts = () => {
   return (
     <div className="space-y-3">
       <div className="mb-2">
-        <h2 className="text-lg font-bold">Prompts das IAs</h2>
+        <h2 className="text-lg font-bold">Instruções Espirituais</h2>
         <p className="text-xs text-[hsl(var(--dark-muted))]">
-          Personalize o prompt de sistema usado por cada recurso de IA. As mudanças se aplicam imediatamente.
+          Personalize as instruções de sistema usadas por cada recurso inteligente. As mudanças se aplicam imediatamente.
         </p>
       </div>
 

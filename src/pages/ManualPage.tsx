@@ -2,7 +2,8 @@ import {
   BookOpen, Sparkles, Image as ImageIcon, Heart, Bell, Settings, 
   Share2, Search, Smartphone, ShieldCheck, ChevronRight, Bookmark, 
   LayoutDashboard, Users, Flame, BookMarked, MessageSquare, 
-  Monitor, Download, Shield, Clock, Languages, AlignCenter
+  Monitor, Download, Shield, Clock, Languages, AlignCenter, 
+  BrainCircuit, Compass
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";

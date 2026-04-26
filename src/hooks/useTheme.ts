@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-type Theme = "light" | "dark";
+type Theme = "light" | "dark" | "sepia";
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -11,16 +11,17 @@ export function useTheme() {
   useEffect(() => {
     localStorage.setItem("app-theme", theme);
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    } else {
-      root.classList.add("light");
-      root.classList.remove("dark");
-    }
+    root.classList.remove("light", "dark", "sepia");
+    root.classList.add(theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      if (prev === "dark") return "light";
+      if (prev === "light") return "sepia";
+      return "dark";
+    });
+  };
 
-  return { theme, toggleTheme };
+  return { theme, setTheme, toggleTheme };
 }

@@ -260,8 +260,8 @@ const AdminDailyVerse = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary animate-pulse" />
             <div>
-               <p className="font-bold text-sm text-[hsl(var(--dark-text))]">Devocional Diário</p>
-               <p className="text-xs text-[hsl(var(--dark-muted))]">Envio de reflexões para edificar o seu dia.</p>
+               <p className="font-bold text-sm text-[hsl(var(--dark-text))]">Não deixe de ler Hoje!</p>
+               <p className="text-xs text-[hsl(var(--dark-muted))]">Envio de lembretes edificantes para manter a constância na Palavra.</p>
             </div>
           </div>
           <Switch checked={motivationalEnabled} onCheckedChange={toggleMotivational} />

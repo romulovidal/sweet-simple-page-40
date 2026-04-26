@@ -36,8 +36,13 @@ const PushPermissionPrompt = () => {
       // If denied, nothing we can do
       if (Notification.permission === "denied") return;
 
-      // Show modal immediately — no cooldown, every visit until they allow
-      setTimeout(() => setPhase("modal"), 800);
+      // If Onboarding hasn't been completed yet, don't show the separate prompt.
+      // Onboarding step 3 already handles push registration.
+      const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
+      if (!onboardingCompleted) return;
+
+      // Show modal after a delay if not in onboarding
+      setTimeout(() => setPhase("modal"), 2000);
     };
 
     check();

@@ -17,32 +17,48 @@ const InstallPrompt = () => {
       setIsInstalled(true);
       return;
     }
-    // iOS standalone
-    if ((navigator as any).standalone === true) {
-      setIsInstalled(true);
-      return;
-    }
+    const checkStatus = async () => {
+      // Check if already installed (standalone mode)
+      if (window.matchMedia("(display-mode: standalone)").matches) {
+        setIsInstalled(true);
+        return;
+      }
+      // iOS standalone
+      if ((navigator as any).standalone === true) {
+        setIsInstalled(true);
+        return;
+      }
 
-    // Check if user previously dismissed
-    const dismissedAt = localStorage.getItem("install-prompt-dismissed");
-    if (dismissedAt) {
-      const diff = Date.now() - Number(dismissedAt);
-      // Show again after 3 days
-      if (diff < 3 * 24 * 60 * 60 * 1000) {
+      // If Onboarding is active, hide the install prompt to avoid UI clutter
+      const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
+      if (!onboardingCompleted) {
         setDismissed(true);
         return;
       }
-    }
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      // Check if user previously dismissed
+      const dismissedAt = localStorage.getItem("install-prompt-dismissed");
+      if (dismissedAt) {
+        const diff = Date.now() - Number(dismissedAt);
+        // Show again after 3 days
+        if (diff < 3 * 24 * 60 * 60 * 1000) {
+          setDismissed(true);
+          return;
+        }
+      }
+
+      const handler = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+      };
+
+      window.addEventListener("beforeinstallprompt", handler);
+      window.addEventListener("appinstalled", () => setIsInstalled(true));
+
+      return () => window.removeEventListener("beforeinstallprompt", handler);
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", () => setIsInstalled(true));
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    checkStatus();
   }, []);
 
   const handleInstall = async () => {

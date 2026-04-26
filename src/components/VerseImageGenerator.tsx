@@ -500,14 +500,8 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
       const foundKeyword = keywords.find(k => verseWords.includes(k.key));
       const searchQuery = foundKeyword ? foundKeyword.search : "nature,spiritual";
       
-      // Usando o Unsplash Source API para obter uma imagem aleatória baseada no contexto do versículo
-      const imageUrl = `https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1200&q=80&sig=${Date.now()}&query=${encodeURIComponent(searchQuery)}`;
+      const finalUrl = `https://images.unsplash.com/featured/1080x1080?${searchQuery}&sig=${Math.random()}`;
       
-      // Para garantir que a imagem mude, vamos tentar pegar um ID diferente via Unsplash
-      // Como não temos API Key real aqui, usamos o parâmetro de query e sig (cache buster)
-      // que o Unsplash aceita em algumas rotas de redirecionamento ou simulamos via keywords
-      const finalUrl = `https://source.unsplash.com/featured/1080x1080?${searchQuery}&sig=${Date.now()}`;
-
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",

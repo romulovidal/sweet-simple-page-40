@@ -158,11 +158,11 @@ const ManualPage = () => {
               variants={item}
               className="space-y-4"
             >
-              <div className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-[2rem] overflow-hidden shadow-xl">
-                <div className="relative h-40">
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:border-amber-400/20">
+                <div className="relative h-48">
                   <img src={section.image} className="w-full h-full object-cover opacity-50" alt={section.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--dark-card))] to-transparent" />
-                  <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0612] via-[#0a0612]/40 to-transparent" />
+                  <div className="absolute bottom-6 left-8 flex items-center gap-4">
                     <div className={`p-2.5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 ${section.color}`}>
                       <section.icon className="w-6 h-6" />
                     </div>
@@ -170,11 +170,11 @@ const ManualPage = () => {
                   </div>
                 </div>
 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {section.items.map((sub, iIdx) => (
                   <div 
                     key={sub.label} 
-                    className="bg-[hsl(var(--dark-card))] border border-white/5 rounded-2xl p-5 hover:bg-[hsl(var(--dark-card-hover))] transition-all group"
+                    className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.08] hover:border-white/10 transition-all group"
                   >
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">

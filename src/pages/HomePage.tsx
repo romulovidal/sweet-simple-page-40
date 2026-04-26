@@ -76,7 +76,7 @@ const HomePage = () => {
   const [planProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
 
   // Daily verse
-  const [verse, setVerse] = useState<{ text: string; ref: string } | null>(null);
+  const [verse, setVerse] = useState<{ text: string; ref: string; versionShortName?: string } | null>(null);
   const [verseLoading, setVerseLoading] = useState(true);
   const [, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 

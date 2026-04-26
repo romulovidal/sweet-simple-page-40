@@ -28,16 +28,25 @@ const AdminDailyVerse = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: modeRow }, { data: versionRow }, { data: timeRow }, { data: queueData }] = await Promise.all([
-      supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
-      supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
-      supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
-      supabase
-        .from("daily_verse_queue")
-        .select("*")
-        .gte("scheduled_date", new Date().toISOString().split("T")[0])
-        .order("scheduled_date", { ascending: true }),
-    ]);
+     const [
+       { data: modeRow }, 
+       { data: versionRow }, 
+       { data: timeRow }, 
+       { data: motEnabledRow },
+       { data: motTimeRow },
+       { data: queueData }
+     ] = await Promise.all([
+       supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
+       supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
+       supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
+       supabase.from("admin_settings").select("value").eq("key", "motivational_push_enabled").maybeSingle(),
+       supabase.from("admin_settings").select("value").eq("key", "motivational_push_time").maybeSingle(),
+       supabase
+         .from("daily_verse_queue")
+         .select("*")
+         .gte("scheduled_date", new Date().toISOString().split("T")[0])
+         .order("scheduled_date", { ascending: true }),
+     ]);
 
     if (modeRow) {
       const val = typeof modeRow.value === "string" ? modeRow.value : JSON.stringify(modeRow.value);

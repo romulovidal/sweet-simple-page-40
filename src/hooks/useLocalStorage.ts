@@ -105,16 +105,21 @@ export function getDisplayStreak(streak: StreakData): number {
 
 export function updateStreak(streak: StreakData): StreakData {
   const today = getToday();
-  if (streak.lastDate === today) return streak;
+  // If already registered activity today, do nothing
+  if (streak.history.includes(today)) return streak;
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-  const isConsecutive = streak.lastDate === yesterdayStr;
-  const history = streak.history.includes(today)
-    ? streak.history
-    : [...streak.history, today].slice(-365);
+  // Consecutive if the last activity in history was yesterday
+  // We check the last item of history array as it's sorted by date
+  const lastActivityDate = streak.history.length > 0 
+    ? streak.history[streak.history.length - 1] 
+    : null;
+  
+  const isConsecutive = lastActivityDate === yesterdayStr;
+  const history = [...streak.history, today].slice(-365);
 
   return {
     current: isConsecutive ? streak.current + 1 : 1,

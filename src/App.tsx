@@ -15,6 +15,7 @@ import PushPermissionPrompt from "@/components/PushPermissionPrompt";
 import PushNotificationViewer from "@/components/PushNotificationViewer";
 import PageTransition from "@/components/PageTransition";
 import AppTour from "@/components/AppTour";
+import Onboarding from "@/components/Onboarding";
 import { useManifestSwap } from "@/hooks/useManifestSwap";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
@@ -57,6 +58,7 @@ const AppContent = () => {
       {!isAdmin && !isLanding && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />
+      {!isAdmin && !isLanding && <Onboarding />}
     </div>
   );
 };

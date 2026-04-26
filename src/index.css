@@ -45,13 +45,22 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Dark theme (default) */
+    /* Dark theme (default variables) */
     --dark-bg: 220 25% 8%;
     --dark-card: 220 20% 14%;
     --dark-card-hover: 220 20% 18%;
     --dark-text: 220 15% 90%;
     --dark-muted: 220 10% 55%;
     --streak-orange: 25 95% 55%;
+  }
+
+  /* Dark theme (default state) */
+  .dark {
+    --dark-bg: 220 25% 8%;
+    --dark-card: 220 20% 14%;
+    --dark-card-hover: 220 20% 18%;
+    --dark-text: 220 15% 90%;
+    --dark-muted: 220 10% 55%;
   }
 
   /* Light theme overrides */
@@ -61,7 +70,16 @@
     --dark-card-hover: 220 15% 88%;
     --dark-text: 220 20% 12%;
     --dark-muted: 220 10% 45%;
-    --streak-orange: 25 95% 55%;
+  }
+
+  /* Sepia theme overrides */
+  .sepia {
+    --dark-bg: 35 45% 90%;
+    --dark-card: 35 40% 85%;
+    --dark-card-hover: 35 40% 80%;
+    --dark-text: 35 45% 15%;
+    --dark-muted: 35 25% 45%;
+    --primary: 35 70% 40%;
   }
 }
 

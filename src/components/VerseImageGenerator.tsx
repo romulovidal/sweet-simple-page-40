@@ -482,18 +482,17 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
         body: JSON.stringify({ reference, text, mode: "image_prompt" }),
       });
 
-      if (!resp.ok) throw new Error("IA error");
+      if (!resp.ok) throw new Error("Erro na comunicação com a IA");
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
+      
       const prompt = data.prompt || "spiritual,bible";
-      
-      // Usamos a URL de redirecionamento do Unsplash que garante uma imagem nova para cada termo de busca e assinatura
-      const finalUrl = `https://source.unsplash.com/1080x1080/?${encodeURIComponent(prompt)},spiritual&sig=${Math.random()}`;
-      
+      const imageUrl = data.imageUrl || `https://images.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt)},spiritual&sig=${Math.random()}`;
+
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",
-        value: finalUrl,
+        value: imageUrl,
         label: "IA Gerada",
         fallback: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
       };

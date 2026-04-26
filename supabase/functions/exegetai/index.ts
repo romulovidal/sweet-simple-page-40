@@ -11,7 +11,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { reference, text, mode } = await req.json();
+    const body = await req.json();
+    const { reference, text, mode } = body;
+    
     if (!reference || !text) {
       return new Response(JSON.stringify({ error: "reference and text are required" }), {
         status: 400,
@@ -22,11 +24,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const UNSPLASH_ACCESS_KEY = Deno.env.get("UNSPLASH_ACCESS_KEY");
 
-    // Use a model confirmed by the error logs
     const MODEL = "google/gemini-2.5-flash";
 
     if (mode === "image_prompt") {
@@ -41,11 +40,11 @@ serve(async (req) => {
           messages: [
             { 
               role: "system", 
-              content: "Você é um assistente criativo. Sua tarefa é criar palavras-chave em inglês (máximo 4) para buscar uma imagem no Unsplash que capture a essência espiritual do versículo bíblico fornecido. Retorne apenas as palavras separadas por vírgula." 
+              content: "You are a creative assistant. Create 2-3 English keywords for a high-quality Unsplash image search that matches the spiritual essence of the given Bible verse. Return ONLY the keywords separated by commas, no other text." 
             },
             {
               role: "user",
-              content: `Versículo: ${reference} - "${text}"`,
+              content: `Verse: ${reference} - "${text}"`,
             },
           ],
         }),
@@ -53,18 +52,38 @@ serve(async (req) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("AI gateway error (image_prompt):", response.status, errorText);
         throw new Error(`AI error: ${response.status} ${errorText}`);
       }
       
       const data = await response.json();
       const prompt = data.choices[0].message.content.trim();
-      return new Response(JSON.stringify({ prompt }), {
+      
+      let imageUrl = "";
+      
+      // Se houver uma chave do Unsplash, usamos a API oficial que é 100% garantida
+      if (UNSPLASH_ACCESS_KEY) {
+        const unsplashResp = await fetch(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(prompt + ",spiritual")}&orientation=squarish&client_id=${UNSPLASH_ACCESS_KEY}`);
+        if (unsplashResp.ok) {
+          const unsplashData = await unsplashResp.json();
+          imageUrl = unsplashData.urls.regular;
+        }
+      }
+      
+      // Fallback para URL direta se não houver chave ou se a API falhar
+      if (!imageUrl) {
+        imageUrl = `https://images.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt + ",spiritual")}&sig=${Math.random()}`;
+      }
+
+      return new Response(JSON.stringify({ prompt, imageUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Default: Exegesis mode
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     let systemPrompt =
       "Você é um exegeta bíblico acadêmico. Ao receber um texto bíblico, faça uma exegese completa incluindo:\n" +
       "1) **Contexto histórico e cultural** da época em que o texto foi escrito\n" +
@@ -106,7 +125,6 @@ serve(async (req) => {
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error (exegesis):", response.status, t);
       return new Response(JSON.stringify({ error: "Erro ao gerar exegese" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

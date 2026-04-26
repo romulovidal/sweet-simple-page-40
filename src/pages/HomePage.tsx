@@ -338,7 +338,7 @@ const HomePage = () => {
   return (
     <div className="pb-20 min-h-screen">
       {/* Header */}
-      <header className="px-5 pt-12 pb-4 flex items-center justify-between">
+      <header className="px-5 pt-12 pb-4 flex items-center justify-between lg:pt-8">
         <div data-tour="home-streak"><StreakBadge days={getDisplayStreak(streak)} /></div>
         <button
           onClick={() => navigate("/descubra")}

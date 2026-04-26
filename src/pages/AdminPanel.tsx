@@ -67,8 +67,8 @@ const ADMIN_SECTIONS = [
   {
     title: "Inteligência Espiritual",
     tabs: [
-      { id: "ai", label: "Configuração IA", icon: BrainCircuit },
-      { id: "ai-prompts", label: "Prompts da IA", icon: Sparkles },
+      { id: "ai", label: "Configurações", icon: BrainCircuit },
+      { id: "ai-prompts", label: "Instruções", icon: Sparkles },
       { id: "exegetai", label: "ExegettAI", icon: Sparkles },
       { id: "ask-bible-prompt", label: "Pergunte à Bíblia", icon: MessageCircleQuestion },
     ]

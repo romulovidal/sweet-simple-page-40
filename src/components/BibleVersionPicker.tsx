@@ -22,7 +22,9 @@ const BibleVersionPicker = ({
   onSelect,
 }: BibleVersionPickerProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true
+  );
 
   useEffect(() => {
     const checkStatus = () => {

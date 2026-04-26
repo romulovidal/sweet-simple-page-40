@@ -340,7 +340,6 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [imageStatus, setImageStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [activeTab, setActiveTab] = useState<"bg" | "font" | "color">("bg");
-  const [generatingAI, setGeneratingAI] = useState(false);
   const [hiddenPreviewIds, setHiddenPreviewIds] = useState<Record<string, boolean>>({});
 
   const WIDTH = 1080;
@@ -470,44 +469,6 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
     if (open) drawCanvas();
   }, [drawCanvas, open]);
 
-  const handleAIGenerate = async () => {
-    setGeneratingAI(true);
-    try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exegetai`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ reference, text, mode: "image_prompt" }),
-      });
-
-      if (!resp.ok) throw new Error("Erro na comunicação com a IA");
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      
-      const prompt = data.prompt || "spiritual,bible";
-      const imageUrl = data.imageUrl;
-      if (!imageUrl) throw new Error("URL da imagem não recebida");
-      
-      const newBg: ImageBackground = {
-        id: "ai_gen_" + Date.now(),
-        type: "image",
-        value: imageUrl,
-        label: "IA Gerada",
-        fallback: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
-      };
-      
-      setSelectedBg(newBg);
-      toast.success(`Imagem gerada: ${prompt}`);
-    } catch (error) {
-      console.error("AI Generation error:", error);
-      toast.error("Erro ao gerar imagem com IA");
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
-
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -634,23 +595,6 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
               {activeTab === "bg" && (
                 <div className="space-y-4">
-                  {/* AI Generation Button */}
-                  <div className="mb-4">
-                    <button
-                      onClick={handleAIGenerate}
-                      disabled={generatingAI}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-600 py-3 text-xs font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50"
-                    >
-                      {generatingAI ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
-                      GERAR COM EXEGETTAI
-                    </button>
-                    <p className="mt-1.5 text-[10px] text-center text-white/40 italic">IA sugere uma imagem que combina com o versículo</p>
-                  </div>
-
                   {/* Gradients - horizontal scroll */}
                   <div>
                     <p className="mb-2 text-xs font-semibold text-white/50">Gradientes</p>

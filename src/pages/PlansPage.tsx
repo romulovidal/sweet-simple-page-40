@@ -225,8 +225,8 @@ const PlansPage = () => {
     const currentVersion = getVersionById(bibleVersion);
 
     return (
-      <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3">
+      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10 w-full">
           <button onClick={() => { setSelectedDay(null); setDayVerses([]); setDayEpigraphs([]); setReadingIndexInDay(0); }}
             className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
             <ChevronLeft className="w-5 h-5" />
@@ -293,7 +293,7 @@ const PlansPage = () => {
           </div>
         )}
 
-        <div className="px-5 mt-8 pb-4">
+        <div className="px-5 mt-8 pb-4 max-w-2xl mx-auto">
           <button
             onClick={handleNext}
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-2xl py-4 font-semibold text-sm active:opacity-90 transition-opacity"
@@ -328,7 +328,7 @@ const PlansPage = () => {
     const progressPercent = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
 
     return (
-      <div className="pb-20 min-h-screen">
+      <div className="pb-20 min-h-screen max-w-4xl mx-auto">
         <header className="px-5 pt-12 pb-4 flex items-center gap-3">
           <button onClick={() => setSelectedPlan(null)}
             className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center">
@@ -365,7 +365,7 @@ const PlansPage = () => {
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="px-5 space-y-2">
+        <div className="px-5 space-y-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
             {dayNumbers.map((dayNum) => {
               const isComplete = completedDays.includes(dayNum);
               const dayReadings = dayGroups[dayNum];
@@ -412,8 +412,8 @@ const PlansPage = () => {
   }
 
   return (
-    <div className="pb-20 min-h-screen">
-      <header className="px-5 pt-12 pb-4">
+    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Planos de Leitura</h1>
         <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">Escolha um plano e cresça na Palavra</p>
       </header>
@@ -425,7 +425,7 @@ const PlansPage = () => {
           <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Os planos são criados pelo administrador.</p>
         </div>
       ) : (
-        <div className="px-5 space-y-3">
+        <div className="px-5 space-y-3 grid grid-cols-1 md:grid-cols-2 gap-4">
           {plans.map((plan) => {
             const prog = planProgress.find((p) => p.planId === plan.id);
             const isStarted = !!prog;

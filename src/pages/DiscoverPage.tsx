@@ -231,8 +231,8 @@ const DiscoverPage = () => {
   };
 
   return (
-    <div className="pb-20 min-h-screen">
-      <header className="px-5 pt-12 pb-4">
+    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Descubra</h1>
         <p className="text-sm text-dark-muted mt-1">
           Busque por tema, capítulo ou referência como João 3:16.
@@ -264,7 +264,7 @@ const DiscoverPage = () => {
       </header>
 
       {searched && (
-        <div className="px-5 mb-6">
+        <div className="px-5 mb-6 max-w-2xl mx-auto">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -309,15 +309,15 @@ const DiscoverPage = () => {
       {!searched && (
         <>
           {/* Ask Bible */}
-          <div className="px-5 mb-4">
+          <div className="px-5 mb-8 max-w-2xl mx-auto">
             <AskBible enabled={appFeatures.ask_bible} />
           </div>
 
-          <div className="px-5 mb-6" data-tour="discover-categories">
+          <div className="px-5 mb-10 max-w-4xl mx-auto" data-tour="discover-categories">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Categorias
             </h2>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
               {categories.map((category) => (
                 <button
                   key={category.label}
@@ -331,11 +331,11 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          <div className="px-5 mb-6" data-tour="discover-popular">
+          <div className="px-5 mb-10 max-w-4xl mx-auto" data-tour="discover-popular">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">
               Passagens populares
             </h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {popularVerses.map((verse) => (
                 <button
                   key={verse.ref}
@@ -349,8 +349,7 @@ const DiscoverPage = () => {
             </div>
           </div>
 
-          {/* Prayer Requests */}
-          <div className="px-5 mb-6">
+          <div className="px-5 mb-10 max-w-4xl mx-auto">
             <PrayerRequests enabled={appFeatures.prayer_requests} />
           </div>
         </>

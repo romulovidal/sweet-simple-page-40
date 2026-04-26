@@ -367,40 +367,139 @@ const HomePage = () => {
         ))}
       </div>
 
-      <div className="px-5 pt-6 space-y-6">
+      <div className="px-5 pt-6 space-y-8 max-w-4xl mx-auto">
         {activeTab === "hoje" ? (
           <>
-            {/* Greeting */}
-            <div>
-              <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
-              <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
-              <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
-                {getDisplayStreak(streak) > 0
-                  ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
-                  : "Comece sua leitura de hoje!"}
-              </p>
-            </div>
-
-            {/* Verse of the Day */}
-            <div data-tour="home-verse-of-day">
-              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
-                Versículo do dia
-              </h2>
-              {verseLoading || !verse ? (
-                <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
-                  <Loader2 className="w-6 h-6 animate-spin text-white" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-8">
+                {/* Greeting */}
+                <div>
+                  <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
+                  <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
+                  <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
+                    {getDisplayStreak(streak) > 0
+                      ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
+                      : "Comece sua leitura de hoje!"}
+                  </p>
                 </div>
-              ) : (
-                <VerseCard text={verse.text} reference={verse.ref} />
-              )}
-              {!verseLoading && verse && (
-                <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
-              )}
+
+                {/* Verse of the Day */}
+                <div data-tour="home-verse-of-day">
+                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+                    Versículo do dia
+                  </h2>
+                  {verseLoading || !verse ? (
+                    <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
+                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                    </div>
+                  ) : (
+                    <VerseCard text={verse.text} reference={verse.ref} />
+                  )}
+                  {!verseLoading && verse && (
+                    <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                {/* Continue Reading */}
+                <div data-tour="home-continue">
+                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+                    Continuar lendo
+                  </h2>
+                  <button
+                    onClick={handleContinueReading}
+                    className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-lg">
+                      📖
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">
+                        {progress ? `${progress.bookName} ${progress.chapter}` : "Gênesis 1"}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--dark-muted))]">
+                        {progress ? "Continue de onde parou" : "Comece a ler agora"}
+                      </p>
+                    </div>
+                    <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
+                  </button>
+                </div>
+
+                {/* Enrolled Plans (Seus Planos) */}
+                {enrolledPlans.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                        Seus Planos
+                      </h2>
+                      <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
+                        Ver todos
+                      </button>
+                    </div>
+                    {enrolledPlans.slice(0, 2).map((plan) => {
+                      const prog = planProgress.find((p) => p.planId === plan.id);
+                      const totalDays = plan.total_days || 1;
+                      const pct = prog ? Math.round((prog.completedDays.length / totalDays) * 100) : 0;
+                      return (
+                        <button
+                          key={plan.id}
+                          onClick={() => {
+                            writeJsonStorage("selected-plan", plan.id);
+                            navigate("/planos");
+                          }}
+                          className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 mb-2 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-lg">{plan.image_emoji}</span>
+                            <p className="font-semibold text-sm flex-1">{plan.title}</p>
+                            <span className="text-xs text-primary font-bold">{pct}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-[hsl(var(--dark-bg))] rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Admin Posts Feed */}
+            {/* Available Plans (Planos de Leitura) - Full Width below the grid */}
+            {availablePlans.length > 0 && (
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                    Planos de Leitura
+                  </h2>
+                  <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
+                    Ver todos
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {availablePlans.slice(0, 5).map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => navigate("/planos")}
+                      className="bg-[hsl(var(--dark-card))] rounded-xl p-4 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors hover:scale-[1.02] transform transition-transform"
+                    >
+                      <span className="text-2xl mb-2 block">{plan.image_emoji}</span>
+                      <p className="font-semibold text-xs leading-tight mb-1">{plan.title}</p>
+                      <p className="text-[10px] text-[hsl(var(--dark-muted))]">{plan.total_days || 0} dias</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Posts Feed - Full Width */}
             {adminPosts.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-4 pt-4">
+                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                  Destaques e Avisos
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {adminPosts.map((post) => {
                   const Icon = postIcon(post.type);
                   const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
@@ -433,102 +532,20 @@ const HomePage = () => {
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Continue Reading */}
-            <div data-tour="home-continue">
-              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
-                Continuar lendo
-              </h2>
-              <button
-                onClick={handleContinueReading}
-                className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-lg">
-                  📖
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">
-                    {progress ? `${progress.bookName} ${progress.chapter}` : "Gênesis 1"}
-                  </p>
-                  <p className="text-xs text-[hsl(var(--dark-muted))]">
-                    {progress ? "Continue de onde parou" : "Comece a ler agora"}
-                  </p>
-                </div>
-                <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
-              </button>
-            </div>
-
-            {/* Enrolled Plans (Seus Planos) */}
-            {enrolledPlans.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
-                    Seus Planos
-                  </h2>
-                  <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
-                    Ver todos
-                  </button>
-                </div>
-                {enrolledPlans.slice(0, 2).map((plan) => {
-                  const prog = planProgress.find((p) => p.planId === plan.id);
-                  const totalDays = plan.total_days || 1;
-                  const pct = prog ? Math.round((prog.completedDays.length / totalDays) * 100) : 0;
-                  return (
-                    <button
-                      key={plan.id}
-                      onClick={() => {
-                        writeJsonStorage("selected-plan", plan.id);
-                        navigate("/planos");
-                      }}
-                      className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 mb-2 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-lg">{plan.image_emoji}</span>
-                        <p className="font-semibold text-sm flex-1">{plan.title}</p>
-                        <span className="text-xs text-primary font-bold">{pct}%</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[hsl(var(--dark-bg))] rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Available Plans (Planos de Leitura) */}
-            {availablePlans.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
-                    Planos de Leitura
-                  </h2>
-                  <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
-                    Ver todos
-                  </button>
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5">
-                  {availablePlans.slice(0, 4).map((plan) => (
-                    <button
-                      key={plan.id}
-                      onClick={() => navigate("/planos")}
-                      className="flex-shrink-0 w-36 bg-[hsl(var(--dark-card))] rounded-xl p-4 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
-                    >
-                      <span className="text-2xl mb-2 block">{plan.image_emoji}</span>
-                      <p className="font-semibold text-xs leading-tight">{plan.title}</p>
-                      <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">{plan.total_days || 0} dias</p>
-                    </button>
-                  ))}
                 </div>
               </div>
             )}
           </>
         ) : (
-          <div className="space-y-6 pb-6">
-            <CultoScheduleList />
-            <PrayerRequests enabled={true} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pb-6">
+            <div className="space-y-6">
+              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Próximos Cultos</h2>
+              <CultoScheduleList />
+            </div>
+            <div className="space-y-6">
+              <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Mural de Orações</h2>
+              <PrayerRequests enabled={true} />
+            </div>
           </div>
         )}
       </div>

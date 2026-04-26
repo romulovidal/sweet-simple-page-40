@@ -410,7 +410,7 @@ const BiblePage = () => {
 
     return (
       <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg z-10 max-w-4xl mx-auto w-full">
           <button
             onClick={() => {
               setSelectedChapter(null);
@@ -561,7 +561,7 @@ const BiblePage = () => {
           />
         )}
 
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 max-w-4xl mx-auto">
           {highlightedVerse && !loading && !error && !hasSelection && (
             <div className="mb-4 bg-primary/10 rounded-xl px-4 py-3">
               <p className="text-xs text-primary font-semibold">Versículo em destaque: {highlightedVerse}</p>
@@ -730,7 +730,7 @@ const BiblePage = () => {
   if (selectedBook) {
     return (
       <div className="pb-20 min-h-screen">
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3">
+        <header className="px-5 pt-12 pb-4 flex items-center gap-3 max-w-4xl mx-auto">
           <button
             onClick={() => {
               setSelectedBook(null);
@@ -745,7 +745,7 @@ const BiblePage = () => {
             {selectedBook.chapters} capítulos
           </span>
         </header>
-        <div className="px-5 grid grid-cols-5 gap-2">
+        <div className="px-5 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 max-w-4xl mx-auto">
           {Array.from({ length: selectedBook.chapters }, (_, index) => (
             <button
               key={index + 1}
@@ -767,8 +767,8 @@ const BiblePage = () => {
 
   // ── Book list ──
   return (
-    <div className="pb-20 min-h-screen">
-      <header className="px-5 pt-12 pb-4">
+    <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Bíblia</h1>
           <button
@@ -805,7 +805,7 @@ const BiblePage = () => {
           ))}
         </div>
       </header>
-      <div className="px-5 space-y-1">
+      <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6">
         {filteredBooks.map((book) => (
           <button
             key={book.abbrev}

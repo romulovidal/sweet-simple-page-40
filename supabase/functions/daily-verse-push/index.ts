@@ -1,3 +1,4 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -158,7 +159,37 @@ async function resolveTodayVerse(
   };
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
+    // Get configured push time
+    const { data: timeRow } = await supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle();
+    const configTime = timeRow?.value ? String(timeRow.value).replace(/"/g, "") : "08:00";
+
+    // If not a manual trigger, check if it's the correct time
+    if (!isManualTrigger) {
+      const now = new Date();
+      const brTime = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(now);
+
+      // Allow a small window (e.g. 5 minutes) in case cron is slightly off
+      const [nowH, nowM] = brTime.split(":").map(Number);
+      const [targetH, targetM] = configTime.split(":").map(Number);
+      
+      const nowMinutes = nowH * 60 + nowM;
+      const targetMinutes = targetH * 60 + targetM;
+
+      // Only send if within 5 minutes of target time
+      if (Math.abs(nowMinutes - targetMinutes) > 5) {
+        console.log(`Skipping: Current BR time is ${brTime}, target is ${configTime}`);
+        return new Response(JSON.stringify({ skipped: true, time: brTime, target: configTime }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

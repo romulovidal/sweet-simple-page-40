@@ -302,7 +302,7 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
         const shareData = { 
           files: [file], 
           title: reference, 
-          text: `"${text}" - ${reference}\n\nLeia mais em: https://biblia.atalaias.online/` 
+          text: `"${text}" - ${reference}\n\nLeia mais em: https://biblia.atalaias.online/app` 
         };
 
         if (navigator.canShare(shareData)) {

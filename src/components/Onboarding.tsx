@@ -17,10 +17,14 @@ const Onboarding = () => {
     isPushEnabled().then(setPushEnabled);
   }, []);
 
-  if (!show) return null;
+  if (!show) return <div id="onboarding-hidden" className="hidden" />;
 
   const next = () => setStep(s => s + 1);
-  const finish = () => setShow(false);
+  const finish = () => {
+    setShow(false);
+    // Notify that onboarding is done so tour can start
+    window.dispatchEvent(new CustomEvent("onboarding:closed"));
+  };
 
   const handlePushEnable = async () => {
     const ok = await registerPushNotifications();
@@ -34,7 +38,7 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[hsl(var(--dark-bg))] flex flex-col items-center justify-center px-6">
+    <div data-onboarding-active="true" className="fixed inset-0 z-[100] bg-[hsl(var(--dark-bg))] flex flex-col items-center justify-center px-6">
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div

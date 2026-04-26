@@ -64,8 +64,8 @@ const AdminAskBiblePrompt = () => {
           <MessageCircleQuestion className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold">Pergunte à Bíblia — Prompt</h2>
-          <p className="text-xs text-[hsl(var(--dark-muted))]">Personalize o comportamento da IA ao responder perguntas</p>
+          <h2 className="text-lg font-bold">Pergunte à Bíblia — Instrução</h2>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">Personalize o comportamento do atendimento espiritual</p>
         </div>
       </div>
 

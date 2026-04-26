@@ -487,8 +487,9 @@ const VerseImageGenerator = ({ text, reference, open, onClose }: VerseImageGener
       if (data.error) throw new Error(data.error);
       
       const prompt = data.prompt || "spiritual,bible";
-      const imageUrl = data.imageUrl || `https://images.unsplash.com/featured/1080x1080/?${encodeURIComponent(prompt)},spiritual&sig=${Math.random()}`;
-
+      const imageUrl = data.imageUrl;
+      if (!imageUrl) throw new Error("URL da imagem não recebida");
+      
       const newBg: ImageBackground = {
         id: "ai_gen_" + Date.now(),
         type: "image",

@@ -304,20 +304,20 @@ const STEPS: Step[] = [
     description:
       "Defina quantos capítulos quer ler no ano e acompanhe o progresso visualmente.",
   },
-  {
-    selector: '[data-tour="profile-menu"]',
-    title: "⚙️ Tudo seu num menu",
-    description:
-      "Versículos salvos, versículos do dia já vistos, histórico de leitura e Configurações (notificações push, refazer este tour, sair, LGPD).",
-  },
+   {
+     selector: '[data-tour="profile-menu"]',
+     title: "⚙️ Tudo seu num menu",
+     description:
+       "Versículos salvos, versículos do dia já vistos, histórico de leitura e Configurações (notificações push, refazer este tour, sair, LGPD).",
+   },
 
   // ===== END =====
-  {
-    title: "🎉 Tudo pronto!",
-    description:
-      "Você viu tudo que o app oferece. Pode refazer este tour quando quiser em **Você → Configurações → Refazer tour do app**. Boa leitura! 📖",
-    showDontShow: true,
-  },
+   {
+     title: "🎉 Tudo pronto!",
+     description:
+       "Você viu tudo que o app oferece. Pode refazer este tour quando quiser em **Perfil → Configurações → Refazer tour do app**. Boa leitura! 📖",
+     showDontShow: true,
+   },
 ];
 
 const AppTour = () => {

@@ -9,16 +9,17 @@
    if (location.pathname !== "/" || !features.ask_bible) return null;
  
    return (
-     <div 
-       className="fixed bottom-24 right-5 z-50 w-14 h-14 active:scale-95 transition-all animate-fade-in cursor-pointer drop-shadow-xl"
+     <button
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
+       className="fixed bottom-24 right-5 z-50 w-14 h-14 active:scale-95 transition-all animate-fade-in cursor-pointer flex items-center justify-center p-0 border-none bg-transparent outline-none focus:outline-none"
+       style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
      >
        <img
-         src="/ask-bible-icon.png"
+         src={`/ask-bible-icon.png?v=${Date.now()}`}
          alt="Pergunte à Bíblia"
-         className="w-full h-full object-contain"
+         className="w-full h-full object-contain pointer-events-none"
        />
-     </div>
+     </button>
    );
  };
  

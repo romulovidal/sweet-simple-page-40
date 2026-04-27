@@ -1,4 +1,6 @@
  import AskBibleFloat from "@/components/AskBibleFloat";
+ import AskBible from "@/components/AskBible";
+ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -32,6 +34,7 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
+   const { features } = useAppFeatures();
   const isAdmin = location.pathname.startsWith("/admin");
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
@@ -58,6 +61,7 @@ const AppContent = () => {
       {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
       {!isAdmin && !isLanding && <PushPermissionPrompt />}
+       {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
        {!isAdmin && !isLanding && <AskBibleFloat />}
        {!isAdmin && !isLanding && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}

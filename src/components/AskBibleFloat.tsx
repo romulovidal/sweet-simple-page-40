@@ -11,7 +11,7 @@
    return (
      <button
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
-       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full overflow-hidden shadow-lg active:scale-95 transition-all animate-fade-in border-2 border-white/20"
+       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-2xl overflow-hidden shadow-lg active:scale-95 transition-all animate-fade-in border border-white/10"
        aria-label="Pergunte à Bíblia"
      >
        <img 

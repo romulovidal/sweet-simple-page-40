@@ -280,18 +280,18 @@ const STEPS: Step[] = [
      side: "top",
    },
 
-  // ===== PROFILE =====
-  {
-    selector: '[data-tour="nav-profile"]',
-    title: "👤 Aba Você",
-    description:
-      "Vamos abrir agora! Aqui ficam suas estatísticas, salvos, histórico, metas e configurações.",
-    before: () => {
-      window.history.pushState({}, "", "/perfil");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    },
-    waitMs: 400,
-  },
+   // ===== PROFILE =====
+   {
+     selector: '[data-tour="nav-profile"]',
+     title: "👤 Aba Perfil",
+     description:
+       "Vamos abrir agora! Aqui ficam suas estatísticas, salvos, histórico, metas e configurações.",
+     before: () => {
+       window.history.pushState({}, "", "/perfil");
+       window.dispatchEvent(new PopStateEvent("popstate"));
+     },
+     waitMs: 400,
+   },
   {
     selector: '[data-tour="profile-stats"]',
     title: "📊 Suas estatísticas",

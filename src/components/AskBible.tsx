@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { MessageCircleQuestion, Send, Loader2, Trash2, Share2 } from "lucide-react";
+ import { MessageSquareQuote, Send, Loader2, Trash2, Share2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,10 +133,10 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
       <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] h-[85vh] flex flex-col p-0 [&>button.absolute]:hidden sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-[600px] sm:max-w-[500px] sm:rounded-3xl sm:border sm:shadow-2xl">
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-[hsl(var(--dark-card))]">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-[hsl(var(--dark-text))] flex items-center gap-2">
-              <MessageCircleQuestion className="w-5 h-5 text-purple-400" />
-              Pergunte à Bíblia
-            </SheetTitle>
+             <SheetTitle className="text-[hsl(var(--dark-text))] flex items-center gap-2">
+               <MessageSquareQuote className="w-5 h-5 text-primary" />
+               Pergunte à Bíblia
+             </SheetTitle>
             {messages.length > 0 && (
               <button onClick={() => setMessages([])} className="text-[hsl(var(--dark-muted))] p-1">
                 <Trash2 className="w-4 h-4" />
@@ -146,12 +146,12 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center py-10">
-              <MessageCircleQuestion className="w-12 h-12 text-purple-400/30 mx-auto mb-4" />
-              <p className="text-sm text-[hsl(var(--dark-muted))]">
-                Pergunte qualquer coisa sobre a Bíblia
-              </p>
+           {messages.length === 0 && (
+             <div className="text-center py-10">
+               <MessageSquareQuote className="w-12 h-12 text-primary/30 mx-auto mb-4" />
+               <p className="text-sm text-[hsl(var(--dark-muted))]">
+                 Pergunte qualquer coisa sobre a Bíblia
+               </p>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
                 {["O que é graça?", "Quem foi Moisés?", "O que diz sobre ansiedade?"].map(q => (
                   <button
@@ -225,19 +225,19 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        data-tour="ask-bible"
-        className="w-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
-      >
-        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-          <MessageCircleQuestion className="w-5 h-5 text-purple-400" />
-        </div>
-        <div className="text-left flex-1">
-          <p className="text-sm font-semibold">Pergunte à Bíblia</p>
-          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Tire suas dúvidas com Inteligência Espiritual</p>
-        </div>
-      </button>
+       <button
+         onClick={() => setOpen(true)}
+         data-tour="ask-bible"
+         className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-all border border-primary/10 hover:border-primary/20 group"
+       >
+         <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+           <MessageSquareQuote className="w-6 h-6 text-primary" />
+         </div>
+         <div className="text-left flex-1">
+           <p className="text-sm font-bold">Pergunte à Bíblia</p>
+           <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">Tire suas dúvidas com Inteligência Espiritual</p>
+         </div>
+       </button>
       {content}
     </>
   );

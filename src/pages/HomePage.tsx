@@ -344,18 +344,15 @@ const HomePage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-8">
-                 <div className="flex flex-col gap-4">
-                   {/* Greeting */}
-                   <div>
-                     <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
-                     <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
-                     <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
-                       {getDisplayStreak(streak) > 0
-                         ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
-                         : "Comece sua leitura de hoje!"}
-                     </p>
-                   </div>
-
+                 {/* Greeting */}
+                 <div>
+                   <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
+                   <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
+                   <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
+                     {getDisplayStreak(streak) > 0
+                       ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
+                       : "Comece sua leitura de hoje!"}
+                   </p>
                  </div>
 
                 {/* Verse of the Day */}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
  import { Search, Loader2, Play, Heart, BookOpen, FileText, Megaphone, MessageCircleQuestion } from "lucide-react";
 import AIDevotional from "@/components/ai/AIDevotional";
  import { useAppFeatures } from "@/hooks/useAppFeatures";
+ import { useAIFeatures } from "@/hooks/useAIFeatures";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
@@ -48,6 +49,7 @@ const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
    const { features: appFeatures } = useAppFeatures();
+   const { features: aiFeatures } = useAIFeatures();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -391,7 +393,7 @@ const HomePage = () => {
                     />
                   )}
                    {!verseLoading && verse && (
-                     <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={true} />
+                     <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
                    )}
                 </div>
               </div>

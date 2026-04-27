@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
  import { Search, Loader2, Play, Heart, BookOpen, FileText, Megaphone, MessageCircleQuestion } from "lucide-react";
 import AIDevotional from "@/components/ai/AIDevotional";
-import { useAIFeatures } from "@/hooks/useAIFeatures";
+ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
@@ -47,7 +47,7 @@ const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
 const HomePage = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const { features: aiFeatures } = useAIFeatures();
+   const { features: appFeatures } = useAppFeatures();
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -355,7 +355,7 @@ const HomePage = () => {
                    </div>
 
                    {/* Ask Bible Shortcut */}
-                   {aiFeatures.ask_bible && (
+                   {appFeatures.ask_bible && (
                      <button
                        onClick={() => navigate("/descubra")}
                        className="w-full bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-all border border-purple-500/10 group hover:border-purple-500/20"

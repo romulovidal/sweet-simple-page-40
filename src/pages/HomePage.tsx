@@ -344,36 +344,15 @@ const HomePage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-8">
-                 <div className="flex flex-col gap-4">
-                   {/* Greeting */}
-                   <div>
-                     <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
-                     <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
-                     <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
-                       {getDisplayStreak(streak) > 0
-                         ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
-                         : "Comece sua leitura de hoje!"}
-                     </p>
-                   </div>
-
-                   {/* Ask Bible Shortcut */}
-                   {appFeatures.ask_bible && (
-                     <button
-                       onClick={() => navigate("/descubra")}
-                       className="w-full bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-all border border-purple-500/10 group hover:border-purple-500/20"
-                     >
-                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                         <MessageCircleQuestion className="w-6 h-6 text-purple-400" />
-                       </div>
-                       <div className="text-left flex-1 min-w-0">
-                         <p className="font-bold text-sm text-[hsl(var(--dark-text))]">Pergunte à Bíblia</p>
-                         <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">Tire suas dúvidas com Inteligência Espiritual</p>
-                       </div>
-                       <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                         <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
-                       </div>
-                     </button>
-                   )}
+                 {/* Greeting */}
+                 <div>
+                   <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
+                   <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
+                   <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
+                     {getDisplayStreak(streak) > 0
+                       ? `Você está numa ofensiva de ${getDisplayStreak(streak)} dia${getDisplayStreak(streak) > 1 ? "s" : ""}!`
+                       : "Comece sua leitura de hoje!"}
+                   </p>
                  </div>
 
                 {/* Verse of the Day */}

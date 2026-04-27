@@ -1,3 +1,4 @@
+ import AskBibleFloat from "@/components/AskBibleFloat";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -57,7 +58,8 @@ const AppContent = () => {
       {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
       {!isAdmin && !isLanding && <PushPermissionPrompt />}
-      {!isAdmin && !isLanding && <BottomNav />}
+       {!isAdmin && !isLanding && <AskBibleFloat />}
+       {!isAdmin && !isLanding && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />
       {!isAdmin && !isLanding && <Onboarding />}

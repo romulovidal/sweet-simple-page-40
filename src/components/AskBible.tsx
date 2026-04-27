@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+ import { useState, useCallback, useEffect } from "react";
 import { MessageCircleQuestion, Send, Loader2, X, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,18 @@ interface Message {
   content: string;
 }
 
-interface AskBibleProps {
-  enabled: boolean;
-}
-
-const AskBible = ({ enabled }: AskBibleProps) => {
+ interface AskBibleProps {
+   enabled: boolean;
+   showButton?: boolean;
+ }
+ 
+ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
+   useEffect(() => {
+     const handleOpen = () => setOpen(true);
+     window.addEventListener("open-ask-bible", handleOpen);
+     return () => window.removeEventListener("open-ask-bible", handleOpen);
+   }, []);
+ 
   const [open, setOpen] = useState(false);
   useBackHandler(open, () => setOpen(false));
   const [messages, setMessages] = useState<Message[]>([]);
@@ -107,25 +114,8 @@ const AskBible = ({ enabled }: AskBibleProps) => {
     }
   }, [input, loading, messages]);
 
-  if (!enabled) return null;
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        data-tour="ask-bible"
-        className="w-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
-      >
-        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-          <MessageCircleQuestion className="w-5 h-5 text-purple-400" />
-        </div>
-        <div className="text-left flex-1">
-          <p className="text-sm font-semibold">Pergunte à Bíblia</p>
-          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Tire suas dúvidas com Inteligência Espiritual</p>
-        </div>
-      </button>
-
-      <Sheet open={open} onOpenChange={setOpen}>
+   const content = (
+     <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] h-[85vh] flex flex-col p-0 [&>button.absolute]:hidden sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-[600px] sm:max-w-[500px] sm:rounded-3xl sm:border sm:shadow-2xl">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-[hsl(var(--dark-card))]">
             <div className="flex items-center justify-between">
@@ -208,9 +198,30 @@ const AskBible = ({ enabled }: AskBibleProps) => {
             </div>
           </div>
         </SheetContent>
-      </Sheet>
-    </>
-  );
+     </Sheet>
+   );
+ 
+   if (!showButton) return content;
+   if (!enabled) return null;
+ 
+   return (
+     <>
+       <button
+         onClick={() => setOpen(true)}
+         data-tour="ask-bible"
+         className="w-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
+       >
+         <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+           <MessageCircleQuestion className="w-5 h-5 text-purple-400" />
+         </div>
+         <div className="text-left flex-1">
+           <p className="text-sm font-semibold">Pergunte à Bíblia</p>
+           <p className="text-[10px] text-[hsl(var(--dark-muted))]">Tire suas dúvidas com Inteligência Espiritual</p>
+         </div>
+       </button>
+       {content}
+     </>
+   );
 };
 
 export default AskBible;

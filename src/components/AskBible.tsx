@@ -1,5 +1,19 @@
  import { useState, useCallback, useEffect } from "react";
-import { MessageCircleQuestion, Send, Loader2, X, Trash2 } from "lucide-react";
+ import { MessageCircleQuestion, Send, Loader2, X, Trash2, Share2 } from "lucide-react";
+   const handleShare = useCallback((text: string) => {
+     if (navigator.share) {
+       navigator.share({
+         title: "Resposta da Bíblia do Atalaia",
+         text: text,
+         url: window.location.origin
+       }).catch(console.error);
+     } else {
+       navigator.clipboard.writeText(text).then(() => {
+         toast.success("Resposta copiada para a área de transferência!");
+       });
+     }
+   }, []);
+ 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -153,23 +167,30 @@ interface Message {
               </div>
             )}
 
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-[hsl(var(--dark-card))]"
-                }`}>
-                  {msg.role === "assistant" ? (
-                    <div className="prose prose-sm prose-invert max-w-none text-sm">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    <p className="text-sm">{msg.content}</p>
-                  )}
-                </div>
-              </div>
-            ))}
+             {messages.map((msg, i) => (
+               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 relative group ${
+                   msg.role === "user"
+                     ? "bg-primary text-primary-foreground"
+                     : "bg-[hsl(var(--dark-card))]"
+                 }`}>
+                   {msg.role === "assistant" ? (
+                     <div className="prose prose-sm prose-invert max-w-none text-sm pr-1">
+                       <ReactMarkdown>{msg.content}</ReactMarkdown>
+                       <button 
+                         onClick={() => handleShare(msg.content)}
+                         className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-dark-card-hover border border-white/10 shadow-lg active:scale-90 transition-all opacity-0 group-hover:opacity-100 lg:opacity-100"
+                         title="Compartilhar resposta"
+                       >
+                         <Share2 className="w-3 h-3 text-primary" />
+                       </button>
+                     </div>
+                   ) : (
+                     <p className="text-sm">{msg.content}</p>
+                   )}
+                 </div>
+               </div>
+             ))}
 
             {loading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">

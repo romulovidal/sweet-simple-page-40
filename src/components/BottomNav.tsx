@@ -1,8 +1,8 @@
- import { Home, BookOpen, CalendarDays, Rocket, User } from "lucide-react";
+ import { LayoutDashboard, BookOpen, CalendarDays, Rocket, User } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 const tabs = [
-  { to: "/", icon: Home, label: "Início", tour: "nav-home" },
+   { to: "/", icon: LayoutDashboard, label: "Início", tour: "nav-home" },
   { to: "/biblia", icon: BookOpen, label: "Bíblia", tour: "nav-bible" },
    { to: "/planos", icon: CalendarDays, label: "Planos", tour: "nav-plans" },
    { to: "/descubra", icon: Rocket, label: "Explore", tour: "nav-discover" },

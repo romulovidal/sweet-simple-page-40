@@ -72,9 +72,9 @@ const STEPS: Step[] = [
   },
   {
     selector: '[data-tour="home-search"]',
-    title: "🔎 Busca rápida",
-    description:
-      "Atalho para a página de Descubra: pesquise versículos, temas ou referências como “João 3:16”.",
+     title: "🔎 Busca rápida",
+     description:
+       "Atalho para a página de Explore: pesquise versículos, temas ou referências como “João 3:16”.",
   },
   {
     selector: '[data-tour="home-verse-of-day"]',
@@ -232,18 +232,18 @@ const STEPS: Step[] = [
     waitMs: 400,
   },
 
-  // ===== DISCOVER =====
-  {
-    selector: '[data-tour="nav-discover"]',
-    title: "🧭 Aba Descubra",
-    description:
-      "Vamos abrir agora! Busque por temas, categorias, passagens populares e converse com o Pergunte à Bíblia.",
-    before: () => {
-      window.history.pushState({}, "", "/descubra");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    },
-    waitMs: 400,
-  },
+   // ===== EXPLORE =====
+   {
+     selector: '[data-tour="nav-discover"]',
+     title: "🚀 Aba Explore",
+     description:
+       "Vamos abrir agora! Busque por temas, categorias, passagens populares e converse com o Pergunte à Bíblia.",
+     before: () => {
+       window.history.pushState({}, "", "/descubra");
+       window.dispatchEvent(new PopStateEvent("popstate"));
+     },
+     waitMs: 400,
+   },
   {
     selector: '[data-tour="discover-search"]',
     title: "🔎 Busca inteligente",
@@ -272,13 +272,13 @@ const STEPS: Step[] = [
       "Lista pronta com versículos clássicos (João 3:16, Salmos 23, Filipenses 4:6...). Toque para abrir direto na Bíblia.",
     side: "top",
   },
-  {
-    selector: '[data-tour="ask-bible"]',
-    title: "🙋 Pergunte à Bíblia",
-    description:
-      "Aqui na aba **Descubra** fica o **Pergunte à Bíblia**: chat com Inteligência Espiritual para tirar dúvidas teológicas com base nas Escrituras.",
-    side: "top",
-  },
+   {
+     selector: '[data-tour="ask-bible"]',
+     title: "🙋 Pergunte à Bíblia",
+     description:
+       "Aqui na aba **Explore** fica o **Pergunte à Bíblia**: chat com Inteligência Espiritual para tirar dúvidas teológicas com base nas Escrituras.",
+     side: "top",
+   },
 
   // ===== PROFILE =====
   {

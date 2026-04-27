@@ -1,4 +1,3 @@
- import { MessageCircleQuestion } from "lucide-react";
  import { useLocation } from "react-router-dom";
  import { useAppFeatures } from "@/hooks/useAppFeatures";
  
@@ -12,10 +11,14 @@
    return (
      <button
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
-       className="fixed bottom-24 right-5 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all animate-fade-in"
+       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full overflow-hidden shadow-lg active:scale-95 transition-all animate-fade-in border-2 border-white/20"
        aria-label="Pergunte à Bíblia"
      >
-       <MessageCircleQuestion className="w-6 h-6 text-white" />
+       <img 
+         src="/ask-bible-icon.png" 
+         alt="Pergunte à Bíblia" 
+         className="w-full h-full object-cover"
+       />
      </button>
    );
  };

@@ -390,9 +390,9 @@ const HomePage = () => {
                       version={verse.versionShortName} 
                     />
                   )}
-                  {!verseLoading && verse && (
-                    <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
-                  )}
+                   {!verseLoading && verse && (
+                     <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={true} />
+                   )}
                 </div>
               </div>
 

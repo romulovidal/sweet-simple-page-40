@@ -9,12 +9,16 @@
    if (location.pathname !== "/" || !features.ask_bible) return null;
  
    return (
-     <img
-       src="/ask-bible-icon.png"
-       alt="Pergunte à Bíblia"
+     <div 
+       className="fixed bottom-24 right-5 z-50 w-14 h-14 active:scale-95 transition-all animate-fade-in cursor-pointer drop-shadow-xl"
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
-       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-xl shadow-2xl active:scale-95 transition-all animate-fade-in cursor-pointer object-cover"
-     />
+     >
+       <img
+         src="/ask-bible-icon.png"
+         alt="Pergunte à Bíblia"
+         className="w-full h-full object-contain"
+       />
+     </div>
    );
  };
  

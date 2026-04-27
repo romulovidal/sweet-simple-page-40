@@ -11,13 +11,13 @@
    return (
      <button
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
-       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-2xl overflow-hidden shadow-lg active:scale-95 transition-all animate-fade-in border-none p-0"
+       className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-2xl overflow-hidden shadow-lg active:scale-95 transition-all animate-fade-in border-none p-0 flex items-center justify-center bg-black"
        aria-label="Pergunte à Bíblia"
      >
        <img 
          src="/ask-bible-icon.png" 
          alt="Pergunte à Bíblia" 
-         className="w-full h-full object-cover"
+         className="w-[102%] h-[102%] object-cover scale-110"
        />
      </button>
    );

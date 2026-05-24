@@ -114,15 +114,18 @@ export function updateStreak(streak: StreakData): StreakData {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-  // Consecutive if the last activity in history was yesterday
-  // We check the history for any entry matching yesterdayStr
-  const isConsecutive = streak.history.includes(yesterdayStr);
+  // Consecutive if the last activity was yesterday
+  const isConsecutive = streak.lastDate === yesterdayStr;
+  
+  // Also handle cases where there might be gaps but we want to be lenient
+  // (e.g. user was active earlier but didn't update lastDate)
+  const hadActivityYesterday = streak.history.includes(yesterdayStr);
+  
   const history = [...streak.history, today].sort();
-
-
+  const newCount = (isConsecutive || hadActivityYesterday) ? streak.current + 1 : 1;
 
   return {
-    current: isConsecutive ? streak.current + 1 : 1,
+    current: newCount,
     lastDate: today,
     history,
   };

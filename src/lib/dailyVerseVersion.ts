@@ -65,4 +65,50 @@ export async function getVerseTextByReference(
   return null;
 }
 
+/**
+ * Get the total number of verses in a specific book and chapter.
+ */
+export async function getVerseCount(
+  bookName: string,
+  chapter: number,
+  versionId: string = DEFAULT_DAILY_VERSION
+): Promise<number> {
+  const version = getVersionById(versionId);
+  try {
+    const data = await loadVersion(version.fileName);
+    const target = norm(bookName);
+    const book = data.find((b) => norm(b.name) === target);
+    if (!book) return 0;
+    const chapterData = book.chapters[chapter - 1];
+    return chapterData ? chapterData.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+
+  const tryVersion = async (vId: string) => {
+    const version = getVersionById(vId);
+    try {
+      const data = await loadVersion(version.fileName);
+      const target = norm(parsed.bookName);
+      const book = data.find((b) => norm(b.name) === target);
+      if (!book) return null;
+      const chapter = book.chapters[parsed.chapter - 1];
+      if (!chapter) return null;
+      const text = chapter[parsed.verse - 1];
+      return text ? text.trim() : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const primary = await tryVersion(versionId);
+  if (primary) return primary;
+  if (versionId !== DEFAULT_DAILY_VERSION) {
+    return await tryVersion(DEFAULT_DAILY_VERSION);
+  }
+  return null;
+}
+
 export { BIBLE_VERSIONS };

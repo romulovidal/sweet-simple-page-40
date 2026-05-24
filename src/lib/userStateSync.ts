@@ -52,11 +52,23 @@ function uniqStrings(values: string[]) {
 }
 
 function computeCurrentStreak(history: string[], lastDate: string) {
-  if (!lastDate) return 0;
+  if (history.length === 0) return 0;
 
   const uniqueHistory = new Set(history);
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  // If no activity today or yesterday, streak is broken
+  if (!uniqueHistory.has(today) && !uniqueHistory.has(yesterdayStr)) {
+    return 0;
+  }
+
+  // Start counting back from the most recent activity (today or yesterday)
   let current = 0;
-  const cursor = new Date(`${lastDate}T00:00:00`);
+  let cursorStr = uniqueHistory.has(today) ? today : yesterdayStr;
+  const cursor = new Date(`${cursorStr}T12:00:00`); // Use noon to avoid timezone edge cases
 
   while (true) {
     const key = cursor.toISOString().split("T")[0];
@@ -67,6 +79,7 @@ function computeCurrentStreak(history: string[], lastDate: string) {
 
   return current;
 }
+
 
 function mergeSavedVerses(local: SavedVerse[], remote: SavedVerse[]) {
   const merged = new Map<string, SavedVerse>();

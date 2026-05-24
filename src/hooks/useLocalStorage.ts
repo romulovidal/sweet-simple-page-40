@@ -117,7 +117,8 @@ export function updateStreak(streak: StreakData): StreakData {
   // Consecutive if the last activity in history was yesterday
   // We check the history for any entry matching yesterdayStr
   const isConsecutive = streak.history.includes(yesterdayStr);
-  const history = [...streak.history, today].sort().slice(-365);
+  const history = [...streak.history, today].sort();
+
 
 
   return {

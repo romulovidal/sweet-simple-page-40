@@ -173,8 +173,17 @@ const AdminDailyVerse = () => {
   };
 
   useEffect(() => {
+    if (selectedBook && selectedChapter) {
+      getVerseCount(selectedBook, parseInt(selectedChapter), version).then(setAvailableVerses);
+    } else {
+      setAvailableVerses(0);
+    }
+  }, [selectedBook, selectedChapter, version]);
+
+  useEffect(() => {
     if (selectedBook && selectedChapter && selectedVerse) {
       const ref = `${selectedBook} ${selectedChapter}:${selectedVerse}`;
+
       const fetchText = async () => {
         setFetchingText(true);
         try {

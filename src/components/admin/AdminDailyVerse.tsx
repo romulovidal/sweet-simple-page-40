@@ -269,16 +269,21 @@ const AdminDailyVerse = () => {
             </div>
 
             <div>
-              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Versículo</label>
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">
+                Versículo {availableVerses > 0 && `(1-${availableVerses})`}
+              </label>
               <Input 
                 type="number" 
                 placeholder="Ex: 1"
                 value={selectedVerse}
                 onChange={(e) => setSelectedVerse(e.target.value)}
                 disabled={!selectedChapter}
+                min={1}
+                max={availableVerses > 0 ? availableVerses : undefined}
                 className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
               />
             </div>
+
           </div>
         </div>
 

@@ -173,12 +173,17 @@ const AdminDailyVerse = () => {
   };
 
   useEffect(() => {
-    if (selectedBook && selectedChapter) {
-      getVerseCount(selectedBook, parseInt(selectedChapter), version).then(setAvailableVerses);
-    } else {
-      setAvailableVerses(0);
-    }
+    const updateVerseCount = async () => {
+      if (selectedBook && selectedChapter) {
+        const count = await getVerseCount(selectedBook, parseInt(selectedChapter), version);
+        setAvailableVerses(count);
+      } else {
+        setAvailableVerses(0);
+      }
+    };
+    updateVerseCount();
   }, [selectedBook, selectedChapter, version]);
+
 
   useEffect(() => {
     if (selectedBook && selectedChapter && selectedVerse) {

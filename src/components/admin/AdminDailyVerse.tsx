@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference } from "@/lib/dailyVerseVersion";
+import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference, getVerseCount } from "@/lib/dailyVerseVersion";
 import { bibleBooks } from "@/data/bible";
+
 
 interface VerseQueueItem {
   id: string;
@@ -32,11 +33,13 @@ const AdminDailyVerse = () => {
   const [selectedChapter, setSelectedChapter] = useState<string>("");
   const [selectedVerse, setSelectedVerse] = useState<string>("");
   const [fetchingText, setFetchingText] = useState(false);
+  const [availableVerses, setAvailableVerses] = useState<number>(0);
 
   const selectedBookData = useMemo(() => 
     bibleBooks.find(b => b.name === selectedBook), 
     [selectedBook]
   );
+
 
   const chapters = useMemo(() => 
     selectedBookData ? Array.from({ length: selectedBookData.chapters }, (_, i) => i + 1) : [],
@@ -170,8 +173,17 @@ const AdminDailyVerse = () => {
   };
 
   useEffect(() => {
+    if (selectedBook && selectedChapter) {
+      getVerseCount(selectedBook, parseInt(selectedChapter), version).then(setAvailableVerses);
+    } else {
+      setAvailableVerses(0);
+    }
+  }, [selectedBook, selectedChapter, version]);
+
+  useEffect(() => {
     if (selectedBook && selectedChapter && selectedVerse) {
       const ref = `${selectedBook} ${selectedChapter}:${selectedVerse}`;
+
       const fetchText = async () => {
         setFetchingText(true);
         try {
@@ -257,16 +269,21 @@ const AdminDailyVerse = () => {
             </div>
 
             <div>
-              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Versículo</label>
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">
+                Versículo {availableVerses > 0 && `(1-${availableVerses})`}
+              </label>
               <Input 
                 type="number" 
                 placeholder="Ex: 1"
                 value={selectedVerse}
                 onChange={(e) => setSelectedVerse(e.target.value)}
                 disabled={!selectedChapter}
+                min={1}
+                max={availableVerses > 0 ? availableVerses : undefined}
                 className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
               />
             </div>
+
           </div>
         </div>
 

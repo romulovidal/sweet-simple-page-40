@@ -425,9 +425,14 @@ const BiblePage = () => {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold flex-1 truncate">
-            {selectedBook.name} {selectedChapter}
-          </h1>
+          <div className="flex flex-col flex-1 min-w-0">
+            <h1 className="text-lg font-bold truncate">
+              {selectedBook.name} {selectedChapter}
+            </h1>
+            <p className="text-[10px] text-dark-muted font-medium uppercase tracking-wider">
+              {verses.length} Versículos disponíveis
+            </p>
+          </div>
           {hasSelection ? (
             <div className="flex items-center gap-1">
               <span className="text-xs text-primary font-semibold mr-1">

@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
+import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference } from "@/lib/dailyVerseVersion";
+import { bibleBooks } from "@/data/bible";
 
 interface VerseQueueItem {
   id: string;
@@ -25,6 +26,23 @@ const AdminDailyVerse = () => {
   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
+
+  // Selector state
+  const [selectedBook, setSelectedBook] = useState<string>("");
+  const [selectedChapter, setSelectedChapter] = useState<string>("");
+  const [selectedVerse, setSelectedVerse] = useState<string>("");
+  const [fetchingText, setFetchingText] = useState(false);
+
+  const selectedBookData = useMemo(() => 
+    bibleBooks.find(b => b.name === selectedBook), 
+    [selectedBook]
+  );
+
+  const chapters = useMemo(() => 
+    selectedBookData ? Array.from({ length: selectedBookData.chapters }, (_, i) => i + 1) : [],
+    [selectedBookData]
+  );
+
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -151,6 +169,26 @@ const AdminDailyVerse = () => {
     loadData();
   };
 
+  useEffect(() => {
+    if (selectedBook && selectedChapter && selectedVerse) {
+      const ref = `${selectedBook} ${selectedChapter}:${selectedVerse}`;
+      const fetchText = async () => {
+        setFetchingText(true);
+        try {
+          const text = await getVerseTextByReference(ref, version);
+          if (text) {
+            setEditing(prev => ({ ...prev, verse_ref: ref, verse_text: text }));
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setFetchingText(false);
+        }
+      };
+      fetchText();
+    }
+  }, [selectedBook, selectedChapter, selectedVerse, version]);
+
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   }
@@ -159,32 +197,114 @@ const AdminDailyVerse = () => {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => setEditing(null)}><X className="w-5 h-5" /></button>
+          <button onClick={() => {
+            setEditing(null);
+            setSelectedBook("");
+            setSelectedChapter("");
+            setSelectedVerse("");
+          }}><X className="w-5 h-5" /></button>
           <h2 className="text-lg font-bold flex-1">{editing.id ? "Editar" : "Novo"} Versículo</h2>
-          <Button size="sm" onClick={saveVerse}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
+          <Button size="sm" onClick={saveVerse} disabled={fetchingText}>
+            {fetchingText ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+            Salvar
+          </Button>
         </div>
-        <div>
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📅 Data</label>
-          <Input type="date" value={editing.scheduled_date || ""}
-            onChange={(e) => setEditing({ ...editing, scheduled_date: e.target.value })}
-            min={new Date().toISOString().split("T")[0]}
-            className="bg-[hsl(var(--dark-card))] border-none" />
+
+        <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))]">Seletor Rápido</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Livro</label>
+              <Select value={selectedBook} onValueChange={(v) => {
+                setSelectedBook(v);
+                setSelectedChapter("");
+                setSelectedVerse("");
+              }}>
+                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bibleBooks.map((b) => (
+                    <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Capítulo</label>
+              <Select 
+                value={selectedChapter} 
+                onValueChange={(v) => {
+                  setSelectedChapter(v);
+                  setSelectedVerse("");
+                }}
+                disabled={!selectedBook}
+              >
+                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs">
+                  <SelectValue placeholder="-" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {chapters.map((c) => (
+                    <SelectItem key={c} value={c.toString()}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Versículo</label>
+              <Input 
+                type="number" 
+                placeholder="Ex: 1"
+                value={selectedVerse}
+                onChange={(e) => setSelectedVerse(e.target.value)}
+                disabled={!selectedChapter}
+                className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
+              />
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência (ex: João 3:16)</label>
-          <Input value={editing.verse_ref || ""}
-            onChange={(e) => setEditing({ ...editing, verse_ref: e.target.value })}
-            className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📅 Data de Exibição</label>
+            <Input type="date" value={editing.scheduled_date || ""}
+              onChange={(e) => setEditing({ ...editing, scheduled_date: e.target.value })}
+              min={new Date().toISOString().split("T")[0]}
+              className="bg-[hsl(var(--dark-card))] border-none" />
+          </div>
+          <div>
+            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência Manual</label>
+            <Input value={editing.verse_ref || ""}
+              onChange={(e) => setEditing({ ...editing, verse_ref: e.target.value })}
+              placeholder="Ex: João 3:16"
+              className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
+          </div>
         </div>
+
         <div>
-          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Texto do versículo</label>
-          <Textarea value={editing.verse_text || ""}
-            onChange={(e) => setEditing({ ...editing, verse_text: e.target.value })}
-            className="bg-[hsl(var(--dark-card))] border-none min-h-[100px]" maxLength={2000} />
+          <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Texto do versículo (carregado automaticamente)</label>
+          <div className="relative">
+            <Textarea value={editing.verse_text || ""}
+              onChange={(e) => setEditing({ ...editing, verse_text: e.target.value })}
+              placeholder="O texto aparecerá aqui ao selecionar acima..."
+              className="bg-[hsl(var(--dark-card))] border-none min-h-[120px] pr-10" maxLength={2000} />
+            {fetchingText && (
+              <div className="absolute top-3 right-3">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="space-y-4">

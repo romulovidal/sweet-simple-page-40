@@ -33,11 +33,13 @@ const AdminDailyVerse = () => {
   const [selectedChapter, setSelectedChapter] = useState<string>("");
   const [selectedVerse, setSelectedVerse] = useState<string>("");
   const [fetchingText, setFetchingText] = useState(false);
+  const [availableVerses, setAvailableVerses] = useState<number>(0);
 
   const selectedBookData = useMemo(() => 
     bibleBooks.find(b => b.name === selectedBook), 
     [selectedBook]
   );
+
 
   const chapters = useMemo(() => 
     selectedBookData ? Array.from({ length: selectedBookData.chapters }, (_, i) => i + 1) : [],

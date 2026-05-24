@@ -173,12 +173,17 @@ const AdminDailyVerse = () => {
   };
 
   useEffect(() => {
-    if (selectedBook && selectedChapter) {
-      getVerseCount(selectedBook, parseInt(selectedChapter), version).then(setAvailableVerses);
-    } else {
-      setAvailableVerses(0);
-    }
+    const updateVerseCount = async () => {
+      if (selectedBook && selectedChapter) {
+        const count = await getVerseCount(selectedBook, parseInt(selectedChapter), version);
+        setAvailableVerses(count);
+      } else {
+        setAvailableVerses(0);
+      }
+    };
+    updateVerseCount();
   }, [selectedBook, selectedChapter, version]);
+
 
   useEffect(() => {
     if (selectedBook && selectedChapter && selectedVerse) {
@@ -270,11 +275,11 @@ const AdminDailyVerse = () => {
 
             <div>
               <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">
-                Versículo {availableVerses > 0 && `(1-${availableVerses})`}
+                Versículo {availableVerses > 0 ? `(Max: ${availableVerses})` : ""}
               </label>
               <Input 
                 type="number" 
-                placeholder="Ex: 1"
+                placeholder={availableVerses > 0 ? `1-${availableVerses}` : "Selecione capítulo"}
                 value={selectedVerse}
                 onChange={(e) => setSelectedVerse(e.target.value)}
                 disabled={!selectedChapter}
@@ -283,6 +288,7 @@ const AdminDailyVerse = () => {
                 className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
               />
             </div>
+
 
           </div>
         </div>

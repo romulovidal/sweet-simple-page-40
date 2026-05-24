@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference } from "@/lib/dailyVerseVersion";
+import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference, getVerseCount } from "@/lib/dailyVerseVersion";
 import { bibleBooks } from "@/data/bible";
+
 
 interface VerseQueueItem {
   id: string;

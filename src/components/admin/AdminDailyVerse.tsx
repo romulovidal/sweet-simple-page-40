@@ -274,20 +274,26 @@ const AdminDailyVerse = () => {
             </div>
 
             <div>
-              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">
-                Versículo {availableVerses > 0 ? `(Max: ${availableVerses})` : ""}
+              <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase font-bold">
+                Versículo
               </label>
-              <Input 
-                type="number" 
-                placeholder={availableVerses > 0 ? `1-${availableVerses}` : "Selecione capítulo"}
-                value={selectedVerse}
-                onChange={(e) => setSelectedVerse(e.target.value)}
-                disabled={!selectedChapter}
-                min={1}
-                max={availableVerses > 0 ? availableVerses : undefined}
-                className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
-              />
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="number" 
+                  placeholder="0"
+                  value={selectedVerse}
+                  onChange={(e) => setSelectedVerse(e.target.value)}
+                  disabled={!selectedChapter}
+                  min={1}
+                  max={availableVerses > 0 ? availableVerses : undefined}
+                  className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs w-20 text-center font-bold"
+                />
+                <span className="text-xs text-[hsl(var(--dark-muted))] font-medium">
+                  de {availableVerses > 0 ? availableVerses : "?"} versículos
+                </span>
+              </div>
             </div>
+
 
 
           </div>

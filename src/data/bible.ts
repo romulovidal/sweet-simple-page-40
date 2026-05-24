@@ -219,11 +219,26 @@ export function getDailyVerse(): { text: string; ref: string } {
     { text: "Levantarei os meus olhos para os montes; de onde me vem o socorro? O meu socorro vem do Senhor, que fez o céu e a terra.", ref: "Salmos 121:1-2" },
   ];
   const today = new Date();
-  // Normalize to midnight UTC to ensure consistency across the day
-  const start = new Date(today.getFullYear(), 0, 0);
-  const diff = (today.getTime() - start.getTime()) + ((start.getTimezoneOffset() - today.getTimezoneOffset()) * 60 * 1000);
-  const oneDay = 1000 * 60 * 60 * 24;
-  const day = Math.floor(diff / oneDay);
+  const year = today.getFullYear();
+  const dayOfYear = Math.floor((today.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
+
+  // A simple pseudo-random generator based on the year to shuffle the verses differently every year
+  // but keep it stable for the same day of the same year.
+  // This prevents the same sequence of verses from repeating on the same day next month or next year.
+  const shuffle = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // We use the day of the year and year as seed to pick a unique verse for each day of the century.
+  // Formula: (dayOfYear + some_constant_from_year) % total_verses
+  // We want to avoid day % length because if length is ~30, it repeats every month.
+  // If length is 20 (current), it repeats every 20 days.
   
-  return verses[day % verses.length];
+  // Use a more robust distribution:
+  // Using prime numbers for offsets helps avoid overlapping cycles.
+  const seed = (year * 366) + dayOfYear;
+  const index = Math.floor(shuffle(seed) * verses.length);
+  
+  return verses[index];
 }

@@ -43,13 +43,23 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
   };
 
   const savePost = async () => {
-    if (!editingPost?.title?.trim() || !editingPost?.content?.trim()) {
-      toast.error("Título e conteúdo são obrigatórios");
+    if (!editingPost?.title?.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+    const isVideo = (editingPost.type || "devocional") === "video";
+    if (isVideo) {
+      if (!editingPost.youtube_url?.trim()) {
+        toast.error("Informe a URL do YouTube");
+        return;
+      }
+    } else if (!editingPost?.content?.trim()) {
+      toast.error("O conteúdo é obrigatório");
       return;
     }
     const data = {
       title: editingPost.title.trim(),
-      content: editingPost.content.trim(),
+      content: editingPost.content?.trim() || (isVideo ? editingPost.title.trim() : ""),
       type: editingPost.type || "devocional",
       youtube_url: editingPost.youtube_url?.trim() || null,
       bible_reference: editingPost.bible_reference?.trim() || null,
@@ -61,14 +71,16 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     if (editingPost.id) {
       const { error } = await supabase.from("admin_posts").update(data).eq("id", editingPost.id);
       if (error) {
-        toast.error("Erro ao salvar");
+        console.error("Erro ao salvar post:", error);
+        toast.error(`Erro ao salvar: ${error.message}`);
         return;
       }
       toast.success("Postagem atualizada!");
     } else {
       const { error } = await supabase.from("admin_posts").insert(data);
       if (error) {
-        toast.error("Erro ao criar");
+        console.error("Erro ao criar post:", error);
+        toast.error(`Erro ao criar: ${error.message}`);
         return;
       }
       toast.success("Postagem criada!");

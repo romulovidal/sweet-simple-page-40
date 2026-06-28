@@ -124,7 +124,12 @@ Deno.serve(async (req) => {
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
     const { data: subs, error } = await supabase
       .from("push_subscriptions")
       .select("id, endpoint, p256dh, auth");

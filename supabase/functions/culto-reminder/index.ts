@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const { data: isAdmin } = await supabase.rpc("has_role", {
+      const { data: isAdmin } = await userClient.rpc("has_role", {
         _user_id: userData.user.id,
         _role: "admin",
       });

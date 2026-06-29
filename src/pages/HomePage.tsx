@@ -7,6 +7,7 @@ import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
+import YouTubePlayer from "@/components/YouTubePlayer";
 import { getDailyVerse } from "@/data/bible";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
@@ -18,21 +19,6 @@ import { getVerseTextByReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
-interface PlanProgress {
-  planId: string;
-  completedDays: number[];
-  startedAt: string;
-}
-
-interface DBPlan {
-  id: string;
-  title: string;
-  description: string;
-  image_emoji: string;
-  category: string;
-  total_days: number | null;
-}
-
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
 const DAILY_VERSE_CACHE_VERSION = 5; // Bump this to force all users to refresh
 
@@ -42,7 +28,6 @@ type CachedDailyVerse = {
   source?: "manual" | "auto";
   verse: { text: string; ref: string };
 };
-const ADMIN_PLANS_CACHE_KEY = "cached-admin-plans";
 const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
 
 const HomePage = () => {
@@ -75,15 +60,12 @@ const HomePage = () => {
   }, []);
   const [streak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
   const [progress] = useLocalStorage<ReadingProgress | null>("reading-progress", null);
-  const [planProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
 
   // Daily verse
   const [verse, setVerse] = useState<{ text: string; ref: string; versionShortName?: string } | null>(null);
   const [verseLoading, setVerseLoading] = useState(true);
   const [, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 
-  // DB plans
-  const [dbPlans, setDbPlans] = useState<DBPlan[]>(() => readJsonStorage<DBPlan[]>(ADMIN_PLANS_CACHE_KEY, []));
   const [adminPosts, setAdminPosts] = useState<AdminPost[]>(() => readJsonStorage<AdminPost[]>(ADMIN_POSTS_CACHE_KEY, []));
 
   useEffect(() => {

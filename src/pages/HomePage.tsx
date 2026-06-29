@@ -353,72 +353,8 @@ const HomePage = () => {
                   </button>
                 </div>
 
-                {/* Enrolled Plans (Seus Planos) */}
-                {enrolledPlans.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
-                        Seus Planos
-                      </h2>
-                      <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
-                        Ver todos
-                      </button>
-                    </div>
-                    {enrolledPlans.slice(0, 2).map((plan) => {
-                      const prog = planProgress.find((p) => p.planId === plan.id);
-                      const totalDays = plan.total_days || 1;
-                      const pct = prog ? Math.round((prog.completedDays.length / totalDays) * 100) : 0;
-                      return (
-                        <button
-                          key={plan.id}
-                          onClick={() => {
-                            writeJsonStorage("selected-plan", plan.id);
-                            navigate("/planos");
-                          }}
-                          className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 mb-2 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors"
-                        >
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-lg">{plan.image_emoji}</span>
-                            <p className="font-semibold text-sm flex-1">{plan.title}</p>
-                            <span className="text-xs text-primary font-bold">{pct}%</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-[hsl(var(--dark-bg))] rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Available Plans (Planos de Leitura) - Full Width below the grid */}
-            {availablePlans.length > 0 && (
-              <div className="pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
-                    Planos de Leitura
-                  </h2>
-                  <button onClick={() => navigate("/planos")} className="text-xs text-primary font-semibold">
-                    Ver todos
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {availablePlans.slice(0, 5).map((plan) => (
-                    <button
-                      key={plan.id}
-                      onClick={() => navigate("/planos")}
-                      className="bg-[hsl(var(--dark-card))] rounded-xl p-4 text-left active:bg-[hsl(var(--dark-card-hover))] transition-colors hover:scale-[1.02] transform transition-transform"
-                    >
-                      <span className="text-2xl mb-2 block">{plan.image_emoji}</span>
-                      <p className="font-semibold text-xs leading-tight mb-1">{plan.title}</p>
-                      <p className="text-[10px] text-[hsl(var(--dark-muted))]">{plan.total_days || 0} dias</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Admin Posts Feed - Full Width */}
             {adminPosts.length > 0 && (
@@ -429,19 +365,11 @@ const HomePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {adminPosts.map((post) => {
                   const Icon = postIcon(post.type);
-                  const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
+                  const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
                     <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden">
-                      {post.type === "video" && embedUrl && (
-                        <div className="aspect-video">
-                          <iframe
-                            src={embedUrl}
-                            className="w-full h-full"
-                            allowFullScreen
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            title={post.title}
-                          />
-                        </div>
+                      {post.type === "video" && videoId && (
+                        <YouTubePlayer videoId={videoId} title={post.title} />
                       )}
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -474,19 +402,11 @@ const HomePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {adminPosts.map((post) => {
                   const Icon = postIcon(post.type);
-                  const embedUrl = post.youtube_url ? getYoutubeEmbedUrl(post.youtube_url) : null;
+                  const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
                     <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5">
-                      {post.type === "video" && embedUrl && (
-                        <div className="aspect-video">
-                          <iframe
-                            src={embedUrl}
-                            className="w-full h-full"
-                            allowFullScreen
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            title={post.title}
-                          />
-                        </div>
+                      {post.type === "video" && videoId && (
+                        <YouTubePlayer videoId={videoId} title={post.title} />
                       )}
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">

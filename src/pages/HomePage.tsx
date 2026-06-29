@@ -210,27 +210,6 @@ const HomePage = () => {
     };
   }, [setVerseHistory]);
 
-  // Fetch DB plans
-  useEffect(() => {
-    let cancelled = false;
-
-    supabase
-      .from("admin_plans")
-      .select("id, title, description, image_emoji, category, total_days")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data, error }) => {
-        if (cancelled || error || !data) return;
-        const nextPlans = data as unknown as DBPlan[];
-        setDbPlans(nextPlans);
-        writeJsonStorage(ADMIN_PLANS_CACHE_KEY, nextPlans, false, "cache");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Fetch admin posts
   useEffect(() => {
     let cancelled = false;
@@ -259,9 +238,9 @@ const HomePage = () => {
     }
   };
 
-  const getYoutubeEmbedUrl = (url: string) => {
+  const extractYoutubeId = (url: string) => {
     const match = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+    return match ? match[1] : null;
   };
 
   const postIcon = (type: string) => {
@@ -278,16 +257,6 @@ const HomePage = () => {
     versiculo: "Versículo", oracao: "Oração", video: "Vídeo",
     devocional: "Devocional", anuncio: "Anúncio",
   };
-
-  // Enrolled plans = plans with progress
-  const enrolledPlans = dbPlans.filter((p) =>
-    planProgress.some((pp) => pp.planId === p.id && pp.completedDays.length > 0)
-  );
-
-  // Available plans (not yet enrolled) for discovery
-  const availablePlans = dbPlans.filter((p) =>
-    !planProgress.some((pp) => pp.planId === p.id && pp.completedDays.length > 0)
-  );
 
   return (
     <div className="pb-20 min-h-screen">

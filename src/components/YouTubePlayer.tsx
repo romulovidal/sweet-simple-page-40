@@ -35,19 +35,13 @@ const YouTubePlayer = ({ videoId, title }: YouTubePlayerProps) => {
           </span>
         </button>
       ) : (
-        <>
-          <iframe
-            src={embed}
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            allowFullScreen
-            title={title}
-          />
-          {/* Mask the YouTube logo watermark (top-right) */}
-          <div className="pointer-events-none absolute top-0 right-0 w-24 h-10 bg-[hsl(var(--dark-card))]" />
-          {/* Mask top-left title overlay that appears on hover */}
-          <div className="pointer-events-none absolute top-0 left-0 right-24 h-10 bg-gradient-to-b from-[hsl(var(--dark-card))] to-transparent" />
-        </>
+        <iframe
+          src={embed}
+          className="absolute inset-0 w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+          title={title}
+        />
       )}
     </div>
   );

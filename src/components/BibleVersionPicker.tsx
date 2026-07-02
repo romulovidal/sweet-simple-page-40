@@ -116,7 +116,7 @@ const BibleVersionPicker = ({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="space-y-1">
             {BIBLE_VERSIONS.map((version) => {
               const isSelected = selectedVersionId === version.id;

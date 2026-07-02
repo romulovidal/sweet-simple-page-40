@@ -84,7 +84,7 @@ const Onboarding = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-6 max-w-sm"
+            className="text-center space-y-6 max-w-sm lg:max-w-md"
           >
             <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto">
               <Sparkles className="w-10 h-10 text-primary" />
@@ -126,7 +126,7 @@ const Onboarding = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-sm space-y-6"
+            className="w-full max-w-sm space-y-6 lg:max-w-2xl"
           >
             <div className="space-y-2 text-center">
               <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -137,7 +137,7 @@ const Onboarding = () => {
                 Qual tradução você prefere ler? Você pode mudar isso a qualquer momento.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {BIBLE_VERSIONS.map((v) => (
                 <button
                   key={v.id}
@@ -168,7 +168,7 @@ const Onboarding = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-6 max-w-sm"
+            className="text-center space-y-6 max-w-sm lg:max-w-md"
           >
             <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center mx-auto">
               <Bell className="w-8 h-8 text-amber-400" />

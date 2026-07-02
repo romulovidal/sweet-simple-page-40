@@ -433,7 +433,16 @@ const AppTour = () => {
         popover: {
           title: step.title,
           description: step.description,
-          ...(step.selector ? { side: (step.side ?? "top") } : {}),
+          ...(step.selector
+            ? {
+                side:
+                  // Em desktop (≥1024px), passos que apontam para itens da sidebar
+                  // ficam melhores com o popover à direita.
+                  window.innerWidth >= 1024 && step.selector.startsWith('[data-tour="nav-')
+                    ? ("right" as const)
+                    : (step.side ?? "top"),
+              }
+            : {}),
           align: "center" as const,
           onPopoverRender: () => {
             if (step.showDontShow) injectDontShowCheckbox();

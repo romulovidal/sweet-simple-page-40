@@ -72,7 +72,7 @@ const InstallPrompt = () => {
   if (!showAndroidPrompt && !showIOSHint) return null;
 
   return (
-    <div className="fixed bottom-20 left-2 right-2 max-w-lg mx-auto z-40 animate-in slide-in-from-bottom-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-xs">
+    <div className="fixed bottom-20 left-2 right-2 max-w-lg mx-auto z-40 animate-in slide-in-from-bottom-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-xs lg:left-6 lg:right-auto lg:bottom-6">
       <div className="bg-card border border-border rounded-2xl p-4 shadow-lg flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
           <Download className="w-5 h-5 text-primary" />

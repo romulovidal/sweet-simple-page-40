@@ -12,7 +12,7 @@
    return (
      <button
        onClick={() => window.dispatchEvent(new CustomEvent("open-ask-bible"))}
-       className="fixed bottom-24 right-5 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 active:scale-95 transition-all animate-fade-in flex items-center justify-center border-none"
+      className="fixed bottom-24 right-5 lg:bottom-8 lg:right-8 lg:w-14 lg:h-14 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 active:scale-95 transition-all animate-fade-in flex items-center justify-center border-none"
        aria-label="Pergunte à Bíblia"
      >
        <MessageSquareQuote className="w-6 h-6" />

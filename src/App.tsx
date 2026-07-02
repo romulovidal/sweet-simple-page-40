@@ -8,6 +8,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BottomNav from "@/components/BottomNav";
+import DesktopSidebar from "@/components/DesktopSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import OfflineSyncBootstrap from "@/components/OfflineSyncBootstrap";
 import ScrollToTop from "@/components/ScrollToTop";
 import ThemeToggleFloat from "@/components/ThemeToggleFloat";
@@ -38,32 +40,40 @@ const AppContent = () => {
   const isAdmin = location.pathname.startsWith("/admin");
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
+  const isMobile = useIsMobile();
+  const showChrome = !isAdmin && !isLanding;
+  // Wait for viewport detection so tour data-tour selectors resolve to only ONE nav
+  const showSidebar = showChrome && isMobile === false;
+  const showBottomNav = showChrome && isMobile !== false;
 
   useManifestSwap();
 
   return (
-    <div className={isAdmin || isLanding ? "min-h-screen" : "max-w-6xl mx-auto relative min-h-screen lg:px-8"}>
-      <ScrollToTop />
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname + resetKey}>
-          <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
-          <Route path="/biblia" element={<PageTransition><BiblePage /></PageTransition>} />
-          <Route path="/planos" element={<PageTransition><PlansPage /></PageTransition>} />
-          <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
-          <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
-          <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/app" element={<AppLanding />} />
-          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
-        </Routes>
-      </AnimatePresence>
-      {!isAdmin && !isLanding && <ThemeToggleFloat />}
+    <div className={isAdmin || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
+      {showSidebar && <DesktopSidebar />}
+      <div className={isAdmin || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
+        <ScrollToTop />
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname + resetKey}>
+            <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
+            <Route path="/biblia" element={<PageTransition><BiblePage /></PageTransition>} />
+            <Route path="/planos" element={<PageTransition><PlansPage /></PageTransition>} />
+            <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
+            <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
+            <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/app" element={<AppLanding />} />
+            <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+          </Routes>
+        </AnimatePresence>
+      </div>
+      {showChrome && !showSidebar && <ThemeToggleFloat />}
       {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
       {!isAdmin && !isLanding && <PushPermissionPrompt />}
        {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
        {!isAdmin && !isLanding && <AskBibleFloat />}
-       {!isAdmin && !isLanding && <BottomNav />}
+       {showBottomNav && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />
       {!isAdmin && !isLanding && <Onboarding />}

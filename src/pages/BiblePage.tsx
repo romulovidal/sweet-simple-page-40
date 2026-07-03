@@ -28,6 +28,7 @@ import AITimeline from "@/components/ai/AITimeline";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
+import VisualTimeline from "@/components/VisualTimeline";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -553,6 +554,24 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
+              <VisualTimeline
+                onNavigateReference={(ref) => {
+                  // Parse "Gênesis 12" or "Êxodo 7—12" → book + first chapter
+                  const match = ref.match(/^(.+?)\s+(\d+)/);
+                  if (!match) return;
+                  const bookName = match[1].trim();
+                  const chapter = parseInt(match[2], 10);
+                  const book = bibleBooks.find(
+                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                  );
+                  if (!book) return;
+                  setSelectedBook(book);
+                  setTestament(book.testament);
+                  setSelectedChapter(Math.min(chapter, book.chapters));
+                  setSelectedVerses(new Set());
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}
@@ -1017,13 +1036,32 @@ const BiblePage = () => {
       <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Bíblia</h1>
-          <button
-            onClick={() => setShowVersionPicker(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
-          >
-            {getVersionById(bibleVersion).shortName}
-            <ChevronDown className="w-3 h-3 text-dark-muted" />
-          </button>
+          <div className="flex items-center gap-2">
+            <VisualTimeline
+              onNavigateReference={(ref) => {
+                const match = ref.match(/^(.+?)\s+(\d+)/);
+                if (!match) return;
+                const bookName = match[1].trim();
+                const chapter = parseInt(match[2], 10);
+                const book = bibleBooks.find(
+                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                );
+                if (!book) return;
+                setSelectedBook(book);
+                setTestament(book.testament);
+                setSelectedChapter(Math.min(chapter, book.chapters));
+                setSelectedVerses(new Set());
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+            <button
+              onClick={() => setShowVersionPicker(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+            >
+              {getVersionById(bibleVersion).shortName}
+              <ChevronDown className="w-3 h-3 text-dark-muted" />
+            </button>
+          </div>
         </div>
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" />

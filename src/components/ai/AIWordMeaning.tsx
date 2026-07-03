@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Languages, Loader2, X, BrainCircuit, Share2 } from "lucide-react";
+import { Languages, Loader2, X, BrainCircuit, Share2, Copy } from "lucide-react";
+import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
@@ -41,6 +42,15 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
     setShareOpen(true);
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast.success("Copiado!");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col items-center gap-1 shrink-0">
@@ -75,13 +85,22 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
               </div>
               <div className="flex items-center gap-2">
                 {content && !loading && (
-                  <button
-                    onClick={handleShare}
-                    className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
-                    title="Compartilhar"
-                  >
-                    <Share2 className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                  </button>
+                  <>
+                    <button
+                      onClick={handleCopy}
+                      className="hidden lg:inline-flex p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
+                      title="Copiar"
+                    >
+                      <Copy className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="p-2 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card)/0.8)] transition-colors"
+                      title="Compartilhar"
+                    >
+                      <Share2 className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                    </button>
+                  </>
                 )}
                 <button onClick={() => setOpen(false)} className="p-2 rounded-xl bg-[hsl(var(--dark-card))]">
                   <X className="w-4 h-4 text-[hsl(var(--dark-muted))]" />

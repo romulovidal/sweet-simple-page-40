@@ -8,7 +8,6 @@ import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
 import PostPreviewDialog from "@/components/PostPreviewDialog";
-import { getDailyVerse } from "@/data/bible";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,12 +19,12 @@ import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 8; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 9; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;
   version?: number;
-  source?: "manual" | "auto";
+  source?: "manual";
   verse: { text: string; ref: string };
 };
 const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
@@ -182,10 +181,12 @@ const HomePage = () => {
           const manual = await tryManualVerse(today);
 
           // Fonte única de verdade: apenas versículos manuais definidos pelo admin.
-          // Se não houver nenhum na fila, mantemos o cache atual (se houver) para não
-          // conflitar exibindo um versículo automático diferente do que o admin escolheu.
           if (!manual) {
-            if (!cancelled && !isCacheValid) setVerseLoading(false);
+            localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
+            if (!cancelled) {
+              setVerse(null);
+              setVerseLoading(false);
+            }
             return;
           }
 
@@ -233,7 +234,17 @@ const HomePage = () => {
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
 
-    // Poll every 1 minute so admin-scheduled verses sync across all devices.
+    // Tempo real: quando o admin salva/edita/remove um versículo, todos os dispositivos atualizam.
+    const realtimeChannel = supabase
+      .channel("daily-verse-queue-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_verse_queue" },
+        () => loadVerse(true)
+      )
+      .subscribe();
+
+    // Fallback: keep a light poll in case the device was asleep/offline when the event happened.
     const pollId = window.setInterval(() => loadVerse(true), 60_000);
 
     return () => {
@@ -241,6 +252,7 @@ const HomePage = () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
+      supabase.removeChannel(realtimeChannel);
       window.clearInterval(pollId);
     };
   }, [setVerseHistory]);

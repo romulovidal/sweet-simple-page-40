@@ -10,9 +10,10 @@ interface Props {
   reference: string;
   text: string;
   enabled: boolean;
+  label?: string;
 }
 
-const AIConnections = ({ reference, text, enabled }: Props) => {
+const AIConnections = ({ reference, text, enabled, label }: Props) => {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
@@ -42,14 +43,17 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
 
   return (
     <>
-      <button
-        onClick={handleOpen}
-        data-tour="bible-action-connections"
-        className="h-11 w-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0"
-        title="Conexões Bíblicas"
-      >
-        <Link2 className="w-[18px] h-[18px] text-emerald-400" />
-      </button>
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <button
+          onClick={handleOpen}
+          data-tour="bible-action-connections"
+          className="h-11 w-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 transition-all flex items-center justify-center"
+          title="Conexões Bíblicas"
+        >
+          <Link2 className="w-[18px] h-[18px] text-emerald-400" />
+        </button>
+        {label && <span className="hidden lg:inline text-[10px] font-medium text-emerald-300/80">{label}</span>}
+      </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

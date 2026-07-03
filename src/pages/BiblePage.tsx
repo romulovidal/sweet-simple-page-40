@@ -607,7 +607,7 @@ const BiblePage = () => {
                   >
                     {selectedVerses.size}
                   </span>
-                  <span className="text-[13px] font-semibold text-foreground">
+                  <span className="text-[13px] font-semibold text-white">
                     versículo{selectedVerses.size !== 1 ? "s" : ""} selecionado{selectedVerses.size !== 1 ? "s" : ""}
                   </span>
                 </div>

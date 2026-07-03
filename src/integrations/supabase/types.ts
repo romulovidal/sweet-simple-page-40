@@ -324,6 +324,36 @@ export type Database = {
         }
         Relationships: []
       }
+      device_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          device_id: string
+          history: string[]
+          last_seen_date: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          device_id: string
+          history?: string[]
+          last_seen_date?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          device_id?: string
+          history?: string[]
+          last_seen_date?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       prayer_reactions: {
         Row: {
           created_at: string

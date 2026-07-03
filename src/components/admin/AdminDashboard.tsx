@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2 } from "lucide-react";
+import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2, Smartphone } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -11,6 +11,8 @@ interface DashboardStats {
   totalPosts: number;
   pushSubscriptions: number;
   avgStreak: number;
+  activeToday: number;
+  activeDevicesToday: number;
   topVerses: { reference: string; count: number }[];
 }
 
@@ -24,13 +26,15 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     setLoading(true);
-    const [usersRes, plansRes, postsRes, pushRes, streaksRes, versesRes] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+    const [usersRes, plansRes, postsRes, pushRes, streaksRes, versesRes, devicesRes] = await Promise.all([
       supabase.from("profiles").select("created_at"),
       supabase.from("admin_plans").select("is_active"),
       supabase.from("admin_posts").select("is_active"),
       supabase.from("push_subscriptions").select("id", { count: "exact", head: true }),
-      supabase.from("user_streaks").select("current_streak"),
+      supabase.from("user_streaks").select("current_streak,last_read_date"),
       supabase.from("user_saved_verses").select("reference"),
+      supabase.from("device_streaks").select("last_seen_date"),
     ]);
 
     const users = usersRes.data || [];
@@ -44,6 +48,8 @@ const AdminDashboard = () => {
     const avgStreak = streaks.length > 0
       ? Math.round(streaks.reduce((sum, s) => sum + s.current_streak, 0) / streaks.length)
       : 0;
+    const activeToday = streaks.filter((s: any) => s.last_read_date === today).length;
+    const activeDevicesToday = (devicesRes.data || []).filter((d: any) => d.last_seen_date === today).length;
 
     // Top verses
     const verseCounts: Record<string, number> = {};
@@ -64,6 +70,8 @@ const AdminDashboard = () => {
       totalPosts: posts.length,
       pushSubscriptions: pushRes.count || 0,
       avgStreak,
+      activeToday,
+      activeDevicesToday,
       topVerses,
     });
     setLoading(false);
@@ -79,10 +87,12 @@ const AdminDashboard = () => {
 
   const cards = [
     { icon: Users, label: "Usuários", value: stats.totalUsers, sub: `+${stats.newUsersThisWeek} esta semana`, color: "text-blue-400" },
+    { icon: Flame, label: "Ativos hoje", value: stats.activeToday, sub: "usuários logados", color: "text-orange-400" },
+    { icon: Smartphone, label: "Dispositivos hoje", value: stats.activeDevicesToday, sub: "visitantes anônimos", color: "text-cyan-400" },
     { icon: BookOpen, label: "Planos", value: `${stats.activePlans}/${stats.totalPlans}`, sub: "ativos", color: "text-green-400" },
     { icon: FileText, label: "Postagens", value: `${stats.activePosts}/${stats.totalPosts}`, sub: "ativas", color: "text-purple-400" },
     { icon: Bell, label: "Push Inscritos", value: stats.pushSubscriptions, sub: "dispositivos", color: "text-amber-400" },
-    { icon: Flame, label: "Streak Médio", value: `${stats.avgStreak}d`, sub: "dias consecutivos", color: "text-orange-400" },
+    { icon: TrendingUp, label: "Streak Médio", value: `${stats.avgStreak}d`, sub: "dias consecutivos", color: "text-red-400" },
   ];
 
   return (

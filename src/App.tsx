@@ -22,6 +22,7 @@ import PageTransition from "@/components/PageTransition";
 import AppTour from "@/components/AppTour";
 import Onboarding from "@/components/Onboarding";
 import { useManifestSwap } from "@/hooks/useManifestSwap";
+import { useDailyOpenTracker } from "@/hooks/useDailyOpenTracker";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -47,6 +48,7 @@ const AppContent = () => {
   const showBottomNav = showChrome && isMobile !== false;
 
   useManifestSwap();
+  useDailyOpenTracker();
 
   return (
     <div className={isAdmin || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>

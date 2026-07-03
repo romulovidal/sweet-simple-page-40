@@ -1,4 +1,4 @@
-var SW_VERSION = "v16";
+var SW_VERSION = "v17";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
@@ -18,40 +18,15 @@ async function addUrlToCache(cache, url) {
 }
 
 async function precacheShell() {
-  var cache = await caches.open(SHELL_CACHE);
-
-  for (var i = 0; i < CORE_URLS.length; i++) {
-    await addUrlToCache(cache, CORE_URLS[i]);
-  }
-
-  try {
-    var response = await fetch(OFFLINE_FALLBACK_URL, { cache: "no-store" });
-    if (!response || !response.ok) return;
-
-    await cache.put(OFFLINE_FALLBACK_URL, response.clone());
-    await cache.put("/index.html", response.clone());
-
-    var html = await response.text();
-    var matches = html.match(/(?:href|src)=["']([^"']+)["']/g) || [];
-    for (var j = 0; j < matches.length; j++) {
-      var match = matches[j].match(/(?:href|src)=["']([^"']+)["']/);
-      if (match && match[1] && match[1].charAt(0) === "/") {
-        await addUrlToCache(cache, match[1]);
-      }
-    }
-  } catch (error) {
-    console.warn("Shell precache failed:", error);
-  }
+  // App-shell precache intentionally disabled. The installed app must always fetch
+  // the latest HTML/JS so removed automatic daily-verse code cannot remain alive.
+  return Promise.resolve();
 }
 
 async function cleanupCaches() {
   var cacheNames = await caches.keys();
-  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE];
-  var toDelete = cacheNames.filter(function(name) {
-    return keep.indexOf(name) === -1;
-  });
-  for (var i = 0; i < toDelete.length; i++) {
-    await caches.delete(toDelete[i]);
+  for (var i = 0; i < cacheNames.length; i++) {
+    await caches.delete(cacheNames[i]);
   }
 }
 
@@ -88,7 +63,7 @@ self.addEventListener("activate", function(event) {
     cleanupCaches().then(function() { return self.clients.claim(); }).then(function() {
       return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clients) {
         clients.forEach(function(client) {
-          client.postMessage({ type: "SW_UPDATED", version: SW_VERSION });
+          client.postMessage({ type: "SW_UPDATED", version: SW_VERSION, clearVerseCache: true });
           if (client.url && client.url.indexOf(self.location.origin) === 0) {
             client.navigate(client.url);
           }
@@ -106,28 +81,7 @@ self.addEventListener("message", function(event) {
     return;
   }
 
-  if (!data || data.type !== "PRECACHE_URLS" || !Array.isArray(data.urls)) return;
-
-  event.waitUntil(
-    caches.open(SHELL_CACHE).then(function(cache) {
-      var urls = data.urls;
-      var chain = Promise.resolve();
-      for (var i = 0; i < urls.length; i++) {
-        (function(rawUrl) {
-          chain = chain.then(function() {
-            try {
-              var url = new URL(rawUrl, self.location.origin);
-              if (!isSameOrigin(url) || !isCacheableRequest(url)) return;
-              return addUrlToCache(cache, url.pathname + url.search);
-            } catch(e) {
-              return;
-            }
-          });
-        })(urls[i]);
-      }
-      return chain;
-    })
-  );
+  if (!data || data.type !== "PRECACHE_URLS") return;
 });
 
 self.addEventListener("fetch", function(event) {
@@ -137,25 +91,13 @@ self.addEventListener("fetch", function(event) {
   var url = new URL(request.url);
   if (!isSameOrigin(url)) return;
 
-  // Navigation: always network-first
+  // Navigation: always network-first, never app-shell-cache-first. This prevents old installed apps
+  // from keeping the removed automatic daily verse bundle alive.
   if (request.mode === "navigate") {
     event.respondWith(
       (function() {
-        return caches.open(SHELL_CACHE).then(function(shellCache) {
-          return fetch(request, { cache: "no-store" }).then(function(response) {
-            if (response && response.ok) {
-              shellCache.put(OFFLINE_FALLBACK_URL, response.clone());
-            }
-            return response;
-          }).catch(function() {
-            return shellCache.match(request).then(function(cached) {
-              return cached || shellCache.match(OFFLINE_FALLBACK_URL).then(function(fallback) {
-                return fallback || shellCache.match("/index.html").then(function(index) {
-                  return index || Response.error();
-                });
-              });
-            });
-          });
+        return fetch(request, { cache: "no-store" }).catch(function() {
+          return new Response("", { status: 503, statusText: "Offline" });
         });
       })()
     );
@@ -164,26 +106,18 @@ self.addEventListener("fetch", function(event) {
 
   if (!isCacheableRequest(url)) return;
 
-  // Navigation & Bible data & API: always network-first
-  // This ensures the Daily Verse update check isn't trapped in cache
-  if (request.mode === "navigate" || isBibleRequest(url) || url.pathname.indexOf("/functions/v1/") !== -1) {
+  // Keep Bible files available offline, but stop caching HTML/JS/CSS app shell.
+  if (isBibleRequest(url)) {
     event.respondWith(
       (function() {
-        var targetCacheName = isBibleRequest(url) ? RUNTIME_CACHE : SHELL_CACHE;
-        return caches.open(targetCacheName).then(function(cache) {
-          // fetch with short timeout to not hang UI if internet is very slow
+        return caches.open(BIBLE_CACHE).then(function(cache) {
           return fetch(request, { cache: "no-store" }).then(function(response) {
             if (response && response.ok) {
               cache.put(request, response.clone());
-              if (request.mode === "navigate") cache.put("/index.html", response.clone());
             }
             return response;
           }).catch(function() {
-            return cache.match(request).then(function(cached) {
-              if (cached) return cached;
-              if (request.mode === "navigate") return cache.match("/index.html");
-              return Response.error();
-            });
+            return cache.match(request).then(function(cached) { return cached || Response.error(); });
           });
         });
       })()
@@ -191,35 +125,10 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  // Hashed assets: cache-first
-  if (isHashedAsset(url)) {
-    event.respondWith(
-      caches.open(SHELL_CACHE).then(function(cache) {
-        return cache.match(request).then(function(cached) {
-          if (cached) return cached;
-          return fetch(request).then(function(response) {
-            if (response && response.ok) cache.put(request, response.clone());
-            return response;
-          }).catch(function() {
-            return Response.error();
-          });
-        });
-      })
-    );
-    return;
-  }
-
-  // Other assets: network-first
+  // App assets/control files: network-only so stale bundles cannot survive deploys.
   event.respondWith(
-    caches.open(RUNTIME_CACHE).then(function(cache) {
-      return fetch(request).then(function(response) {
-        if (response && response.ok) cache.put(request, response.clone());
-        return response;
-      }).catch(function() {
-        return cache.match(request).then(function(cached) {
-          return cached || Response.error();
-        });
-      });
+    fetch(request, { cache: "no-store" }).catch(function() {
+      return Response.error();
     })
   );
 });

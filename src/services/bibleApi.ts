@@ -1,4 +1,4 @@
-import { bibleBooks, getDailyVerse } from "@/data/bible";
+import { bibleBooks } from "@/data/bible";
 import {
   loadBundledBibleVersion,
   type BibleBookData,
@@ -193,13 +193,11 @@ export async function getRandomVerse(): Promise<{
       text: verse.text,
     };
   } catch {
-    // Use getDailyVerse as fallback (also deterministic by day)
-    const fallback = getDailyVerse();
     return {
-      book: { name: fallback.ref.split(" ").slice(0, -1).join(" ") },
+      book: { name: "" },
       chapter: 0,
       number: 0,
-      text: fallback.text,
+      text: "",
     };
   }
 }

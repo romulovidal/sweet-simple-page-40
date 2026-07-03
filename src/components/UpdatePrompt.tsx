@@ -35,12 +35,12 @@ const UpdatePrompt = () => {
       });
     });
 
-    // Periodically check for updates (every 30 min)
+    // Periodically check for updates (every 1 min)
     const interval = setInterval(() => {
       navigator.serviceWorker.getRegistration("/sw.js").then((reg) => {
         reg?.update().catch(() => {});
       });
-    }, 30 * 60 * 1000);
+    }, 60 * 1000);
 
     return () => {
       clearInterval(interval);
@@ -49,6 +49,7 @@ const UpdatePrompt = () => {
 
   const handleUpdate = () => {
     setUpdating(true);
+    window.localStorage.removeItem("daily-verse-cache");
     if (waitingWorker) {
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     }

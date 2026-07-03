@@ -73,7 +73,14 @@ export async function registerAppServiceWorker() {
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (reloading) return;
       reloading = true;
+      window.localStorage.removeItem("daily-verse-cache");
       window.location.reload();
+    });
+
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "SW_UPDATED") {
+        window.localStorage.removeItem("daily-verse-cache");
+      }
     });
 
     registration.addEventListener("updatefound", () => {
@@ -104,12 +111,12 @@ export async function registerAppServiceWorker() {
       }
     });
 
-    // Periodic check every 10 minutes
+    // Periodic check every 1 minute so installed devices pick up verse-sync fixes quickly
     setInterval(() => {
       if (navigator.onLine) {
         registration.update().catch(() => {});
       }
-    }, 10 * 60 * 1000);
+    }, 60 * 1000);
   } catch (error) {
     console.error("Service worker registration error:", error);
   }

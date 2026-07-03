@@ -901,11 +901,11 @@ const BiblePage = () => {
                 <h3 className="text-sm font-bold mb-4 flex items-center gap-2 text-dark-text">
                   <StickyNote className="w-4 h-4 text-yellow-500" /> Suas Anotações
                 </h3>
-                <p className="text-xs text-dark-muted mb-4">Clique no ícone de nota em cada versículo ou abra o painel geral.</p>
-                <PersonalNotes 
-                  bookAbbrev={selectedBook.apiAbbrev} 
-                  chapter={selectedChapter} 
-                  enabled={appFeatures.personal_notes} 
+                <PersonalNotes
+                  bookAbbrev={selectedBook.apiAbbrev}
+                  chapter={selectedChapter}
+                  enabled={appFeatures.personal_notes}
+                  variant="inline"
                 />
               </div>
             </aside>

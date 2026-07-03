@@ -73,8 +73,20 @@ const HomePage = () => {
     let cancelled = false;
 
     const getToday = () => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Sao_Paulo",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).formatToParts(new Date());
+        const year = parts.find((part) => part.type === "year")?.value;
+        const month = parts.find((part) => part.type === "month")?.value;
+        const day = parts.find((part) => part.type === "day")?.value;
+        if (year && month && day) return `${year}-${month}-${day}`;
+      } catch { /* fall back to device date */ }
+
       const now = new Date();
-      // Use local date to avoid timezone issues that make it look like "yesterday" late at night
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const day = String(now.getDate()).padStart(2, '0');
@@ -126,11 +138,15 @@ const HomePage = () => {
 
     const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
       try {
-        const { data: queueVerse } = await supabase
+        const { data: queueVerse, error } = await supabase
           .from("daily_verse_queue")
           .select("verse_text, verse_ref")
-          .eq("scheduled_date", today)
+          .lte("scheduled_date", today)
+          .order("scheduled_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
+        if (error) throw error;
         if (queueVerse) {
           return { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
         }
@@ -180,7 +196,7 @@ const HomePage = () => {
             setVerseLoading(false);
             
             // Atualizar cache se algo mudou ou se é um novo dia
-            if (!isCacheValid || cached?.verse.text !== finalVerse.text) {
+            if (!isCacheValid || cached?.verse.text !== finalVerse.text || cached?.verse.ref !== finalVerse.ref || cached?.source !== source) {
               writeJsonStorage(
                 DAILY_VERSE_CACHE_KEY,
                 { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: finalVerse },

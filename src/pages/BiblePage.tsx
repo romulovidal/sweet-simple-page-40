@@ -580,27 +580,47 @@ const BiblePage = () => {
 
         {/* Floating action bar */}
         {hasSelection && (
-          <div className="sticky top-[72px] z-10 mx-5 mb-2" data-tour="bible-action-bar">
-            <div className="rounded-2xl border border-white/10 bg-[hsl(var(--dark-card))]/95 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden animate-fade-up">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 bg-primary/10">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
+          <div className="sticky top-[72px] z-10 mx-4 mb-2" data-tour="bible-action-bar">
+            <div
+              className="relative rounded-3xl overflow-hidden animate-fade-up"
+              style={{
+                background:
+                  "linear-gradient(160deg, hsl(var(--dark-card)) 0%, hsl(var(--dark-bg)) 100%)",
+                boxShadow:
+                  "0 20px 50px -20px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.15) inset",
+              }}
+            >
+              {/* Soft glow accent */}
+              <div
+                className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full blur-3xl opacity-40"
+                style={{ background: "hsl(var(--primary) / 0.5)" }}
+              />
+              <div className="relative flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full text-primary-foreground text-xs font-bold shadow-md"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.75) 100%)",
+                      boxShadow: "0 4px 12px hsl(var(--primary) / 0.4)",
+                    }}
+                  >
                     {selectedVerses.size}
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="text-[13px] font-semibold text-foreground">
                     versículo{selectedVerses.size !== 1 ? "s" : ""} selecionado{selectedVerses.size !== 1 ? "s" : ""}
                   </span>
                 </div>
                 <button
                   onClick={() => setSelectedVerses(new Set())}
-                  className="h-7 w-7 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center"
+                  className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center border border-white/10"
                   title="Limpar seleção"
                   aria-label="Limpar seleção"
                 >
-                  <X className="w-3.5 h-3.5 text-dark-muted" />
+                  <X className="w-4 h-4 text-foreground/80" />
                 </button>
               </div>
-              <div className="px-3 py-3">
+              <div className="relative px-3 pb-3 pt-1">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <Palette className="w-[18px] h-[18px] text-primary" />
@@ -649,24 +669,47 @@ const BiblePage = () => {
 
             {/* Color picker */}
             {showColorPicker && (
-              <div className="mt-2 rounded-2xl border border-white/10 bg-[hsl(var(--dark-card))]/95 backdrop-blur-xl p-4 shadow-2xl shadow-black/40 animate-fade-up">
-                <p className="text-xs text-dark-muted font-semibold mb-3">Escolha uma cor para destacar</p>
-                <div className="flex items-center gap-3 justify-center">
+              <div
+                className="mt-2 rounded-3xl p-5 animate-fade-up relative overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(160deg, hsl(var(--dark-card)) 0%, hsl(var(--dark-bg)) 100%)",
+                  boxShadow:
+                    "0 20px 50px -20px rgba(0,0,0,0.6), 0 0 0 1px hsl(var(--primary) / 0.15) inset",
+                }}
+              >
+                <p className="text-[11px] uppercase tracking-wider text-dark-muted font-bold mb-4 text-center">
+                  Escolha uma cor para destacar
+                </p>
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
                   {HIGHLIGHT_COLORS.map((c) => (
                     <button
                       key={c.value}
                       onClick={() => handleHighlightSelected(c.value)}
-                      className="w-9 h-9 rounded-full border-2 border-transparent hover:border-white/50 active:scale-90 transition-all"
-                      style={{ backgroundColor: c.value }}
+                      className="group flex flex-col items-center gap-1.5 active:scale-90 transition-all"
                       title={c.name}
-                    />
+                      aria-label={c.name}
+                    >
+                      <span
+                        className="w-11 h-11 rounded-full flex items-center justify-center ring-2 ring-white/10 group-hover:ring-white/40 transition-all"
+                        style={{
+                          background: `linear-gradient(135deg, ${c.value} 0%, ${c.value}cc 100%)`,
+                          boxShadow: `0 6px 20px ${c.value}66, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                        }}
+                      />
+                      <span className="text-[10px] text-dark-muted font-medium">{c.name}</span>
+                    </button>
                   ))}
                   <button
                     onClick={handleRemoveHighlightSelected}
-                    className="w-9 h-9 rounded-full border-2 border-dark-muted bg-white/10 flex items-center justify-center hover:border-white/50 active:scale-90 transition-all"
+                    className="group flex flex-col items-center gap-1.5 active:scale-90 transition-all"
                     title="Remover destaque"
+                    aria-label="Remover destaque"
                   >
-                    <Ban className="w-5 h-5 text-dark-muted" />
+                    <span className="w-11 h-11 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center group-hover:border-white/40 transition-all">
+                      <Ban className="w-5 h-5 text-dark-muted" />
+                    </span>
+                    <span className="text-[10px] text-dark-muted font-medium">Remover</span>
                   </button>
                 </div>
               </div>

@@ -7,7 +7,7 @@ import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
-import YouTubePlayer from "@/components/YouTubePlayer";
+import PostPreviewDialog from "@/components/PostPreviewDialog";
 import { getDailyVerse } from "@/data/bible";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
@@ -67,6 +67,7 @@ const HomePage = () => {
   const [, setVerseHistory] = useLocalStorage<DailyVerseEntry[]>("daily-verse-history", []);
 
   const [adminPosts, setAdminPosts] = useState<AdminPost[]>(() => readJsonStorage<AdminPost[]>(ADMIN_POSTS_CACHE_KEY, []));
+  const [previewPost, setPreviewPost] = useState<AdminPost | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -387,9 +388,27 @@ const HomePage = () => {
                   const Icon = postIcon(post.type);
                   const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
-                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden">
+                    <button
+                      key={post.id}
+                      type="button"
+                      onClick={() => setPreviewPost(post)}
+                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all"
+                    >
                       {post.type === "video" && videoId && (
-                        <YouTubePlayer videoId={videoId} title={post.title} />
+                        <div className="relative aspect-video bg-black">
+                          <img
+                            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                            alt={post.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/10" />
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="w-14 h-14 rounded-full bg-primary/95 flex items-center justify-center shadow-xl ring-4 ring-white/20">
+                              <Play className="w-6 h-6 text-primary-foreground fill-current ml-0.5" />
+                            </span>
+                          </span>
+                        </div>
                       )}
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -402,9 +421,9 @@ const HomePage = () => {
                           )}
                         </div>
                         <h3 className="font-bold text-sm mb-1">{post.title}</h3>
-                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed">{post.content}</p>
+                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed line-clamp-3">{post.content}</p>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
                 </div>
@@ -424,9 +443,27 @@ const HomePage = () => {
                   const Icon = postIcon(post.type);
                   const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
-                    <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5">
+                    <button
+                      key={post.id}
+                      type="button"
+                      onClick={() => setPreviewPost(post)}
+                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5 text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all"
+                    >
                       {post.type === "video" && videoId && (
-                        <YouTubePlayer videoId={videoId} title={post.title} />
+                        <div className="relative aspect-video bg-black">
+                          <img
+                            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                            alt={post.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/10" />
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="w-14 h-14 rounded-full bg-primary/95 flex items-center justify-center shadow-xl ring-4 ring-white/20">
+                              <Play className="w-6 h-6 text-primary-foreground fill-current ml-0.5" />
+                            </span>
+                          </span>
+                        </div>
                       )}
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -436,26 +473,17 @@ const HomePage = () => {
                           </span>
                         </div>
                         <h3 className="font-bold text-sm mb-1">{post.title}</h3>
-                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed">{post.content}</p>
+                        <p className="text-sm text-[hsl(var(--dark-muted))] leading-relaxed line-clamp-3">{post.content}</p>
                         {post.bible_reference && (
                           <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
                             <span className="text-xs font-bold text-primary">{post.bible_reference}</span>
-                            <button 
-                              onClick={() => {
-                                const params = new URLSearchParams({ 
-                                  book: post.bible_reference?.split(' ')[0].toLowerCase() || '', 
-                                  chapter: post.bible_reference?.split(' ')[1]?.split(':')[0] || '1' 
-                                });
-                                navigate(`/biblia?${params.toString()}`);
-                              }}
-                              className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md font-bold uppercase"
-                            >
-                              Ler na Bíblia
-                            </button>
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md font-bold uppercase">
+                              Abrir
+                            </span>
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
                 </div>
@@ -475,6 +503,7 @@ const HomePage = () => {
           </div>
         )}
       </div>
+      <PostPreviewDialog post={previewPost} open={previewPost !== null} onOpenChange={(o) => !o && setPreviewPost(null)} />
     </div>
   );
 };

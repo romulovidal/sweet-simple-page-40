@@ -626,32 +626,32 @@ const BiblePage = () => {
                     <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                       <Palette className="w-[18px] h-[18px] text-primary" />
                     </button>
-                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Destacar</span>
+                    <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Destacar</span>
                   </div>
                   <div className="flex flex-col items-center gap-1 shrink-0">
                     <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                       <Share2 className="w-[18px] h-[18px] text-primary" />
                     </button>
-                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Compartilhar</span>
+                    <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Compartilhar</span>
                   </div>
                   <div className="flex flex-col items-center gap-1 shrink-0">
                     <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                       <ImageIcon className="w-[18px] h-[18px] text-primary" />
                     </button>
-                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Imagem</span>
+                    <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Imagem</span>
                   </div>
                   <div className="flex flex-col items-center gap-1 shrink-0">
                     <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" title="Comparar versões" aria-label="Comparar versões" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                       <GitCompareArrows className="w-[18px] h-[18px] text-primary" />
                     </button>
-                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Comparar</span>
+                    <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Comparar</span>
                   </div>
                   {appFeatures.presentation_mode && (
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <button onClick={() => setShowPresentation(true)} title="Modo Apresentação" aria-label="Modo Apresentação" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                         <Monitor className="w-[18px] h-[18px] text-primary" />
                       </button>
-                      <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Apresentar</span>
+                      <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Apresentar</span>
                     </div>
                   )}
                   {/* Anotações — exclusivo desktop */}

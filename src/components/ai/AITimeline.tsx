@@ -62,7 +62,7 @@ const AITimeline = ({ reference, text, enabled, label }: Props) => {
         >
           <Clock className="w-[18px] h-[18px] text-orange-400" />
         </button>
-        {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-muted">{label}</span>}
+        {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-text">{label}</span>}
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>

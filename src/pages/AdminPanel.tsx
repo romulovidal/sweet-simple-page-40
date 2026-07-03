@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
-  Clock, BookMarked, Menu, Home, Sparkles, BrainCircuit,
-  Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid
+  Clock, BookMarked, Home, Sparkles, BrainCircuit,
+  Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
+  ArrowLeft, MoreHorizontal
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -20,38 +21,35 @@ import AdminAIInstructions from "@/components/admin/AdminAIInstructions";
 import AdminPosts from "@/components/admin/AdminPosts";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type TabType = "home" | "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
+type ToolId = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
+type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
   {
+    id: "overview",
     title: "Visão Geral",
     subtitle: "Métricas e atividade",
     accent: "from-sky-500/25 to-sky-500/5",
     ring: "ring-sky-400/40",
     icon: "text-sky-300",
+    sectionIcon: LayoutDashboard,
     tabs: [
-      { id: "home", label: "Início", desc: "Atalhos para tudo", icon: LayoutGrid },
       { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
       { id: "log", label: "Atividade", desc: "Histórico de ações", icon: Clock },
     ],
   },
   {
+    id: "content",
     title: "Conteúdo",
     subtitle: "Publicações e planos",
     accent: "from-emerald-500/25 to-emerald-500/5",
     ring: "ring-emerald-400/40",
     icon: "text-emerald-300",
+    sectionIcon: FileText,
     tabs: [
       { id: "posts", label: "Posts", desc: "Feed devocional", icon: FileText },
       { id: "plans", label: "Planos de Leitura", desc: "Trilhas bíblicas", icon: BookOpen },
@@ -60,58 +58,60 @@ const ADMIN_SECTIONS = [
     ],
   },
   {
+    id: "community",
     title: "Comunidade",
     subtitle: "Interação e avisos",
     accent: "from-rose-500/25 to-rose-500/5",
     ring: "ring-rose-400/40",
     icon: "text-rose-300",
+    sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
       { id: "prayers", label: "Pedidos de Oração", desc: "Moderação", icon: HandHeart },
     ],
   },
   {
+    id: "ai",
     title: "Inteligência Artificial",
     subtitle: "Modelos e prompts",
     accent: "from-violet-500/25 to-violet-500/5",
     ring: "ring-violet-400/40",
     icon: "text-violet-300",
+    sectionIcon: Sparkles,
     tabs: [
       { id: "ai", label: "Configurações", desc: "Provedores e modelos", icon: BrainCircuit },
       { id: "ai-prompts", label: "Instruções", desc: "Prompts de todas as IAs", icon: Sparkles },
     ],
   },
   {
+    id: "system",
     title: "Sistema",
     subtitle: "Acesso e ajustes",
     accent: "from-amber-500/25 to-amber-500/5",
     ring: "ring-amber-400/40",
     icon: "text-amber-300",
+    sectionIcon: Settings2,
     tabs: [
       { id: "app-features", label: "Funcionalidades", desc: "Ligar/desligar recursos", icon: Settings2 },
       { id: "users", label: "Usuários App", desc: "Membros cadastrados", icon: Users },
       { id: "roles", label: "Administradores", desc: "Permissões", icon: Shield },
     ],
   },
-];
+] as const;
 
-const ALL_TABS = ADMIN_SECTIONS.flatMap(s => s.tabs.map(t => ({ ...t, section: s.title, accent: s.accent, ring: s.ring, iconColor: s.icon })));
-const findMeta = (id: string) => ALL_TABS.find(t => t.id === id);
-const BOTTOM_TABS = [
-  { id: "home", label: "Início", icon: LayoutGrid },
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "posts", label: "Posts", icon: FileText },
-  { id: "plans", label: "Planos", icon: BookOpen },
-];
+const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
+  s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title, accent: s.accent, ring: s.ring, iconColor: s.icon }))
+);
+const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
+const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabType>("home");
+  const [view, setView] = useState<View>({ kind: "home" });
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -130,269 +130,255 @@ const AdminPanel = () => {
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
 
-  const currentMeta = findMeta(tab);
-  const currentTabLabel = currentMeta?.label || "Painel Admin";
-  const currentSection = currentMeta?.section || "";
+  const openTool = (id: string) => setView({ kind: "tool", id: id as ToolId });
+  const openCategory = (id: string) => setView({ kind: "category", id });
+  const goHome = () => setView({ kind: "home" });
+  const goBack = () => {
+    if (view.kind === "tool") {
+      const tool = findTool(view.id);
+      if (tool) setView({ kind: "category", id: tool.sectionId });
+      else goHome();
+    } else if (view.kind === "category") {
+      goHome();
+    }
+  };
 
-  const filteredSections = ADMIN_SECTIONS;
+  // ----------- HEADER -----------
 
-  const NavList = ({ compact = false }: { compact?: boolean }) => (
-    <div className="space-y-5">
-      {filteredSections.map((section) => (
-        <div key={section.title}>
-          <div className="flex items-center gap-2 px-2 mb-2">
-            <span className={`w-1.5 h-1.5 rounded-full bg-current ${section.icon}`} />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[hsl(var(--dark-muted))]">
-              {section.title}
-            </h3>
-          </div>
-          <div className="space-y-1">
-            {section.tabs.map((t) => {
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setTab(t.id as any); setMenuOpen(false); }}
-                  className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                    active
-                      ? `bg-gradient-to-r ${section.accent} ring-1 ${section.ring} shadow-sm`
-                      : "hover:bg-[hsl(var(--dark-card))]/60"
-                  }`}
-                >
-                  <span className={`w-9 h-9 shrink-0 rounded-xl grid place-items-center bg-[hsl(var(--dark-card))]/70 ${section.icon}`}>
-                    <t.icon className="w-4.5 h-4.5" />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className={`block text-sm font-semibold truncate ${active ? "text-[hsl(var(--dark-text))]" : "text-[hsl(var(--dark-text))]/90"}`}>
-                      {t.label}
-                    </span>
-                    {!compact && (t as any).desc && (
-                      <span className="block text-[11px] text-[hsl(var(--dark-muted))] truncate">
-                        {(t as any).desc}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${active ? "text-[hsl(var(--dark-text))] translate-x-0.5" : "text-[hsl(var(--dark-muted))]/50 group-hover:translate-x-0.5"}`} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {filteredSections.length === 0 && (
-        <p className="text-center text-xs text-[hsl(var(--dark-muted))] py-8">Nada encontrado.</p>
-      )}
-    </div>
-  );
+  const currentTool = view.kind === "tool" ? findTool(view.id) : null;
+  const currentCategory =
+    view.kind === "category" ? findSection(view.id) :
+    view.kind === "tool" && currentTool ? findSection(currentTool.sectionId) : null;
 
-  const Brand = () => (
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 grid place-items-center shadow-lg shadow-amber-500/20">
-        <Shield className="w-5 h-5 text-amber-950" />
+  const headerCrumb =
+    view.kind === "home" ? "Administração" :
+    view.kind === "category" ? currentCategory?.subtitle || "" :
+    currentCategory?.title || "";
+  const headerTitle =
+    view.kind === "home" ? "Bíblia do Atalaia" :
+    view.kind === "category" ? currentCategory?.title || "" :
+    currentTool?.label || "";
+
+  // ----------- VIEWS -----------
+
+  // Home: only category cards, compact
+  const HomeView = () => (
+    <div className="space-y-3">
+      <div className="mb-1">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Categorias</p>
+        <h2 className="text-xl font-bold text-[hsl(var(--dark-text))]">Escolha uma área</h2>
       </div>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">Administração</p>
-        <p className="text-sm font-bold leading-tight bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">
-          Bíblia do Atalaia
-        </p>
-      </div>
-    </div>
-  );
-
-  // Home: grade de cards quadrados, agrupados por seção (sem Home nem Dashboard duplicados)
-  const HomeGrid = () => (
-    <div className="space-y-6">
       {ADMIN_SECTIONS.map((section) => {
-        const tiles = section.tabs.filter((t) => t.id !== "home");
-        if (tiles.length === 0) return null;
+        const SIcon = section.sectionIcon;
         return (
-          <section key={section.title}>
-            <div className="flex items-center gap-2 px-1 mb-3">
-              <span className={`w-1.5 h-1.5 rounded-full bg-current ${section.icon}`} />
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[hsl(var(--dark-muted))]">
-                {section.title}
-              </h3>
+          <button
+            key={section.id}
+            onClick={() => openCategory(section.id)}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all bg-gradient-to-r ${section.accent} ring-1 ${section.ring} hover:brightness-110 active:scale-[0.99]`}
+          >
+            <span className={`w-12 h-12 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+              <SIcon className="w-5 h-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-[hsl(var(--dark-text))] truncate">{section.title}</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))] truncate">{section.subtitle}</p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {tiles.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id as any)}
-                  className={`group aspect-square rounded-2xl p-4 flex flex-col justify-between text-left transition-all bg-gradient-to-br ${section.accent} ring-1 ${section.ring} hover:scale-[1.02] active:scale-[0.98]`}
-                >
-                  <span className={`w-11 h-11 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
-                    <t.icon className="w-5 h-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{t.label}</p>
-                    <p className="text-[11px] text-[hsl(var(--dark-muted))] line-clamp-2 leading-snug">{(t as any).desc}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-card))]/60 rounded-full px-2 py-0.5">
+                {section.tabs.length}
+              </span>
+              <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))]" />
             </div>
-          </section>
+          </button>
         );
       })}
+
+      <div className="pt-2 grid grid-cols-2 gap-3">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[hsl(var(--dark-card))]/70 ring-1 ring-[hsl(var(--dark-card-hover))]/60 text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] transition-colors"
+        >
+          <Home className="w-4 h-4" /> Bíblia
+        </button>
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-destructive/10 ring-1 ring-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/20 transition-colors"
+        >
+          <LogOut className="w-4 h-4" /> Sair
+        </button>
+      </div>
     </div>
   );
 
-  const FooterActions = () => (
-    <div className="space-y-1.5">
-      <button
-        onClick={() => { setMenuOpen(false); navigate("/"); }}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]/60 transition-colors"
-      >
-        <Home className="w-4 h-4" />
-        Voltar para a Bíblia
-      </button>
-      <button
-        onClick={handleLogout}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-      >
-        <LogOut className="w-4 h-4" />
-        Sair
-      </button>
-    </div>
-  );
+  // Category: list of tools inside the section
+  const CategoryView = ({ sectionId }: { sectionId: string }) => {
+    const section = findSection(sectionId);
+    if (!section) return null;
+    const SIcon = section.sectionIcon;
+    return (
+      <div className="space-y-4">
+        <div className={`rounded-2xl p-5 bg-gradient-to-br ${section.accent} ring-1 ${section.ring} flex items-center gap-4`}>
+          <span className={`w-14 h-14 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+            <SIcon className="w-6 h-6" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">{section.subtitle}</p>
+            <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] truncate">{section.title}</h2>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {section.tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => openTool(t.id)}
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left bg-[hsl(var(--dark-card))]/60 hover:bg-[hsl(var(--dark-card))] ring-1 ring-[hsl(var(--dark-card-hover))]/40 transition-colors"
+            >
+              <span className={`w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] ${section.icon}`}>
+                <t.icon className="w-4.5 h-4.5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{t.label}</p>
+                <p className="text-[11px] text-[hsl(var(--dark-muted))] truncate">{t.desc}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 shrink-0 text-[hsl(var(--dark-muted))]" />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Tool: renders the actual admin surface
+  const ToolContent = ({ id }: { id: ToolId }) => {
+    switch (id) {
+      case "dashboard": return <AdminDashboard />;
+      case "verse": return <AdminDailyVerse />;
+      case "push": return <AdminPushSender />;
+      case "roles": return <AdminRoles />;
+      case "log": return <AdminActivityLog />;
+      case "cultos": return <AdminCultoSchedule />;
+      case "ai": return <AdminAISettings />;
+      case "ai-prompts": return <AdminAIInstructions />;
+      case "app-features": return <AdminAppFeatures />;
+      case "prayers": return <AdminPrayerRequests />;
+      case "posts": return <AdminPosts posts={posts} fetchData={fetchData} />;
+      case "plans": return <AdminPlans plans={plans} fetchData={fetchData} />;
+      case "users": return <AdminUsers users={users} fetchData={fetchData} />;
+    }
+  };
+
+  const showToolLoader = loading && view.kind === "tool" && ["posts", "plans", "users"].includes(view.id);
 
   return (
-    <div className="min-h-screen flex bg-[hsl(var(--dark-bg))]">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col border-r border-[hsl(var(--dark-card))] bg-[hsl(var(--dark-bg))]/95 backdrop-blur z-30">
-        <div className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))]">
-          <Brand />
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-4">
-          <NavList />
-        </nav>
-        <div className="p-3 border-t border-[hsl(var(--dark-card))]">
-          <FooterActions />
-        </div>
-      </aside>
-
-      {/* Main column */}
-      <div className="flex-1 flex flex-col lg:pl-72 pb-20 lg:pb-0">
-        {/* Header */}
-        <header className="sticky top-0 z-20 bg-[hsl(var(--dark-bg))]/90 backdrop-blur border-b border-[hsl(var(--dark-card))]">
-          <div className="px-5 lg:px-8 py-4 flex items-center gap-3">
-            {/* Mobile hamburger */}
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <button className="lg:hidden p-2 rounded-xl hover:bg-[hsl(var(--dark-card))] transition-colors" aria-label="Abrir menu">
-                  <Menu className="w-5 h-5" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[85vw] max-w-sm bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] p-0 flex flex-col">
-                <SheetHeader className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))] shrink-0">
-                  <SheetTitle className="text-left">
-                    <Brand />
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto px-3 py-4">
-                  <NavList />
-                </div>
-                <div className="p-3 border-t border-[hsl(var(--dark-card))] shrink-0">
-                  <FooterActions />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] truncate">
-                {currentSection}
-              </p>
-              <h1 className="text-base lg:text-lg font-bold text-[hsl(var(--dark-text))] truncate leading-tight">
-                {currentTabLabel}
-              </h1>
+    <div className="min-h-screen bg-[hsl(var(--dark-bg))]">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-[hsl(var(--dark-bg))]/90 backdrop-blur border-b border-[hsl(var(--dark-card))]">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          {view.kind === "home" ? (
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 grid place-items-center shadow-lg shadow-amber-500/20 shrink-0">
+              <Shield className="w-5 h-5 text-amber-950" />
             </div>
-
+          ) : (
             <button
-              onClick={() => navigate("/")}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+              onClick={goBack}
+              aria-label="Voltar"
+              className="w-10 h-10 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/70 hover:bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] shrink-0 transition-colors"
             >
-              <Home className="w-4 h-4" />
-              Bíblia
+              <ArrowLeft className="w-5 h-5" />
             </button>
-          </div>
-        </header>
+          )}
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto">
-          {loading && (tab === "posts" || tab === "plans" || tab === "users") ? (
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] truncate">
+              {headerCrumb}
+            </p>
+            <h1 className={`text-base font-bold truncate leading-tight ${
+              view.kind === "home"
+                ? "bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent"
+                : "text-[hsl(var(--dark-text))]"
+            }`}>
+              {headerTitle}
+            </h1>
+          </div>
+
+          {view.kind !== "home" && (
+            <button
+              onClick={goHome}
+              aria-label="Início"
+              className="w-10 h-10 rounded-2xl grid place-items-center text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card))] hover:text-[hsl(var(--dark-text))] shrink-0 transition-colors"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="pb-24">
+        <div className="max-w-2xl mx-auto px-4 py-5">
+          {showToolLoader ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
+          ) : view.kind === "home" ? (
+            <HomeView />
+          ) : view.kind === "category" ? (
+            <CategoryView sectionId={view.id} />
           ) : (
-            <div className="px-5 lg:px-8 py-5 lg:py-8 max-w-5xl mx-auto w-full">
-              {/* Section hero card (hidden na Home para dar destaque aos tiles) */}
-              {currentMeta && tab !== "home" && (
-                <div className={`mb-5 rounded-2xl p-4 lg:p-5 bg-gradient-to-r ${currentMeta.accent} ring-1 ${currentMeta.ring} flex items-center gap-4`}>
-                  <span className={`w-12 h-12 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/70 ${currentMeta.iconColor}`}>
-                    <currentMeta.icon className="w-5 h-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">{currentSection}</p>
-                    <h2 className="text-base lg:text-lg font-bold text-[hsl(var(--dark-text))] truncate">{currentTabLabel}</h2>
-                    {(currentMeta as any).desc && (
-                      <p className="text-xs text-[hsl(var(--dark-muted))] truncate">{(currentMeta as any).desc}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {tab === "home" && <HomeGrid />}
-                {tab === "dashboard" && <AdminDashboard />}
-                {tab === "verse" && <AdminDailyVerse />}
-                {tab === "push" && <AdminPushSender />}
-                {tab === "roles" && <AdminRoles />}
-                {tab === "log" && <AdminActivityLog />}
-                {tab === "cultos" && <AdminCultoSchedule />}
-                {tab === "ai" && <AdminAISettings />}
-                {tab === "ai-prompts" && <AdminAIInstructions />}
-                {tab === "app-features" && <AdminAppFeatures />}
-                {tab === "prayers" && <AdminPrayerRequests />}
-                {tab === "posts" && <AdminPosts posts={posts} fetchData={fetchData} />}
-                {tab === "plans" && <AdminPlans plans={plans} fetchData={fetchData} />}
-                {tab === "users" && <AdminUsers users={users} fetchData={fetchData} />}
-              </div>
-            </div>
+            <ToolContent id={view.id} />
           )}
-        </main>
+        </div>
+      </main>
 
-        {/* Bottom Navigation - mobile only */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-t border-[hsl(var(--dark-card))]">
-          <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-            {BOTTOM_TABS.map((t) => {
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id as any)}
-                  className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
-                    active ? "text-primary" : "text-[hsl(var(--dark-muted))]"
-                  }`}
-                >
-                  {active && (
-                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
-                  )}
-                  <t.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">{t.label}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[hsl(var(--dark-muted))]"
-            >
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Mais</span>
-            </button>
-          </div>
-        </nav>
-      </div>
+      {/* Bottom action bar — always visible, mobile-first */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-t border-[hsl(var(--dark-card))]">
+        <div className="max-w-2xl mx-auto flex items-center justify-around h-16 px-2">
+          <BottomButton
+            active={view.kind === "home"}
+            onClick={goHome}
+            icon={LayoutGrid}
+            label="Início"
+          />
+          <BottomButton
+            active={view.kind === "tool" && view.id === "dashboard"}
+            onClick={() => openTool("dashboard")}
+            icon={LayoutDashboard}
+            label="Dashboard"
+          />
+          <BottomButton
+            active={view.kind === "tool" && view.id === "ai-prompts"}
+            onClick={() => openTool("ai-prompts")}
+            icon={Sparkles}
+            label="IA"
+          />
+          <BottomButton
+            active={view.kind === "category" && view.id === "system"}
+            onClick={() => openCategory("system")}
+            icon={MoreHorizontal}
+            label="Mais"
+          />
+        </div>
+      </nav>
     </div>
   );
 };
+
+const BottomButton = ({
+  active, onClick, icon: Icon, label,
+}: { active: boolean; onClick: () => void; icon: typeof Home; label: string }) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
+      active ? "text-primary" : "text-[hsl(var(--dark-muted))]"
+    }`}
+  >
+    {active && (
+      <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
+    )}
+    <Icon className="w-5 h-5" />
+    <span className="text-[10px] font-medium">{label}</span>
+  </button>
+);
 
 export default AdminPanel;

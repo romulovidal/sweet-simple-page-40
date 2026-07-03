@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2, Save, X, Eye, EyeOff, FileText, Video, BookOpen, Heart, Megaphone } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Eye, EyeOff, FileText, Video, BookOpen, Heart, Megaphone, Play } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import PostPreviewDialog from "@/components/PostPreviewDialog";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 
@@ -26,6 +27,7 @@ interface AdminPostsProps {
 
 const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
   const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
+  const [previewPost, setPreviewPost] = useState<Post | null>(null);
 
   const sendPostPush = async (postData: Pick<Post, "title" | "content" | "type">) => {
     const postTypeLabel = POST_TYPES.find((t) => t.value === postData.type)?.label || "Post";
@@ -195,20 +197,39 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
         {posts.map((post) => {
           const typeInfo = POST_TYPES.find((t) => t.value === post.type);
           const Icon = typeInfo?.icon || FileText;
+          const ytMatch = post.youtube_url?.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          const ytId = ytMatch ? ytMatch[1] : null;
           return (
             <div key={post.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPost(post)}
+                className="w-full flex items-start gap-3 text-left active:opacity-80 transition"
+                aria-label={`Visualizar ${post.title}`}
+              >
+                {ytId ? (
+                  <div className="relative w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-black">
+                    <img src={`https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <Play className="w-5 h-5 text-white fill-current" />
+                    </span>
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm truncate">{post.title}</p>
                     {!post.is_active && <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">Oculto</span>}
                   </div>
                   <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">{post.content}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-primary/80 uppercase tracking-wider">
+                    <Eye className="w-3 h-3" /> Ver preview
+                  </span>
                 </div>
-              </div>
+              </button>
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
                 <button onClick={() => setEditingPost(post)} className="text-xs text-primary font-medium flex items-center gap-1">
                   <Edit2 className="w-3 h-3" /> Editar
@@ -226,6 +247,7 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
         })}
         {posts.length === 0 && <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-10">Nenhuma postagem ainda</p>}
       </div>
+      <PostPreviewDialog post={previewPost} open={!!previewPost} onOpenChange={(o) => !o && setPreviewPost(null)} />
     </>
   );
 };

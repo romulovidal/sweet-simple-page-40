@@ -554,6 +554,24 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
+              <VisualTimeline
+                onNavigateReference={(ref) => {
+                  // Parse "Gênesis 12" or "Êxodo 7—12" → book + first chapter
+                  const match = ref.match(/^(.+?)\s+(\d+)/);
+                  if (!match) return;
+                  const bookName = match[1].trim();
+                  const chapter = parseInt(match[2], 10);
+                  const book = bibleBooks.find(
+                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                  );
+                  if (!book) return;
+                  setSelectedBook(book);
+                  setTestament(book.testament);
+                  setSelectedChapter(Math.min(chapter, book.chapters));
+                  setSelectedVerses(new Set());
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}

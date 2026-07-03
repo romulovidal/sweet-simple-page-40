@@ -18,6 +18,13 @@ const VisualTimeline = ({ onNavigateReference, onCharacterClick }: Props) => {
 
   const eras = useMemo(() => BIBLE_TIMELINE, []);
 
+  // Permite abrir de fora via evento
+  useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener("open-visual-timeline", h);
+    return () => window.removeEventListener("open-visual-timeline", h);
+  }, []);
+
   // Highlight active era while scrolling
   useEffect(() => {
     if (!open) return;

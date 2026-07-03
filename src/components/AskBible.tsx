@@ -27,7 +27,11 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const handleOpen = () => setOpen(true);
+    const handleOpen = (e: Event) => {
+      setOpen(true);
+      const prefill = (e as CustomEvent<{ prefill?: string }>).detail?.prefill;
+      if (prefill) setInput(prefill);
+    };
     window.addEventListener("open-ask-bible", handleOpen);
     return () => window.removeEventListener("open-ask-bible", handleOpen);
   }, []);

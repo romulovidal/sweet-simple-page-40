@@ -14,6 +14,8 @@ const UpdatePrompt = () => {
     navigator.serviceWorker.getRegistration("/sw.js").then((reg) => {
       if (!reg) return;
 
+      reg.update().catch(() => {});
+
       if (reg.waiting) {
         setWaitingWorker(reg.waiting);
         setShowUpdate(true);

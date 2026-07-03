@@ -84,6 +84,7 @@ const isSameBibleNavigationView = (a: unknown, b: BibleNavigationView) => {
   if (!isBibleNavigationView(a)) return false;
   if (a.kind !== b.kind) return false;
   if (a.kind === "books") return true;
+  if (b.kind === "books") return true;
   if (a.bookAbbrev !== b.bookAbbrev) return false;
   return a.kind === "chapters" || a.chapter === (b as { kind: "chapter"; chapter: number }).chapter;
 };

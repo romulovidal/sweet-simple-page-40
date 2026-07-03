@@ -54,11 +54,6 @@ function sendPrecacheMessage(registration: ServiceWorkerRegistration) {
   });
 }
 
-function applyWaitingUpdate(registration: ServiceWorkerRegistration) {
-  if (!registration.waiting) return;
-  registration.waiting.postMessage({ type: "SKIP_WAITING" });
-}
-
 export async function registerAppServiceWorker() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) {
     return;
@@ -68,9 +63,6 @@ export async function registerAppServiceWorker() {
     const registration = await navigator.serviceWorker.register("/sw.js");
     sendPrecacheMessage(registration);
 
-    // Force-apply any waiting update immediately (covers users on old versions)
-    applyWaitingUpdate(registration);
-
     // When the controller changes (new SW took over), reload to get fresh code
     let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -79,17 +71,9 @@ export async function registerAppServiceWorker() {
       window.location.reload();
     });
 
-    // Auto-apply updates as soon as they install
-    registration.addEventListener("updatefound", () => {
-      const installing = registration.installing;
-      if (!installing) return;
-
-      installing.addEventListener("statechange", () => {
-        if (installing.state === "installed" && navigator.serviceWorker.controller) {
-          applyWaitingUpdate(registration);
-        }
-      });
-    });
+    // Do NOT auto-apply updates — UpdatePrompt lets the user click "Atualizar"
+    // when a new version is waiting. This ensures the prompt only appears for
+    // outdated clients and never interrupts users on the current version.
 
     navigator.serviceWorker.ready
       .then(() => sendPrecacheMessage(registration))

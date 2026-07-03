@@ -29,6 +29,7 @@ import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
 import VisualTimeline from "@/components/VisualTimeline";
+import BiblicalMaps from "@/components/BiblicalMaps";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -572,6 +573,23 @@ const BiblePage = () => {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
+              <BiblicalMaps
+                onNavigateReference={(ref) => {
+                  const match = ref.match(/^(.+?)\s+(\d+)/);
+                  if (!match) return;
+                  const bookName = match[1].trim();
+                  const chapter = parseInt(match[2], 10);
+                  const book = bibleBooks.find(
+                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                  );
+                  if (!book) return;
+                  setSelectedBook(book);
+                  setTestament(book.testament);
+                  setSelectedChapter(Math.min(chapter, book.chapters));
+                  setSelectedVerses(new Set());
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}
@@ -1038,6 +1056,23 @@ const BiblePage = () => {
           <h1 className="text-2xl font-bold">Bíblia</h1>
           <div className="flex items-center gap-2">
             <VisualTimeline
+              onNavigateReference={(ref) => {
+                const match = ref.match(/^(.+?)\s+(\d+)/);
+                if (!match) return;
+                const bookName = match[1].trim();
+                const chapter = parseInt(match[2], 10);
+                const book = bibleBooks.find(
+                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                );
+                if (!book) return;
+                setSelectedBook(book);
+                setTestament(book.testament);
+                setSelectedChapter(Math.min(chapter, book.chapters));
+                setSelectedVerses(new Set());
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+            <BiblicalMaps
               onNavigateReference={(ref) => {
                 const match = ref.match(/^(.+?)\s+(\d+)/);
                 if (!match) return;

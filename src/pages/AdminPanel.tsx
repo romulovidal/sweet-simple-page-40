@@ -33,9 +33,6 @@ const ADMIN_SECTIONS = [
     id: "overview",
     title: "Visão Geral",
     subtitle: "Métricas e atividade",
-    accent: "from-primary/15 to-primary/5",
-    ring: "ring-primary/25",
-    icon: "text-primary",
     sectionIcon: LayoutDashboard,
     tabs: [
       { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
@@ -46,9 +43,6 @@ const ADMIN_SECTIONS = [
     id: "content",
     title: "Conteúdo",
     subtitle: "Publicações e planos",
-    accent: "from-primary/15 to-primary/5",
-    ring: "ring-primary/25",
-    icon: "text-primary",
     sectionIcon: FileText,
     tabs: [
       { id: "posts", label: "Posts", desc: "Feed devocional", icon: FileText },
@@ -61,9 +55,6 @@ const ADMIN_SECTIONS = [
     id: "community",
     title: "Comunidade",
     subtitle: "Interação e avisos",
-    accent: "from-[hsl(var(--streak-orange)/0.18)] to-[hsl(var(--streak-orange)/0.05)]",
-    ring: "ring-[hsl(var(--streak-orange)/0.3)]",
-    icon: "text-[hsl(var(--streak-orange))]",
     sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
@@ -74,9 +65,6 @@ const ADMIN_SECTIONS = [
     id: "ai",
     title: "Inteligência Artificial",
     subtitle: "Modelos e prompts",
-    accent: "from-[hsl(var(--streak-orange)/0.2)] to-[hsl(var(--streak-orange)/0.05)]",
-    ring: "ring-[hsl(var(--streak-orange)/0.35)]",
-    icon: "text-[hsl(var(--streak-orange))]",
     sectionIcon: Sparkles,
     tabs: [
       { id: "ai", label: "Configurações", desc: "Provedores e modelos", icon: BrainCircuit },
@@ -87,9 +75,6 @@ const ADMIN_SECTIONS = [
     id: "system",
     title: "Sistema",
     subtitle: "Acesso e ajustes",
-    accent: "from-primary/10 to-primary/5",
-    ring: "ring-[hsl(var(--dark-card-hover))]",
-    icon: "text-[hsl(var(--dark-muted))]",
     sectionIcon: Settings2,
     tabs: [
       { id: "app-features", label: "Funcionalidades", desc: "Ligar/desligar recursos", icon: Settings2 },
@@ -100,7 +85,7 @@ const ADMIN_SECTIONS = [
 ] as const;
 
 const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
-  s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title, accent: s.accent, ring: s.ring, iconColor: s.icon }))
+  s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title }))
 );
 const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
 const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);

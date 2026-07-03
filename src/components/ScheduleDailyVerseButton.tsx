@@ -14,6 +14,7 @@ interface Props {
   text: string;
   disabled?: boolean;
   onScheduled?: () => void;
+  label?: string;
 }
 
 /**
@@ -21,7 +22,7 @@ interface Props {
  * Opens a popover with a date picker to schedule the selected verses
  * as the "verse of the day" (writes to daily_verse_queue).
  */
-const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled }: Props) => {
+const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled, label }: Props) => {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -57,17 +58,18 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled }: Pr
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          disabled={disabled}
-          title="Agendar como versículo do dia"
-          aria-label="Agendar como versículo do dia"
-          className="h-11 w-11 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0 disabled:opacity-40"
-        >
-          <CalendarPlus className="w-[18px] h-[18px] text-violet-400" />
-        </button>
-      </PopoverTrigger>
+    <div className="flex flex-col items-center gap-1 shrink-0">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            disabled={disabled}
+            title="Agendar como versículo do dia"
+            aria-label="Agendar como versículo do dia"
+            className="h-11 w-11 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40"
+          >
+            <CalendarPlus className="w-[18px] h-[18px] text-violet-400" />
+          </button>
+        </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">
         <div className="p-3 border-b border-border">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
@@ -104,7 +106,9 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled }: Pr
           </Button>
         </div>
       </PopoverContent>
-    </Popover>
+      </Popover>
+      {label && <span className="hidden lg:inline text-[10px] font-medium text-violet-300/80">{label}</span>}
+    </div>
   );
 };
 

@@ -580,7 +580,7 @@ const BiblePage = () => {
 
         {/* Floating action bar */}
         {hasSelection && (
-          <div className="sticky top-[72px] z-10 mx-4 mb-2" data-tour="bible-action-bar">
+          <div className="sticky top-[72px] z-10 mx-4 mb-2 lg:max-w-3xl lg:mx-auto" data-tour="bible-action-bar">
             <div
               className="relative rounded-3xl overflow-hidden animate-fade-up"
               style={{
@@ -620,20 +620,45 @@ const BiblePage = () => {
                   <X className="w-4 h-4 text-foreground/80" />
                 </button>
               </div>
-              <div className="relative px-3 pb-3 pt-1">
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                    <Palette className="w-[18px] h-[18px] text-primary" />
-                  </button>
-                  <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                    <Share2 className="w-[18px] h-[18px] text-primary" />
-                  </button>
-                  <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                    <ImageIcon className="w-[18px] h-[18px] text-primary" />
-                  </button>
-                  <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" title="Comparar versões" aria-label="Comparar versões" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                    <GitCompareArrows className="w-[18px] h-[18px] text-primary" />
-                  </button>
+              <div className="relative px-3 pb-3 pt-1 lg:px-5 lg:pb-5">
+                <div className="flex flex-wrap items-start justify-center gap-2 lg:gap-4">
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                      <Palette className="w-[18px] h-[18px] text-primary" />
+                    </button>
+                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Destacar</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                      <Share2 className="w-[18px] h-[18px] text-primary" />
+                    </button>
+                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Compartilhar</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                      <ImageIcon className="w-[18px] h-[18px] text-primary" />
+                    </button>
+                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Imagem</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" title="Comparar versões" aria-label="Comparar versões" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                      <GitCompareArrows className="w-[18px] h-[18px] text-primary" />
+                    </button>
+                    <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Comparar</span>
+                  </div>
+                  {/* Anotações — exclusivo desktop */}
+                  {appFeatures.personal_notes && (
+                    <div className="hidden lg:flex">
+                      <PersonalNotes
+                        bookAbbrev={selectedBook.apiAbbrev}
+                        chapter={selectedChapter}
+                        verse={Array.from(selectedVerses).sort((a, b) => a - b)[0]}
+                        enabled={appFeatures.personal_notes}
+                        variant="action-bar"
+                        label="Anotações"
+                      />
+                    </div>
+                  )}
                   {(() => {
                     const sortedSel = Array.from(selectedVerses).sort((a, b) => a - b);
                     const selTexts = sortedSel.map((n) => verses.find((v) => v.number === n)).filter(Boolean) as BibleVerse[];
@@ -648,13 +673,14 @@ const BiblePage = () => {
                     const selText = selTexts.map((v) => `${v.number} ${v.text}`).join("\n");
                     return (
                       <>
-                        <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
-                        <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
-                        <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
+                        <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} label="Conexões" />
+                        <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} label="Significado" />
+                        <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} label="Linha do Tempo" />
                         {isAdmin && (
                           <ScheduleDailyVerseButton
                             reference={selRef}
                             text={selText}
+                            label="Agendar"
                           />
                         )}
                       </>

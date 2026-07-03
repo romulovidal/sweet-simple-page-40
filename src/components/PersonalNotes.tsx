@@ -12,6 +12,8 @@ interface PersonalNotesProps {
   chapter: number;
   verse?: number;
   enabled: boolean;
+  label?: string;
+  variant?: "compact" | "action-bar";
 }
 
 interface Note {
@@ -22,7 +24,7 @@ interface Note {
   updated_at: string;
 }
 
-const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled }: PersonalNotesProps) => {
+const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "compact" }: PersonalNotesProps) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -107,18 +109,37 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled }: PersonalNotesPro
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="p-1 relative"
-        title="Anotações"
-      >
-        <StickyNote className={`w-4 h-4 ${noteCount > 0 ? "text-yellow-400" : "text-[hsl(var(--dark-muted))]"}`} />
-        {noteCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 text-[8px] text-black font-bold flex items-center justify-center">
-            {noteCount}
-          </span>
-        )}
-      </button>
+      {variant === "action-bar" ? (
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <button
+            onClick={() => setOpen(true)}
+            className="relative h-11 w-11 rounded-xl bg-yellow-500/15 hover:bg-yellow-500/25 active:scale-95 transition-all flex items-center justify-center"
+            title="Anotações"
+            aria-label="Anotações"
+          >
+            <StickyNote className="w-[18px] h-[18px] text-yellow-400" />
+            {noteCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-yellow-400 text-[9px] text-black font-bold flex items-center justify-center">
+                {noteCount}
+              </span>
+            )}
+          </button>
+          {label && <span className="hidden lg:inline text-[10px] font-medium text-yellow-300/80">{label}</span>}
+        </div>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="p-1 relative"
+          title="Anotações"
+        >
+          <StickyNote className={`w-4 h-4 ${noteCount > 0 ? "text-yellow-400" : "text-[hsl(var(--dark-muted))]"}`} />
+          {noteCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 text-[8px] text-black font-bold flex items-center justify-center">
+              {noteCount}
+            </span>
+          )}
+        </button>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] max-h-[80vh] overflow-y-auto">

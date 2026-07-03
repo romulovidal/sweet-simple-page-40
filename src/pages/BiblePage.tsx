@@ -31,6 +31,8 @@ import PresentationMode from "@/components/PresentationMode";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
+import ScheduleDailyVerseButton from "@/components/ScheduleDailyVerseButton";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const APP_URL = window.location.origin;
 
@@ -46,6 +48,7 @@ const HIGHLIGHT_COLORS = [
 const BiblePage = () => {
   const { features: aiFeatures } = useAIFeatures();
   const { features: appFeatures } = useAppFeatures();
+  const { isAdmin } = useIsAdmin();
   const [showPresentation, setShowPresentation] = useState(false);
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -513,6 +516,12 @@ const BiblePage = () => {
                         <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
                         <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
                         <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
+                        {isAdmin && (
+                          <ScheduleDailyVerseButton
+                            reference={selRef}
+                            text={selText}
+                          />
+                        )}
                       </>
                     );
                   })()}

@@ -1098,7 +1098,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       id={`verse-${verse.number}`}
       className={`group scroll-mt-24 rounded-lg transition-all py-2.5 px-3 cursor-pointer active:scale-[0.99] ${
         isHighlighted ? "bg-primary/10" : ""
-      } ${isSelected ? "bg-primary/20 ring-1 ring-primary/40" : ""}`}
+      } ${isSelected ? "verse-selected" : ""}`}
       style={
         highlightColor && !isSelected
           ? {

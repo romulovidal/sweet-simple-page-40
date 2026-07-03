@@ -337,7 +337,7 @@ const AdminDailyVerse = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-10 sm:grid-cols-12 md:grid-cols-15 gap-1.5">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-2">
                 {chapterVerses.map((_, i) => {
                   const n = i + 1;
                   const selected = selectedVerses.includes(n);
@@ -345,7 +345,9 @@ const AdminDailyVerse = () => {
                     <button
                       key={n}
                       onClick={() => toggleVerse(n)}
-                      className={`aspect-square text-xs font-bold rounded-md transition-all ${
+                      aria-label={`Versículo ${n}${selected ? " (selecionado)" : ""}`}
+                      aria-pressed={selected}
+                      className={`min-h-[44px] min-w-[44px] aspect-square text-sm font-bold rounded-lg transition-all touch-manipulation flex items-center justify-center ${
                         selected
                           ? "bg-primary text-primary-foreground scale-105 shadow-md shadow-primary/30"
                           : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] hover:bg-primary/20 hover:text-primary"

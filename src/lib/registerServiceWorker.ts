@@ -62,6 +62,7 @@ export async function registerAppServiceWorker() {
   try {
     const registration = await navigator.serviceWorker.register("/sw.js");
     sendPrecacheMessage(registration);
+    registration.update().catch(() => {});
 
     // When the controller changes (new SW took over), reload to get fresh code
     let reloading = false;

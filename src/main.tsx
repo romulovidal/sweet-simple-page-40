@@ -6,13 +6,28 @@ import { initErrorMonitor } from "@/lib/errorMonitor";
 
 initErrorMonitor();
 
-// Ensure the app is free to rotate; a previously-cached PWA manifest may have
-// locked orientation. This is a no-op on browsers that don't support it.
-try {
-  (screen.orientation as any)?.unlock?.();
-} catch {
-  /* noop */
-}
+const allowLandscapeOrientation = () => {
+  const orientation = screen.orientation as ScreenOrientation & {
+    lock?: (orientation: OrientationLockType) => Promise<void>;
+    unlock?: () => void;
+  };
+
+  orientation?.lock?.("any").catch(() => {
+    try {
+      orientation?.unlock?.();
+    } catch {
+      /* noop */
+    }
+  });
+};
+
+allowLandscapeOrientation();
+window.addEventListener("pageshow", allowLandscapeOrientation);
+window.addEventListener("focus", allowLandscapeOrientation);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") allowLandscapeOrientation();
+});
+document.addEventListener("pointerdown", allowLandscapeOrientation, { once: true, passive: true });
 
 createRoot(document.getElementById("root")!).render(<App />);
 

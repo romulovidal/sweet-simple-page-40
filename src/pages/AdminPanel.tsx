@@ -205,9 +205,9 @@ const AdminPanel = () => {
           <button
             key={section.id}
             onClick={() => openCategory(section.id)}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all bg-gradient-to-r ${section.accent} ring-1 ${section.ring} hover:brightness-110 active:scale-[0.99]`}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-colors bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] active:scale-[0.99]"
           >
-            <span className={`w-12 h-12 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+            <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
               <SIcon className="w-5 h-5" />
             </span>
             <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ const AdminPanel = () => {
               <p className="text-xs text-[hsl(var(--dark-muted))] truncate">{section.subtitle}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] font-bold text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-card))]/60 rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-bold text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-bg))] rounded-full px-2 py-0.5">
                 {section.tabs.length}
               </span>
               <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))]" />
@@ -227,13 +227,13 @@ const AdminPanel = () => {
       <div className="pt-2 grid grid-cols-2 gap-3">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[hsl(var(--dark-card))]/70 ring-1 ring-[hsl(var(--dark-card-hover))]/60 text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] transition-colors"
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[hsl(var(--dark-card))] text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
         >
           <Home className="w-4 h-4" /> Bíblia
         </button>
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-destructive/10 ring-1 ring-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/20 transition-colors"
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-destructive/10 text-sm font-semibold text-destructive hover:bg-destructive/20 transition-colors"
         >
           <LogOut className="w-4 h-4" /> Sair
         </button>
@@ -248,13 +248,13 @@ const AdminPanel = () => {
     const SIcon = section.sectionIcon;
     return (
       <div className="space-y-4">
-        <div className={`rounded-2xl p-5 bg-gradient-to-br ${section.accent} ring-1 ${section.ring} flex items-center gap-4`}>
-          <span className={`w-14 h-14 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+        <div className="rounded-2xl p-5 bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] flex items-center gap-4">
+          <span className="w-14 h-14 shrink-0 rounded-2xl grid place-items-center bg-white/15 text-white backdrop-blur">
             <SIcon className="w-6 h-6" />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">{section.subtitle}</p>
-            <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] truncate">{section.title}</h2>
+            <p className="text-[10px] uppercase tracking-widest text-white/70">{section.subtitle}</p>
+            <h2 className="text-lg font-bold text-white truncate">{section.title}</h2>
           </div>
         </div>
 
@@ -263,9 +263,9 @@ const AdminPanel = () => {
             <button
               key={t.id}
               onClick={() => openTool(t.id)}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left bg-[hsl(var(--dark-card))]/60 hover:bg-[hsl(var(--dark-card))] ring-1 ring-[hsl(var(--dark-card-hover))]/40 transition-colors"
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
             >
-              <span className={`w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] ${section.icon}`}>
+              <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
                 <t.icon className="w-4.5 h-4.5" />
               </span>
               <div className="flex-1 min-w-0">

@@ -1,4 +1,4 @@
-var SW_VERSION = "v11";
+var SW_VERSION = "v12";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
@@ -80,7 +80,9 @@ function isHashedAsset(requestUrl) {
 }
 
 self.addEventListener("install", function(event) {
-  event.waitUntil(precacheShell().then(function() { return self.skipWaiting(); }));
+  // Do NOT auto-skipWaiting — we want the new SW to stay "waiting" so the
+  // UpdatePrompt can show and let the user click "Atualizar".
+  event.waitUntil(precacheShell());
 });
 
 self.addEventListener("activate", function(event) {

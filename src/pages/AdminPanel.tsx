@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Menu, Home, Sparkles, BrainCircuit,
-  Settings2, MessageCircleQuestion, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid
+  Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -13,12 +13,10 @@ import AdminPushSender from "@/components/admin/AdminPushSender";
 import AdminRoles from "@/components/admin/AdminRoles";
 import AdminActivityLog from "@/components/admin/AdminActivityLog";
 import AdminCultoSchedule from "@/components/admin/AdminCultoSchedule";
-import AdminExegetAI from "@/components/admin/AdminExegetAI";
 import AdminAISettings from "@/components/admin/AdminAISettings";
 import AdminAppFeatures from "@/components/admin/AdminAppFeatures";
-import AdminAskBiblePrompt from "@/components/admin/AdminAskBiblePrompt";
 import AdminPrayerRequests from "@/components/admin/AdminPrayerRequests";
-import AdminAIPrompts from "@/components/admin/AdminAIPrompts";
+import AdminAIInstructions from "@/components/admin/AdminAIInstructions";
 import AdminPosts from "@/components/admin/AdminPosts";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
@@ -33,7 +31,7 @@ import {
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type TabType = "home" | "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
+type TabType = "home" | "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
 
 const ADMIN_SECTIONS = [
   {
@@ -80,9 +78,7 @@ const ADMIN_SECTIONS = [
     icon: "text-violet-300",
     tabs: [
       { id: "ai", label: "Configurações", desc: "Provedores e modelos", icon: BrainCircuit },
-      { id: "ai-prompts", label: "Instruções", desc: "Prompts globais", icon: Sparkles },
-      { id: "exegetai", label: "ExegetAI", desc: "Estudo profundo", icon: Sparkles },
-      { id: "ask-bible-prompt", label: "Pergunte à Bíblia", desc: "Chat bíblico", icon: MessageCircleQuestion },
+      { id: "ai-prompts", label: "Instruções", desc: "Prompts de todas as IAs", icon: Sparkles },
     ],
   },
   {
@@ -352,11 +348,9 @@ const AdminPanel = () => {
                 {tab === "roles" && <AdminRoles />}
                 {tab === "log" && <AdminActivityLog />}
                 {tab === "cultos" && <AdminCultoSchedule />}
-                {tab === "exegetai" && <AdminExegetAI />}
                 {tab === "ai" && <AdminAISettings />}
-                {tab === "ai-prompts" && <AdminAIPrompts />}
+                {tab === "ai-prompts" && <AdminAIInstructions />}
                 {tab === "app-features" && <AdminAppFeatures />}
-                {tab === "ask-bible-prompt" && <AdminAskBiblePrompt />}
                 {tab === "prayers" && <AdminPrayerRequests />}
                 {tab === "posts" && <AdminPosts posts={posts} fetchData={fetchData} />}
                 {tab === "plans" && <AdminPlans plans={plans} fetchData={fetchData} />}

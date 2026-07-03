@@ -107,7 +107,7 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled, labe
         </div>
       </PopoverContent>
       </Popover>
-      {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-muted">{label}</span>}
+      {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-text">{label}</span>}
     </div>
   );
 };

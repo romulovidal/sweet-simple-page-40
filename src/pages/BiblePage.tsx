@@ -628,9 +628,6 @@ const BiblePage = () => {
                   <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <Share2 className="w-[18px] h-[18px] text-primary" />
                   </button>
-                  <button onClick={handleSaveSelected} data-tour="bible-action-save" title="Salvar" aria-label="Salvar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                    <BookmarkPlus className="w-[18px] h-[18px] text-primary" />
-                  </button>
                   <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <ImageIcon className="w-[18px] h-[18px] text-primary" />
                   </button>

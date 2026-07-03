@@ -516,6 +516,12 @@ const BiblePage = () => {
                         <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} />
                         <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} />
                         <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} />
+                        {isAdmin && (
+                          <ScheduleDailyVerseButton
+                            reference={selRef}
+                            text={selText}
+                          />
+                        )}
                       </>
                     );
                   })()}

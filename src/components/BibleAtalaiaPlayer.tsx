@@ -169,7 +169,7 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
 
     const onFsChange = () => {
       if (!document.fullscreenElement) {
-        try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+        try { (screen.orientation as any)?.lock?.("portrait").catch(() => {}); } catch { /* noop */ }
       }
     };
     document.addEventListener("fullscreenchange", onFsChange);
@@ -184,7 +184,7 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
       window.removeEventListener("pagehide", onBeforeUnload);
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("fullscreenchange", onFsChange);
-      try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+      try { (screen.orientation as any)?.lock?.("portrait").catch(() => {}); } catch { /* noop */ }
       try {
         playerRef.current?.destroy?.();
       } catch {
@@ -222,7 +222,7 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
     const anyEl = el as any;
     if (document.fullscreenElement) {
       document.exitFullscreen?.();
-      try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+      try { (screen.orientation as any)?.lock?.("portrait").catch(() => {}); } catch { /* noop */ }
     } else {
       const enter = (el.requestFullscreen && el.requestFullscreen.bind(el)) || (anyEl.webkitRequestFullscreen && anyEl.webkitRequestFullscreen.bind(el));
       if (enter) {

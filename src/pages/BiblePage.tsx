@@ -637,6 +637,11 @@ const BiblePage = () => {
           )}
         </header>
 
+        {/* Barra Explorar (mobile prominente) */}
+        {!hasSelection && (
+          <ExploreToolsBar className="px-5 pt-3" />
+        )}
+
         {/* Floating action bar */}
         {hasSelection && (
           <div className="sticky top-[72px] z-10 mx-4 mb-2 lg:max-w-3xl lg:mx-auto" data-tour="bible-action-bar">

@@ -33,9 +33,6 @@ const ADMIN_SECTIONS = [
     id: "overview",
     title: "Visão Geral",
     subtitle: "Métricas e atividade",
-    accent: "from-primary/15 to-primary/5",
-    ring: "ring-primary/25",
-    icon: "text-primary",
     sectionIcon: LayoutDashboard,
     tabs: [
       { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
@@ -46,9 +43,6 @@ const ADMIN_SECTIONS = [
     id: "content",
     title: "Conteúdo",
     subtitle: "Publicações e planos",
-    accent: "from-primary/15 to-primary/5",
-    ring: "ring-primary/25",
-    icon: "text-primary",
     sectionIcon: FileText,
     tabs: [
       { id: "posts", label: "Posts", desc: "Feed devocional", icon: FileText },
@@ -61,9 +55,6 @@ const ADMIN_SECTIONS = [
     id: "community",
     title: "Comunidade",
     subtitle: "Interação e avisos",
-    accent: "from-[hsl(var(--streak-orange)/0.18)] to-[hsl(var(--streak-orange)/0.05)]",
-    ring: "ring-[hsl(var(--streak-orange)/0.3)]",
-    icon: "text-[hsl(var(--streak-orange))]",
     sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
@@ -74,9 +65,6 @@ const ADMIN_SECTIONS = [
     id: "ai",
     title: "Inteligência Artificial",
     subtitle: "Modelos e prompts",
-    accent: "from-[hsl(var(--streak-orange)/0.2)] to-[hsl(var(--streak-orange)/0.05)]",
-    ring: "ring-[hsl(var(--streak-orange)/0.35)]",
-    icon: "text-[hsl(var(--streak-orange))]",
     sectionIcon: Sparkles,
     tabs: [
       { id: "ai", label: "Configurações", desc: "Provedores e modelos", icon: BrainCircuit },
@@ -87,9 +75,6 @@ const ADMIN_SECTIONS = [
     id: "system",
     title: "Sistema",
     subtitle: "Acesso e ajustes",
-    accent: "from-primary/10 to-primary/5",
-    ring: "ring-[hsl(var(--dark-card-hover))]",
-    icon: "text-[hsl(var(--dark-muted))]",
     sectionIcon: Settings2,
     tabs: [
       { id: "app-features", label: "Funcionalidades", desc: "Ligar/desligar recursos", icon: Settings2 },
@@ -100,7 +85,7 @@ const ADMIN_SECTIONS = [
 ] as const;
 
 const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
-  s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title, accent: s.accent, ring: s.ring, iconColor: s.icon }))
+  s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title }))
 );
 const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
 const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
@@ -220,9 +205,9 @@ const AdminPanel = () => {
           <button
             key={section.id}
             onClick={() => openCategory(section.id)}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all bg-gradient-to-r ${section.accent} ring-1 ${section.ring} hover:brightness-110 active:scale-[0.99]`}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-colors bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] active:scale-[0.99]"
           >
-            <span className={`w-12 h-12 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+            <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
               <SIcon className="w-5 h-5" />
             </span>
             <div className="flex-1 min-w-0">
@@ -230,7 +215,7 @@ const AdminPanel = () => {
               <p className="text-xs text-[hsl(var(--dark-muted))] truncate">{section.subtitle}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] font-bold text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-card))]/60 rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-bold text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-bg))] rounded-full px-2 py-0.5">
                 {section.tabs.length}
               </span>
               <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))]" />
@@ -242,13 +227,13 @@ const AdminPanel = () => {
       <div className="pt-2 grid grid-cols-2 gap-3">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[hsl(var(--dark-card))]/70 ring-1 ring-[hsl(var(--dark-card-hover))]/60 text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] transition-colors"
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[hsl(var(--dark-card))] text-sm font-semibold text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
         >
           <Home className="w-4 h-4" /> Bíblia
         </button>
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-destructive/10 ring-1 ring-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/20 transition-colors"
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-destructive/10 text-sm font-semibold text-destructive hover:bg-destructive/20 transition-colors"
         >
           <LogOut className="w-4 h-4" /> Sair
         </button>
@@ -263,13 +248,13 @@ const AdminPanel = () => {
     const SIcon = section.sectionIcon;
     return (
       <div className="space-y-4">
-        <div className={`rounded-2xl p-5 bg-gradient-to-br ${section.accent} ring-1 ${section.ring} flex items-center gap-4`}>
-          <span className={`w-14 h-14 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+        <div className="rounded-2xl p-5 bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] flex items-center gap-4">
+          <span className="w-14 h-14 shrink-0 rounded-2xl grid place-items-center bg-white/15 text-white backdrop-blur">
             <SIcon className="w-6 h-6" />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">{section.subtitle}</p>
-            <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] truncate">{section.title}</h2>
+            <p className="text-[10px] uppercase tracking-widest text-white/70">{section.subtitle}</p>
+            <h2 className="text-lg font-bold text-white truncate">{section.title}</h2>
           </div>
         </div>
 
@@ -278,9 +263,9 @@ const AdminPanel = () => {
             <button
               key={t.id}
               onClick={() => openTool(t.id)}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left bg-[hsl(var(--dark-card))]/60 hover:bg-[hsl(var(--dark-card))] ring-1 ring-[hsl(var(--dark-card-hover))]/40 transition-colors"
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
             >
-              <span className={`w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] ${section.icon}`}>
+              <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
                 <t.icon className="w-4.5 h-4.5" />
               </span>
               <div className="flex-1 min-w-0">
@@ -322,14 +307,14 @@ const AdminPanel = () => {
       <header className="sticky top-0 z-30 bg-[hsl(var(--dark-bg))]/90 backdrop-blur border-b border-[hsl(var(--dark-card))]">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           {view.kind === "home" ? (
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 grid place-items-center shadow-lg shadow-amber-500/20 shrink-0">
-              <Shield className="w-5 h-5 text-amber-950" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] grid place-items-center shadow-lg shadow-primary/25 shrink-0">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
           ) : (
             <button
               onClick={goBack}
               aria-label="Voltar"
-              className="w-10 h-10 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/70 hover:bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] shrink-0 transition-colors"
+              className="w-10 h-10 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] shrink-0 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -339,11 +324,7 @@ const AdminPanel = () => {
             <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] truncate">
               {headerCrumb}
             </p>
-            <h1 className={`text-base font-bold truncate leading-tight ${
-              view.kind === "home"
-                ? "bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent"
-                : "text-[hsl(var(--dark-text))]"
-            }`}>
+            <h1 className="text-base font-bold truncate leading-tight text-[hsl(var(--dark-text))]">
               {headerTitle}
             </h1>
           </div>

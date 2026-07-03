@@ -45,7 +45,7 @@ const AIConnections = ({ reference, text, enabled }: Props) => {
       <button
         onClick={handleOpen}
         data-tour="bible-action-connections"
-        className="p-2 rounded-lg bg-emerald-500/10 active:bg-emerald-500/20 transition-colors"
+        className="h-11 w-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0"
         title="Conexões Bíblicas"
       >
         <Link2 className="w-[18px] h-[18px] text-emerald-400" />

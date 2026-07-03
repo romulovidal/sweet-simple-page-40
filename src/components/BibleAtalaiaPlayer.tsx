@@ -213,10 +213,16 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
     const anyEl = el as any;
     if (document.fullscreenElement) {
       document.exitFullscreen?.();
-    } else if (el.requestFullscreen) {
-      el.requestFullscreen();
-    } else if (anyEl.webkitEnterFullscreen) {
-      anyEl.webkitEnterFullscreen();
+      try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+    } else {
+      const enter = (el.requestFullscreen && el.requestFullscreen.bind(el)) || (anyEl.webkitRequestFullscreen && anyEl.webkitRequestFullscreen.bind(el));
+      if (enter) {
+        Promise.resolve(enter()).then(() => {
+          try { (screen.orientation as any)?.lock?.("landscape").catch(() => {}); } catch { /* noop */ }
+        }).catch(() => {});
+      } else if (anyEl.webkitEnterFullscreen) {
+        anyEl.webkitEnterFullscreen();
+      }
     }
   };
 

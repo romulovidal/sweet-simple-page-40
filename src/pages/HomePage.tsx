@@ -180,16 +180,17 @@ const HomePage = () => {
         try {
           const activeVersion = await getActiveVersion();
           const manual = await tryManualVerse(today);
-          
-          let finalVerse: { text: string; ref: string };
-          let source: "manual" | "auto" = "auto";
 
-          if (manual) {
-            finalVerse = await applyVersion(manual, activeVersion);
-            source = "manual";
-          } else {
-            finalVerse = await applyVersion(getDailyVerse(), activeVersion);
+          // Fonte única de verdade: apenas versículos manuais definidos pelo admin.
+          // Se não houver nenhum na fila, mantemos o cache atual (se houver) para não
+          // conflitar exibindo um versículo automático diferente do que o admin escolheu.
+          if (!manual) {
+            if (!cancelled && !isCacheValid) setVerseLoading(false);
+            return;
           }
+
+          const finalVerse = await applyVersion(manual, activeVersion);
+          const source: "manual" = "manual";
 
           if (!cancelled) {
             setVerse({ ...finalVerse, versionShortName: activeVersion.toUpperCase() });

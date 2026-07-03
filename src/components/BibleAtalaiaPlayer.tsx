@@ -167,6 +167,13 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
     window.addEventListener("pagehide", onBeforeUnload);
     window.addEventListener("beforeunload", onBeforeUnload);
 
+    const onFsChange = () => {
+      if (!document.fullscreenElement) {
+        try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+      }
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+
     return () => {
       disposed = true;
       persistNow();
@@ -176,6 +183,8 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onBeforeUnload);
       window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("fullscreenchange", onFsChange);
+      try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
       try {
         playerRef.current?.destroy?.();
       } catch {
@@ -213,10 +222,16 @@ const BibleAtalaiaPlayer = ({ videoId, title, autoplay = false }: Props) => {
     const anyEl = el as any;
     if (document.fullscreenElement) {
       document.exitFullscreen?.();
-    } else if (el.requestFullscreen) {
-      el.requestFullscreen();
-    } else if (anyEl.webkitEnterFullscreen) {
-      anyEl.webkitEnterFullscreen();
+      try { (screen.orientation as any)?.unlock?.(); } catch { /* noop */ }
+    } else {
+      const enter = (el.requestFullscreen && el.requestFullscreen.bind(el)) || (anyEl.webkitRequestFullscreen && anyEl.webkitRequestFullscreen.bind(el));
+      if (enter) {
+        Promise.resolve(enter()).then(() => {
+          try { (screen.orientation as any)?.lock?.("landscape").catch(() => {}); } catch { /* noop */ }
+        }).catch(() => {});
+      } else if (anyEl.webkitEnterFullscreen) {
+        anyEl.webkitEnterFullscreen();
+      }
     }
   };
 

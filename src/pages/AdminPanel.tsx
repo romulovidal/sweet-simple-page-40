@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -111,9 +111,6 @@ const AdminPanel = () => {
   // Stack of previously visited views (excluding the current one). We use this
   // to power both the in-app back button and the browser back button.
   const [history, setHistory] = useState<View[]>([]);
-  // When the user hits the browser back button, we call setView from popstate.
-  // That change should NOT push another history entry — this ref suppresses it.
-  const skipNextHistoryPush = useRef(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -146,14 +143,12 @@ const AdminPanel = () => {
       // sentinel entry so subsequent back presses keep working.
       setHistory((prev) => {
         if (prev.length === 0) {
-          // Nothing left in the stack — allow default (leave admin).
-          // We already consumed the sentinel; navigate away explicitly.
+          // Nothing left in the admin stack — leave the panel entirely.
           navigate("/");
           return prev;
         }
         const next = [...prev];
         const previousView = next.pop()!;
-        skipNextHistoryPush.current = true;
         setView(previousView);
         // Re-push a sentinel so the next OS back press fires popstate again.
         window.history.pushState({ __admin: true }, "");

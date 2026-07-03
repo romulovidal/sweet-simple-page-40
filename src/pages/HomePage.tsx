@@ -20,7 +20,7 @@ import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 6; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 7; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;

@@ -1,4 +1,4 @@
-var SW_VERSION = "v14";
+var SW_VERSION = "v15";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
@@ -86,9 +86,12 @@ self.addEventListener("install", function(event) {
 self.addEventListener("activate", function(event) {
   event.waitUntil(
     cleanupCaches().then(function() { return self.clients.claim(); }).then(function() {
-      return self.clients.matchAll({ type: "window" }).then(function(clients) {
+      return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clients) {
         clients.forEach(function(client) {
           client.postMessage({ type: "SW_UPDATED", version: SW_VERSION });
+          if (client.url && client.url.indexOf(self.location.origin) === 0) {
+            client.navigate(client.url);
+          }
         });
       });
     })

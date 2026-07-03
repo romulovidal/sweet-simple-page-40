@@ -64,6 +64,10 @@ export async function registerAppServiceWorker() {
     sendPrecacheMessage(registration);
     registration.update().catch(() => {});
 
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+
     // When the controller changes (new SW took over), reload to get fresh code
     let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -72,9 +76,16 @@ export async function registerAppServiceWorker() {
       window.location.reload();
     });
 
-    // Do NOT auto-apply updates — UpdatePrompt lets the user click "Atualizar"
-    // when a new version is waiting. This ensures the prompt only appears for
-    // outdated clients and never interrupts users on the current version.
+    registration.addEventListener("updatefound", () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+
+      newWorker.addEventListener("statechange", () => {
+        if (newWorker.state === "installed") {
+          newWorker.postMessage({ type: "SKIP_WAITING" });
+        }
+      });
+    });
 
     navigator.serviceWorker.ready
       .then(() => sendPrecacheMessage(registration))

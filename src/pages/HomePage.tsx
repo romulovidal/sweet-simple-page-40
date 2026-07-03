@@ -20,7 +20,7 @@ import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 5; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 6; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;
@@ -170,8 +170,8 @@ const HomePage = () => {
           return [{ date: today, ...cached.verse }, ...prev].slice(0, 90);
         });
       } else if (!cancelled) {
-        // Se não tem cache do dia, mostra o estático enquanto carrega o real
-        setVerse(getDailyVerse());
+        // Sem cache confiável: mantém o card em carregamento para não exibir versículo automático antigo.
+        setVerse(null);
         setVerseLoading(true);
       }
 

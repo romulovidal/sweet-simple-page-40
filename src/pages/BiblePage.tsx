@@ -31,6 +31,7 @@ import PresentationMode from "@/components/PresentationMode";
 import VisualTimeline from "@/components/VisualTimeline";
 import BiblicalMaps from "@/components/BiblicalMaps";
 import BibleCharacters from "@/components/BibleCharacters";
+import ExploreToolsBar from "@/components/ExploreToolsBar";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -636,6 +637,11 @@ const BiblePage = () => {
           )}
         </header>
 
+        {/* Barra Explorar (mobile prominente) */}
+        {!hasSelection && (
+          <ExploreToolsBar className="px-5 pt-3" />
+        )}
+
         {/* Floating action bar */}
         {hasSelection && (
           <div className="sticky top-[72px] z-10 mx-4 mb-2 lg:max-w-3xl lg:mx-auto" data-tour="bible-action-bar">
@@ -1165,6 +1171,7 @@ const BiblePage = () => {
           ))}
         </div>
       </header>
+      <ExploreToolsBar className="px-5 mb-4 max-w-2xl mx-auto" />
       <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6">
         {filteredBooks.map((book) => (
           <button

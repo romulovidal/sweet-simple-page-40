@@ -68,9 +68,9 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled }: Pr
           <CalendarPlus className="w-[18px] h-[18px] text-primary-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-dark-card border-dark-card-hover" align="end">
-        <div className="p-3 border-b border-dark-card-hover">
-          <p className="text-[10px] uppercase tracking-wider text-dark-muted font-bold">
+      <PopoverContent className="w-auto p-0" align="end">
+        <div className="p-3 border-b border-border">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
             Agendar Versículo do Dia
           </p>
           <p className="text-sm font-semibold text-primary mt-1 truncate max-w-[260px]">

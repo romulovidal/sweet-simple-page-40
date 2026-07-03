@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -108,6 +108,12 @@ const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [view, setView] = useState<View>({ kind: "home" });
+  // Stack of previously visited views (excluding the current one). We use this
+  // to power both the in-app back button and the browser back button.
+  const [history, setHistory] = useState<View[]>([]);
+  // When the user hits the browser back button, we call setView from popstate.
+  // That change should NOT push another history entry — this ref suppresses it.
+  const skipNextHistoryPush = useRef(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -128,19 +134,63 @@ const AdminPanel = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Bind the admin view stack to the browser history so the phone/OS back
+  // button pops one admin view at a time instead of leaving /admin.
+  useEffect(() => {
+    // Seed one entry so the very first back press pops us out of admin
+    // (matching the "home" state) instead of leaving immediately.
+    window.history.pushState({ __admin: true, kind: "home" }, "");
+
+    const onPop = () => {
+      // If we still have an admin view to pop, consume it and re-push a
+      // sentinel entry so subsequent back presses keep working.
+      setHistory((prev) => {
+        if (prev.length === 0) {
+          // Nothing left in the stack — allow default (leave admin).
+          // We already consumed the sentinel; navigate away explicitly.
+          navigate("/");
+          return prev;
+        }
+        const next = [...prev];
+        const previousView = next.pop()!;
+        skipNextHistoryPush.current = true;
+        setView(previousView);
+        // Re-push a sentinel so the next OS back press fires popstate again.
+        window.history.pushState({ __admin: true }, "");
+        return next;
+      });
+    };
+
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [navigate]);
+
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
 
-  const openTool = (id: string) => setView({ kind: "tool", id: id as ToolId });
-  const openCategory = (id: string) => setView({ kind: "category", id });
-  const goHome = () => setView({ kind: "home" });
+  // Central navigation helper: pushes the current view onto the stack, updates
+  // the current view and mirrors the change to browser history so the OS back
+  // button works everywhere in the admin.
+  const navigateTo = (next: View) => {
+    setHistory((prev) => [...prev, view]);
+    setView(next);
+    window.history.pushState({ __admin: true, kind: next.kind }, "");
+  };
+
+  const openTool = (id: string) => navigateTo({ kind: "tool", id: id as ToolId });
+  const openCategory = (id: string) => navigateTo({ kind: "category", id });
+  const goHome = () => {
+    if (view.kind === "home") return;
+    navigateTo({ kind: "home" });
+  };
+
+  // In-app back button — delegate to the browser so both back paths behave
+  // identically (single source of truth = window.history).
   const goBack = () => {
-    if (view.kind === "tool") {
-      const tool = findTool(view.id);
-      if (tool) setView({ kind: "category", id: tool.sectionId });
-      else goHome();
-    } else if (view.kind === "category") {
-      goHome();
+    if (history.length === 0) {
+      navigate("/");
+      return;
     }
+    window.history.back();
   };
 
   // ----------- HEADER -----------

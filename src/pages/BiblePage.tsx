@@ -30,6 +30,7 @@ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
 import VisualTimeline from "@/components/VisualTimeline";
 import BiblicalMaps from "@/components/BiblicalMaps";
+import BibleCharacters from "@/components/BibleCharacters";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";

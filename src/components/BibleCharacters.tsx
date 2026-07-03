@@ -56,6 +56,13 @@ const BibleCharacters = ({ onNavigateReference }: Props) => {
     return () => window.removeEventListener("open-bible-character", handler);
   }, []);
 
+  // Abrir a galeria (sem personagem específico) via evento
+  useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener("open-bible-characters", h);
+    return () => window.removeEventListener("open-bible-characters", h);
+  }, []);
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return BIBLE_CHARACTERS.filter((c) => {

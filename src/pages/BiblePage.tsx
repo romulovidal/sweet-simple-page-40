@@ -30,6 +30,7 @@ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
 import VisualTimeline from "@/components/VisualTimeline";
 import BiblicalMaps from "@/components/BiblicalMaps";
+import BibleCharacters from "@/components/BibleCharacters";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -572,8 +573,28 @@ const BiblePage = () => {
                   setSelectedVerses(new Set());
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
+                onCharacterClick={(name) =>
+                  window.dispatchEvent(new CustomEvent("open-bible-character", { detail: { name } }))
+                }
               />
               <BiblicalMaps
+                onNavigateReference={(ref) => {
+                  const match = ref.match(/^(.+?)\s+(\d+)/);
+                  if (!match) return;
+                  const bookName = match[1].trim();
+                  const chapter = parseInt(match[2], 10);
+                  const book = bibleBooks.find(
+                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                  );
+                  if (!book) return;
+                  setSelectedBook(book);
+                  setTestament(book.testament);
+                  setSelectedChapter(Math.min(chapter, book.chapters));
+                  setSelectedVerses(new Set());
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+              <BibleCharacters
                 onNavigateReference={(ref) => {
                   const match = ref.match(/^(.+?)\s+(\d+)/);
                   if (!match) return;
@@ -1071,8 +1092,28 @@ const BiblePage = () => {
                 setSelectedVerses(new Set());
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
+              onCharacterClick={(name) =>
+                window.dispatchEvent(new CustomEvent("open-bible-character", { detail: { name } }))
+              }
             />
             <BiblicalMaps
+              onNavigateReference={(ref) => {
+                const match = ref.match(/^(.+?)\s+(\d+)/);
+                if (!match) return;
+                const bookName = match[1].trim();
+                const chapter = parseInt(match[2], 10);
+                const book = bibleBooks.find(
+                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
+                );
+                if (!book) return;
+                setSelectedBook(book);
+                setTestament(book.testament);
+                setSelectedChapter(Math.min(chapter, book.chapters));
+                setSelectedVerses(new Set());
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+            <BibleCharacters
               onNavigateReference={(ref) => {
                 const match = ref.match(/^(.+?)\s+(\d+)/);
                 if (!match) return;

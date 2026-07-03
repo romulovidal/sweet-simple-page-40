@@ -5,9 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen, Eraser } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BIBLE_VERSIONS, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION, getVerseTextByReference, getVerseCount } from "@/lib/dailyVerseVersion";
+import {
+  BIBLE_VERSIONS,
+  DAILY_VERSE_VERSION_KEY,
+  DEFAULT_DAILY_VERSION,
+  getChapterVerses,
+  getVersesTextByNumbers,
+  formatVerseRange,
+} from "@/lib/dailyVerseVersion";
 import { bibleBooks } from "@/data/bible";
 
 
@@ -31,9 +38,9 @@ const AdminDailyVerse = () => {
   // Selector state
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<string>("");
-  const [selectedVerse, setSelectedVerse] = useState<string>("");
+  const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
+  const [chapterVerses, setChapterVerses] = useState<string[]>([]);
   const [fetchingText, setFetchingText] = useState(false);
-  const [availableVerses, setAvailableVerses] = useState<number>(0);
 
   const selectedBookData = useMemo(() => 
     bibleBooks.find(b => b.name === selectedBook), 
@@ -173,29 +180,32 @@ const AdminDailyVerse = () => {
   };
 
   useEffect(() => {
-    const updateVerseCount = async () => {
+    const loadChapter = async () => {
       if (selectedBook && selectedChapter) {
-        const count = await getVerseCount(selectedBook, parseInt(selectedChapter), version);
-        setAvailableVerses(count);
+        const verses = await getChapterVerses(selectedBook, parseInt(selectedChapter), version);
+        setChapterVerses(verses);
       } else {
-        setAvailableVerses(0);
+        setChapterVerses([]);
       }
     };
-    updateVerseCount();
+    loadChapter();
   }, [selectedBook, selectedChapter, version]);
 
 
   useEffect(() => {
-    if (selectedBook && selectedChapter && selectedVerse) {
-      const ref = `${selectedBook} ${selectedChapter}:${selectedVerse}`;
-
+    if (selectedBook && selectedChapter && selectedVerses.length > 0) {
+      const range = formatVerseRange(selectedVerses);
+      const ref = `${selectedBook} ${selectedChapter}:${range}`;
       const fetchText = async () => {
         setFetchingText(true);
         try {
-          const text = await getVerseTextByReference(ref, version);
-          if (text) {
-            setEditing(prev => ({ ...prev, verse_ref: ref, verse_text: text }));
-          }
+          const text = await getVersesTextByNumbers(
+            selectedBook,
+            parseInt(selectedChapter),
+            selectedVerses,
+            version,
+          );
+          setEditing((prev) => ({ ...prev, verse_ref: ref, verse_text: text }));
         } catch (e) {
           console.error(e);
         } finally {
@@ -204,7 +214,19 @@ const AdminDailyVerse = () => {
       };
       fetchText();
     }
-  }, [selectedBook, selectedChapter, selectedVerse, version]);
+  }, [selectedBook, selectedChapter, selectedVerses, version]);
+
+  const toggleVerse = (n: number) => {
+    setSelectedVerses((prev) =>
+      prev.includes(n) ? prev.filter((v) => v !== n) : [...prev, n].sort((a, b) => a - b),
+    );
+  };
+
+  const selectAllVerses = () => {
+    setSelectedVerses(chapterVerses.map((_, i) => i + 1));
+  };
+
+  const clearVerses = () => setSelectedVerses([]);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -218,7 +240,8 @@ const AdminDailyVerse = () => {
             setEditing(null);
             setSelectedBook("");
             setSelectedChapter("");
-            setSelectedVerse("");
+            setSelectedVerses([]);
+            setChapterVerses([]);
           }}><X className="w-5 h-5" /></button>
           <h2 className="text-lg font-bold flex-1">{editing.id ? "Editar" : "Novo"} Versículo</h2>
           <Button size="sm" onClick={saveVerse} disabled={fetchingText}>
@@ -239,7 +262,7 @@ const AdminDailyVerse = () => {
               <Select value={selectedBook} onValueChange={(v) => {
                 setSelectedBook(v);
                 setSelectedChapter("");
-                setSelectedVerse("");
+                setSelectedVerses([]);
               }}>
                 <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs">
                   <SelectValue placeholder="Selecione" />
@@ -258,7 +281,7 @@ const AdminDailyVerse = () => {
                 value={selectedChapter} 
                 onValueChange={(v) => {
                   setSelectedChapter(v);
-                  setSelectedVerse("");
+                  setSelectedVerses([]);
                 }}
                 disabled={!selectedBook}
               >
@@ -275,28 +298,71 @@ const AdminDailyVerse = () => {
 
             <div>
               <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase font-bold">
-                Versículo
+                Selecionados
               </label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  type="number" 
-                  placeholder="0"
-                  value={selectedVerse}
-                  onChange={(e) => setSelectedVerse(e.target.value)}
-                  disabled={!selectedChapter}
-                  min={1}
-                  max={availableVerses > 0 ? availableVerses : undefined}
-                  className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs w-20 text-center font-bold"
-                />
-                <span className="text-xs text-[hsl(var(--dark-muted))] font-medium">
-                  de {availableVerses > 0 ? availableVerses : "?"} versículos
+              <div className="flex items-center gap-2 h-9">
+                <span className="text-xs font-bold text-primary tabular-nums">
+                  {selectedVerses.length > 0
+                    ? `v. ${formatVerseRange(selectedVerses)}`
+                    : "nenhum"}
+                </span>
+                <span className="text-[10px] text-[hsl(var(--dark-muted))]">
+                  ({selectedVerses.length}/{chapterVerses.length || "?"})
                 </span>
               </div>
             </div>
-
-
-
           </div>
+
+          {/* Chapter verse grid — click to multi-select */}
+          {selectedChapter && chapterVerses.length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-[hsl(var(--dark-card-hover))]">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                  Clique nos versículos ({selectedBook} {selectedChapter})
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={selectAllVerses}
+                    className="text-[10px] px-2 py-1 rounded-md bg-[hsl(var(--dark-bg))] hover:bg-primary/10 text-[hsl(var(--dark-muted))] hover:text-primary transition-colors"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    onClick={clearVerses}
+                    disabled={selectedVerses.length === 0}
+                    className="text-[10px] px-2 py-1 rounded-md bg-[hsl(var(--dark-bg))] hover:bg-destructive/10 text-[hsl(var(--dark-muted))] hover:text-destructive transition-colors disabled:opacity-40 flex items-center gap-1"
+                  >
+                    <Eraser className="w-3 h-3" /> Limpar
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-10 sm:grid-cols-12 md:grid-cols-15 gap-1.5">
+                {chapterVerses.map((_, i) => {
+                  const n = i + 1;
+                  const selected = selectedVerses.includes(n);
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => toggleVerse(n)}
+                      className={`aspect-square text-xs font-bold rounded-md transition-all ${
+                        selected
+                          ? "bg-primary text-primary-foreground scale-105 shadow-md shadow-primary/30"
+                          : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] hover:bg-primary/20 hover:text-primary"
+                      }`}
+                      title={chapterVerses[i]?.slice(0, 80)}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] italic">
+                Dica: clique em vários números para agrupar (ex: 1, 2, 3 vira "1-3"; 1, 3, 5 vira "1,3,5").
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

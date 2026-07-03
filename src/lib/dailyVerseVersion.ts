@@ -87,3 +87,79 @@ export async function getVerseCount(
 }
 
 export { BIBLE_VERSIONS };
+
+/**
+ * Load all verses of a chapter (1-based index in output not applied; array is 0-based).
+ */
+export async function getChapterVerses(
+  bookName: string,
+  chapter: number,
+  versionId: string = DEFAULT_DAILY_VERSION
+): Promise<string[]> {
+  const tryVersion = async (vId: string) => {
+    const version = getVersionById(vId);
+    try {
+      const data = await loadVersion(version.fileName);
+      const target = norm(bookName);
+      const book = data.find((b) => norm(b.name) === target);
+      if (!book) return null;
+      const chapterData = book.chapters[chapter - 1];
+      return chapterData ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const primary = await tryVersion(versionId);
+  if (primary) return primary;
+  if (versionId !== DEFAULT_DAILY_VERSION) {
+    const fb = await tryVersion(DEFAULT_DAILY_VERSION);
+    if (fb) return fb;
+  }
+  return [];
+}
+
+/**
+ * Format a set of verse numbers as a compact reference range.
+ * [1,2,3] -> "1-3"   [1,3,5] -> "1,3,5"   [1,2,4,5,6] -> "1-2,4-6"
+ */
+export function formatVerseRange(verses: number[]): string {
+  if (verses.length === 0) return "";
+  const sorted = [...new Set(verses)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    const cur = sorted[i];
+    if (cur !== prev + 1) {
+      parts.push(start === prev ? `${start}` : `${start}-${prev}`);
+      start = cur;
+    }
+    prev = cur;
+  }
+  return parts.join(",");
+}
+
+/**
+ * Compose the display text for multiple verses of the same chapter.
+ * Prepends each verse number in superscript style, e.g. "¹ No princípio... ² A terra..."
+ */
+export async function getVersesTextByNumbers(
+  bookName: string,
+  chapter: number,
+  verseNumbers: number[],
+  versionId: string
+): Promise<string> {
+  if (verseNumbers.length === 0) return "";
+  const verses = await getChapterVerses(bookName, chapter, versionId);
+  const sorted = [...new Set(verseNumbers)].sort((a, b) => a - b);
+  if (sorted.length === 1) {
+    return (verses[sorted[0] - 1] || "").trim();
+  }
+  return sorted
+    .map((n) => {
+      const t = (verses[n - 1] || "").trim();
+      return t ? `${n} ${t}` : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+}

@@ -53,6 +53,20 @@ const formatScheduled = (iso: string | null | undefined) => {
   });
 };
 
+// Build a default scheduled_at for a new reminder on an existing schedule:
+// next occurrence of that weekday+time, minus 1h.
+const defaultScheduledFor = (schedule: CultoSchedule): string => {
+  const [h, m] = schedule.time.split(":").map(Number);
+  const now = new Date();
+  const target = new Date(now);
+  const delta = (schedule.day_of_week - now.getDay() + 7) % 7;
+  target.setDate(now.getDate() + delta);
+  target.setHours(h, m, 0, 0);
+  if (delta === 0 && target.getTime() < now.getTime()) target.setDate(target.getDate() + 7);
+  target.setTime(target.getTime() - 60 * 60 * 1000);
+  return target.toISOString();
+};
+
 const AdminCultoSchedule = () => {
   const [schedules, setSchedules] = useState<CultoSchedule[]>([]);
   const [reminders, setReminders] = useState<CultoReminder[]>([]);

@@ -18,30 +18,9 @@ async function addUrlToCache(cache, url) {
 }
 
 async function precacheShell() {
-  var cache = await caches.open(SHELL_CACHE);
-
-  for (var i = 0; i < CORE_URLS.length; i++) {
-    await addUrlToCache(cache, CORE_URLS[i]);
-  }
-
-  try {
-    var response = await fetch(OFFLINE_FALLBACK_URL, { cache: "no-store" });
-    if (!response || !response.ok) return;
-
-    await cache.put(OFFLINE_FALLBACK_URL, response.clone());
-    await cache.put("/index.html", response.clone());
-
-    var html = await response.text();
-    var matches = html.match(/(?:href|src)=["']([^"']+)["']/g) || [];
-    for (var j = 0; j < matches.length; j++) {
-      var match = matches[j].match(/(?:href|src)=["']([^"']+)["']/);
-      if (match && match[1] && match[1].charAt(0) === "/") {
-        await addUrlToCache(cache, match[1]);
-      }
-    }
-  } catch (error) {
-    console.warn("Shell precache failed:", error);
-  }
+  // App-shell precache intentionally disabled. The installed app must always fetch
+  // the latest HTML/JS so removed automatic daily-verse code cannot remain alive.
+  return Promise.resolve();
 }
 
 async function cleanupCaches() {
@@ -102,28 +81,7 @@ self.addEventListener("message", function(event) {
     return;
   }
 
-  if (!data || data.type !== "PRECACHE_URLS" || !Array.isArray(data.urls)) return;
-
-  event.waitUntil(
-    caches.open(SHELL_CACHE).then(function(cache) {
-      var urls = data.urls;
-      var chain = Promise.resolve();
-      for (var i = 0; i < urls.length; i++) {
-        (function(rawUrl) {
-          chain = chain.then(function() {
-            try {
-              var url = new URL(rawUrl, self.location.origin);
-              if (!isSameOrigin(url) || !isCacheableRequest(url)) return;
-              return addUrlToCache(cache, url.pathname + url.search);
-            } catch(e) {
-              return;
-            }
-          });
-        })(urls[i]);
-      }
-      return chain;
-    })
-  );
+  if (!data || data.type !== "PRECACHE_URLS") return;
 });
 
 self.addEventListener("fetch", function(event) {

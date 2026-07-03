@@ -45,6 +45,12 @@ const BiblicalMaps = ({ onNavigateReference }: Props) => {
   const journeys = useMemo(() => BIBLE_MAPS, []);
   const active = journeys.find((j) => j.id === activeId) ?? journeys[0];
 
+  useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener("open-biblical-maps", h);
+    return () => window.removeEventListener("open-biblical-maps", h);
+  }, []);
+
   return (
     <>
       <button

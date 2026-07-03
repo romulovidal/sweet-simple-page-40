@@ -1171,6 +1171,7 @@ const BiblePage = () => {
           ))}
         </div>
       </header>
+      <ExploreToolsBar className="px-5 mb-4 max-w-2xl mx-auto" />
       <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6">
         {filteredBooks.map((book) => (
           <button

@@ -646,6 +646,14 @@ const BiblePage = () => {
                     </button>
                     <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Comparar</span>
                   </div>
+                  {appFeatures.presentation_mode && (
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <button onClick={() => setShowPresentation(true)} title="Modo Apresentação" aria-label="Modo Apresentação" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                        <Monitor className="w-[18px] h-[18px] text-primary" />
+                      </button>
+                      <span className="hidden lg:inline text-[10px] font-medium text-primary/80">Apresentar</span>
+                    </div>
+                  )}
                   {/* Anotações — exclusivo desktop */}
                   {appFeatures.personal_notes && (
                     <div className="hidden lg:flex">

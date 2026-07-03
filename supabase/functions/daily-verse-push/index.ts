@@ -130,27 +130,27 @@ serve(async (req) => {
           baseVerse = null;
        }
 
-        if (!baseVerse) return new Response(JSON.stringify({ skipped: true, ...results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
- 
-       const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
-       const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
- 
-       const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-         method: "POST",
-         headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-         body: JSON.stringify({
-           title: `📖 ${finalVerse.ref}`,
-            body: limitNotificationBody(finalVerse.text),
-           url: "/",
-           type: "daily-verse",
-           ttl: 86400,
-         }),
-       });
-       results.verse = await response.json();
-       
-       if (!isManual) {
-         await supabase.from("admin_settings").upsert({ key: "last_daily_verse_push_date", value: JSON.stringify(todayBR) });
-       }
+        if (baseVerse) {
+          const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
+          const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
+
+          const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+            body: JSON.stringify({
+              title: `📖 ${finalVerse.ref}`,
+              body: limitNotificationBody(finalVerse.text),
+              url: "/",
+              type: "daily-verse",
+              ttl: 86400,
+            }),
+          });
+          results.verse = await response.json();
+          
+          if (!isManual) {
+            await supabase.from("admin_settings").upsert({ key: "last_daily_verse_push_date", value: JSON.stringify(todayBR) });
+          }
+        }
      }
  
      // 2. Check Motivational Push (AI Generated)

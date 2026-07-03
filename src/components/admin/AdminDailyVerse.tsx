@@ -481,7 +481,7 @@ const AdminDailyVerse = () => {
             <p className="font-semibold text-sm">Horário da Notificação</p>
           </div>
           <p className="text-xs text-[hsl(var(--dark-muted))]">
-            Horário em que o push automático do versículo será enviado diariamente.
+            Horário em que o push do versículo manual será enviado diariamente.
           </p>
           <div className="flex items-center gap-3">
             <Input

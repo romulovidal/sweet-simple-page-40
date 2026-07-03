@@ -557,7 +557,7 @@ const BiblePage = () => {
                 <button
                   onClick={() => setShowPresentation(true)}
                   data-tour="bible-presentation"
-                  className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                  className="hidden lg:flex w-8 h-8 rounded-full bg-dark-card items-center justify-center"
                   title="Modo Apresentação"
                 >
                   <Monitor className="w-4 h-4" />
@@ -647,7 +647,7 @@ const BiblePage = () => {
                     <span className="hidden lg:inline text-[10px] font-medium text-dark-text">Comparar</span>
                   </div>
                   {appFeatures.presentation_mode && (
-                    <div className="flex flex-col items-center gap-1 shrink-0">
+                    <div className="hidden lg:flex flex-col items-center gap-1 shrink-0">
                       <button onClick={() => setShowPresentation(true)} title="Modo Apresentação" aria-label="Modo Apresentação" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
                         <Monitor className="w-[18px] h-[18px] text-primary" />
                       </button>

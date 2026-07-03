@@ -232,11 +232,15 @@ const HomePage = () => {
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
 
+    // Poll every 1 minute so admin-scheduled verses sync across all devices.
+    const pollId = window.setInterval(() => loadVerse(true), 60_000);
+
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
+      window.clearInterval(pollId);
     };
   }, [setVerseHistory]);
 

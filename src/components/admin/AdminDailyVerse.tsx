@@ -26,7 +26,6 @@ interface VerseQueueItem {
 }
 
 const AdminDailyVerse = () => {
-  const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
   const [pushTime, setPushTime] = useState<string>("08:00");
   const [motivationalEnabled, setMotivationalEnabled] = useState(true);
@@ -77,14 +76,12 @@ const AdminDailyVerse = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [
-      { data: modeRow }, 
       { data: versionRow }, 
       { data: timeRow }, 
       { data: motEnabledRow },
       { data: motTimeRow },
       { data: queueData }
     ] = await Promise.all([
-      supabase.from("admin_settings").select("value").eq("key", "daily_verse_mode").maybeSingle(),
       supabase.from("admin_settings").select("value").eq("key", DAILY_VERSE_VERSION_KEY).maybeSingle(),
       supabase.from("admin_settings").select("value").eq("key", "daily_verse_push_time").maybeSingle(),
       supabase.from("admin_settings").select("value").eq("key", "motivational_push_enabled").maybeSingle(),
@@ -96,10 +93,6 @@ const AdminDailyVerse = () => {
         .order("scheduled_date", { ascending: true }),
     ]);
 
-    if (modeRow) {
-      const val = typeof modeRow.value === "string" ? modeRow.value : JSON.stringify(modeRow.value);
-      setMode(val.replace(/"/g, "") as "auto" | "manual");
-    }
     if (versionRow) {
       const val = typeof versionRow.value === "string" ? versionRow.value : JSON.stringify(versionRow.value);
       setVersion((val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase());
@@ -123,15 +116,6 @@ const AdminDailyVerse = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const toggleMode = async (checked: boolean) => {
-    const newMode = checked ? "manual" : "auto";
-    setMode(newMode);
-    await supabase
-      .from("admin_settings")
-      .upsert({ key: "daily_verse_mode", value: JSON.stringify(newMode), updated_at: new Date().toISOString() }, { onConflict: "key" });
-    toast.success(newMode === "manual" ? "Modo manual ativado" : "Modo automático ativado");
-  };
 
   const changeVersion = async (newVersion: string) => {
     setVersion(newVersion);
@@ -448,18 +432,17 @@ const AdminDailyVerse = () => {
         </Button>
       </div>
 
-      {/* Mode toggle */}
+      {/* Manual mode notice */}
       <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold text-sm">Modo do Versículo do Dia</p>
             <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">
-              {mode === "auto" ? "Versículo escolhido automaticamente pelo sistema" : "Versículo definido manualmente pela fila abaixo"}
+              Versículo definido somente pela fila manual abaixo, em tempo real.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[hsl(var(--dark-muted))]">{mode === "auto" ? "Auto" : "Manual"}</span>
-            <Switch checked={mode === "manual"} onCheckedChange={toggleMode} />
+            <span className="text-xs font-semibold text-primary">Manual</span>
           </div>
         </div>
       </div>
@@ -498,7 +481,7 @@ const AdminDailyVerse = () => {
             <p className="font-semibold text-sm">Horário da Notificação</p>
           </div>
           <p className="text-xs text-[hsl(var(--dark-muted))]">
-            Horário em que o push automático do versículo será enviado diariamente.
+            Horário em que o push do versículo manual será enviado diariamente.
           </p>
           <div className="flex items-center gap-3">
             <Input
@@ -546,59 +529,45 @@ const AdminDailyVerse = () => {
         )}
       </div>
 
-      {mode === "manual" && (
-        <>
-          <Button onClick={() => setEditing({ scheduled_date: new Date().toISOString().split("T")[0] })} className="w-full">
-            <Plus className="w-4 h-4 mr-2" /> Agendar Versículo
-          </Button>
+      <Button onClick={() => setEditing({ scheduled_date: new Date().toISOString().split("T")[0] })} className="w-full">
+        <Plus className="w-4 h-4 mr-2" /> Agendar Versículo
+      </Button>
 
-          {queue.length === 0 ? (
-            <div className="text-center py-10">
-              <Calendar className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
-              <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhum versículo agendado</p>
-              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Quando a fila estiver vazia, o sistema usará o modo automático</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {queue.map((item) => {
-                const isToday = item.scheduled_date === new Date().toISOString().split("T")[0];
-                return (
-                  <div key={item.id} className={`bg-[hsl(var(--dark-card))] rounded-xl p-4 ${isToday ? "ring-1 ring-primary" : ""}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-primary">
-                            {new Date(item.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-                          </span>
-                          {isToday && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">Hoje</span>}
-                        </div>
-                        <p className="text-sm font-semibold mt-1">{item.verse_ref}</p>
-                        <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">{item.verse_text}</p>
-                      </div>
+      {queue.length === 0 ? (
+        <div className="text-center py-10">
+          <Calendar className="w-10 h-10 text-[hsl(var(--dark-muted))] mx-auto mb-3 opacity-40" />
+          <p className="text-sm text-[hsl(var(--dark-muted))]">Nenhum versículo agendado</p>
+          <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Agende um versículo manual para ele aparecer no app.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {queue.map((item) => {
+            const isToday = item.scheduled_date === new Date().toISOString().split("T")[0];
+            return (
+              <div key={item.id} className={`bg-[hsl(var(--dark-card))] rounded-xl p-4 ${isToday ? "ring-1 ring-primary" : ""}`}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-primary">
+                        {new Date(item.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                      </span>
+                      {isToday && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">Hoje</span>}
                     </div>
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
-                      <button onClick={() => setEditing(item)} className="text-xs text-primary font-medium flex items-center gap-1">
-                        <Edit2 className="w-3 h-3" /> Editar
-                      </button>
-                      <button onClick={() => deleteVerse(item.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
-                        <Trash2 className="w-3 h-3" /> Remover
-                      </button>
-                    </div>
+                    <p className="text-sm font-semibold mt-1">{item.verse_ref}</p>
+                    <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">{item.verse_text}</p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-
-      {mode === "auto" && (
-        <div className="bg-primary/10 rounded-xl p-4">
-          <p className="text-xs text-primary font-semibold mb-1">💡 Modo Automático</p>
-          <p className="text-xs text-[hsl(var(--dark-muted))]">
-            O sistema escolhe um versículo diferente a cada dia automaticamente.
-            Ative o modo manual para definir versículos específicos para datas específicas.
-          </p>
+                </div>
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[hsl(var(--dark-card))]">
+                  <button onClick={() => setEditing(item)} className="text-xs text-primary font-medium flex items-center gap-1">
+                    <Edit2 className="w-3 h-3" /> Editar
+                  </button>
+                  <button onClick={() => deleteVerse(item.id)} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+                    <Trash2 className="w-3 h-3" /> Remover
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

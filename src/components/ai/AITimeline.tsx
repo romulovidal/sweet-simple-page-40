@@ -45,7 +45,7 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
       <button
         onClick={handleOpen}
         data-tour="bible-action-timeline"
-        className="p-2 rounded-lg bg-orange-500/10 active:bg-orange-500/20 transition-colors"
+        className="h-11 w-11 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0"
         title="Linha do Tempo"
       >
         <Clock className="w-[18px] h-[18px] text-orange-400" />

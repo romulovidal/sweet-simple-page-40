@@ -63,9 +63,9 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled }: Pr
           disabled={disabled}
           title="Agendar como versículo do dia"
           aria-label="Agendar como versículo do dia"
-          className="p-1.5 rounded-lg bg-primary-foreground/20 active:bg-primary-foreground/30 shrink-0 disabled:opacity-40"
+          className="h-11 w-11 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0 disabled:opacity-40"
         >
-          <CalendarPlus className="w-[18px] h-[18px] text-primary-foreground" />
+          <CalendarPlus className="w-[18px] h-[18px] text-violet-400" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">

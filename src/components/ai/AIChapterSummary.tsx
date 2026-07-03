@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { BookOpen, Loader2, ChevronDown, ChevronUp, Share2 } from "lucide-react";
+import { BookOpen, Loader2, ChevronDown, ChevronUp, Share2, Copy } from "lucide-react";
+import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
@@ -44,6 +45,15 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
     setShareOpen(true);
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast.success("Copiado!");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   return (
     <div className="mx-5 mb-4">
       <button
@@ -73,7 +83,14 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
                 <ReactMarkdown>{content}</ReactMarkdown>
               </div>
               {!loading && (
-                <div className="flex justify-end mt-3">
+                <div className="flex justify-end gap-2 mt-3">
+                  <button
+                    onClick={handleCopy}
+                    className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/15 transition-colors"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copiar
+                  </button>
                   <button
                     onClick={handleShare}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/15 transition-colors"

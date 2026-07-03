@@ -1070,7 +1070,11 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       } ${isSelected ? "bg-primary/20 ring-1 ring-primary/40" : ""}`}
       style={
         highlightColor && !isSelected
-          ? { backgroundColor: `${highlightColor}18`, borderLeft: `3px solid ${highlightColor}` }
+          ? {
+              background: `linear-gradient(90deg, ${highlightColor}38 0%, ${highlightColor}14 100%)`,
+              borderLeft: `4px solid ${highlightColor}`,
+              boxShadow: `inset 0 0 0 1px ${highlightColor}22`,
+            }
           : undefined
       }
       onClick={() => onTap(verse.number)}
@@ -1078,7 +1082,13 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       <p className={`leading-relaxed ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
         <span
           className="font-bold mr-2 text-xs align-super"
-          style={highlightColor ? { color: highlightColor } : isRedLetter ? { color: "#ef4444" } : undefined}
+          style={
+            highlightColor
+              ? { color: highlightColor, textShadow: `0 0 8px ${highlightColor}66` }
+              : isRedLetter
+                ? { color: "#ef4444" }
+                : undefined
+          }
         >
           {verse.number}
         </span>

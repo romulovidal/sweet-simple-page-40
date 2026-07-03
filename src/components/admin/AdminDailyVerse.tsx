@@ -234,9 +234,9 @@ const AdminDailyVerse = () => {
 
   if (editing) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <button onClick={() => {
+      <div className="space-y-4 pb-24">
+        <div className="sticky top-0 z-20 -mx-4 px-4 py-3 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))] flex items-center gap-3">
+          <button aria-label="Fechar" onClick={() => {
             setEditing(null);
             setSelectedBook("");
             setSelectedChapter("");

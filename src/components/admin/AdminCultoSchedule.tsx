@@ -23,27 +23,34 @@ interface CultoSchedule {
 interface CultoReminder {
   id: string;
   schedule_id: string;
-  minutes_before: number;
+  minutes_before: number | null;
   message: string;
   last_sent: string | null;
   sort_order: number;
+  scheduled_at: string | null;
 }
 
-const REMINDER_PRESETS = [
-  { value: 15, label: "15 min" },
-  { value: 30, label: "30 min" },
-  { value: 60, label: "1h" },
-  { value: 120, label: "2h" },
-  { value: 180, label: "3h" },
-  { value: 360, label: "6h" },
-  { value: 720, label: "12h" },
-  { value: 1440, label: "24h" },
-];
+const MAX_REMINDERS = 4;
 
-const formatMinutes = (min: number) => {
-  if (min >= 1440) return `${Math.round(min / 1440)}d`;
-  if (min >= 60) return `${Math.round(min / 60)}h`;
-  return `${min}min`;
+// Convert an ISO timestamp to the value expected by <input type="datetime-local"> in local tz
+const toLocalInput = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const fromLocalInput = (val: string): string | null => {
+  if (!val) return null;
+  const d = new Date(val); // interpreted as local time
+  return isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+const formatScheduled = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("pt-BR", {
+    weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
 };
 
 const AdminCultoSchedule = () => {
@@ -92,6 +99,18 @@ const AdminCultoSchedule = () => {
 
     // Save reminders
     if (scheduleId) {
+      // Validate: every reminder must have a scheduled_at
+      for (const r of editingReminders) {
+        if (!r.scheduled_at) {
+          toast.error("Defina data e hora para cada lembrete");
+          return;
+        }
+      }
+      if (editingReminders.length > MAX_REMINDERS) {
+        toast.error(`Máximo de ${MAX_REMINDERS} lembretes`);
+        return;
+      }
+
       // Delete existing reminders for this schedule
       await supabase.from("culto_reminders").delete().eq("schedule_id", scheduleId);
 
@@ -99,7 +118,8 @@ const AdminCultoSchedule = () => {
       if (editingReminders.length > 0) {
         const reminderPayloads = editingReminders.map((r, i) => ({
           schedule_id: scheduleId!,
-          minutes_before: r.minutes_before ?? 180,
+          minutes_before: null,
+          scheduled_at: r.scheduled_at!,
           message: r.message?.trim() || "",
           sort_order: i,
         }));
@@ -151,15 +171,30 @@ const AdminCultoSchedule = () => {
     if (schedule) {
       setEditing(schedule);
       const schedReminders = reminders.filter(r => r.schedule_id === schedule.id);
-      setEditingReminders(schedReminders.length > 0 ? schedReminders : [{ minutes_before: 180, message: "" }]);
+      setEditingReminders(
+        schedReminders.length > 0
+          ? schedReminders
+          : [{ scheduled_at: defaultScheduledFor(schedule), message: "" }]
+      );
     } else {
       setEditing({ day_of_week: 0, reminder_minutes_before: 180, is_active: true });
-      setEditingReminders([{ minutes_before: 180, message: "" }]);
+      setEditingReminders([{ scheduled_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), message: "" }]);
     }
   };
 
   const addReminder = () => {
-    setEditingReminders([...editingReminders, { minutes_before: 60, message: "" }]);
+    if (editingReminders.length >= MAX_REMINDERS) {
+      toast.error(`Máximo de ${MAX_REMINDERS} lembretes`);
+      return;
+    }
+    // Default: 1 hour from now, but based on last reminder if any
+    const base = editingReminders.length
+      ? new Date(editingReminders[editingReminders.length - 1].scheduled_at || Date.now()).getTime()
+      : Date.now();
+    setEditingReminders([
+      ...editingReminders,
+      { scheduled_at: new Date(base + 60 * 60 * 1000).toISOString(), message: "" },
+    ]);
   };
 
   const removeReminder = (index: number) => {
@@ -207,9 +242,13 @@ const AdminCultoSchedule = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs text-[hsl(var(--dark-muted))] flex items-center gap-1">
-              <Bell className="w-3 h-3" /> Lembretes Push ({editingReminders.length})
+              <Bell className="w-3 h-3" /> Lembretes agendados ({editingReminders.length}/{MAX_REMINDERS})
             </label>
-            <button onClick={addReminder} className="text-xs text-primary font-medium flex items-center gap-1">
+            <button
+              onClick={addReminder}
+              disabled={editingReminders.length >= MAX_REMINDERS}
+              className="text-xs text-primary font-medium flex items-center gap-1 disabled:opacity-40"
+            >
               <Plus className="w-3 h-3" /> Adicionar
             </button>
           </div>
@@ -218,30 +257,21 @@ const AdminCultoSchedule = () => {
             <div key={index} className="bg-[hsl(var(--dark-card))] rounded-xl p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-primary">Lembrete {index + 1}</span>
-                {editingReminders.length > 1 && (
-                  <button onClick={() => removeReminder(index)} className="text-destructive">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
+                <button onClick={() => removeReminder(index)} className="text-destructive">
+                  <Trash2 className="w-3 h-3" />
+                </button>
               </div>
 
               <div>
-                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block">Quanto tempo antes</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {REMINDER_PRESETS.map((opt) => (
-                    <button key={opt.value} onClick={() => updateReminder(index, { minutes_before: opt.value })}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                        reminder.minutes_before === opt.value ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"
-                      }`}>{opt.label}</button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">ou:</span>
-                  <Input type="number" value={reminder.minutes_before ?? 180}
-                    onChange={(e) => updateReminder(index, { minutes_before: parseInt(e.target.value) || 1 })}
-                    min={1} max={10080} className="bg-[hsl(var(--dark-bg))] border-none h-7 text-xs w-20" />
-                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">minutos</span>
-                </div>
+                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block">
+                  Data e hora do envio
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={toLocalInput(reminder.scheduled_at)}
+                  onChange={(e) => updateReminder(index, { scheduled_at: fromLocalInput(e.target.value) || undefined })}
+                  className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
+                />
               </div>
 
               <div>
@@ -298,7 +328,7 @@ const AdminCultoSchedule = () => {
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">
-                    {formatMinutes(r.minutes_before)} antes
+                    {r.scheduled_at ? formatScheduled(r.scheduled_at) : `${r.minutes_before ?? 0}min antes`}
                   </span>
                 </div>
                 {r.message ? (
@@ -359,7 +389,7 @@ const AdminCultoSchedule = () => {
                     <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5 flex items-center gap-1">
                       <Bell className="w-3 h-3" />
                       {schedReminders.length > 0
-                        ? `${schedReminders.length} lembrete${schedReminders.length > 1 ? "s" : ""}: ${schedReminders.map(r => formatMinutes(r.minutes_before)).join(", ")}`
+                        ? `${schedReminders.length} lembrete${schedReminders.length > 1 ? "s" : ""}`
                         : "Nenhum lembrete"}
                     </p>
                   </div>

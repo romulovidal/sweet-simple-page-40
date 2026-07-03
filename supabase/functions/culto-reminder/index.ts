@@ -237,25 +237,36 @@ Deno.serve(async (req) => {
             message: "",
             last_sent: schedule.last_reminder_sent,
             sort_order: 0,
+            scheduled_at: null,
           }];
 
       for (const reminder of remindersToCheck) {
-        // Fire when we're inside the window [minutes_before, minutes_before - 20)
-        // i.e. current time reached the reminder trigger, up to 20 min after
-        const diff = reminder.minutes_before - minutesUntilCulto;
-        if (diff < 0 || diff >= 20) continue;
-
-        if (reminder.last_sent) {
-          const lastSent = reminder.last_sent.split("T")[0];
-          if (lastSent === today) continue;
+        // NEW: if reminder has an explicit scheduled_at, fire based on that.
+        // Otherwise fall back to the legacy "minutes_before" logic.
+        const nowMs = Date.now();
+        if (reminder.scheduled_at) {
+          const trigger = new Date(reminder.scheduled_at).getTime();
+          const delta = nowMs - trigger; // >=0 means we've passed the trigger
+          if (delta < 0 || delta >= 20 * 60 * 1000) continue;
+          if (reminder.last_sent && new Date(reminder.last_sent).getTime() >= trigger) continue;
+        } else {
+          if (reminder.minutes_before == null) continue;
+          const diff = reminder.minutes_before - minutesUntilCulto;
+          if (diff < 0 || diff >= 20) continue;
+          if (reminder.last_sent) {
+            const lastSent = reminder.last_sent.split("T")[0];
+            if (lastSent === today) continue;
+          }
         }
 
         // Actual day/time of THIS reminder occurrence
         const daysUntilThis = daysUntilCulto;
         const whenTxt = describeWhen(daysUntilThis, minutesUntilCulto, timeStr, schedule.day_of_week);
-        const reminderLabel = reminder.minutes_before >= 60
-          ? `${Math.round(reminder.minutes_before / 60)}h`
-          : `${reminder.minutes_before}min`;
+        const reminderLabel = reminder.scheduled_at
+          ? "agendado"
+          : (reminder.minutes_before ?? 0) >= 60
+          ? `${Math.round((reminder.minutes_before ?? 0) / 60)}h`
+          : `${reminder.minutes_before ?? 0}min`;
 
         let pushBody = reminder.message && reminder.message.trim() ? reminder.message.trim() : "";
         if (!pushBody) {
@@ -281,7 +292,7 @@ Deno.serve(async (req) => {
               body: pushBody,
               url: "/?tab=comunidade",
               type: "culto-reminder",
-              ttl: reminder.minutes_before * 60,
+              ttl: Math.max(60, (reminder.minutes_before ?? 60) * 60),
               urgency: "high",
             }),
           });

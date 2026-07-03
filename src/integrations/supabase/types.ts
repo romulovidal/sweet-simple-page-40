@@ -226,8 +226,9 @@ export type Database = {
           id: string
           last_sent: string | null
           message: string
-          minutes_before: number
+          minutes_before: number | null
           schedule_id: string
+          scheduled_at: string | null
           sort_order: number
         }
         Insert: {
@@ -235,8 +236,9 @@ export type Database = {
           id?: string
           last_sent?: string | null
           message?: string
-          minutes_before?: number
+          minutes_before?: number | null
           schedule_id: string
+          scheduled_at?: string | null
           sort_order?: number
         }
         Update: {
@@ -244,8 +246,9 @@ export type Database = {
           id?: string
           last_sent?: string | null
           message?: string
-          minutes_before?: number
+          minutes_before?: number | null
           schedule_id?: string
+          scheduled_at?: string | null
           sort_order?: number
         }
         Relationships: [

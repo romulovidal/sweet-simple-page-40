@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface PersonalNotesProps {
   bookAbbrev: string;
@@ -26,6 +27,7 @@ interface Note {
 
 const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "compact" }: PersonalNotesProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,7 +105,21 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
     }
   };
 
-  if (!enabled || !user) return null;
+  if (!enabled) return null;
+
+  const requireAuth = () => {
+    if (!user) {
+      toast.info("Entre ou crie uma conta para usar as Anotações");
+      navigate("/perfil");
+      return false;
+    }
+    return true;
+  };
+
+  const handleOpen = () => {
+    if (!requireAuth()) return;
+    setOpen(true);
+  };
 
   const noteCount = notes.length;
 
@@ -112,7 +128,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
       {variant === "action-bar" ? (
         <div className="flex flex-col items-center gap-1 shrink-0">
           <button
-            onClick={() => setOpen(true)}
+            onClick={handleOpen}
             className="relative h-11 w-11 rounded-xl bg-yellow-500/15 hover:bg-yellow-500/25 active:scale-95 transition-all flex items-center justify-center"
             title="Anotações"
             aria-label="Anotações"
@@ -128,7 +144,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
         </div>
       ) : (
         <button
-          onClick={() => setOpen(true)}
+          onClick={handleOpen}
           className="p-1 relative"
           title="Anotações"
         >

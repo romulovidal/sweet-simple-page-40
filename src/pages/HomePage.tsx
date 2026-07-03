@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
-import { getVerseTextByReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
+import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
@@ -99,6 +99,26 @@ const HomePage = () => {
       v: { text: string; ref: string },
       versionId: string
     ): Promise<{ text: string; ref: string }> => {
+      // Detect multi-verse refs like "João 3:16-17" or "João 3:16,18"
+      const versePart = v.ref.split(":")[1]?.trim() ?? "";
+      const hasRange = /[,-]/.test(versePart);
+      if (hasRange) {
+        const parsed = parseReference(v.ref);
+        if (parsed) {
+          const nums: number[] = [];
+          for (const seg of versePart.split(",")) {
+            const [a, b] = seg.split("-").map((n) => parseInt(n, 10));
+            if (Number.isNaN(a)) continue;
+            if (Number.isNaN(b)) nums.push(a);
+            else for (let i = a; i <= b; i++) nums.push(i);
+          }
+          if (nums.length > 0) {
+            const text = await getVersesTextByNumbers(parsed.bookName, parsed.chapter, nums, versionId);
+            if (text) return { text, ref: v.ref };
+          }
+        }
+        return v;
+      }
       const text = await getVerseTextByReference(v.ref, versionId);
       return text ? { text, ref: v.ref } : v;
     };

@@ -14,7 +14,7 @@ interface PersonalNotesProps {
   verse?: number;
   enabled: boolean;
   label?: string;
-  variant?: "compact" | "action-bar";
+  variant?: "compact" | "action-bar" | "inline";
 }
 
 interface Note {
@@ -123,6 +123,97 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
 
   const noteCount = notes.length;
 
+  // Auto-fetch notes for inline variant
+  useEffect(() => {
+    if (variant === "inline" && user) fetchNotes();
+  }, [variant, user, fetchNotes]);
+
+  if (variant === "inline") {
+    if (!user) {
+      return (
+        <div className="text-xs text-[hsl(var(--dark-muted))]">
+          <p className="mb-3">Entre ou crie uma conta para usar as Anotações.</p>
+          <Button size="sm" onClick={() => navigate("/perfil")} className="w-full">
+            Entrar / Criar conta
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Textarea
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder={verse ? `Nota para o versículo ${verse}...` : "Escreva sua anotação..."}
+            className="bg-[hsl(var(--dark-bg))] border-none min-h-[70px] text-sm"
+            maxLength={2000}
+          />
+          <Button onClick={handleSave} disabled={saving || !newNote.trim()} size="sm" className="w-full">
+            {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+            Adicionar Nota
+          </Button>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          </div>
+        ) : notes.length > 0 ? (
+          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            {notes.map((note) => (
+              <div key={note.id} className="bg-[hsl(var(--dark-bg))] rounded-xl p-3">
+                {editingId === note.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="bg-[hsl(var(--dark-card))] border-none min-h-[60px] text-sm"
+                      maxLength={2000}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => handleUpdate(note.id)} disabled={saving}>
+                        <Save className="w-3 h-3 mr-1" /> Salvar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingId(null)}
+                        className="bg-[hsl(var(--dark-card))] border-none text-[hsl(var(--dark-text))]">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {note.verse && (
+                      <p className="text-[10px] font-semibold text-yellow-400 mb-1">Versículo {note.verse}</p>
+                    )}
+                    <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[hsl(var(--dark-card))]">
+                      <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                        {new Date(note.created_at).toLocaleDateString("pt-BR")}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setEditingId(note.id); setEditContent(note.content); }}
+                          className="text-[10px] text-primary"
+                        >
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(note.id)} className="text-[10px] text-destructive">
+                          <Trash2 className="w-3 h-3 inline" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-[hsl(var(--dark-muted))] py-4">Nenhuma anotação ainda</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       {variant === "action-bar" ? (
@@ -158,10 +249,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
       )}
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] w-full sm:max-w-md lg:max-w-lg overflow-y-auto p-4"
-        >
+        <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] max-h-[80vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-[hsl(var(--dark-text))]">
               📝 Anotações — {bookAbbrev.toUpperCase()} {chapter}{verse ? `:${verse}` : ""}

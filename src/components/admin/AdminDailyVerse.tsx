@@ -256,7 +256,7 @@ const AdminDailyVerse = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))]">Seletor Rápido</span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase">Livro</label>
               <Select value={selectedBook} onValueChange={(v) => {
@@ -264,7 +264,7 @@ const AdminDailyVerse = () => {
                 setSelectedChapter("");
                 setSelectedVerses([]);
               }}>
-                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs">
+                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-11 text-sm">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,7 +285,7 @@ const AdminDailyVerse = () => {
                 }}
                 disabled={!selectedBook}
               >
-                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs">
+                <SelectTrigger className="bg-[hsl(var(--dark-bg))] border-none h-11 text-sm">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
@@ -296,17 +296,17 @@ const AdminDailyVerse = () => {
               </Select>
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block uppercase font-bold">
                 Selecionados
               </label>
-              <div className="flex items-center gap-2 h-9">
-                <span className="text-xs font-bold text-primary tabular-nums">
+              <div className="flex items-center gap-2 h-11 px-3 rounded-md bg-[hsl(var(--dark-bg))]">
+                <span className="text-sm font-bold text-primary tabular-nums truncate">
                   {selectedVerses.length > 0
                     ? `v. ${formatVerseRange(selectedVerses)}`
                     : "nenhum"}
                 </span>
-                <span className="text-[10px] text-[hsl(var(--dark-muted))]">
+                <span className="text-[10px] text-[hsl(var(--dark-muted))] ml-auto whitespace-nowrap">
                   ({selectedVerses.length}/{chapterVerses.length || "?"})
                 </span>
               </div>
@@ -316,23 +316,23 @@ const AdminDailyVerse = () => {
           {/* Chapter verse grid — click to multi-select */}
           {selectedChapter && chapterVerses.length > 0 && (
             <div className="space-y-3 pt-3 border-t border-[hsl(var(--dark-card-hover))]">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[10px] text-[hsl(var(--dark-muted))] uppercase tracking-wider">
                   Clique nos versículos ({selectedBook} {selectedChapter})
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={selectAllVerses}
-                    className="text-[10px] px-2 py-1 rounded-md bg-[hsl(var(--dark-bg))] hover:bg-primary/10 text-[hsl(var(--dark-muted))] hover:text-primary transition-colors"
+                    className="text-xs px-3 py-1.5 min-h-[32px] rounded-md bg-[hsl(var(--dark-bg))] hover:bg-primary/10 text-[hsl(var(--dark-muted))] hover:text-primary transition-colors"
                   >
                     Todos
                   </button>
                   <button
                     onClick={clearVerses}
                     disabled={selectedVerses.length === 0}
-                    className="text-[10px] px-2 py-1 rounded-md bg-[hsl(var(--dark-bg))] hover:bg-destructive/10 text-[hsl(var(--dark-muted))] hover:text-destructive transition-colors disabled:opacity-40 flex items-center gap-1"
+                    className="text-xs px-3 py-1.5 min-h-[32px] rounded-md bg-[hsl(var(--dark-bg))] hover:bg-destructive/10 text-[hsl(var(--dark-muted))] hover:text-destructive transition-colors disabled:opacity-40 flex items-center gap-1"
                   >
-                    <Eraser className="w-3 h-3" /> Limpar
+                    <Eraser className="w-3.5 h-3.5" /> Limpar
                   </button>
                 </div>
               </div>

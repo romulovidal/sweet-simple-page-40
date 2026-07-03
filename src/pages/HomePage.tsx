@@ -126,13 +126,6 @@ const HomePage = () => {
 
     const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
       try {
-        const { data: settings } = await supabase
-          .from("admin_settings")
-          .select("value")
-          .eq("key", "daily_verse_mode")
-          .maybeSingle();
-        const mode = settings?.value ? String(settings.value).replace(/"/g, "") : "auto";
-        if (mode !== "manual") return null;
         const { data: queueVerse } = await supabase
           .from("daily_verse_queue")
           .select("verse_text, verse_ref")

@@ -41,19 +41,17 @@ async function markLoggedUser(userId: string, streak: StreakData) {
 
 async function markDevice(deviceId: string, streak: StreakData) {
   try {
-    await supabase.from("device_streaks").upsert(
-      {
+    // Mutations are server-side validated via edge function (RLS blocks direct writes).
+    await supabase.functions.invoke("track-device", {
+      body: {
         device_id: deviceId,
         current_streak: streak.current,
         last_seen_date: streak.lastDate || null,
         history: streak.history,
-        user_agent:
-          typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 250) : null,
       },
-      { onConflict: "device_id" }
-    );
+    });
   } catch (e) {
-    console.error("[streak] upsert device_streaks failed", e);
+    console.error("[streak] track-device failed", e);
   }
 }
 

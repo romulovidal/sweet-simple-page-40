@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Menu, Home, Sparkles, BrainCircuit,
-  Settings2, MessageCircleQuestion, HandHeart, FileText, BookOpen, Search, ChevronRight
+  Settings2, MessageCircleQuestion, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -33,7 +33,7 @@ import {
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type TabType = "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
+type TabType = "home" | "dashboard" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "exegetai" | "ai" | "ai-prompts" | "app-features" | "ask-bible-prompt" | "prayers";
 
 const ADMIN_SECTIONS = [
   {
@@ -43,6 +43,7 @@ const ADMIN_SECTIONS = [
     ring: "ring-sky-400/40",
     icon: "text-sky-300",
     tabs: [
+      { id: "home", label: "Início", desc: "Atalhos para tudo", icon: LayoutGrid },
       { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
       { id: "log", label: "Atividade", desc: "Histórico de ações", icon: Clock },
     ],
@@ -101,21 +102,20 @@ const ADMIN_SECTIONS = [
 const ALL_TABS = ADMIN_SECTIONS.flatMap(s => s.tabs.map(t => ({ ...t, section: s.title, accent: s.accent, ring: s.ring, iconColor: s.icon })));
 const findMeta = (id: string) => ALL_TABS.find(t => t.id === id);
 const BOTTOM_TABS = [
-  { id: "dashboard", label: "Início", icon: LayoutDashboard },
+  { id: "home", label: "Início", icon: LayoutGrid },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "posts", label: "Posts", icon: FileText },
   { id: "plans", label: "Planos", icon: BookOpen },
-  { id: "ai", label: "IA", icon: Sparkles },
 ];
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabType>("dashboard");
+  const [tab, setTab] = useState<TabType>("home");
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -138,14 +138,7 @@ const AdminPanel = () => {
   const currentTabLabel = currentMeta?.label || "Painel Admin";
   const currentSection = currentMeta?.section || "";
 
-  const filteredSections = ADMIN_SECTIONS.map((s) => ({
-    ...s,
-    tabs: s.tabs.filter((t) =>
-      !search.trim()
-        ? true
-        : (t.label + " " + (t as any).desc).toLowerCase().includes(search.toLowerCase())
-    ),
-  })).filter((s) => s.tabs.length > 0);
+  const filteredSections = ADMIN_SECTIONS;
 
   const NavList = ({ compact = false }: { compact?: boolean }) => (
     <div className="space-y-5">
@@ -196,18 +189,6 @@ const AdminPanel = () => {
     </div>
   );
 
-  const SearchBox = () => (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar seção..."
-        className="w-full h-10 pl-9 pr-3 rounded-xl bg-[hsl(var(--dark-card))]/70 border border-[hsl(var(--dark-card-hover))]/60 text-sm placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/40"
-      />
-    </div>
-  );
-
   const Brand = () => (
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 grid place-items-center shadow-lg shadow-amber-500/20">
@@ -219,6 +200,43 @@ const AdminPanel = () => {
           Bíblia do Atalaia
         </p>
       </div>
+    </div>
+  );
+
+  // Home: grade de cards quadrados, agrupados por seção (sem Home nem Dashboard duplicados)
+  const HomeGrid = () => (
+    <div className="space-y-6">
+      {ADMIN_SECTIONS.map((section) => {
+        const tiles = section.tabs.filter((t) => t.id !== "home");
+        if (tiles.length === 0) return null;
+        return (
+          <section key={section.title}>
+            <div className="flex items-center gap-2 px-1 mb-3">
+              <span className={`w-1.5 h-1.5 rounded-full bg-current ${section.icon}`} />
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-[hsl(var(--dark-muted))]">
+                {section.title}
+              </h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {tiles.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id as any)}
+                  className={`group aspect-square rounded-2xl p-4 flex flex-col justify-between text-left transition-all bg-gradient-to-br ${section.accent} ring-1 ${section.ring} hover:scale-[1.02] active:scale-[0.98]`}
+                >
+                  <span className={`w-11 h-11 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${section.icon}`}>
+                    <t.icon className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{t.label}</p>
+                    <p className="text-[11px] text-[hsl(var(--dark-muted))] line-clamp-2 leading-snug">{(t as any).desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 
@@ -248,10 +266,7 @@ const AdminPanel = () => {
         <div className="px-5 pt-6 pb-4 border-b border-[hsl(var(--dark-card))]">
           <Brand />
         </div>
-        <div className="px-4 pt-4 pb-3">
-          <SearchBox />
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-4">
           <NavList />
         </nav>
         <div className="p-3 border-t border-[hsl(var(--dark-card))]">
@@ -277,9 +292,6 @@ const AdminPanel = () => {
                     <Brand />
                   </SheetTitle>
                 </SheetHeader>
-                <div className="px-4 pt-3">
-                  <SearchBox />
-                </div>
                 <div className="flex-1 overflow-y-auto px-3 py-4">
                   <NavList />
                 </div>
@@ -316,8 +328,8 @@ const AdminPanel = () => {
             </div>
           ) : (
             <div className="px-5 lg:px-8 py-5 lg:py-8 max-w-5xl mx-auto w-full">
-              {/* Section hero card */}
-              {currentMeta && (
+              {/* Section hero card (hidden na Home para dar destaque aos tiles) */}
+              {currentMeta && tab !== "home" && (
                 <div className={`mb-5 rounded-2xl p-4 lg:p-5 bg-gradient-to-r ${currentMeta.accent} ring-1 ${currentMeta.ring} flex items-center gap-4`}>
                   <span className={`w-12 h-12 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/70 ${currentMeta.iconColor}`}>
                     <currentMeta.icon className="w-5 h-5" />
@@ -333,6 +345,7 @@ const AdminPanel = () => {
               )}
 
               <div className="space-y-4">
+                {tab === "home" && <HomeGrid />}
                 {tab === "dashboard" && <AdminDashboard />}
                 {tab === "verse" && <AdminDailyVerse />}
                 {tab === "push" && <AdminPushSender />}

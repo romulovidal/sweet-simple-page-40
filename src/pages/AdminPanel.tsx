@@ -307,14 +307,14 @@ const AdminPanel = () => {
       <header className="sticky top-0 z-30 bg-[hsl(var(--dark-bg))]/90 backdrop-blur border-b border-[hsl(var(--dark-card))]">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           {view.kind === "home" ? (
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 grid place-items-center shadow-lg shadow-amber-500/20 shrink-0">
-              <Shield className="w-5 h-5 text-amber-950" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] grid place-items-center shadow-lg shadow-primary/25 shrink-0">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
           ) : (
             <button
               onClick={goBack}
               aria-label="Voltar"
-              className="w-10 h-10 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/70 hover:bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] shrink-0 transition-colors"
+              className="w-10 h-10 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] shrink-0 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -324,11 +324,7 @@ const AdminPanel = () => {
             <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] truncate">
               {headerCrumb}
             </p>
-            <h1 className={`text-base font-bold truncate leading-tight ${
-              view.kind === "home"
-                ? "bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent"
-                : "text-[hsl(var(--dark-text))]"
-            }`}>
+            <h1 className="text-base font-bold truncate leading-tight text-[hsl(var(--dark-text))]">
               {headerTitle}
             </h1>
           </div>

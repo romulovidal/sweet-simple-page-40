@@ -5,26 +5,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const WEEKDAY_NAMES = [
+  "domingo",
+  "segunda-feira",
+  "terça-feira",
+  "quarta-feira",
+  "quinta-feira",
+  "sexta-feira",
+  "sábado",
+];
+
+function describeWhen(daysUntil: number, minutesUntil: number, timeStr: string, cultoDay: number) {
+  if (daysUntil === 0) {
+    if (minutesUntil <= 0) return `está começando agora, às ${timeStr}`;
+    if (minutesUntil < 60) return `começa em ${minutesUntil} minutos, às ${timeStr}`;
+    const h = Math.round(minutesUntil / 60);
+    return `é hoje às ${timeStr} (em cerca de ${h}h)`;
+  }
+  if (daysUntil === 1) return `é amanhã às ${timeStr}`;
+  if (daysUntil === 2) return `é depois de amanhã às ${timeStr}`;
+  return `é ${WEEKDAY_NAMES[cultoDay]} às ${timeStr} (em ${daysUntil} dias)`;
+}
+
 async function generateInviteMessage(params: {
   cultoName: string;
   timeStr: string;
-  minutesBefore: number;
-  reminderLabel: string;
+  daysUntil: number;
+  minutesUntil: number;
+  cultoDay: number;
 }): Promise<string | null> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return null;
-  const { cultoName, timeStr, minutesBefore, reminderLabel } = params;
+  const { cultoName, timeStr, daysUntil, minutesUntil, cultoDay } = params;
 
-  const timing =
-    minutesBefore >= 12 * 60
-      ? `é amanhã às ${timeStr}`
-      : minutesBefore >= 60
-      ? `começa em ${reminderLabel}, às ${timeStr}`
-      : `começa em ${reminderLabel}!`;
+  const timing = describeWhen(daysUntil, minutesUntil, timeStr, cultoDay);
 
   const system =
-    "Você escreve convites curtos e acolhedores em português do Brasil para lembrar membros de uma igreja evangélica sobre o culto. Tom pastoral, caloroso, sem clichês repetidos. Sem hashtags. Use no máximo 1 emoji. Máximo 180 caracteres. Retorne APENAS o texto da notificação, sem aspas ou títulos.";
-  const user = `Escreva uma mensagem única e original convidando a participar do culto "${cultoName}", que ${timing}. Varie a inspiração bíblica a cada geração. Não repita o nome do culto no início.`;
+    "Você escreve convites curtos e acolhedores em português do Brasil para lembrar membros de uma igreja evangélica sobre o culto. Tom pastoral, caloroso, sem clichês repetidos. Sem hashtags. Use no máximo 1 emoji. Máximo 180 caracteres. Retorne APENAS o texto da notificação, sem aspas ou títulos. Sempre respeite exatamente o momento indicado (hoje / amanhã / depois de amanhã / dia da semana).";
+  const user = `Escreva uma mensagem única e original convidando a participar do culto "${cultoName}", que ${timing}. Varie a inspiração bíblica a cada geração. Não repita o nome do culto no início. Deixe claro quando é (hoje, amanhã, depois de amanhã, ou o dia da semana).`;
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -119,16 +137,27 @@ Deno.serve(async (req) => {
       const [h, m] = schedule.time.split(":").map(Number);
       const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
+      // Determine day offset until the next occurrence of this schedule
+      const nowB = brasiliaNow();
+      const currentDayM = nowB.getDay();
+      const currentMinM = nowB.getHours() * 60 + nowB.getMinutes();
+      const cultoTotalM = h * 60 + m;
+      let daysUntilM = (schedule.day_of_week - currentDayM + 7) % 7;
+      if (daysUntilM === 0 && cultoTotalM + 20 < currentMinM) daysUntilM = 7;
+      const minutesUntilM = daysUntilM * 1440 + (cultoTotalM - currentMinM);
+
       let pushBody = body.custom_message?.trim() || "";
       if (!pushBody) {
         const ai = await generateInviteMessage({
           cultoName: schedule.name,
           timeStr,
-          minutesBefore: 60,
-          reminderLabel: "instantes",
+          daysUntil: daysUntilM,
+          minutesUntil: minutesUntilM,
+          cultoDay: schedule.day_of_week,
         });
+        const whenTxt = describeWhen(daysUntilM, minutesUntilM, timeStr, schedule.day_of_week);
         pushBody =
-          ai || `Lembrete: o culto "${schedule.name}" será às ${timeStr}. Prepare seu coração! 🙏`;
+          ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
       }
 
       const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
@@ -156,25 +185,20 @@ Deno.serve(async (req) => {
     }
 
     // ===== SCHEDULED CRON CHECK =====
-    // Get current time in Brasilia timezone (UTC-3)
-    const now = new Date();
-    const brasiliaOffset = -3 * 60;
-    const brasiliaTime = new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
+    // Look at ALL active schedules — cross-day reminders (e.g. "night before") must fire too.
+    const brasiliaTime = brasiliaNow();
     const currentDay = brasiliaTime.getDay();
-    const currentHour = brasiliaTime.getHours();
-    const currentMinute = brasiliaTime.getMinutes();
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-    const today = brasiliaTime.toISOString().split("T")[0];
+    const currentTotalMinutes = brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
+    const today = brasiliaDateStr(brasiliaTime);
 
     const { data: schedules, error } = await supabase
       .from("culto_schedules")
       .select("*")
-      .eq("day_of_week", currentDay)
       .eq("is_active", true);
 
     if (error) throw error;
     if (!schedules || schedules.length === 0) {
-      return new Response(JSON.stringify({ message: "No cultos today", day: currentDay }), {
+      return new Response(JSON.stringify({ message: "No active schedules", day: currentDay }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -195,6 +219,13 @@ Deno.serve(async (req) => {
       const cultoTotalMinutes = h * 60 + m;
       const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
+      // Minutes from now until the next occurrence of this culto
+      let daysUntilCulto = (schedule.day_of_week - currentDay + 7) % 7;
+      if (daysUntilCulto === 0 && cultoTotalMinutes + 20 < currentTotalMinutes) {
+        daysUntilCulto = 7;
+      }
+      const minutesUntilCulto = daysUntilCulto * 1440 + (cultoTotalMinutes - currentTotalMinutes);
+
       const scheduleReminders = (allReminders || []).filter(r => r.schedule_id === schedule.id);
 
       const remindersToCheck = scheduleReminders.length > 0
@@ -209,31 +240,35 @@ Deno.serve(async (req) => {
           }];
 
       for (const reminder of remindersToCheck) {
-        const reminderTime = cultoTotalMinutes - reminder.minutes_before;
+        // Fire when we're inside the window [minutes_before, minutes_before - 20)
+        // i.e. current time reached the reminder trigger, up to 20 min after
+        const diff = reminder.minutes_before - minutesUntilCulto;
+        if (diff < 0 || diff >= 20) continue;
 
-        // Widened window to 20 minutes to avoid missing due to cron jitter (cron runs every 15min)
-        if (currentTotalMinutes >= reminderTime && currentTotalMinutes < reminderTime + 20) {
-          if (reminder.last_sent) {
-            const lastSent = reminder.last_sent.split("T")[0];
-            if (lastSent === today) continue;
-          }
+        if (reminder.last_sent) {
+          const lastSent = reminder.last_sent.split("T")[0];
+          if (lastSent === today) continue;
+        }
 
-          const reminderLabel = reminder.minutes_before >= 60
-            ? `${Math.round(reminder.minutes_before / 60)}h`
-            : `${reminder.minutes_before}min`;
+        // Actual day/time of THIS reminder occurrence
+        const daysUntilThis = daysUntilCulto;
+        const whenTxt = describeWhen(daysUntilThis, minutesUntilCulto, timeStr, schedule.day_of_week);
+        const reminderLabel = reminder.minutes_before >= 60
+          ? `${Math.round(reminder.minutes_before / 60)}h`
+          : `${reminder.minutes_before}min`;
 
-          let pushBody = reminder.message && reminder.message.trim() ? reminder.message.trim() : "";
-          if (!pushBody) {
-            const ai = await generateInviteMessage({
-              cultoName: schedule.name,
-              timeStr,
-              minutesBefore: reminder.minutes_before,
-              reminderLabel,
-            });
-            pushBody =
-              ai ||
-              `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`;
-          }
+        let pushBody = reminder.message && reminder.message.trim() ? reminder.message.trim() : "";
+        if (!pushBody) {
+          const ai = await generateInviteMessage({
+            cultoName: schedule.name,
+            timeStr,
+            daysUntil: daysUntilThis,
+            minutesUntil: minutesUntilCulto,
+            cultoDay: schedule.day_of_week,
+          });
+          pushBody =
+            ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
+        }
 
           const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
             method: "POST",
@@ -267,7 +302,6 @@ Deno.serve(async (req) => {
 
           sent++;
           console.log(`Sent reminder "${reminder.id}" for "${schedule.name}" (${reminderLabel} before):`, pushResult);
-        }
       }
     }
 
@@ -283,3 +317,16 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+function brasiliaNow(): Date {
+  const now = new Date();
+  const brasiliaOffset = -3 * 60;
+  return new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
+}
+
+function brasiliaDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

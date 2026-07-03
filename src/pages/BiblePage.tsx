@@ -601,20 +601,20 @@ const BiblePage = () => {
                 </button>
               </div>
               <div className="px-3 py-3">
-                <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-                  <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-full sm:w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button onClick={() => setShowColorPicker(!showColorPicker)} data-tour="bible-action-color" title="Destacar" aria-label="Destacar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <Palette className="w-[18px] h-[18px] text-primary" />
                   </button>
-                  <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-full sm:w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                  <button onClick={handleShareSelected} data-tour="bible-action-share" title="Compartilhar" aria-label="Compartilhar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <Share2 className="w-[18px] h-[18px] text-primary" />
                   </button>
-                  <button onClick={handleSaveSelected} data-tour="bible-action-save" title="Salvar" aria-label="Salvar" className="h-11 w-full sm:w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                  <button onClick={handleSaveSelected} data-tour="bible-action-save" title="Salvar" aria-label="Salvar" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <BookmarkPlus className="w-[18px] h-[18px] text-primary" />
                   </button>
-                  <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-full sm:w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                  <button onClick={handleImageSelected} data-tour="bible-action-image" title="Gerar imagem" aria-label="Gerar imagem" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <ImageIcon className="w-[18px] h-[18px] text-primary" />
                   </button>
-                  <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" title="Comparar versões" aria-label="Comparar versões" className="h-11 w-full sm:w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center">
+                  <button onClick={() => setShowCompare(true)} data-tour="bible-action-compare" title="Comparar versões" aria-label="Comparar versões" className="h-11 w-11 rounded-xl bg-primary/15 hover:bg-primary/25 active:scale-95 transition-all flex items-center justify-center shrink-0">
                     <GitCompareArrows className="w-[18px] h-[18px] text-primary" />
                   </button>
                   {(() => {

@@ -10,9 +10,10 @@ interface Props {
   reference: string;
   text: string;
   enabled: boolean;
+  label?: string;
 }
 
-const AITimeline = ({ reference, text, enabled }: Props) => {
+const AITimeline = ({ reference, text, enabled, label }: Props) => {
   const [open, setOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const { content, loading, run, reset } = useAIStream();
@@ -42,14 +43,17 @@ const AITimeline = ({ reference, text, enabled }: Props) => {
 
   return (
     <>
-      <button
-        onClick={handleOpen}
-        data-tour="bible-action-timeline"
-        className="h-11 w-11 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 active:scale-95 transition-all flex items-center justify-center shrink-0"
-        title="Linha do Tempo"
-      >
-        <Clock className="w-[18px] h-[18px] text-orange-400" />
-      </button>
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <button
+          onClick={handleOpen}
+          data-tour="bible-action-timeline"
+          className="h-11 w-11 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 active:scale-95 transition-all flex items-center justify-center"
+          title="Linha do Tempo"
+        >
+          <Clock className="w-[18px] h-[18px] text-orange-400" />
+        </button>
+        {label && <span className="hidden lg:inline text-[10px] font-medium text-orange-300/80">{label}</span>}
+      </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

@@ -158,7 +158,10 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
       )}
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] max-h-[80vh] overflow-y-auto">
+        <SheetContent
+          side="right"
+          className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card))] w-full sm:max-w-md lg:max-w-lg overflow-y-auto p-4"
+        >
           <SheetHeader>
             <SheetTitle className="text-[hsl(var(--dark-text))]">
               📝 Anotações — {bookAbbrev.toUpperCase()} {chapter}{verse ? `:${verse}` : ""}

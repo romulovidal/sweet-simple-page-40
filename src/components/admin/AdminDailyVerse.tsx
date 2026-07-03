@@ -234,8 +234,8 @@ const AdminDailyVerse = () => {
 
   if (editing) {
     return (
-      <div className="space-y-4 pb-24">
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-3 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))] flex items-center gap-3">
+      <div className="space-y-4 pb-32">
+        <div className="sticky top-0 z-20 -mx-5 px-5 py-3 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))] flex items-center gap-3">
           <button aria-label="Fechar" onClick={() => {
             setEditing(null);
             setSelectedBook("");
@@ -244,7 +244,7 @@ const AdminDailyVerse = () => {
             setChapterVerses([]);
           }}><X className="w-5 h-5" /></button>
           <h2 className="text-lg font-bold flex-1">{editing.id ? "Editar" : "Novo"} Versículo</h2>
-          <Button size="sm" onClick={saveVerse} disabled={fetchingText}>
+          <Button size="sm" onClick={saveVerse} disabled={fetchingText} className="hidden sm:inline-flex">
             {fetchingText ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
             Salvar
           </Button>

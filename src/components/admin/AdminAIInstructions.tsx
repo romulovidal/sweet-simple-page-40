@@ -7,9 +7,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import type { AIFeatures } from "@/hooks/useAIFeatures";
+import type { AppFeatures } from "@/hooks/useAppFeatures";
 
 // ---------- Defaults (kept in sync with the previous individual admin screens) ----------
 
@@ -77,17 +80,21 @@ const TOOL_DEFAULTS: Record<ToolKey, string> = {
 
 type Kind = "exegetai" | "ask-bible" | "tool";
 
+// Each card also maps to a persisted enable/disable flag. AI tool flags live
+// in admin_settings.ai_features; ask_bible lives in admin_settings.app_features.
+type FeatureFlag =
+  | { store: "ai_features"; key: keyof AIFeatures }
+  | { store: "app_features"; key: keyof AppFeatures };
+
 interface PromptCard {
-  id: string;                 // stable id used in the UI
+  id: string;
   kind: Kind;
-  toolKey?: ToolKey;          // present when kind === "tool"
+  toolKey?: ToolKey;
   label: string;
   description: string;
   icon: typeof BookOpen;
-  accent: string;             // gradient bg
-  ring: string;
-  iconColor: string;
   defaultPrompt: string;
+  flag: FeatureFlag;
 }
 
 interface Category {
@@ -105,29 +112,29 @@ const CATEGORIES: Category[] = [
         id: "exegetai", kind: "exegetai",
         label: "ExegetAI", description: "Exegese completa do texto bíblico",
         icon: Sparkles,
-        accent: "from-amber-500/25 to-amber-500/5", ring: "ring-amber-400/40", iconColor: "text-amber-300",
         defaultPrompt: EXEGETAI_DEFAULT,
+        flag: { store: "ai_features", key: "exegetai" },
       },
       {
         id: "summary", kind: "tool", toolKey: "summary",
         label: "Resumo do Capítulo", description: "Resumo acadêmico ao abrir um capítulo",
         icon: BookOpen,
-        accent: "from-blue-500/20 to-blue-500/5", ring: "ring-blue-400/40", iconColor: "text-blue-300",
         defaultPrompt: TOOL_DEFAULTS.summary,
+        flag: { store: "ai_features", key: "summary" },
       },
       {
         id: "word-meaning", kind: "tool", toolKey: "word-meaning",
         label: "Significado Original", description: "Palavras em hebraico e grego",
         icon: Languages,
-        accent: "from-cyan-500/20 to-cyan-500/5", ring: "ring-cyan-400/40", iconColor: "text-cyan-300",
         defaultPrompt: TOOL_DEFAULTS["word-meaning"],
+        flag: { store: "ai_features", key: "word_meaning" },
       },
       {
         id: "timeline", kind: "tool", toolKey: "timeline",
         label: "Linha do Tempo", description: "Contexto histórico e eventos",
         icon: Clock,
-        accent: "from-orange-500/20 to-orange-500/5", ring: "ring-orange-400/40", iconColor: "text-orange-300",
         defaultPrompt: TOOL_DEFAULTS.timeline,
+        flag: { store: "ai_features", key: "timeline" },
       },
     ],
   },
@@ -139,15 +146,15 @@ const CATEGORIES: Category[] = [
         id: "devotional", kind: "tool", toolKey: "devotional",
         label: "Devocional Diário", description: "Reflexão para o versículo do dia",
         icon: Heart,
-        accent: "from-purple-500/20 to-purple-500/5", ring: "ring-purple-400/40", iconColor: "text-purple-300",
         defaultPrompt: TOOL_DEFAULTS.devotional,
+        flag: { store: "ai_features", key: "devotional" },
       },
       {
         id: "ask-bible", kind: "ask-bible",
         label: "Pergunte à Bíblia", description: "Chat pastoral com o usuário",
         icon: MessageCircleQuestion,
-        accent: "from-pink-500/20 to-pink-500/5", ring: "ring-pink-400/40", iconColor: "text-pink-300",
         defaultPrompt: ASK_BIBLE_DEFAULT,
+        flag: { store: "app_features", key: "ask_bible" },
       },
     ],
   },
@@ -159,19 +166,25 @@ const CATEGORIES: Category[] = [
         id: "connections", kind: "tool", toolKey: "connections",
         label: "Conexões Bíblicas", description: "Referências cruzadas e paralelos",
         icon: Link2,
-        accent: "from-emerald-500/20 to-emerald-500/5", ring: "ring-emerald-400/40", iconColor: "text-emerald-300",
         defaultPrompt: TOOL_DEFAULTS.connections,
+        flag: { store: "ai_features", key: "connections" },
       },
       {
         id: "plan-generator", kind: "tool", toolKey: "plan-generator",
         label: "Gerador de Planos", description: "Cria planos de leitura por tema",
         icon: Wand2,
-        accent: "from-rose-500/20 to-rose-500/5", ring: "ring-rose-400/40", iconColor: "text-rose-300",
         defaultPrompt: TOOL_DEFAULTS["plan-generator"],
+        flag: { store: "ai_features", key: "plan_generator" },
       },
     ],
   },
 ];
+
+const DEFAULT_AI_FEATURES: AIFeatures = {
+  summary: true, devotional: true, connections: true,
+  word_meaning: true, timeline: true, plan_generator: true, exegetai: true,
+};
+const DEFAULT_APP_FEATURES: Partial<AppFeatures> = { ask_bible: true };
 
 // ---------- Component ----------
 
@@ -182,16 +195,21 @@ const AdminAIInstructions = () => {
   const [exegetPrompt, setExegetPrompt] = useState(EXEGETAI_DEFAULT);
   const [askBiblePrompt, setAskBiblePrompt] = useState(ASK_BIBLE_DEFAULT);
   const [tools, setTools] = useState<Record<ToolKey, string>>(TOOL_DEFAULTS);
+  const [aiFeatures, setAiFeatures] = useState<AIFeatures>(DEFAULT_AI_FEATURES);
+  const [appFeatures, setAppFeatures] = useState<Partial<AppFeatures>>(DEFAULT_APP_FEATURES);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<PromptCard | null>(null);
   const [draft, setDraft] = useState("");
 
   useEffect(() => {
     (async () => {
-      const [exRes, askRes, toolsRes] = await Promise.all([
+      const [exRes, askRes, toolsRes, aiFeatRes, appFeatRes] = await Promise.all([
         supabase.from("admin_settings").select("value").eq("key", "exegetai_prompt").maybeSingle(),
         supabase.from("admin_settings").select("value").eq("key", "ask_bible_prompt").maybeSingle(),
         supabase.from("admin_settings").select("value").eq("key", "ai_tool_prompts").maybeSingle(),
+        supabase.from("admin_settings").select("value").eq("key", "ai_features").maybeSingle(),
+        supabase.from("admin_settings").select("value").eq("key", "app_features").maybeSingle(),
       ]);
 
       if (exRes.data?.value && typeof exRes.data.value === "object" && "prompt" in (exRes.data.value as any)) {
@@ -206,6 +224,12 @@ const AdminAIInstructions = () => {
       if (toolsRes.data?.value && typeof toolsRes.data.value === "object") {
         setTools({ ...TOOL_DEFAULTS, ...(toolsRes.data.value as Partial<Record<ToolKey, string>>) });
       }
+      if (aiFeatRes.data?.value && typeof aiFeatRes.data.value === "object") {
+        setAiFeatures({ ...DEFAULT_AI_FEATURES, ...(aiFeatRes.data.value as Partial<AIFeatures>) });
+      }
+      if (appFeatRes.data?.value && typeof appFeatRes.data.value === "object") {
+        setAppFeatures({ ...DEFAULT_APP_FEATURES, ...(appFeatRes.data.value as Partial<AppFeatures>) });
+      }
       setLoading(false);
     })();
   }, []);
@@ -214,6 +238,41 @@ const AdminAIInstructions = () => {
     if (card.kind === "exegetai") return exegetPrompt;
     if (card.kind === "ask-bible") return askBiblePrompt;
     return tools[card.toolKey!];
+  };
+
+  const isEnabled = (card: PromptCard): boolean => {
+    if (card.flag.store === "ai_features") return aiFeatures[card.flag.key] ?? true;
+    return (appFeatures[card.flag.key] as boolean | undefined) ?? true;
+  };
+
+  const toggleEnabled = async (card: PromptCard) => {
+    setTogglingId(card.id);
+    try {
+      if (card.flag.store === "ai_features") {
+        const next = { ...aiFeatures, [card.flag.key]: !aiFeatures[card.flag.key] };
+        const { error } = await (supabase.from("admin_settings") as any).upsert(
+          { key: "ai_features", value: next as unknown as Record<string, unknown>, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+        if (error) throw error;
+        setAiFeatures(next);
+        toast.success(`${card.label} ${next[card.flag.key] ? "ativado" : "desativado"}`);
+      } else {
+        const current = (appFeatures[card.flag.key] as boolean | undefined) ?? true;
+        const next = { ...appFeatures, [card.flag.key]: !current };
+        const { error } = await (supabase.from("admin_settings") as any).upsert(
+          { key: "app_features", value: next as unknown as Record<string, unknown>, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+        if (error) throw error;
+        setAppFeatures(next);
+        toast.success(`${card.label} ${!current ? "ativado" : "desativado"}`);
+      }
+    } catch {
+      toast.error("Erro ao alterar estado");
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const openEditor = (card: PromptCard) => {
@@ -283,9 +342,9 @@ const AdminAIInstructions = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-[hsl(var(--dark-text))]">Instruções da IA</h2>
+        <h2 className="text-lg font-bold text-[hsl(var(--dark-text))]">IAs do App</h2>
         <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">
-          Todos os prompts das IAs do app, agrupados por categoria. Clique em <strong>Editar</strong> para personalizar.
+          Ative, desative ou edite o prompt de cada inteligência artificial. Tudo em um só lugar.
         </p>
       </div>
 
@@ -297,17 +356,19 @@ const AdminAIInstructions = () => {
             </h3>
             <span className="text-[10px] text-[hsl(var(--dark-muted))]/70">{cat.subtitle}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2.5">
             {cat.items.map((card) => {
               const Icon = card.icon;
               const current = getCurrent(card);
               const isCustom = current.trim() !== card.defaultPrompt.trim();
+              const enabled = isEnabled(card);
+              const busy = togglingId === card.id;
               return (
                 <div
                   key={card.id}
-                  className={`rounded-2xl p-4 bg-gradient-to-br ${card.accent} ring-1 ${card.ring} flex items-center gap-3`}
+                  className={`rounded-2xl p-3.5 bg-[hsl(var(--dark-card))]/70 ring-1 ring-[hsl(var(--streak-orange)/0.2)] flex items-center gap-3 transition-opacity ${enabled ? "" : "opacity-55"}`}
                 >
-                  <span className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center bg-[hsl(var(--dark-card))]/80 ${card.iconColor}`}>
+                  <span className={`w-11 h-11 shrink-0 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] ${enabled ? "text-[hsl(var(--streak-orange))]" : "text-[hsl(var(--dark-muted))]"}`}>
                     <Icon className="w-5 h-5" />
                   </span>
                   <div className="flex-1 min-w-0">
@@ -318,18 +379,31 @@ const AdminAIInstructions = () => {
                           custom
                         </span>
                       )}
+                      {!enabled && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-bg))] px-1.5 py-0.5 rounded-full">
+                          off
+                        </span>
+                      )}
                     </div>
                     <p className="text-[11px] text-[hsl(var(--dark-muted))] truncate">{card.description}</p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditor(card)}
-                    className="shrink-0 h-9 px-3 bg-[hsl(var(--dark-card))]/60 border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
-                  >
-                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                    Editar
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Switch
+                      checked={enabled}
+                      disabled={busy}
+                      onCheckedChange={() => toggleEnabled(card)}
+                      aria-label={enabled ? `Desativar ${card.label}` : `Ativar ${card.label}`}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditor(card)}
+                      className="h-9 px-3 bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))]"
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -342,7 +416,7 @@ const AdminAIInstructions = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[hsl(var(--dark-text))]">
               {editing && (
-                <span className={`w-8 h-8 rounded-xl grid place-items-center bg-[hsl(var(--dark-card))] ${editing.iconColor}`}>
+                <span className="w-8 h-8 rounded-xl grid place-items-center bg-[hsl(var(--dark-card))] text-[hsl(var(--streak-orange))]">
                   <editing.icon className="w-4 h-4" />
                 </span>
               )}

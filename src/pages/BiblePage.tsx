@@ -45,6 +45,59 @@ const HIGHLIGHT_COLORS = [
   { name: "Laranja", value: "#fb923c" },
 ];
 
+type BibleNavigationView =
+  | { kind: "books" }
+  | { kind: "chapters"; bookAbbrev: string }
+  | { kind: "chapter"; bookAbbrev: string; chapter: number };
+
+const findBibleBookByAbbrev = (bookAbbrev: string) =>
+  bibleBooks.find((book) => book.apiAbbrev === bookAbbrev || book.abbrev === bookAbbrev);
+
+const isBibleNavigationView = (value: unknown): value is BibleNavigationView => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<BibleNavigationView>;
+  if (candidate.kind === "books") return true;
+  if (candidate.kind === "chapters" && typeof candidate.bookAbbrev === "string") {
+    return !!findBibleBookByAbbrev(candidate.bookAbbrev);
+  }
+  if (
+    candidate.kind === "chapter" &&
+    typeof candidate.bookAbbrev === "string" &&
+    typeof candidate.chapter === "number"
+  ) {
+    const book = findBibleBookByAbbrev(candidate.bookAbbrev);
+    return !!book && candidate.chapter >= 1 && candidate.chapter <= book.chapters;
+  }
+  return false;
+};
+
+const getBibleNavigationView = (
+  book: BibleBook | null,
+  chapter: number | null
+): BibleNavigationView => {
+  if (!book) return { kind: "books" };
+  if (!chapter) return { kind: "chapters", bookAbbrev: book.apiAbbrev };
+  return { kind: "chapter", bookAbbrev: book.apiAbbrev, chapter };
+};
+
+const isSameBibleNavigationView = (a: unknown, b: BibleNavigationView) => {
+  if (!isBibleNavigationView(a)) return false;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "books") return true;
+  if (b.kind === "books") return true;
+  if (a.bookAbbrev !== b.bookAbbrev) return false;
+  return a.kind === "chapters" || a.chapter === (b as { kind: "chapter"; chapter: number }).chapter;
+};
+
+const writeBibleHistory = (view: BibleNavigationView, mode: "push" | "replace") => {
+  const state = { ...(window.history.state || {}), __bibleView: view };
+  if (mode === "replace") {
+    window.history.replaceState(state, "", window.location.href);
+  } else {
+    window.history.pushState(state, "", window.location.href);
+  }
+};
+
 const BiblePage = () => {
   const { features: aiFeatures } = useAIFeatures();
   const { features: appFeatures } = useAppFeatures();
@@ -79,13 +132,67 @@ const BiblePage = () => {
   const [, setStreak] = useLocalStorage<StreakData>("streak", { current: 0, lastDate: "", history: [] });
 
   // Native-like back behavior: closes overlays/modals before navigating away.
-  // Verse/chapter back interception was removed because it was breaking verse selection on mobile.
   useBackHandler(showColorPicker, () => setShowColorPicker(false));
   useBackHandler(showShareMenu, () => setShowShareMenu(false));
   useBackHandler(showCompare, () => setShowCompare(false));
   useBackHandler(showVersionPicker, () => setShowVersionPicker(false));
   useBackHandler(showPresentation, () => setShowPresentation(false));
   useBackHandler(!!imageVerse, () => setImageVerse(null));
+
+  const applyBibleNavigationView = useCallback((nextView: BibleNavigationView) => {
+    if (nextView.kind === "books") {
+      setSelectedBook(null);
+      setSelectedChapter(null);
+      setHighlightedVerse(null);
+      setVerses([]);
+      setEpigraphs([]);
+      setSelectedVerses(new Set());
+      return;
+    }
+
+    const book = findBibleBookByAbbrev(nextView.bookAbbrev);
+    if (!book) return;
+
+    setSelectedBook(book);
+    setTestament(book.testament);
+    setHighlightedVerse(null);
+    setSelectedVerses(new Set());
+
+    if (nextView.kind === "chapters") {
+      setSelectedChapter(null);
+      setVerses([]);
+      setEpigraphs([]);
+      return;
+    }
+
+    setSelectedChapter(nextView.chapter);
+  }, []);
+
+  useEffect(() => {
+    const currentHistoryView = window.history.state?.__bibleView;
+    if (isBibleNavigationView(currentHistoryView)) {
+      applyBibleNavigationView(currentHistoryView);
+    } else {
+      writeBibleHistory(getBibleNavigationView(selectedBook, selectedChapter), "replace");
+    }
+
+    const onPop = (event: PopStateEvent) => {
+      const nextView = event.state?.__bibleView;
+      if (isBibleNavigationView(nextView)) applyBibleNavigationView(nextView);
+    };
+
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // Only bind once on mount; selected state changes are mirrored below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyBibleNavigationView]);
+
+  useEffect(() => {
+    const nextView = getBibleNavigationView(selectedBook, selectedChapter);
+    if (!isSameBibleNavigationView(window.history.state?.__bibleView, nextView)) {
+      writeBibleHistory(nextView, "push");
+    }
+  }, [selectedBook, selectedChapter]);
 
   // On mount, restore last reading position if no search params
   useEffect(() => {
@@ -418,11 +525,7 @@ const BiblePage = () => {
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
           <button
             onClick={() => {
-              setSelectedChapter(null);
-              setHighlightedVerse(null);
-              setVerses([]);
-              setEpigraphs([]);
-              setSelectedVerses(new Set());
+              window.history.back();
             }}
             className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
           >
@@ -788,8 +891,7 @@ const BiblePage = () => {
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 max-w-4xl mx-auto">
           <button
             onClick={() => {
-              setSelectedBook(null);
-              setHighlightedVerse(null);
+              window.history.back();
             }}
             className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
           >

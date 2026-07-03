@@ -105,12 +105,30 @@ const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
 const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
 const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 
+const isSameView = (a: View, b: View) =>
+  a.kind === b.kind && (a.kind === "home" || ("id" in a && "id" in b && a.id === b.id));
+
+const isAdminView = (value: unknown): value is View => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<View>;
+  if (candidate.kind === "home") return true;
+  if (candidate.kind === "category" && typeof candidate.id === "string") return !!findSection(candidate.id);
+  if (candidate.kind === "tool" && typeof candidate.id === "string") return !!findTool(candidate.id);
+  return false;
+};
+
+const writeAdminHistory = (view: View, mode: "push" | "replace") => {
+  const state = { ...(window.history.state || {}), __adminView: view };
+  if (mode === "replace") {
+    window.history.replaceState(state, "", window.location.href);
+  } else {
+    window.history.pushState(state, "", window.location.href);
+  }
+};
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [view, setView] = useState<View>({ kind: "home" });
-  // Stack of previously visited views (excluding the current one). We use this
-  // to power both the in-app back button and the browser back button.
-  const [history, setHistory] = useState<View[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -131,29 +149,19 @@ const AdminPanel = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Bind the admin view stack to the browser history so the phone/OS back
-  // button pops one admin view at a time instead of leaving /admin.
+  // Each admin screen is mirrored into the browser history. This makes the
+  // phone/OS back button return one internal step at a time before leaving.
   useEffect(() => {
-    // Seed one entry so the very first back press pops us out of admin
-    // (matching the "home" state) instead of leaving immediately.
-    window.history.pushState({ __admin: true, kind: "home" }, "");
+    const currentHistoryView = window.history.state?.__adminView;
+    if (isAdminView(currentHistoryView)) {
+      setView(currentHistoryView);
+    } else {
+      writeAdminHistory({ kind: "home" }, "replace");
+    }
 
-    const onPop = () => {
-      // If we still have an admin view to pop, consume it and re-push a
-      // sentinel entry so subsequent back presses keep working.
-      setHistory((prev) => {
-        if (prev.length === 0) {
-          // Nothing left in the admin stack — leave the panel entirely.
-          navigate("/");
-          return prev;
-        }
-        const next = [...prev];
-        const previousView = next.pop()!;
-        setView(previousView);
-        // Re-push a sentinel so the next OS back press fires popstate again.
-        window.history.pushState({ __admin: true }, "");
-        return next;
-      });
+    const onPop = (event: PopStateEvent) => {
+      const nextView = event.state?.__adminView;
+      if (isAdminView(nextView)) setView(nextView);
     };
 
     window.addEventListener("popstate", onPop);
@@ -162,13 +170,10 @@ const AdminPanel = () => {
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate("/admin"); };
 
-  // Central navigation helper: pushes the current view onto the stack, updates
-  // the current view and mirrors the change to browser history so the OS back
-  // button works everywhere in the admin.
   const navigateTo = (next: View) => {
-    setHistory((prev) => [...prev, view]);
+    if (isSameView(view, next)) return;
     setView(next);
-    window.history.pushState({ __admin: true, kind: next.kind }, "");
+    writeAdminHistory(next, "push");
   };
 
   const openTool = (id: string) => navigateTo({ kind: "tool", id: id as ToolId });
@@ -178,13 +183,9 @@ const AdminPanel = () => {
     navigateTo({ kind: "home" });
   };
 
-  // In-app back button — delegate to the browser so both back paths behave
-  // identically (single source of truth = window.history).
+  // In-app back button — delegate to browser history so it behaves exactly
+  // like the phone/OS back button.
   const goBack = () => {
-    if (history.length === 0) {
-      navigate("/");
-      return;
-    }
     window.history.back();
   };
 

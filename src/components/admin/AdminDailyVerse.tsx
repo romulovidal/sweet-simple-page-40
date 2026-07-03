@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen, Eraser } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Loader2, Calendar, Languages, Clock, Sparkles, BookOpen, Eraser, Send } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BIBLE_VERSIONS,
@@ -34,6 +34,26 @@ const AdminDailyVerse = () => {
   const [queue, setQueue] = useState<VerseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const resendDailyVerse = async () => {
+    setResending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-verse-push", {
+        method: "POST",
+        body: {},
+      });
+      if (error) throw error;
+      toast.success(
+        `Push reenviado! ${data?.sent || 0} entregues${data?.failed ? `, ${data.failed} falhas` : ""} • ${data?.verse || ""}`
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao reenviar versículo do dia");
+    } finally {
+      setResending(false);
+    }
+  };
 
   // Selector state
   const [selectedBook, setSelectedBook] = useState<string>("");
@@ -413,6 +433,21 @@ const AdminDailyVerse = () => {
 
   return (
     <div className="space-y-4">
+      {/* Reenviar push do versículo do dia */}
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Reenviar Versículo do Dia</span>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3 leading-relaxed">
+          Dispara agora o push com o mesmo versículo exibido hoje no app.
+        </p>
+        <Button onClick={resendDailyVerse} disabled={resending} className="w-full" size="sm">
+          {resending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+          {resending ? "Enviando..." : "Reenviar push agora"}
+        </Button>
+      </div>
+
       {/* Mode toggle */}
       <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
         <div className="flex items-center justify-between">

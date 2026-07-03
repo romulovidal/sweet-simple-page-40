@@ -5,6 +5,56 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function generateInviteMessage(params: {
+  cultoName: string;
+  timeStr: string;
+  minutesBefore: number;
+  reminderLabel: string;
+}): Promise<string | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+  const { cultoName, timeStr, minutesBefore, reminderLabel } = params;
+
+  const timing =
+    minutesBefore >= 12 * 60
+      ? `é amanhã às ${timeStr}`
+      : minutesBefore >= 60
+      ? `começa em ${reminderLabel}, às ${timeStr}`
+      : `começa em ${reminderLabel}!`;
+
+  const system =
+    "Você escreve convites curtos e acolhedores em português do Brasil para lembrar membros de uma igreja evangélica sobre o culto. Tom pastoral, caloroso, sem clichês repetidos. Sem hashtags. Use no máximo 1 emoji. Máximo 180 caracteres. Retorne APENAS o texto da notificação, sem aspas ou títulos.";
+  const user = `Escreva uma mensagem única e original convidando a participar do culto "${cultoName}", que ${timing}. Varie a inspiração bíblica a cada geração. Não repita o nome do culto no início.`;
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.error("AI gateway error", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    if (!text) return null;
+    return text.replace(/^["'`]+|["'`]+$/g, "").slice(0, 240);
+  } catch (e) {
+    console.error("AI generation failed", e);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -69,9 +119,17 @@ Deno.serve(async (req) => {
       const [h, m] = schedule.time.split(":").map(Number);
       const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-      const pushBody = body.custom_message?.trim()
-        ? body.custom_message.trim()
-        : `Lembrete: o culto "${schedule.name}" será às ${timeStr}. Prepare seu coração! 🙏`;
+      let pushBody = body.custom_message?.trim() || "";
+      if (!pushBody) {
+        const ai = await generateInviteMessage({
+          cultoName: schedule.name,
+          timeStr,
+          minutesBefore: 60,
+          reminderLabel: "instantes",
+        });
+        pushBody =
+          ai || `Lembrete: o culto "${schedule.name}" será às ${timeStr}. Prepare seu coração! 🙏`;
+      }
 
       const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
         method: "POST",
@@ -164,9 +222,18 @@ Deno.serve(async (req) => {
             ? `${Math.round(reminder.minutes_before / 60)}h`
             : `${reminder.minutes_before}min`;
 
-          const pushBody = reminder.message && reminder.message.trim()
-            ? reminder.message.trim()
-            : `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`;
+          let pushBody = reminder.message && reminder.message.trim() ? reminder.message.trim() : "";
+          if (!pushBody) {
+            const ai = await generateInviteMessage({
+              cultoName: schedule.name,
+              timeStr,
+              minutesBefore: reminder.minutes_before,
+              reminderLabel,
+            });
+            pushBody =
+              ai ||
+              `Faltam ${reminderLabel} para o culto de hoje às ${timeStr}. Prepare seu coração! 🙏`;
+          }
 
           const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
             method: "POST",

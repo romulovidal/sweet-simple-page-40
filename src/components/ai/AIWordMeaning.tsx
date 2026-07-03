@@ -62,7 +62,7 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
         >
           <Languages className="w-[18px] h-[18px] text-cyan-400" />
         </button>
-        {label && <span className="hidden lg:inline text-[10px] font-medium text-cyan-300/80">{label}</span>}
+        {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-muted">{label}</span>}
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>

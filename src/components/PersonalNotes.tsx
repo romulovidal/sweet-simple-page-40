@@ -231,7 +231,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
               </span>
             )}
           </button>
-          {label && <span className="hidden lg:inline text-[10px] font-medium text-yellow-300/80">{label}</span>}
+          {label && <span className="hidden lg:inline text-[10px] font-medium text-dark-muted">{label}</span>}
         </div>
       ) : (
         <button

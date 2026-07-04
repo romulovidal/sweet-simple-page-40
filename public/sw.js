@@ -3,6 +3,7 @@ var SW_VERSION = "__BUILD_VERSION__";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
+var HARPA_CACHE = "harpa-offline-v1";
 var OFFLINE_FALLBACK_URL = "/";
 var CORE_URLS = [
   "/",
@@ -40,6 +41,7 @@ function isCacheableRequest(requestUrl) {
     requestUrl.pathname === "/" ||
     requestUrl.pathname.indexOf("/assets/") === 0 ||
     requestUrl.pathname.indexOf("/biblias/") === 0 ||
+    requestUrl.pathname.indexOf("/harpa/") === 0 ||
     requestUrl.pathname === "/manifest.json" ||
     requestUrl.pathname === "/admin-manifest.json" ||
     requestUrl.pathname === "/logo.png" ||
@@ -49,6 +51,10 @@ function isCacheableRequest(requestUrl) {
 
 function isBibleRequest(requestUrl) {
   return requestUrl.pathname.indexOf("/biblias/") === 0;
+}
+
+function isHarpaRequest(requestUrl) {
+  return requestUrl.pathname.indexOf("/harpa/") === 0;
 }
 
 function isHashedAsset(requestUrl) {
@@ -122,6 +128,28 @@ self.addEventListener("fetch", function(event) {
           });
         });
       })()
+    );
+    return;
+  }
+
+  // Harpa Cristã JSON — cache-first para funcionar 100% offline.
+  if (isHarpaRequest(url)) {
+    event.respondWith(
+      caches.open(HARPA_CACHE).then(function(cache) {
+        return cache.match(request).then(function(cached) {
+          if (cached) {
+            // revalida em segundo plano
+            fetch(request, { cache: "no-store" }).then(function(response) {
+              if (response && response.ok) cache.put(request, response.clone());
+            }).catch(function() {});
+            return cached;
+          }
+          return fetch(request, { cache: "no-store" }).then(function(response) {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          }).catch(function() { return Response.error(); });
+        });
+      })
     );
     return;
   }

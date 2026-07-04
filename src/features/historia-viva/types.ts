@@ -125,3 +125,56 @@ export interface HistoriaBook {
 
 export type EntityKind = "character" | "event" | "place" | "book" | "period";
 export interface EntityRef { kind: EntityKind; id: string }
+
+// ---------------- Quiz ----------------
+export type QuizDifficulty = "facil" | "medio" | "dificil";
+
+export interface QuizQuestion {
+  id: string;
+  prompt: string;
+  choices: string[]; // length 4
+  correct: number; // 0..3
+  explanation: string;
+  ref?: string;
+  entityRef?: EntityRef;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  difficulty: QuizDifficulty;
+  color?: string; // hsl triplet
+  periodId?: PeriodId;
+  questions: QuizQuestion[];
+}
+
+export interface QuizAttempt {
+  id?: string;
+  quiz_id: string;
+  score: number;
+  total: number;
+  duration_ms: number;
+  answers?: number[];
+  created_at?: string;
+}
+
+// ---------------- Plans ----------------
+export interface PlanDay {
+  index: number; // 1-based
+  title: string;
+  summary: string;
+  readings: string[]; // bible refs
+  entities?: EntityRef[];
+}
+
+export interface ReadingPlan {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color?: string; // hsl triplet
+  periodId?: PeriodId;
+  days: PlanDay[];
+}

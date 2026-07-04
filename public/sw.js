@@ -1,5 +1,4 @@
-// __BUILD_VERSION__ é substituído automaticamente por scripts/stamp-sw.mjs no build.
-// Em dev o valor "dev" fica, mas o SW nem se registra fora de produção.
+// Versão substituída no build por scripts/stamp-sw.mjs (procura pelo literal abaixo).
 var SW_VERSION = "__BUILD_VERSION__";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;

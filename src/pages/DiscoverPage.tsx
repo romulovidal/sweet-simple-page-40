@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Sparkles, History, MapPin, Users, ChevronRight } from "lucide-react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import { searchVerses } from "@/services/bibleApi";
 import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
-import VisualTimeline from "@/components/VisualTimeline";
-import BiblicalMaps from "@/components/BiblicalMaps";
-import BibleCharacters from "@/components/BibleCharacters";
-import { BIBLE_TIMELINE } from "@/data/bibleTimeline";
-import { BIBLE_MAPS } from "@/data/bibleMaps";
-import { BIBLE_CHARACTERS } from "@/data/bibleCharacters";
+import StudyHub from "@/components/study/StudyHub";
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -44,39 +39,6 @@ const popularVerses = [
 ];
 
 const quickPrompts = ["joão 3:16", "salmos 23", "ansiedade", "cura", "propósito"];
-
-const studyCards = [
-  {
-    id: "timeline",
-    event: "open-visual-timeline",
-    label: "Linha do Tempo",
-    sub: "Da Criação ao Apocalipse",
-    icon: History,
-    color: "38 92% 55%",
-    count: BIBLE_TIMELINE.length,
-    countLabel: "eras",
-  },
-  {
-    id: "maps",
-    event: "open-biblical-maps",
-    label: "Mapas Bíblicos",
-    sub: "Terra Santa e jornadas",
-    icon: MapPin,
-    color: "142 71% 45%",
-    count: BIBLE_MAPS.length,
-    countLabel: "jornadas",
-  },
-  {
-    id: "characters",
-    event: "open-bible-characters",
-    label: "Personagens",
-    sub: "Vidas · momentos · versículos",
-    icon: Users,
-    color: "217 91% 60%",
-    count: BIBLE_CHARACTERS.length,
-    countLabel: "perfis",
-  },
-];
 
 const dedupeResults = (items: DiscoverResult[]) =>
   items.filter(

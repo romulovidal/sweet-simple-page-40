@@ -255,6 +255,7 @@ const BiblePage = () => {
           : null,
     );
     setHighlightedVerses(parsedVerses);
+    console.log("[BiblePage effect] setHighlightedVerses:", Array.from(parsedVerses));
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 

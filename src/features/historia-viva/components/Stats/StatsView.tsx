@@ -110,7 +110,7 @@ const StatsView = () => {
               <div key={p.id} className="flex items-center gap-2">
                 <span className="text-[10px] w-24 truncate text-dark-text">{p.icon} {p.name}</span>
                 <div className="flex-1 h-2 rounded-full bg-dark-card-hover overflow-hidden">
-                  <div className="h-full transition-all" style={{ width: `${w}%`, background: `hsl(${p.color})` }} />
+                  <div className="h-full transition-all bg-primary" style={{ width: `${w}%` }} />
                 </div>
                 <span className="text-[10px] font-bold text-dark-muted w-6 text-right">{v}</span>
               </div>
@@ -138,7 +138,6 @@ const StatsView = () => {
               const plan = PLANS.find((p) => p.id === pid);
               if (!plan) return null;
               const pct = Math.round((d / plan.days.length) * 100);
-              const color = plan.color ?? "217 91% 60%";
               return (
                 <div key={pid}>
                   <div className="flex justify-between text-[11px] mb-1">
@@ -146,7 +145,7 @@ const StatsView = () => {
                     <span className="text-dark-muted">{d}/{plan.days.length} · {pct}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-dark-card-hover overflow-hidden">
-                    <div className="h-full" style={{ width: `${pct}%`, background: `hsl(${color})` }} />
+                    <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );

@@ -9,6 +9,7 @@ import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
 import PostPreviewDialog from "@/components/PostPreviewDialog";
 import PageHead from "@/components/PageHead";
+import harpaAtalaiaIcon from "@/assets/harpa-atalaia-icon-v2.png";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -196,8 +197,26 @@ const HomePage = () => {
         breadcrumbs={[{ name: "Início", path: "/" }]}
       />
       {/* Header */}
-      <header className="px-5 pt-12 pb-4 flex items-center justify-between lg:pt-8">
+      <header className="relative px-5 pt-12 pb-4 flex items-center justify-between lg:pt-8">
         <div data-tour="home-streak"><StreakBadge days={getDisplayStreak(streak)} /></div>
+        <button
+          type="button"
+          onClick={() => navigate("/harpa")}
+          aria-label="Abrir Harpa Atalaia"
+          className="absolute left-1/2 -translate-x-1/2 top-11 lg:top-7 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-b from-amber-500/10 to-transparent border border-amber-500/25 active:scale-95 transition-transform"
+        >
+          <img
+            src={harpaAtalaiaIcon}
+            alt=""
+            aria-hidden="true"
+            width={20}
+            height={20}
+            className="w-5 h-5 object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.55)]"
+          />
+          <span className="text-[13px] font-semibold tracking-wide bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent">
+            Harpa Atalaia
+          </span>
+        </button>
         <button
           onClick={() => navigate("/descubra")}
           data-tour="home-search"

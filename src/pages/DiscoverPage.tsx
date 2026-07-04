@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Sparkles, History, MapPin, Users, ChevronRight } from "lucide-react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import { searchVerses } from "@/services/bibleApi";
 import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolveBookAbbrev } from "@/lib/bibleSearch";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
-import VisualTimeline from "@/components/VisualTimeline";
-import BiblicalMaps from "@/components/BiblicalMaps";
-import BibleCharacters from "@/components/BibleCharacters";
-import { BIBLE_TIMELINE } from "@/data/bibleTimeline";
-import { BIBLE_MAPS } from "@/data/bibleMaps";
-import { BIBLE_CHARACTERS } from "@/data/bibleCharacters";
+import StudyHub from "@/components/study/StudyHub";
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -44,39 +39,6 @@ const popularVerses = [
 ];
 
 const quickPrompts = ["joão 3:16", "salmos 23", "ansiedade", "cura", "propósito"];
-
-const studyCards = [
-  {
-    id: "timeline",
-    event: "open-visual-timeline",
-    label: "Linha do Tempo",
-    sub: "Da Criação ao Apocalipse",
-    icon: History,
-    color: "38 92% 55%",
-    count: BIBLE_TIMELINE.length,
-    countLabel: "eras",
-  },
-  {
-    id: "maps",
-    event: "open-biblical-maps",
-    label: "Mapas Bíblicos",
-    sub: "Terra Santa e jornadas",
-    icon: MapPin,
-    color: "142 71% 45%",
-    count: BIBLE_MAPS.length,
-    countLabel: "jornadas",
-  },
-  {
-    id: "characters",
-    event: "open-bible-characters",
-    label: "Personagens",
-    sub: "Vidas · momentos · versículos",
-    icon: Users,
-    color: "217 91% 60%",
-    count: BIBLE_CHARACTERS.length,
-    countLabel: "perfis",
-  },
-];
 
 const dedupeResults = (items: DiscoverResult[]) =>
   items.filter(
@@ -141,23 +103,6 @@ const DiscoverPage = () => {
       navigate(`/biblia?${params.toString()}`);
     },
     [navigate]
-  );
-
-  const openReferenceByString = useCallback(
-    (ref: string) => {
-      const parsed = parseBibleReference(ref);
-      if (parsed) {
-        openBibleReference(parsed.book.apiAbbrev, parsed.chapter, parsed.verse);
-        return;
-      }
-      // Fallback: "Livro 12" or "Livro 7—12"
-      const match = ref.match(/^(.+?)\s+(\d+)/);
-      if (!match) return;
-      const bookAbbrev = resolveBookAbbrev(match[1].trim());
-      if (!bookAbbrev) return;
-      openBibleReference(bookAbbrev, parseInt(match[2], 10));
-    },
-    [openBibleReference],
   );
 
   const handleSearch = useCallback(async (rawQuery: string) => {
@@ -369,62 +314,7 @@ const DiscoverPage = () => {
 
           {/* Estudos Bíblicos */}
           <div className="px-5 mb-10 max-w-4xl mx-auto">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">
-                Estudos Bíblicos
-              </h2>
-              <span className="text-[10px] text-dark-muted/70">
-                Aprenda tocando
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {studyCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <button
-                    key={card.id}
-                    onClick={() => window.dispatchEvent(new CustomEvent(card.event))}
-                    className="group relative overflow-hidden rounded-2xl p-4 text-left bg-dark-card active:scale-[0.98] transition-all"
-                    style={{
-                      border: `1px solid hsl(${card.color} / 0.25)`,
-                      boxShadow: `0 12px 30px -18px hsl(${card.color} / 0.55)`,
-                    }}
-                  >
-                    <div
-                      className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-40"
-                      style={{ background: `hsl(${card.color} / 0.55)` }}
-                    />
-                    <div className="relative flex items-start justify-between mb-6">
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
-                        style={{
-                          background: `linear-gradient(135deg, hsl(${card.color}) 0%, hsl(${card.color} / 0.6) 100%)`,
-                        }}
-                      >
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <ChevronRight
-                        className="w-4 h-4 mt-2 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-                        style={{ color: `hsl(${card.color})` }}
-                      />
-                    </div>
-                    <p className="relative text-sm font-bold text-dark-text leading-tight">
-                      {card.label}
-                    </p>
-                    <p className="relative text-[11px] text-dark-muted mt-0.5 leading-snug">
-                      {card.sub}
-                    </p>
-                    <p
-                      className="relative mt-3 text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: `hsl(${card.color})` }}
-                    >
-                      {card.count} {card.countLabel}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            <StudyHub />
           </div>
 
           <div className="px-5 mb-10 max-w-4xl mx-auto" data-tour="discover-categories">
@@ -465,17 +355,6 @@ const DiscoverPage = () => {
 
         </>
       )}
-
-      {/* Sheets that listen to global open-* events. Triggers hidden — the study cards above open them. */}
-      <VisualTimeline
-        hideTrigger
-        onNavigateReference={openReferenceByString}
-        onCharacterClick={(name) =>
-          window.dispatchEvent(new CustomEvent("open-bible-character", { detail: { name } }))
-        }
-      />
-      <BiblicalMaps hideTrigger onNavigateReference={openReferenceByString} />
-      <BibleCharacters hideTrigger onNavigateReference={openReferenceByString} />
     </div>
   );
 };

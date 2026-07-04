@@ -27,6 +27,11 @@ export interface BibleCharacter {
   bio: string;
   keyVerses: CharacterVerse[];
   moments: CharacterMoment[];
+  /**
+   * Falas em 1ª pessoa que o personagem "diz" quando se apresenta ao usuário.
+   * Cada string é uma fala/slide. Se omitido, um script é gerado a partir do bio.
+   */
+  presentation?: string[];
 }
 
 export const BIBLE_CHARACTERS: BibleCharacter[] = [
@@ -41,6 +46,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "38 92% 55%",
     icon: "🌟",
     bio: "Chamado por Deus para deixar sua terra e se tornar pai de uma grande nação. Sua fé foi contada como justiça, e por meio de sua descendência todas as famílias da terra seriam abençoadas.",
+    presentation: [
+      "Sou Abraão. Nasci em Ur dos caldeus, uma cidade rica em ídolos.",
+      "Um dia, o Senhor me disse: 'Sai da tua terra e da casa de teu pai para a terra que te mostrarei.'",
+      "Sem saber para onde ia, obedeci — e Ele me prometeu uma descendência como as estrelas do céu.",
+      "Cri no Senhor, e isso me foi imputado por justiça.",
+      "No monte Moriá, quando levantei o cutelo sobre Isaque, meu único filho, Deus mesmo proveu o cordeiro.",
+      "Por meio da minha semente, todas as famílias da terra seriam abençoadas — e essa semente é Cristo.",
+    ],
     keyVerses: [
       { reference: "Gênesis 12", note: "O chamado e a promessa" },
       { reference: "Gênesis 15", note: "Aliança e justificação pela fé" },
@@ -63,6 +76,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "38 80% 60%",
     icon: "🐑",
     bio: "Filho de Abraão e Sara, nascido milagrosamente na velhice. Prefigura Cristo no monte Moriá e continua a linhagem da aliança.",
+    presentation: [
+      "Sou Isaque, o filho do riso — porque minha mãe, Sara, riu quando ouviu a promessa.",
+      "Nasci quando meu pai já tinha cem anos; sou prova viva de que nada é impossível para Deus.",
+      "No monte Moriá, subi carregando a lenha do sacrifício, sem saber que o cordeiro era eu.",
+      "Mas Deus proveu — e ali entendi que a aliança seguiria por mim.",
+      "Casei-me com Rebeca e vi renascerem em meus filhos as promessas de meu pai.",
+    ],
     keyVerses: [
       { reference: "Gênesis 21", note: "Nascimento" },
       { reference: "Gênesis 22", note: "O carneiro no lugar" },
@@ -84,6 +104,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "28 85% 55%",
     icon: "🪜",
     bio: "Enganador que se tornou lutador com Deus. Após anos com Labão, retorna transformado e recebe o nome Israel. Seus 12 filhos formam as tribos.",
+    presentation: [
+      "Sou Jacó — o suplantador, o que segura pelo calcanhar.",
+      "Enganei meu pai e meu irmão pela bênção, e por isso tive de fugir.",
+      "Em Betel, vi uma escada tocando o céu, e o Senhor me disse: 'Estou contigo.'",
+      "Trabalhei catorze anos por Raquel, e vinte por Labão — o enganador foi enganado.",
+      "Numa noite, em Peniel, lutei com o próprio Deus até romper a alva. Ele me deu novo nome: Israel.",
+      "De mim nasceram doze filhos — as doze tribos do povo do Senhor.",
+    ],
     keyVerses: [
       { reference: "Gênesis 28", note: "A escada até o céu em Betel" },
       { reference: "Gênesis 32", note: "Luta com Deus em Peniel" },
@@ -104,6 +132,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "260 70% 65%",
     icon: "👑",
     bio: "Vendido pelos irmãos, tornou-se segundo homem do Egito. Preservou a vida de muitos e trouxe sua família ao Egito, cumprindo os planos de Deus.",
+    presentation: [
+      "Sou José, o sonhador. Meu pai me amava mais que aos outros, e por isso meus irmãos me odiaram.",
+      "Fui vendido como escravo, jogado numa cisterna e depois numa prisão do Egito.",
+      "Mas Deus estava comigo — em cada cela e em cada sonho.",
+      "Interpretei o sonho de Faraó e, num dia, passei do calabouço ao trono do Egito.",
+      "Quando meus irmãos vieram famintos, os perdoei: 'Vós intentastes o mal, mas Deus o tornou em bem.'",
+    ],
     keyVerses: [
       { reference: "Gênesis 37", note: "Sonhos e traição" },
       { reference: "Gênesis 41", note: "Interpretação dos sonhos de Faraó" },
@@ -125,6 +160,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "195 85% 55%",
     icon: "📜",
     bio: "Tirado das águas, criado no palácio de Faraó, chamado na sarça ardente. Conduziu Israel do Egito ao Sinai e recebeu a Lei de Deus.",
+    presentation: [
+      "Sou Moisés. Fui tirado das águas do Nilo pela filha de Faraó e criado como príncipe do Egito.",
+      "Aos quarenta, fugi para o deserto e por outros quarenta apascentei ovelhas em Midiã.",
+      "Foi quando vi uma sarça em chamas que não se consumia — e ouvi: 'Eu sou o que Sou.'",
+      "Diante do Faraó, com um cajado, o Senhor abriu o Mar Vermelho e afogou os carros do Egito.",
+      "No Sinai, subi ao monte e recebi da mão de Deus os Dez Mandamentos, gravados em pedra.",
+      "Vi a Terra Prometida do alto do Nebo. Não entrei nela — mas o Senhor me guardou consigo.",
+    ],
     keyVerses: [
       { reference: "Êxodo 3", note: "A sarça ardente" },
       { reference: "Êxodo 14", note: "Travessia do Mar Vermelho" },
@@ -147,6 +190,15 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "0 75% 55%",
     icon: "👑",
     bio: "Pastor ungido em segredo, venceu Golias, foi perseguido por Saul e reinou 40 anos. Salmista de Israel e ancestral do Messias.",
+    presentation: [
+      "Sou Davi, filho de Jessé, de Belém.",
+      "Era o caçula, cuidando das ovelhas, quando Samuel chegou e me ungiu rei em segredo.",
+      "Diante de Golias, o gigante que blasfemava o Deus vivo, tomei cinco pedras lisas do ribeiro.",
+      "O Senhor derrubou o gigante — não pela espada, mas pelo nome dele.",
+      "Fui perseguido por Saul, mas o Senhor foi meu pastor: nada me faltou.",
+      "Pequei gravemente, e chorei: 'Cria em mim, ó Deus, um coração puro.'",
+      "De minha casa, Deus prometeu levantar o Rei eterno — Jesus, filho de Davi.",
+    ],
     keyVerses: [
       { reference: "1 Samuel 16", note: "Ungido por Samuel" },
       { reference: "1 Samuel 17", note: "Davi e Golias" },
@@ -170,6 +222,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "45 85% 55%",
     icon: "🏛️",
     bio: "Filho de Davi. Pediu sabedoria a Deus e recebeu também riqueza e honra. Construiu o primeiro Templo, mas seu coração desviou-se no fim.",
+    presentation: [
+      "Sou Salomão, filho de Davi. Quando me tornei rei, era ainda menino.",
+      "Em Gibeom, Deus me apareceu em sonhos: 'Pede o que quiseres.'",
+      "Pedi sabedoria para governar Seu povo — e Ele me deu também riqueza e honra.",
+      "Construí em Jerusalém a Casa do Senhor, e Sua glória a encheu como uma nuvem.",
+      "Escrevi provérbios e cânticos. Mas meu coração se desviou por muitas mulheres.",
+      "Aprendi tarde: 'Tudo é vaidade. Teme a Deus e guarda os seus mandamentos.'",
+    ],
     keyVerses: [
       { reference: "1 Reis 3", note: "Pedido de sabedoria" },
       { reference: "1 Reis 8", note: "Dedicação do Templo" },
@@ -191,6 +251,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "15 90% 55%",
     icon: "🔥",
     bio: "Confrontou Acabe e os profetas de Baal no Carmelo. Foi levado ao céu num carro de fogo. Aparece com Moisés na Transfiguração de Jesus.",
+    presentation: [
+      "Sou Elias, o tesbita. Fui profeta do Deus vivo em dias de trevas em Israel.",
+      "Anunciei a Acabe: 'Não haverá orvalho nem chuva senão pela minha palavra.'",
+      "Corvos me alimentaram junto ao ribeiro de Querite; uma viúva de Sarepta partilhou seu pouco comigo.",
+      "No Carmelo, desafiei 450 profetas de Baal. Fogo desceu do céu e consumiu o sacrifício.",
+      "Na fuga, ouvi o Senhor não no vento, não no terremoto, não no fogo — mas num cicio tranquilo e suave.",
+      "E quando meu tempo terminou, um carro de fogo me arrebatou aos céus.",
+    ],
     keyVerses: [
       { reference: "1 Reis 17", note: "Alimentado pelos corvos" },
       { reference: "1 Reis 18", note: "Confronto no Monte Carmelo" },
@@ -212,6 +280,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "220 70% 60%",
     icon: "📖",
     bio: "Chamado numa visão da glória do Senhor. Profetizou juízo e salvação, e anunciou com clareza o Servo Sofredor — o Messias.",
+    presentation: [
+      "Sou Isaías. No ano em que morreu o rei Uzias, vi o Senhor assentado num trono alto e elevado.",
+      "Os serafins clamavam: 'Santo, Santo, Santo!' e um brasa tocou os meus lábios.",
+      "Ouvi a voz do Senhor: 'A quem enviarei?' — e respondi: 'Eis-me aqui, envia-me.'",
+      "Profetizei que uma virgem conceberia o Emanuel — Deus conosco.",
+      "Vi de longe o Servo ferido pelas nossas transgressões, moído pelas nossas iniquidades.",
+      "Pelas suas pisaduras — sim, dEle mesmo — fomos sarados.",
+    ],
     keyVerses: [
       { reference: "Isaías 6", note: "Visão do trono: \"Eis-me aqui, envia-me\"" },
       { reference: "Isaías 7", note: "A virgem conceberá — Emanuel" },
@@ -232,6 +308,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "265 65% 60%",
     icon: "🦁",
     bio: "Levado cativo à Babilônia jovem, manteve-se fiel a Deus na corte pagã. Recebeu visões do fim dos tempos e foi livre da cova dos leões.",
+    presentation: [
+      "Sou Daniel. Fui levado cativo a Babilônia quando ainda era jovem.",
+      "Ali, propus no meu coração não me contaminar com a mesa do rei — e Deus me deu ciência em todas as letras.",
+      "Interpretei o sonho de Nabucodonosor: uma estátua e uma pedra que se tornou monte enchendo toda a terra.",
+      "Continuei orando três vezes ao dia, mesmo sob decreto de morte.",
+      "Fui lançado na cova dos leões, mas o Senhor fechou-lhes a boca — não me fizeram dano algum.",
+      "Vi a chegada dos dias — e o Ancião de Dias entregando o reino ao Filho do Homem.",
+    ],
     keyVerses: [
       { reference: "Daniel 1", note: "Fidelidade na corte" },
       { reference: "Daniel 2", note: "A estátua e os reinos" },
@@ -254,6 +338,15 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "0 0% 100%",
     icon: "✝️",
     bio: "O Verbo que se fez carne. Nasceu de Maria em Belém, viveu em Nazaré, pregou o Reino, foi crucificado por nossos pecados, ressuscitou ao terceiro dia e vive para sempre.",
+    presentation: [
+      "Eu Sou. Antes que Abraão existisse, Eu Sou.",
+      "No princípio era o Verbo, e o Verbo se fez carne, e habitou entre vós.",
+      "Vim de Nazaré, filho de carpinteiro, mas Filho do Pai que está nos céus.",
+      "Curei os enfermos, abri os olhos dos cegos, ressuscitei os mortos — para que crêsseis.",
+      "'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito.'",
+      "Fui pregado numa cruz por vossos pecados. Consumado é.",
+      "Ao terceiro dia ressuscitei. Estou convosco todos os dias, até à consumação dos séculos.",
+    ],
     keyVerses: [
       { reference: "João 1", note: "\"No princípio era o Verbo\"" },
       { reference: "Mateus 5", note: "O Sermão do Monte" },
@@ -277,6 +370,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "200 75% 65%",
     icon: "🕊️",
     bio: "Jovem de Nazaré que respondeu ao anjo com fé: \"Eis aqui a serva do Senhor\". Acompanhou Jesus da manjedoura à cruz.",
+    presentation: [
+      "Sou Maria, uma jovem de Nazaré. O anjo Gabriel me disse: 'Ave, cheia de graça, o Senhor é contigo.'",
+      "Sem entender, respondi: 'Eis aqui a serva do Senhor; faça-se em mim segundo a tua palavra.'",
+      "A minha alma engrandeceu ao Senhor — do meu ventre nasceu o Salvador do mundo.",
+      "Guardei todas essas coisas, meditando-as no coração.",
+      "Vi meu Filho crescer, ensinar, curar — e depois carregar a cruz até o Calvário.",
+      "Ao pé da cruz, Ele me olhou e me confiou ao discípulo amado. E eu O vi ressurgir.",
+    ],
     keyVerses: [
       { reference: "Lucas 1", note: "A Anunciação e o Magnificat" },
       { reference: "Lucas 2", note: "Nascimento de Jesus" },
@@ -298,6 +399,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "35 70% 45%",
     icon: "💧",
     bio: "Voz que clama no deserto. Pregou arrependimento e batizou Jesus no Jordão, apontando-o como o Cordeiro de Deus.",
+    presentation: [
+      "Sou João, filho de Zacarias. Vivi no deserto, vestido de pele de camelo.",
+      "Sou a voz que clama: 'Preparai o caminho do Senhor, endireitai as suas veredas!'",
+      "Batizava no rio Jordão os que confessavam seus pecados.",
+      "Quando vi Jesus vindo para mim, apontei e disse: 'Eis o Cordeiro de Deus que tira o pecado do mundo!'",
+      "Convém que Ele cresça e que eu diminua.",
+      "Morri por dizer a verdade a Herodes — mas Aquele que apontei vive para sempre.",
+    ],
     keyVerses: [
       { reference: "Mateus 3", note: "Prega e batiza" },
       { reference: "João 1", note: "\"Eis o Cordeiro de Deus\"" },
@@ -318,6 +427,15 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "210 80% 55%",
     icon: "🗝️",
     bio: "Pescador da Galileia chamado por Jesus. Impulsivo e apaixonado, negou o Senhor três vezes e foi restaurado. Pregou no Pentecostes e liderou a igreja primitiva.",
+    presentation: [
+      "Sou Simão, filho de Jonas. Jesus me olhou e disse: 'Tu serás chamado Cefas' — Pedro, pedra.",
+      "Larguei as redes, e por três anos O segui pela Galileia.",
+      "Confessei: 'Tu és o Cristo, o Filho do Deus vivo.'",
+      "Andei sobre as águas — até que olhei para o vento e comecei a afundar. Ele me tomou pela mão.",
+      "Naquela noite terrível, neguei três vezes conhecê-lO. E o galo cantou.",
+      "À beira-mar, Ele me perguntou três vezes: 'Pedro, tu me amas?' — e me restaurou.",
+      "No Pentecostes, preguei, e três mil almas foram acrescentadas naquele dia.",
+    ],
     keyVerses: [
       { reference: "Mateus 16", note: "\"Tu és o Cristo\"" },
       { reference: "João 21", note: "Restauração à beira-mar" },
@@ -340,6 +458,15 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "155 60% 45%",
     icon: "✉️",
     bio: "Fariseu perseguidor da igreja que encontrou Cristo no caminho de Damasco. Fez três viagens missionárias e escreveu 13 epístolas do Novo Testamento.",
+    presentation: [
+      "Fui Saulo, fariseu dos fariseus, perseguidor da Igreja. Consenti na morte de Estêvão.",
+      "A caminho de Damasco, uma luz do céu me cegou. Ouvi: 'Saulo, Saulo, por que me persegues?'",
+      "'Quem és tu, Senhor?' — 'Eu sou Jesus, a quem tu persegues.'",
+      "Fui batizado, e nunca mais fui o mesmo. Já não sou eu quem vive, mas Cristo vive em mim.",
+      "Andei o mundo do meu tempo — Ásia, Grécia, Roma — plantando igrejas e escrevendo cartas.",
+      "Aprendi a viver com muito e com pouco: tudo posso naquele que me fortalece.",
+      "Combati o bom combate, acabei a carreira, guardei a fé.",
+    ],
     keyVerses: [
       { reference: "Atos 9", note: "Conversão no caminho de Damasco" },
       { reference: "Romanos 8", note: "Nada nos separará do amor de Cristo" },
@@ -365,6 +492,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "30 60% 50%",
     icon: "🌱",
     bio: "Formado do pó da terra pelas mãos de Deus, recebeu o fôlego da vida e cuidou do jardim do Éden. Sua desobediência trouxe a queda, mas em Cristo — o segundo Adão — a vida é restaurada.",
+    presentation: [
+      "Sou Adão, o primeiro. Fui formado do pó, e o próprio Deus soprou em mim o fôlego da vida.",
+      "No Éden, dei nome a todos os animais — mas nenhum era semelhante a mim.",
+      "Então Deus formou Eva do meu lado, e a chamei: 'Osso dos meus ossos, carne da minha carne.'",
+      "Comemos do fruto proibido. Ouvimos os passos de Deus e nos escondemos.",
+      "Fomos expulsos do jardim. Mas Deus prometeu: viria a Semente que esmagaria a cabeça da serpente.",
+    ],
     keyVerses: [
       { reference: "Gênesis 1", note: "Criado à imagem de Deus" },
       { reference: "Gênesis 2", note: "Colocado no Éden" },
@@ -386,6 +520,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "340 60% 60%",
     icon: "🍎",
     bio: "Tirada do lado de Adão como auxiliadora idônea. Foi enganada pela serpente, mas recebeu a primeira promessa da vitória do Descendente que esmagaria a cabeça do inimigo.",
+    presentation: [
+      "Sou Eva, a mãe de todos os viventes.",
+      "Fui formada do lado de Adão, para lhe ser auxiliadora idônea.",
+      "A serpente me enganou: comi do fruto e dei também a meu marido.",
+      "Conheci a vergonha, a dor de parto e a saudade do jardim.",
+      "Mas ouvi a primeira promessa: da minha semente viria Aquele que esmagaria a serpente.",
+    ],
     keyVerses: [
       { reference: "Gênesis 2", note: "Criada de uma costela de Adão" },
       { reference: "Gênesis 3", note: "O engano e a primeira promessa" },
@@ -406,6 +547,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "200 55% 50%",
     icon: "⛵",
     bio: "Homem justo e íntegro em sua geração. Andou com Deus e obedeceu ao construir a arca, preservando a vida sobre a terra durante o dilúvio.",
+    presentation: [
+      "Sou Noé. Achei graça aos olhos do Senhor num mundo cheio de violência.",
+      "Deus me falou: 'Faze uma arca de madeira de gofer' — e por muitos anos construí, enquanto pregava justiça.",
+      "Entrei na arca com minha família e os animais — e o Senhor fechou a porta.",
+      "Por quarenta dias e quarenta noites, choveu sobre a terra.",
+      "Quando as águas baixaram, edifiquei um altar. E Deus pôs o arco nas nuvens: nunca mais destruiria a terra por água.",
+    ],
     keyVerses: [
       { reference: "Gênesis 6", note: "\"Noé achou graça aos olhos do Senhor\"" },
       { reference: "Gênesis 7", note: "O dilúvio" },
@@ -428,6 +576,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "320 55% 65%",
     icon: "👑",
     bio: "Estéril por décadas, riu diante da promessa impossível e ainda assim viu Isaque nascer em sua velhice — testemunho da fidelidade de Deus.",
+    presentation: [
+      "Sou Sara, esposa de Abraão. Por décadas fui estéril, e chamei-me amarga.",
+      "Quando ouvi que teria um filho aos noventa anos, ri à porta da tenda.",
+      "Mas o Senhor disse: 'Há para o Senhor coisa alguma difícil?'",
+      "E Isaque — 'ele ri' — nasceu no tempo que Deus havia dito.",
+      "Aprendi que a promessa de Deus não falha, mesmo quando o corpo já não pode.",
+    ],
     keyVerses: [
       { reference: "Gênesis 17", note: "\"Sarai será mãe de nações\"" },
       { reference: "Gênesis 18", note: "A promessa se cumpre" },
@@ -450,6 +605,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "160 65% 45%",
     icon: "🛡️",
     bio: "Servo fiel de Moisés desde jovem, tornou-se o líder que introduziu Israel na Terra Prometida. Sua vida ensina coragem e obediência confiante.",
+    presentation: [
+      "Sou Josué, filho de Num. Fui servo de Moisés desde a minha juventude.",
+      "Fui um dos doze que espiaram Canaã — e, com Calebe, cri que o Senhor nos daria a terra.",
+      "Após a morte de Moisés, o Senhor me disse: 'Sê forte e corajoso; Eu estou contigo.'",
+      "As águas do Jordão se detiveram, e os muros de Jericó caíram ao som das trombetas.",
+      "No fim, reuni o povo em Siquém e declarei: 'Eu e a minha casa serviremos ao Senhor.'",
+    ],
     keyVerses: [
       { reference: "Josué 1", note: "\"Sê forte e corajoso\"" },
       { reference: "Josué 6", note: "Queda dos muros de Jericó" },
@@ -470,6 +632,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "210 65% 55%",
     icon: "🔔",
     bio: "Dedicado a Deus desde o ventre por Ana. Ouviu a voz do Senhor ainda menino no tabernáculo e ungiu os dois primeiros reis de Israel.",
+    presentation: [
+      "Sou Samuel. Nasci como resposta às orações de minha mãe Ana, que me consagrou ao Senhor.",
+      "Ainda menino, dormindo no tabernáculo, ouvi uma voz. Respondi: 'Fala, Senhor, teu servo ouve.'",
+      "Fui o último juiz de Israel — e o primeiro a ungir reis: Saul, e depois Davi.",
+      "Quando o povo pediu um rei como as nações, adverti-os — mas ungi quem Deus escolheu.",
+      "Aprendi que 'o obedecer é melhor do que sacrificar.'",
+    ],
     keyVerses: [
       { reference: "1 Samuel 3", note: "\"Fala, Senhor, teu servo ouve\"" },
       { reference: "1 Samuel 8", note: "Israel pede um rei" },
@@ -490,6 +659,13 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "35 75% 60%",
     icon: "🌾",
     bio: "Estrangeira que escolheu o Deus de Israel e não abandonou sua sogra Noemi. Sua fidelidade a levou à linhagem do Messias.",
+    presentation: [
+      "Sou Rute, moabita. Casei-me em Moabe com um homem de Israel — mas ele morreu.",
+      "Noemi, minha sogra, quis voltar sozinha para Belém. Eu me apeguei a ela.",
+      "'Aonde tu fores, irei eu; o teu povo é o meu povo, o teu Deus é o meu Deus.'",
+      "Colhi espigas no campo de Boaz — e ali achei graça aos olhos do resgatador.",
+      "Ele me tomou por esposa, e do nosso filho Obede nasceu Jessé, pai de Davi.",
+    ],
     keyVerses: [
       { reference: "Rute 1", note: "\"O teu povo é o meu povo\"" },
       { reference: "Rute 2", note: "Colhe nos campos de Boaz" },
@@ -510,6 +686,14 @@ export const BIBLE_CHARACTERS: BibleCharacter[] = [
     color: "295 65% 60%",
     icon: "👸",
     bio: "Órfã judia que se tornou rainha e arriscou a própria vida para salvar seu povo do extermínio — \"para tal tempo como este\".",
+    presentation: [
+      "Sou Hadassa — mas o rei da Pérsia me conheceu como Ester.",
+      "Órfã, fui criada por meu primo Mardoqueu na cidade de Susã.",
+      "Fui levada ao palácio de Assuero e, entre todas, achei graça aos seus olhos.",
+      "Quando Hamã tramou destruir o meu povo, Mardoqueu me disse: 'Quem sabe se para tempo como este chegaste ao reino?'",
+      "Jejuei três dias com meu povo. Entrei diante do rei sem ser chamada: 'Se perecer, pereci.'",
+      "O Senhor livrou os judeus, e Purim se celebra até hoje.",
+    ],
     keyVerses: [
       { reference: "Ester 4", note: "\"Se perecer, pereci\"" },
       { reference: "Ester 7", note: "Desmascara Hamã" },

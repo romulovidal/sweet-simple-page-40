@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { z } from "https://esm.sh/zod@3.25.76";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIdentifier,
+} from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,6 +67,11 @@ Deno.serve(async (req) => {
 
     // Use service role to bypass RLS — this function IS the secure gateway
     const adminClient = createClient(supabaseUrl, serviceKey);
+
+    // Rate limit: 10 requests / 60s per user or IP
+    const identifier = getClientIdentifier(req, resolvedUserId);
+    const rl = await checkRateLimit(adminClient, identifier, "push-subscription", 10, 60);
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     if (parsed.data.action === "delete") {
       let deleteQuery = adminClient

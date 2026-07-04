@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Clock, Bell } from "lucide-react";
+import { Send, Loader2, Clock, Bell, Sparkles, Music2 } from "lucide-react";
 
 interface PushLogEntry {
   id: string;
@@ -22,6 +22,7 @@ const AdminPushSender = () => {
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("/");
   const [sending, setSending] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [log, setLog] = useState<PushLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -90,6 +91,29 @@ const AdminPushSender = () => {
     }
   };
 
+  const generateHarpaMessage = async () => {
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-push-message", {
+        body: {
+          topic:
+            "Nova Harpa Cristã Atalaia com corinhos disponível no app; usuários podem LER as letras e OUVIR cada hino direto no player.",
+        },
+      });
+      if (error) throw error;
+      if (!data?.title || !data?.body) throw new Error("Resposta vazia");
+      setTitle(data.title);
+      setBody(data.body);
+      setUrl("/harpa");
+      toast.success("Mensagem gerada — revise e envie");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao gerar mensagem");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4 space-y-3">
@@ -100,6 +124,21 @@ const AdminPushSender = () => {
         <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
           Agora o envio usa retenção de 24h para o aparelho receber quando voltar à internet.
         </p>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={generateHarpaMessage}
+          disabled={generating || sending}
+          className="w-full"
+        >
+          {generating ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Sparkles className="w-4 h-4 mr-2" />
+          )}
+          <Music2 className="w-4 h-4 mr-2" />
+          {generating ? "Gerando com IA..." : "Novidade Harpa Cristã (IA)"}
+        </Button>
         <div>
           <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título *</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)}

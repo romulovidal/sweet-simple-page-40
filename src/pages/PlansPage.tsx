@@ -6,6 +6,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChevronLeft, CheckCircle, Circle, Loader2, ChevronRight, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import PageHead from "@/components/PageHead";
 import {
   getChapter,
   type BibleChapterEpigraph,
@@ -413,6 +414,11 @@ const PlansPage = () => {
 
   return (
     <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <PageHead
+        title="Planos de Leitura Bíblica — A Bíblia do Atalaia"
+        description="Escolha um plano de leitura da Bíblia e acompanhe seu progresso diário. Do plano em 30 dias à Bíblia toda em 1 ano."
+        path="/planos"
+      />
       <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Planos de Leitura</h1>
         <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">Escolha um plano e cresça na Palavra</p>

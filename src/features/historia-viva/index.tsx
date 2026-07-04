@@ -174,7 +174,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                         style={{ background: `hsl(${p.color})` }}
                       >{p.icon}</span>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold" style={{ color: `hsl(${p.color})` }}>{p.name}</p>
+                        <p className="text-sm font-bold text-dark-text">{p.name}</p>
                         <p className="text-[11px] text-dark-muted line-clamp-1">{p.subtitle}</p>
                       </div>
                     </button>

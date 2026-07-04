@@ -60,7 +60,6 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
         icon={c.icon}
         color={color}
         onBack={onBack}
-        onClose={onClose}
         onToggleFav={() => toggle("character", c.id)}
         isFav={isFav("character", c.id)}
         onShare={() => share(c.name, c.bio)}
@@ -191,7 +190,6 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         icon={e.icon}
         color={color}
         onBack={onBack}
-        onClose={onClose}
         onToggleFav={() => toggle("event", e.id)}
         isFav={isFav("event", e.id)}
         onShare={() => share(e.name, e.description)}
@@ -287,7 +285,6 @@ const PlaceView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         icon="📍"
         color={color}
         onBack={onBack}
-        onClose={onClose}
         onToggleFav={() => toggle("place", p.id)}
         isFav={isFav("place", p.id)}
         onShare={() => share(p.name, p.description)}
@@ -335,7 +332,6 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
         icon="📖"
         color={color}
         onBack={onBack}
-        onClose={onClose}
         onToggleFav={() => toggle("book", b.id)}
         isFav={isFav("book", b.id)}
       />
@@ -390,7 +386,6 @@ const PeriodView = ({ id, onBack, onClose, onNavigate }: Omit<ViewProps, "isFav"
         icon={p.icon}
         color={color}
         onBack={onBack}
-        onClose={onClose}
       />
       <Section title="Sobre este período" icon={<Info className="w-3.5 h-3.5" />}>
         <p className="text-sm leading-relaxed">{p.description}</p>

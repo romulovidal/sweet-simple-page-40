@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Users, MapPin, BookOpen, Clock, Sparkles, Book, Lightbulb, Info } from "lucide-react";
 import { getCharacter, getEvent, getPlace, getBook, getPeriod, relatedForCharacter, relatedForEvent, relatedForPlace, relatedForBook } from "../lib/graph";
+import { CHARACTERS } from "../data/characters";
+import { EVENTS } from "../data/events";
 import type { EntityRef } from "../types";
 import { formatYear } from "../data/periods";
 import EntityHeader from "./shared/EntityHeader";
@@ -75,15 +77,13 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
       {c.family && Object.values(c.family).some((v) => v && v.length) && (
         <Section title="Família" icon={<Users className="w-3.5 h-3.5" />}>
           <div className="space-y-1.5 text-[12px]">
-            {(["fathers", "Pais"], ["mothers", "Mães"], ["spouses", "Cônjuges"], ["siblings", "Irmãos"], ["children", "Filhos"]) as any}
-            {(["fathers","Pais"] as const)}
-            {[
+            {([
               ["fathers", "Pais"],
               ["mothers", "Mães"],
               ["spouses", "Cônjuges"],
               ["siblings", "Irmãos"],
               ["children", "Filhos"],
-            ].map(([k, label]) => {
+            ] as const).map(([k, label]) => {
               const ids = (c.family as any)?.[k] as string[] | undefined;
               if (!ids?.length) return null;
               return (
@@ -379,14 +379,8 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
 const PeriodView = ({ id, onBack, onClose, onNavigate }: Omit<ViewProps, "isFav" | "toggle">) => {
   const p = getPeriod(id);
   if (!p) return null;
-  const chars = useMemo(() => {
-    const { CHARACTERS } = require("../data/characters");
-    return CHARACTERS.filter((c: any) => c.periodId === p.id);
-  }, [p]);
-  const evts = useMemo(() => {
-    const { EVENTS } = require("../data/events");
-    return EVENTS.filter((e: any) => e.periodId === p.id);
-  }, [p]);
+  const chars = useMemo(() => CHARACTERS.filter((c) => c.periodId === p.id), [p]);
+  const evts = useMemo(() => EVENTS.filter((e) => e.periodId === p.id), [p]);
   const color = p.color;
   return (
     <div className="pb-24">

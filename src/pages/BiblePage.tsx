@@ -523,12 +523,14 @@ const BiblePage = () => {
       ...prev,
       { text: verse.text, reference, savedAt: new Date().toISOString() },
     ]);
+    trackEvent("verse_save", { book: selectedBook.apiAbbrev, chapter: selectedChapter, verse: verse.number });
     toast("Versículo salvo!");
   };
 
   const handleShareVerse = async (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
+    trackEvent("verse_share", { book: selectedBook.apiAbbrev, chapter: selectedChapter, verse: verse.number });
     const versionShort = getVersionById(bibleVersion).shortName;
     const longLink = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${verse.number}`;
     const shortLink = await createShortVerseLink({

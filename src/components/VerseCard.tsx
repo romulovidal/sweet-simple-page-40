@@ -116,17 +116,32 @@ const VerseCard = ({ text, reference, version }: VerseCardProps) => {
     } catch (err: any) {
       if (err?.name === "AbortError") return;
     }
-    setShareText(text_);
-    setShowShareMenu(true);
+    // Sem suporte a share nativo: copia direto e avisa (evita modal "estranha")
+    try {
+      await navigator.clipboard.writeText(text_);
+      toast.success("Versículo copiado para compartilhar");
+    } catch {
+      setShareText(text_);
+      setShowShareMenu(true);
+    }
   };
 
   const handleViewContext = () => {
     const parsed = parseReference(reference);
-    if (!parsed) return;
-    const abbrev = bookNameToAbbrev[parsed.book];
-    if (abbrev) {
-      navigate(`/biblia?book=${abbrev}&chapter=${parsed.chapter}&verse=${parsed.verse}`);
+    if (!parsed) {
+      toast.error("Não foi possível abrir o contexto");
+      return;
     }
+    const normalizedBook = BOOK_ALIASES[parsed.book] ?? parsed.book;
+    const abbrev = bookNameToAbbrev[normalizedBook];
+    if (!abbrev) {
+      toast.error(`Livro não reconhecido: ${parsed.book}`);
+      return;
+    }
+    const versesParam = parsed.verses.join(",");
+    navigate(
+      `/biblia?book=${abbrev}&chapter=${parsed.chapter}&verses=${versesParam}`,
+    );
   };
 
   return (

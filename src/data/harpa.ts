@@ -1,31 +1,70 @@
-// Estrutura de dados do hinário Harpa Cristã Atalaia.
-// O JSON real será carregado pelo usuário — este arquivo define o schema
-// e um array vazio inicial. Basta substituir HARPA_HINOS pelo conteúdo do JSON
-// (ou fazer fetch dinâmico) quando o hinário estiver disponível.
+// Schema interno + loader para /harpa-crista.json (Harpa Cristã Atalaia, 524 hinos).
+// O JSON fica em public/ e é carregado sob demanda para não inflar o bundle.
 
 export interface HarpaStrophe {
-  /** true quando esta estrofe é o refrão/coro do hino */
+  /** true quando é o refrão/coro do hino */
   chorus?: boolean;
+  /** número da estrofe quando não é refrão */
+  index?: number;
   /** linhas da estrofe */
   lines: string[];
 }
 
 export interface HarpaHino {
-  /** número do hino no hinário (ex.: 1, 25, 320) */
   number: number;
-  /** título do hino */
   title: string;
-  /** autor / letrista, opcional */
-  author?: string;
-  /** compositor da melodia, opcional */
-  composer?: string;
-  /** tonalidade sugerida, opcional (ex.: "Dó Maior") */
-  key?: string;
-  /** referência bíblica associada, opcional */
-  reference?: string;
-  /** estrofes na ordem de execução */
   strophes: HarpaStrophe[];
 }
 
-// Preencher com o JSON completo do hinário.
-export const HARPA_HINOS: HarpaHino[] = [];
+// Formato bruto vindo do JSON público.
+interface RawSecao {
+  tipo: "estrofe" | "refrao";
+  numero?: number;
+  linhas: string[];
+}
+interface RawHino {
+  numero: number;
+  titulo: string;
+  secoes: RawSecao[];
+}
+interface RawFile {
+  nome: string;
+  fonte: string;
+  total: number;
+  hinos: RawHino[];
+}
+
+function normalize(raw: RawFile): HarpaHino[] {
+  return raw.hinos.map((h) => ({
+    number: h.numero,
+    title: h.titulo,
+    strophes: h.secoes.map((s) => ({
+      chorus: s.tipo === "refrao",
+      index: s.tipo === "estrofe" ? s.numero : undefined,
+      lines: s.linhas,
+    })),
+  }));
+}
+
+let cache: HarpaHino[] | null = null;
+let inflight: Promise<HarpaHino[]> | null = null;
+
+export async function loadHarpa(): Promise<HarpaHino[]> {
+  if (cache) return cache;
+  if (inflight) return inflight;
+  inflight = fetch("/harpa-crista.json", { cache: "force-cache" })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<RawFile>;
+    })
+    .then((raw) => {
+      cache = normalize(raw);
+      inflight = null;
+      return cache;
+    })
+    .catch((err) => {
+      inflight = null;
+      throw err;
+    });
+  return inflight;
+}

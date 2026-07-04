@@ -450,14 +450,8 @@
     },
     {
       "numero": 9,
-      "titulo": "MARCHAI, SOLDADOS DE",
+      "titulo": "MARCHAI, SOLDADOS DE CRISTO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CRISTO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -870,14 +864,8 @@
     },
     {
       "numero": 16,
-      "titulo": "DESPERTAR PARA O",
+      "titulo": "DESPERTAR PARA O TRABALHO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "TRABALHO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -1106,14 +1094,8 @@
     },
     {
       "numero": 20,
-      "titulo": "OLHAI P'RA O CORDEIRO DE",
+      "titulo": "OLHAI P'RA O CORDEIRO DE DEUS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "DEUS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -2306,7 +2288,7 @@
             "Zombe o mundo e escarneça, Nada",
             "imporia, Salvador",
             "Pois que do Teu gozo eterno Mesmo",
-            "aqui tenho o penhor! H.M.W"
+            "aqui tenho o penhor!"
           ]
         }
       ]
@@ -2688,7 +2670,7 @@
             "me apresentar, Rocha eterna, meu",
             "Jesus, Que por mim, na amarga cruz,",
             "Foste morto em meu lugar, Quero em Ti",
-            "só me abrigar. H.M.W"
+            "só me abrigar."
           ]
         }
       ]
@@ -2852,7 +2834,7 @@
             "CRUZ!",
             "EIS A DIVISA QUE A NÓS NOS",
             "PERTENCE AOS LIBERTADOS POR",
-            "CRISTO JESUS! H.M.W"
+            "CRISTO JESUS!"
           ]
         }
       ]
@@ -2906,7 +2888,7 @@
             "crucificado,",
             "A minh'alma p'ra salvar; Vinde todos!",
             "Vinde todos,",
-            "Já comigo, O adorar! H.M.W"
+            "Já comigo, O adorar!"
           ]
         }
       ]
@@ -3037,7 +3019,7 @@
             "foge, o dia vem,",
             "A glória esperamos além, Pois",
             "trabalhemos, com fervor",
-            "Até que volte o Salvador. H.M.W"
+            "Até que volte o Salvador."
           ]
         }
       ]
@@ -3835,14 +3817,8 @@
     },
     {
       "numero": 69,
-      "titulo": "JESUS QUEBROU OS MEUS",
+      "titulo": "JESUS QUEBROU OS MEUS GRILHÕES",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "GRILHÕES"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -4151,14 +4127,8 @@
     },
     {
       "numero": 75,
-      "titulo": "EM JESUS TENS A PALMA DA",
+      "titulo": "EM JESUS TENS A PALMA DA VITÓRIA",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "VITÓRIA"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -4567,7 +4537,7 @@
           "linhas": [
             "A vida e o amor Tu me deste, Porque",
             "Tu amaste a mim, Tornou, sim, a glória",
-            "celeste, Minha sorte bendita, enfim. S.N"
+            "celeste, Minha sorte bendita, enfim."
           ]
         }
       ]
@@ -4684,14 +4654,8 @@
     },
     {
       "numero": 85,
-      "titulo": "DEIXAI ENTRAR O ESPÍRITO DE",
+      "titulo": "DEIXAI ENTRAR O ESPÍRITO DE DEUS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "DEUS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -6430,14 +6394,8 @@
     },
     {
       "numero": 117,
-      "titulo": "O SENHOR SALVA A TODO O",
+      "titulo": "O SENHOR SALVA A TODO O PECADOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "PECADOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -6924,14 +6882,8 @@
     },
     {
       "numero": 126,
-      "titulo": "BEM-AVENTURANÇA DO",
+      "titulo": "BEM-AVENTURANÇA DO CRENTE",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CRENTE"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -7496,9 +7448,7 @@
         },
         {
           "tipo": "refrao",
-          "linhas": [
-            "P.L.M"
-          ]
+          "linhas": []
         }
       ]
     },
@@ -7669,19 +7619,18 @@
             "Segue,a quem morreu na cruz, Pois a",
             "vida te conduz;",
             "Dar-te-á nas trevas luz,",
-            "Quem bate ï· Jesus Cristo. P."
+            "Quem bate ï· Jesus Cristo."
           ]
         }
       ]
     },
     {
       "numero": 139,
-      "titulo": "JESUS, MEU ETERNO",
+      "titulo": "JESUS, MEU ETERNO REDENTOR",
       "secoes": [
         {
           "tipo": "refrao",
           "linhas": [
-            "REDENTOR",
             "1JÁ O FILHO DE DEUS É DESCIDO DO CÉU; A",
             "OBRA PERFEITA NA CRUZ CONSUMOU;",
             "E ALI SUA CARNE, RASGADA QUAL VÉU, VIVO",
@@ -7779,14 +7728,8 @@
     },
     {
       "numero": 141,
-      "titulo": "GUIA-ME SEMPRE, MEU",
+      "titulo": "GUIA-ME SEMPRE, MEU SENHOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "SENHOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -7898,7 +7841,7 @@
             "E Deus, que há dado o Seu filho amado,",
             "Com Cristo na glória, os consolará,",
             "Os consolará os consolará Com Cristo",
-            "na glória, os consolará. P.L."
+            "na glória, os consolará."
           ]
         }
       ]
@@ -8008,14 +7951,8 @@
     },
     {
       "numero": 145,
-      "titulo": "UNIÃO DO CRENTE COM SEU",
+      "titulo": "UNIÃO DO CRENTE COM SEU SENHOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "SENHOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -8725,14 +8662,8 @@
     },
     {
       "numero": 158,
-      "titulo": "QUE FARÁS DE JESUS",
+      "titulo": "QUE FARÁS DE JESUS CRISTO?",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CRISTO?"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -8883,14 +8814,8 @@
     },
     {
       "numero": 161,
-      "titulo": "NAVEGANDO P'RA TERRA",
+      "titulo": "NAVEGANDO P'RA TERRA CELESTE",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CELESTE"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -9126,14 +9051,8 @@
     },
     {
       "numero": 166,
-      "titulo": "DEIXA ENTRAR O REI DA",
+      "titulo": "DEIXA ENTRAR O REI DA GLORIA",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "GLORIA"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -9243,14 +9162,8 @@
     },
     {
       "numero": 168,
-      "titulo": "MEUS IRMÃOS, NOS",
+      "titulo": "MEUS IRMÃOS, NOS JUBILEMOS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "JUBILEMOS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -9511,14 +9424,8 @@
     },
     {
       "numero": 173,
-      "titulo": "OS SANTOS LOUVAM AO",
+      "titulo": "OS SANTOS LOUVAM AO SENHOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "SENHOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -10105,7 +10012,7 @@
             "mundo disto não compartilha, Porque",
             "não vê a luz que brilha lá; Mui breve,",
             "Cristo voltará",
-            "Mas. só os Seus. ao céu levará. P.L.M"
+            "Mas. só os Seus. ao céu levará."
           ]
         }
       ]
@@ -11563,14 +11470,8 @@
     },
     {
       "numero": 212,
-      "titulo": "OS GUERREIROS SE",
+      "titulo": "OS GUERREIROS SE PREPARAM",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "PREPARAM"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -11624,21 +11525,15 @@
             "renhida, Mas são poucos os soldados",
             "para batalhar; Ó vem libertar as pobres",
             "almas oprimidas De quem furioso, as",
-            "quer tragar P.L.M"
+            "quer tragar."
           ]
         }
       ]
     },
     {
       "numero": 213,
-      "titulo": "SOBRE A TERRA VOU",
+      "titulo": "SOBRE A TERRA VOU ANDANDO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "ANDANDO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -12167,7 +12062,7 @@
             "Portas abertas aos libertos No céu",
             "de luz sempre estão; Eis que os anjos",
             "alertos",
-            "A ver tua entrada estarão! S.N"
+            "A ver tua entrada estarão!"
           ]
         }
       ]
@@ -12474,7 +12369,7 @@
             "Sinto meu ser transformado, Pela",
             "graça do Senhor;",
             "Cada dia mais chegado,",
-            "Eu à Pátria, estou, de amor. E.C"
+            "Eu à Pátria, estou, de amor."
           ]
         }
       ]
@@ -12809,9 +12704,7 @@
         },
         {
           "tipo": "refrao",
-          "linhas": [
-            "P.L.M"
-          ]
+          "linhas": []
         }
       ]
     },
@@ -12935,14 +12828,8 @@
     },
     {
       "numero": 237,
-      "titulo": "O GOZO DE ESTAR",
+      "titulo": "O GOZO DE ESTAR PREPARADO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "PREPARADO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -13363,14 +13250,8 @@
     },
     {
       "numero": 245,
-      "titulo": "PAZ DE DEUS EM JESUS",
+      "titulo": "PAZ DE DEUS EM JESUS ENCONTREI",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "ENCONTREI"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -13464,14 +13345,8 @@
     },
     {
       "numero": 247,
-      "titulo": "DEUS NOS GUARDE NO SEU",
+      "titulo": "DEUS NOS GUARDE NO SEU AMOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "AMOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -13662,7 +13537,7 @@
             "Seguir o Caminho p'ra bela cidade,",
             "Pois nEle, dos males, sou bem",
             "protegido, Também rodeado de vera",
-            "bondade. P.L.M"
+            "bondade."
           ]
         }
       ]
@@ -13812,7 +13687,7 @@
             "pensamento; \"O vil pecado sempre nós",
             "combateremos\". Pois Jesus vem, não",
             "tarda um momento, Crendo em Jesus.",
-            "vitória nós já temos. P.L"
+            "vitória nós já temos."
           ]
         }
       ]
@@ -13926,14 +13801,8 @@
     },
     {
       "numero": 256,
-      "titulo": "ABANDONA ESTE MUNDO DE",
+      "titulo": "ABANDONA ESTE MUNDO DE HORROR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "HORROR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -14032,7 +13901,7 @@
           "linhas": [
             "A fonte és da compaixão, Sempre a",
             "Ti darei louvor! Faz-me bem ao coração",
-            "Exaltar-Te. meu Senhor! P.L"
+            "Exaltar-Te. meu Senhor!"
           ]
         }
       ]
@@ -14155,14 +14024,8 @@
     },
     {
       "numero": 260,
-      "titulo": "AVANTE COM O NOSSO",
+      "titulo": "AVANTE COM O NOSSO CAPITÃO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CAPITÃO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -14402,7 +14265,7 @@
             "Palavra, água da vida",
             "Do nosso cálice, faz transbordar, Cheia",
             "de graça bem dirigida,",
-            "Para os sedentos poder saciar. P.L"
+            "Para os sedentos poder saciar."
           ]
         }
       ]
@@ -14593,7 +14456,7 @@
             "forças hão de vir; Mesmo que o sol se",
             "turve, Haja forte furacão",
             "Sé fiel, não te perturbes, Crê em Deus,",
-            "de coração. P.L.M"
+            "de coração."
           ]
         }
       ]
@@ -14658,13 +14521,12 @@
     },
     {
       "numero": 270,
-      "titulo": "LOUVANDO AO NOSSO",
+      "titulo": "LOUVANDO AO NOSSO CRIADOR",
       "secoes": [
         {
           "tipo": "refrao",
           "linhas": [
-            "CRIADOR",
-            "L. SINTO PRAZER LOUVANDO AO NOSSO",
+            "SINTO PRAZER LOUVANDO AO NOSSO",
             "CRIADOR,",
             "E GOZO CELEBRANDO",
             "OS FEITOS DO SENHOR; SABER QUE SOU",
@@ -14749,7 +14611,7 @@
           "linhas": [
             "Estando lá eu gozarei De toda a",
             "bênção divinal; Também com Cristo",
-            "reinarei Na Sua glória eternal. J.T.L"
+            "reinarei Na Sua glória eternal."
           ]
         }
       ]
@@ -15109,7 +14971,7 @@
             "Só em Cristo, o fiel amigo, Acharás,",
             "acharás,",
             "Escondido neste bom abri9o, A paz de",
-            "Deus, então fruirás. P.L.M"
+            "Deus, então fruirás."
           ]
         }
       ]
@@ -15838,7 +15700,7 @@
             "Quero sempre levar e sofrer; Cristo vem",
             "me buscar,",
             "E com Ele, no lar,",
-            "Uma parte da glória hei de ter. A.A"
+            "Uma parte da glória hei de ter."
           ]
         }
       ]
@@ -16423,7 +16285,7 @@
             "Seu lugar ao lado do Senhor Jesus;",
             "Quem a fome suportou",
             "E a sede já passou,",
-            "Lá no Céu irá cear em santa luz. P.L."
+            "Lá no Céu irá cear em santa luz."
           ]
         }
       ]
@@ -16673,14 +16535,8 @@
     },
     {
       "numero": 306,
-      "titulo": "A PALAVRA DE DEUS É UM",
+      "titulo": "A PALAVRA DE DEUS É UM TESOURO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "TESOURO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -17185,7 +17041,7 @@
             "Pois sempre vou cantando Sua graça,",
             "amor e paz; Eu vou marchando para o",
             "eterno lar, E breve, lá no céu - minha",
-            "pátria- hei de estar. F.V"
+            "pátria- hei de estar."
           ]
         }
       ]
@@ -17435,7 +17291,7 @@
           "linhas": [
             "Considera o grande gozo Que no",
             "céu esperam, sim; Aqui lutas, lá",
-            "repouso, Galardão terás enfim. F.V"
+            "repouso, Galardão terás enfim."
           ]
         }
       ]
@@ -18189,7 +18045,7 @@
             "morrer, tormentos padecerá,",
             "Pois quem deseja sobre o mal a vitória,",
             "No sangue do Cordeiro poder",
-            "encontrará. P.L.M"
+            "encontrará."
           ]
         }
       ]
@@ -18234,7 +18090,7 @@
           "linhas": [
             "Devemos, pois, esperar, E ao mundo",
             "olhos fechar; Andemos sempre na luz,",
-            "A buscar o Rei Jesus. L.F"
+            "A buscar o Rei Jesus."
           ]
         }
       ]
@@ -18925,7 +18781,7 @@
             "pecador, e vem ao bom Jesus,",
             "Que te dará real poder, o gozo e paz de",
             "Deus E quando tudo fenecer, tu viverás",
-            "no céu. P.L.M"
+            "no céu."
           ]
         }
       ]
@@ -18982,7 +18838,7 @@
           "linhas": [
             "Pai abençoa os crentes Que sempre",
             "estão a buscar A Tua face, tementes;",
-            "Chuvas,lhes queiras mandar. P.L.M"
+            "Chuvas,lhes queiras mandar."
           ]
         }
       ]
@@ -20380,14 +20236,8 @@
     },
     {
       "numero": 377,
-      "titulo": "AS PROMESSAS QUE NÃO",
+      "titulo": "AS PROMESSAS QUE NÃO FALHAM",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "FALHAM"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -20956,7 +20806,7 @@
           "linhas": [
             "Irmãos, amemos o Senhor, Também",
             "o Consolador, E a nosso Pai Celestial,",
-            "Que paz nos dá eternal. P.L.M"
+            "Que paz nos dá eternal."
           ]
         }
       ]
@@ -21250,13 +21100,12 @@
     },
     {
       "numero": 391,
-      "titulo": "JESUS NO MONTE DA",
+      "titulo": "JESUS NO MONTE DA ASCENSÃO",
       "secoes": [
         {
           "tipo": "refrao",
           "linhas": [
-            "ASCENSÃO",
-            "L. JESUS DISSE AOS DISCÍPULOS, NO MONTE,",
+            "JESUS DISSE AOS DISCÍPULOS, NO MONTE,",
             "AO SUBIR: \"DETEI-VOS EM JERUSALÉM POIS",
             "HÁ DE SE CUMPRI",
             "A VINDA GLORIOSA DE O CONSOLADOR,",
@@ -21297,7 +21146,7 @@
             "O Santo Espírito de Deus que vem p'ra",
             "t'ensinar Jesus, a gloriosa unção te",
             "mandara,",
-            "E Seu amor sublime, proclamar irás. F.V"
+            "E Seu amor sublime, proclamar irás."
           ]
         }
       ]
@@ -21509,14 +21358,8 @@
     },
     {
       "numero": 396,
-      "titulo": "ALÉM DO NOSSO",
+      "titulo": "ALÉM DO NOSSO ENTENDIMENTO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "ENTENDIMENTO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -21713,7 +21556,7 @@
             "Não quereis ir lá? Onde todos os irmãos",
             "Vão ver quem os salvou,",
             "Oh! Não quereis ir lá? Oh! Não quereis ir",
-            "lá? P.L.M."
+            "lá?"
           ]
         }
       ]
@@ -22008,14 +21851,8 @@
     },
     {
       "numero": 406,
-      "titulo": "À SOMBRA DO MEU",
+      "titulo": "À SOMBRA DO MEU REDENTOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "REDENTOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -22166,14 +22003,8 @@
     },
     {
       "numero": 409,
-      "titulo": "TRABALHADORESDO",
+      "titulo": "TRABALHADORES DO EVANGELHO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "EVANGELHO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -22426,14 +22257,8 @@
     },
     {
       "numero": 414,
-      "titulo": "TEM COMPAIXÃO DO",
+      "titulo": "TEM COMPAIXÃO DO PECADOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "PECADOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -22528,14 +22353,8 @@
     },
     {
       "numero": 416,
-      "titulo": "QUANDO O POVO SALVO",
+      "titulo": "QUANDO O POVO SALVO ENTRAR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "ENTRAR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -23730,14 +23549,8 @@
     },
     {
       "numero": 439,
-      "titulo": "AOS PES DE CRISTO",
+      "titulo": "AOS PES DE CRISTO PROSTRADOS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "PROSTRADOS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -23891,7 +23704,7 @@
           "linhas": [
             "Pedimos nós, agora a Ti, Ó queima",
             "todo mal E vivifica-nos aqui, Com fogo",
-            "celestial! P.L.M"
+            "celestial!"
           ]
         }
       ]
@@ -24050,21 +23863,15 @@
             "Vem hoje, vem te entregar",
             "Deixando,todo mal,",
             "Deus quer agora te salvar, Ó vem p'ra",
-            "luz real! P.L.M"
+            "luz real!"
           ]
         }
       ]
     },
     {
       "numero": 445,
-      "titulo": "RESGATADO COM O SANGUE",
+      "titulo": "RESGATADO COM O SANGUE DE CRISTO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "DE CRISTO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -24846,14 +24653,8 @@
     },
     {
       "numero": 461,
-      "titulo": "JESUS CHOROU SOBRE",
+      "titulo": "JESUS CHOROU SOBRE JERUSALÉM",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "JERUSALÉM"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -25586,7 +25387,7 @@
             "Só mesmo o tão profundo amor Do",
             "nosso bendito Deus,",
             "Mandava ao mundo de horror,",
-            "O Seu Filho, p'ra salvar os Seus. D.L"
+            "O Seu Filho, p'ra salvar os Seus."
           ]
         }
       ]
@@ -26432,14 +26233,8 @@
     },
     {
       "numero": 491,
-      "titulo": "HÁ PODER NO SANGUE DE",
+      "titulo": "HÁ PODER NO SANGUE DE JESUS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "JESUS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -26978,14 +26773,8 @@
     },
     {
       "numero": 501,
-      "titulo": "VENCENDO COM O BOM",
+      "titulo": "VENCENDO COM O BOM CAPITÃO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "CAPITÃO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -27078,14 +26867,8 @@
     },
     {
       "numero": 503,
-      "titulo": "VIDAS CONSAGRADAS AO",
+      "titulo": "VIDAS CONSAGRADAS AO TRABALHO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "TRABALHO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -28303,8 +28086,7 @@
             "Rei dos reis! Breve os reinos deste",
             "mundo Seguirão as suas leis!",
             "Os sinais da sua vinda Mais se mostram",
-            "cada vez: Vencendo vem Jesus!",
-            "Coro"
+            "cada vez: Vencendo vem Jesus!"
           ]
         },
         {
@@ -28376,8 +28158,7 @@
             "maravilhado, Contemplo a tua imensa",
             "criação,",
             "A terra e o mar e o céu todo estrelado",
-            "Me vêm falar da tua perfeição.",
-            "Coro"
+            "Me vêm falar da tua perfeição."
           ]
         },
         {
@@ -28530,7 +28311,7 @@
             "Em sua graça, seu rico amor. Veio do",
             "Céu a Belém meu Senhor. Que",
             "maravilha! Meu Salvador",
-            "Por mim na cruz morreu! K.L.C"
+            "Por mim na cruz morreu!"
           ]
         }
       ]
@@ -28555,7 +28336,7 @@
           "linhas": [
             "Vivifica! - vivifica Nossas almas, oh!",
             "Senhor! Vivifica! - vivifica",
-            "Nossas almas, oh! Senhor! H.M.W"
+            "Nossas almas, oh! Senhor!"
           ]
         }
       ]
@@ -28570,8 +28351,7 @@
           "linhas": [
             "Leva tu contigo o nome De Jesus, o",
             "Salvador! Este nome dá conforto Hoje,",
-            "sempre e onde for.",
-            "Coro"
+            "sempre e onde for."
           ]
         },
         {
@@ -28610,7 +28390,7 @@
             "Santo nome! adorável! Tem Jesus, o",
             "amado teu:",
             "- \"Rei dos reis”, \"Senhor eterno” Tu o",
-            "aclamarás no Céu. L.B"
+            "aclamarás no Céu."
           ]
         }
       ]
@@ -28625,7 +28405,7 @@
           "linhas": [
             "Este nome santo, Nome de Jesus,",
             "Doce melodia",
-            "Em meu coração produz. W.A"
+            "Em meu coração produz."
           ]
         }
       ]
@@ -28701,8 +28481,7 @@
             "Tu ás fiel, Senhor, meu Pai celeste:",
             "Pleno poder aos teus filhos darás.",
             "Nunca mudaste: tu nunca faltaste:",
-            "Tal como eras, tu sempre serás.",
-            "Coro"
+            "Tal como eras, tu sempre serás."
           ]
         },
         {
@@ -28796,14 +28575,8 @@
     },
     {
       "numero": 538,
-      "titulo": "TU, SENHOR, ÉS NOSSO",
+      "titulo": "TU, SENHOR, ÉS NOSSO AMIGO",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "AMIGO"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -28895,14 +28668,8 @@
     },
     {
       "numero": 541,
-      "titulo": "CALVÁRIO, REVELAÇÃO DE",
+      "titulo": "CALVÁRIO, REVELAÇÃO DE AMOR",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "AMOR"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -28911,8 +28678,7 @@
             "meigo Salvador!",
             "- Oh! revelação de amor! - O mistério",
             "há tanto oculto, Deus em Cristo revelou!",
-            "- Oh! revelação de amor!",
-            "Coro"
+            "- Oh! revelação de amor!"
           ]
         },
         {
@@ -29083,8 +28849,7 @@
             "Deus enviou seu Filho amado Pra",
             "perdoar, pra me salvar.",
             "Na cruz morreu por meu pecado,",
-            "Mas ressurgiu e vivo com o Pai está.",
-            "Coro"
+            "Mas ressurgiu e vivo com o Pai está."
           ]
         },
         {
@@ -29163,8 +28928,7 @@
             "nesta vida já cessou.",
             "Do Senhor os bons ceifeiros, terminaram",
             "seu labor; A colheita completou-se: é a",
-            "vinda do Senhor!",
-            "Coro"
+            "vinda do Senhor!"
           ]
         },
         {
@@ -29291,14 +29055,8 @@
     },
     {
       "numero": 552,
-      "titulo": "QUANDO PARA O CÉU NÓS",
+      "titulo": "QUANDO PARA O CÉU NÓS FORMOS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "FORMOS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -29306,8 +29064,7 @@
             "Canta o grande amor de Cristo, Sua",
             "graça e compaixão:",
             "Num lugar tranqüilo e belo Faz-nos",
-            "eternal mansão.",
-            "Coro"
+            "eternal mansão."
           ]
         },
         {
@@ -29454,8 +29211,7 @@
           "linhas": [
             "Se desejas conhecer A mensagem do",
             "Senhor, Tua alma enriquecer Na",
-            "Verdade e no Amor,",
-            "Coro"
+            "Verdade e no Amor,"
           ]
         },
         {
@@ -29556,8 +29312,7 @@
             "Dai-me a Bíblia, que eu tanto anelo:",
             "Por seu caminho quero sempre andar.",
             "Por suas palavras são a grata nova",
-            "Que Jesus Cristo veio anunciar.",
-            "Coro"
+            "Que Jesus Cristo veio anunciar."
           ]
         },
         {
@@ -29691,8 +29446,7 @@
             "Tenho paz em meu ser, uma perfeita",
             "paz, Que o mundo não me pode dar.",
             "E na prova fatal ou na luta mortal Tenho",
-            "paz para me confortar.",
-            "Coro"
+            "paz para me confortar."
           ]
         },
         {
@@ -29741,8 +29495,7 @@
             "rolam no mar!",
             "Que bênção: as flores brotando nos",
             "campos! Mas a maior bênção eu vou te",
-            "contar:",
-            "Coro"
+            "contar:"
           ]
         },
         {
@@ -29841,8 +29594,7 @@
             "Se, com desalento, julgas tudo vão,",
             "Conta as muitas bênçãos, dize-as duma",
             "vez, E verás, surpreso, quanto Deus já",
-            "fez!",
-            "Coro"
+            "fez!"
           ]
         },
         {
@@ -29940,8 +29692,7 @@
             "Pois o preço não queria eu pagar. Longe",
             "de Deus a vagar,",
             "Sua promessa a rejeitar.",
-            "Do pecado não querendo me apartar.",
-            "Coro"
+            "Do pecado não querendo me apartar."
           ]
         },
         {
@@ -30010,8 +29761,7 @@
             "Manso e suave, é Cristo chamando:",
             "Chama por ti e por mim.",
             "Eis que Ele às portas espera velando:",
-            "Vela por ti e por mim,",
-            "Coro"
+            "Vela por ti e por mim,"
           ]
         },
         {
@@ -30065,8 +29815,7 @@
           "linhas": [
             "“Morri na cruz por ti:",
             "Morri pra te livrar! Meu sangue, ali, verti,",
-            "E posso te salvar.”",
-            "Coro"
+            "E posso te salvar.”"
           ]
         },
         {
@@ -30118,8 +29867,7 @@
             "- Ao findar o labor desta vida Quando",
             "a morte a teu lado chegar, Que destino",
             "há de ter a tua alma? Qual será no",
-            "futuro teu lar?",
-            "Coro"
+            "futuro teu lar?"
           ]
         },
         {
@@ -30332,8 +30080,7 @@
             "Em fervente oração, vem o teu",
             "coração Na presença de Deus derramar!",
             "Mas só podes fruir o que estás a pedir,",
-            "Quando tudo deixares no Altar.",
-            "Coro"
+            "Quando tudo deixares no Altar."
           ]
         },
         {
@@ -30384,8 +30131,7 @@
             "Não se te dá que morramos? Podes",
             "assim dormir.",
             "Se a cada momento nos vemos, Sim,",
-            "prestes a submergir?",
-            "Coro"
+            "prestes a submergir?"
           ]
         },
         {
@@ -30591,8 +30337,7 @@
             "Eu tenho de andar neste mundo Qual",
             "barca vogando no mar,",
             "Mas sei o segredo profundo De nele",
-            "jamais naufragar:",
-            "Coro"
+            "jamais naufragar:"
           ]
         },
         {
@@ -30929,8 +30674,7 @@
             "Eu estou no lugar onde há bênção e",
             "paz, Onde sinto comigo Jesus.",
             "Aos humildes seu sangue assegura",
-            "perdão: Seu Espírito os enche de luz.",
-            "Coro"
+            "perdão: Seu Espírito os enche de luz."
           ]
         },
         {
@@ -31072,8 +30816,7 @@
             "Ao lado estou das riquezas dos céus,",
             "Fluídas de tuas mãos.",
             "Quero cantar mil cantares!",
-            "- Oferta profunda do meu coração! ;",
-            "Coro"
+            "- Oferta profunda do meu coração! ;"
           ]
         },
         {
@@ -31332,8 +31075,7 @@
             "A seara está madura; Há trabalho pra",
             "fazer.",
             "Ouve a voz de Deus chamando Para à",
-            "ceifa te trazer!",
-            "Coro"
+            "ceifa te trazer!"
           ]
         },
         {
@@ -31439,14 +31181,8 @@
     },
     {
       "numero": 604,
-      "titulo": "SENHOR, OS MENSAGEIROS",
+      "titulo": "SENHOR, OS MENSAGEIROS TEUS",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "TEUS"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -31489,8 +31225,7 @@
             "Quero, Jesus, fazer o teu querer;",
             "Quero servir-te, sim.",
             "Tua palavra sempre obedecer, Pois tens",
-            "amado a mim.",
-            "Coro"
+            "amado a mim."
           ]
         },
         {
@@ -31957,14 +31692,8 @@
     },
     {
       "numero": 620,
-      "titulo": "NA JORNADA PARA",
+      "titulo": "NA JORNADA PARA JERUSALÉM",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "JERUSALÉM"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -31972,8 +31701,7 @@
             "Na jornada para o Céu, Vivo sempre a",
             "meditar. Muito alegre vou cantando E",
             "seguindo pro meu lar. Muito alegre vou",
-            "cantando E seguindo pro meu lar.",
-            "Coro"
+            "cantando E seguindo pro meu lar."
           ]
         },
         {
@@ -32048,8 +31776,7 @@
             "Tão grato me é lembrar Que cada dia",
             "estou",
             "Mais perto do celeste lar, Em que morar",
-            "eu vou!",
-            "Coro"
+            "eu vou!"
           ]
         },
         {
@@ -32169,8 +31896,7 @@
             "meio da praça eis o rio Da vida e vigor",
             "eternal;",
             "Mas metade da glória celeste Jamais se",
-            "contou ao mortal.",
-            "Coro"
+            "contou ao mortal."
           ]
         },
         {
@@ -32308,14 +32034,8 @@
     },
     {
       "numero": 630,
-      "titulo": "NÃO HÁ SEPARAÇÃO NA",
+      "titulo": "NÃO HÁ SEPARAÇÃO NA GLÓRIA",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "GLÓRIA"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -32338,8 +32058,7 @@
           "linhas": [
             "Eis plantada neste dia, Qual semente",
             "singular, Esta pedra - que alegria Faz o",
-            "povo aqui cantar!",
-            "Coro"
+            "povo aqui cantar!"
           ]
         },
         {
@@ -32397,8 +32116,7 @@
             "Hoje, inaugura-se aqui, santo Deus,",
             "Mais um padrão de teu amor:",
             "Um novo templo, fanal para os céus,",
-            "Causa de mais louvor!",
-            "Coro"
+            "Causa de mais louvor!"
           ]
         },
         {
@@ -32454,8 +32172,7 @@
             "sublime, Creio ver-te muito breve bem",
             "maior, Combatendo a iniqüidade, o vicio,",
             "o crime, Redimido aos pés de Cristo, o",
-            "Salvador.",
-            "Coro"
+            "Salvador."
           ]
         },
         {
@@ -32508,8 +32225,7 @@
             "Lar prezado, lar formoso, É por ti o meu",
             "amor.",
             "Que o meu Deus de excelsa graça Te",
-            "dispense seu favor!",
-            "Coro"
+            "dispense seu favor!"
           ]
         },
         {
@@ -32639,8 +32355,7 @@
             "Salve lindo pendão da esperança!",
             "Salve, símbolo augusto da paz!",
             "Tua nobre presença à lembrança A",
-            "grandeza da Pátria nos traz.",
-            "Coro"
+            "grandeza da Pátria nos traz."
           ]
         },
         {
@@ -32715,8 +32430,7 @@
             "resplandece.",
             "Gigante pela própria natureza,",
             "És belo, és forte, impávido, colosso, E o",
-            "teu futuro espelha essa grandeza.",
-            "Coro"
+            "teu futuro espelha essa grandeza."
           ]
         },
         {
@@ -32768,8 +32482,7 @@
             "No horizonte do Brasil! Já raiou a",
             "liberdade",
             "Já raiou a liberdade",
-            "No horizonte do Brasil.",
-            "Coro"
+            "No horizonte do Brasil."
           ]
         },
         {
@@ -32822,14 +32535,8 @@
     },
     {
       "numero": 640,
-      "titulo": "HINO DA PROCLAMAÇÃO DA",
+      "titulo": "HINO DA PROCLAMAÇÃO DA REPÚBLICA DO BRASIL",
       "secoes": [
-        {
-          "tipo": "refrao",
-          "linhas": [
-            "REPÚBLICA DO BRASIL"
-          ]
-        },
         {
           "tipo": "estrofe",
           "numero": 1,
@@ -32840,8 +32547,7 @@
             "mais torpes labéus! Seja um hino de",
             "glória que fale De esperanças de um",
             "novo porvir! Com visões de triunfos",
-            "embale Quem por ele lutando surgir!",
-            "Coro"
+            "embale Quem por ele lutando surgir!"
           ]
         },
         {

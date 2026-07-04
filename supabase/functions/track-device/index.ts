@@ -29,7 +29,6 @@ function sanitizeHistory(input: unknown): string[] {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  console.log("[track-device] request received", req.method);
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method not allowed" }), {
       status: 405,
@@ -66,12 +65,6 @@ serve(async (req) => {
     // Rate limit: 60 requests / 60s per device_id (chamada frequente durante leitura)
     const rl = await checkRateLimit(supabase, `device:${device_id}`, "track-device", 60, 60);
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
-    // TEMP debug
-    if (device_id.startsWith("rltest")) {
-      return new Response(JSON.stringify({ ok: true, rl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // Fetch existing to merge history and prevent regressions.
     const { data: existing } = await supabase

@@ -27,6 +27,11 @@ export interface BibleCharacter {
   bio: string;
   keyVerses: CharacterVerse[];
   moments: CharacterMoment[];
+  /**
+   * Falas em 1ª pessoa que o personagem "diz" quando se apresenta ao usuário.
+   * Cada string é uma fala/slide. Se omitido, um script é gerado a partir do bio.
+   */
+  presentation?: string[];
 }
 
 export const BIBLE_CHARACTERS: BibleCharacter[] = [

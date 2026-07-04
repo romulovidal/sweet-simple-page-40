@@ -18,6 +18,9 @@ const BodySchema = z.object({
   book_abbrev: z.string().trim().min(1).max(10),
   chapter: z.number().int().min(1).max(200),
   verses: z.array(z.number().int().min(1).max(200)).min(1).max(50),
+  text_snippet: z.string().trim().max(600).optional(),
+  book_name: z.string().trim().max(60).optional(),
+  version: z.string().trim().max(10).optional(),
 });
 
 const ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem 0/O/l/1/I
@@ -41,7 +44,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const { book_abbrev, chapter, verses } = parsed.data;
+    const { book_abbrev, chapter, verses, text_snippet, book_name, version } = parsed.data;
 
     // Rate limit: 20 novos links / 60s por usuário/IP
     const userId = await getRequestUserId(req);
@@ -76,7 +79,15 @@ Deno.serve(async (req) => {
       const slug = genSlug(6);
       const { error } = await supabase
         .from("verse_shares")
-        .insert({ slug, book_abbrev, chapter, verses: sortedVerses });
+        .insert({
+          slug,
+          book_abbrev,
+          chapter,
+          verses: sortedVerses,
+          text_snippet: text_snippet ?? null,
+          book_name: book_name ?? null,
+          version: version ?? null,
+        });
 
       if (!error) {
         return new Response(JSON.stringify({ slug }), {

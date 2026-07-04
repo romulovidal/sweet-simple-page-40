@@ -31,6 +31,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
+import VerseShareRedirect from "@/pages/VerseShareRedirect";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const AppContent = () => {
             <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
             <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
             <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
+            <Route path="/v/:slug" element={<VerseShareRedirect />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/app" element={<AppLanding />} />
             <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />

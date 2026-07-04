@@ -64,8 +64,8 @@ const StudyHub = () => {
               Conheça a história por trás dos versículos
             </h2>
             <p className="text-xs text-dark-muted leading-snug mt-1">
-              Personagens que se apresentam, uma linha do tempo viva e mapas com rotas
-              interativas — tudo conectado à Bíblia.
+              Personagens que se apresentam em 1ª pessoa, com versículos, momentos
+              marcantes e conexão direta com a Bíblia.
             </p>
           </div>
         </div>

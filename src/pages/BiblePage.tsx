@@ -594,6 +594,28 @@ const BiblePage = () => {
           description={metaDesc}
           path={metaPath}
           type="article"
+          breadcrumbs={[
+            { name: "Início", path: "/" },
+            { name: "Bíblia", path: "/biblia" },
+            { name: `${selectedBook.name} ${selectedChapter}`, path: metaPath },
+          ]}
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: `${selectedBook.name} ${selectedChapter}${metaVerseLabel ? ` — ${metaVerseLabel}` : ""}`,
+            inLanguage: "pt-BR",
+            isPartOf: {
+              "@type": "Book",
+              name: selectedBook.name,
+              inLanguage: "pt-BR",
+              bookEdition: currentVersion.shortName,
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "A Bíblia do Atalaia",
+            },
+            about: `${selectedBook.name} ${selectedChapter}`,
+          }}
         />
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
           <button
@@ -1093,6 +1115,10 @@ const BiblePage = () => {
         title="Bíblia Online — Todos os Livros | A Bíblia do Atalaia"
         description="Escolha o livro e capítulo. 66 livros da Bíblia disponíveis nas versões ARC, ACF, NVI e mais, com leitura offline."
         path="/biblia"
+        breadcrumbs={[
+          { name: "Início", path: "/" },
+          { name: "Bíblia", path: "/biblia" },
+        ]}
       />
       <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">

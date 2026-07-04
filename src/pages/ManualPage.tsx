@@ -98,6 +98,18 @@ const ManualPage = () => {
         title="Manual do Aplicativo — A Bíblia do Atalaia"
         description="Guia completo do app: leitura offline, planos, versões da Bíblia, notas, destaques e recursos de IA."
         path="/manual"
+        breadcrumbs={[
+          { name: "Início", path: "/" },
+          { name: "Manual", path: "/manual" },
+        ]}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "TechArticle",
+          headline: "Manual do Aplicativo — A Bíblia do Atalaia",
+          inLanguage: "pt-BR",
+          about: "Guia de uso do aplicativo A Bíblia do Atalaia",
+          publisher: { "@type": "Organization", name: "A Bíblia do Atalaia" },
+        }}
       />
       {/* Ambient background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">

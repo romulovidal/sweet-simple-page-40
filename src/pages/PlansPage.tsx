@@ -418,6 +418,10 @@ const PlansPage = () => {
         title="Planos de Leitura Bíblica — A Bíblia do Atalaia"
         description="Escolha um plano de leitura da Bíblia e acompanhe seu progresso diário. Do plano em 30 dias à Bíblia toda em 1 ano."
         path="/planos"
+        breadcrumbs={[
+          { name: "Início", path: "/" },
+          { name: "Planos de Leitura", path: "/planos" },
+        ]}
       />
       <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Planos de Leitura</h1>

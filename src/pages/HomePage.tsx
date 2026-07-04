@@ -193,6 +193,7 @@ const HomePage = () => {
         title="Bíblia do Atalaia — Versículo do Dia, Leia e Medite"
         description="Comece o dia com o versículo do Atalaia, mantenha sua sequência de leitura e receba a Palavra que Deus tem para você hoje."
         path="/"
+        breadcrumbs={[{ name: "Início", path: "/" }]}
       />
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between lg:pt-8">

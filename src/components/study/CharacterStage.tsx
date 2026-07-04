@@ -144,13 +144,13 @@ const CharacterStage = ({
     [selected]
   );
   const currentLine = script[slideIdx] || "";
-  const { output, done } = useTypewriter(currentLine, !!selected && !paused, 24);
+  const { output, done } = useTypewriter(currentLine, !!selected && !paused, 42);
 
   // Auto-advance after each line finishes typing (with reading pause)
   useEffect(() => {
     if (!selected || paused || !done) return;
     if (slideIdx >= script.length - 1) return;
-    const wait = Math.min(3500, 1200 + currentLine.length * 22);
+    const wait = Math.min(8000, 2500 + currentLine.length * 45);
     const id = window.setTimeout(() => setSlideIdx((i) => i + 1), wait);
     return () => window.clearTimeout(id);
   }, [done, paused, selected, slideIdx, script.length, currentLine.length]);

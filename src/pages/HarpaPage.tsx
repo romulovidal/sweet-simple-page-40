@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
-import { ArrowLeft, Search, Music2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Search, Music2, X, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import harpaIcon from "@/assets/harpa-atalaia-icon.png";
-import { HARPA_HINOS, type HarpaHino } from "@/data/harpa";
+import { loadHarpa, type HarpaHino } from "@/data/harpa";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -12,18 +12,39 @@ const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
+  const [hinos, setHinos] = useState<HarpaHino[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    loadHarpa()
+      .then((data) => {
+        if (!alive) return;
+        setHinos(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setError(err?.message ?? "Falha ao carregar hinário");
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const results = useMemo(() => {
     const q = normalize(query.trim());
-    if (!q) return HARPA_HINOS;
+    if (!q) return hinos;
     const asNumber = Number(q);
-    return HARPA_HINOS.filter((h) => {
+    return hinos.filter((h) => {
       if (!Number.isNaN(asNumber) && String(h.number).includes(q)) return true;
       return normalize(h.title).includes(q);
     });
-  }, [query]);
+  }, [query, hinos]);
 
-  const empty = HARPA_HINOS.length === 0;
+  const empty = !loading && hinos.length === 0;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--dark-text))] pb-24">
@@ -47,12 +68,12 @@ const HarpaPage = () => {
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold leading-tight truncate">Harpa Cristã Atalaia</h1>
             <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
-              {empty ? "Hinário aguardando carregamento" : `${HARPA_HINOS.length} hinos`}
+              {loading ? "Carregando…" : empty ? "Hinário indisponível" : `${hinos.length} hinos`}
             </p>
           </div>
         </div>
 
-        {!empty && (
+        {!empty && !loading && (
           <div className="px-4 pb-3 max-w-3xl mx-auto">
             <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--dark-card))] border border-white/5 focus-within:border-amber-500/40">
               <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
@@ -75,14 +96,18 @@ const HarpaPage = () => {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 pt-4">
-        {empty ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-[hsl(var(--dark-muted))]">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando hinário…
+          </div>
+        ) : error ? (
+          <p className="text-center text-sm text-red-400 py-16">
+            Não foi possível carregar o hinário: {error}
+          </p>
+        ) : empty ? (
           <div className="text-center py-16">
             <img src={harpaIcon} alt="" width={96} height={96} className="w-24 h-24 mx-auto opacity-80" />
             <h2 className="mt-4 text-lg font-semibold">Hinário ainda não carregado</h2>
-            <p className="mt-2 text-sm text-[hsl(var(--dark-muted))] max-w-sm mx-auto">
-              Envie o JSON da Harpa Cristã Atalaia para que os hinos apareçam aqui,
-              com busca por número/título e leitura em tela cheia.
-            </p>
           </div>
         ) : results.length === 0 ? (
           <p className="text-center text-sm text-[hsl(var(--dark-muted))] py-16">
@@ -101,11 +126,6 @@ const HarpaPage = () => {
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-semibold truncate text-sm">{h.title}</span>
-                    {h.author && (
-                      <span className="block text-[11px] text-[hsl(var(--dark-muted))] truncate">
-                        {h.author}
-                      </span>
-                    )}
                   </span>
                   <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
                 </button>
@@ -132,19 +152,11 @@ const HarpaPage = () => {
               </span>
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold leading-tight truncate">{selected.title}</h2>
-                {(selected.author || selected.key) && (
-                  <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight truncate">
-                    {[selected.author, selected.key].filter(Boolean).join(" • ")}
-                  </p>
-                )}
               </div>
             </div>
           </header>
 
           <article className="max-w-2xl mx-auto px-5 py-6 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed">
-            {selected.reference && (
-              <p className="text-xs text-[hsl(var(--dark-muted))] italic">{selected.reference}</p>
-            )}
             {selected.strophes.map((s, i) => (
               <div
                 key={i}
@@ -154,9 +166,9 @@ const HarpaPage = () => {
                     : ""
                 }
               >
-                {!s.chorus && (
+                {!s.chorus && s.index !== undefined && (
                   <span className="block text-xs text-amber-400/70 font-semibold mb-1">
-                    {i + 1}
+                    {s.index}
                   </span>
                 )}
                 {s.chorus && (
@@ -169,11 +181,6 @@ const HarpaPage = () => {
                 ))}
               </div>
             ))}
-            {selected.composer && (
-              <p className="text-xs text-[hsl(var(--dark-muted))] pt-4 border-t border-white/5">
-                Melodia: {selected.composer}
-              </p>
-            )}
           </article>
         </div>
       )}

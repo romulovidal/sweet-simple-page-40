@@ -230,6 +230,38 @@ const HarpaPage = () => {
         </div>
 
         {!empty && !loading && (
+          <div className="px-4 pb-2 max-w-3xl mx-auto">
+            <div className="flex gap-1 p-1 rounded-full bg-[hsl(var(--dark-card))] text-xs">
+              {(
+                [
+                  { id: "todos", label: "Todos", Icon: ListMusic },
+                  { id: "favoritos", label: "Favoritos", Icon: Star },
+                  { id: "historico", label: "Recentes", Icon: Clock },
+                  { id: "temas", label: "Temas", Icon: Tag },
+                ] as { id: TabKey; label: string; Icon: typeof Star }[]
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setTab(id);
+                    setActiveTheme(null);
+                    setQuery("");
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full transition font-medium ${
+                    tab === id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))]"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!empty && !loading && !showThemeGrid && (
           <div className="px-4 pb-3 max-w-3xl mx-auto">
             <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--dark-card))] border border-transparent focus-within:border-primary/40">
               <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
@@ -247,10 +279,33 @@ const HarpaPage = () => {
                 </button>
               )}
             </label>
-            {query && (
-              <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1.5 px-1">
-                {results.length} resultado{results.length === 1 ? "" : "s"}
+            <div className="flex items-center justify-between mt-1.5 px-1">
+              {activeTheme ? (
+                <button
+                  onClick={() => setActiveTheme(null)}
+                  className="text-[11px] text-primary flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3 h-3" /> Voltar aos temas
+                </button>
+              ) : (
+                <span />
+              )}
+              <p className="text-[11px] text-[hsl(var(--dark-muted))]">
+                {query
+                  ? `${results.length} resultado${results.length === 1 ? "" : "s"}`
+                  : `${baseList.length} hino${baseList.length === 1 ? "" : "s"}`}
               </p>
+            </div>
+            {tab === "historico" && history.length > 0 && (
+              <button
+                onClick={() => {
+                  clearHistory();
+                  toast.success("Histórico limpo");
+                }}
+                className="mt-2 text-[11px] text-[hsl(var(--destructive))] flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Limpar histórico
+              </button>
             )}
           </div>
         )}

@@ -5,6 +5,7 @@ export interface RateLimitResult {
   current: number;
   limit: number;
   retryAfter: number;
+  debug?: string;
 }
 
 /**
@@ -30,7 +31,7 @@ export async function checkRateLimit(
     });
     if (error) {
       console.error("[rate-limit] rpc error:", JSON.stringify(error), "for", endpoint, identifier);
-      return { allowed: true, current: 0, limit: max, retryAfter: 0 };
+      return { allowed: true, current: 0, limit: max, retryAfter: 0, debug: `rpc-error:${JSON.stringify(error)}` };
     }
     console.log("[rate-limit] ok:", endpoint, identifier, JSON.stringify(data));
     const d = data as { allowed: boolean; current: number; limit: number; retry_after: number };
@@ -42,7 +43,7 @@ export async function checkRateLimit(
     };
   } catch (e) {
     console.error("[rate-limit] exception:", e);
-    return { allowed: true, current: 0, limit: max, retryAfter: 0 };
+    return { allowed: true, current: 0, limit: max, retryAfter: 0, debug: `exception:${(e as Error).message}` };
   }
 }
 

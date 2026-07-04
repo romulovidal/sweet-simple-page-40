@@ -19,14 +19,20 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Pr
   const playerRef = useRef<any>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onEndedRef = useRef<typeof onEnded>(onEnded);
+  const foundRef = useRef<{ number: number; video: SearchResult } | null>(null);
+  const numberRef = useRef<number>(number);
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
+  useEffect(() => {
+    numberRef.current = number;
+  }, [number]);
 
   // Reset when hymn changes
   useEffect(() => {
     stop();
     setFound(null);
+    foundRef.current = null;
     if (autoPlay) {
       const t = setTimeout(() => play(), 50);
       return () => clearTimeout(t);
@@ -44,16 +50,19 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Pr
   }, []);
 
   async function ensureVideo(): Promise<SearchResult | null> {
-    if (found) return found;
+    const cached = foundRef.current;
+    if (cached && cached.number === numberRef.current) return cached.video;
     const { data, error } = await supabase.functions.invoke("youtube-search", {
-      body: { number, title },
+      body: { number: numberRef.current, title },
     });
     if (error || !data?.videoId) {
       toast.error(data?.error || "Não foi possível encontrar o hino");
       return null;
     }
-    setFound(data as SearchResult);
-    return data as SearchResult;
+    const video = data as SearchResult;
+    foundRef.current = { number: numberRef.current, video };
+    setFound(video);
+    return video;
   }
 
   async function play() {

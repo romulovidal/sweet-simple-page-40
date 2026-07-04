@@ -877,7 +877,6 @@ const BiblePage = () => {
                 const isUrlHighlighted =
                   !hasSelection &&
                   (highlightedVerse === verse.number || highlightedVerses.has(verse.number));
-                if (verse.number === 16) console.log("[render] v16 isUrlHighlighted:", isUrlHighlighted, "hasSelection:", hasSelection, "highlightedVerse:", highlightedVerse, "highlightedVerses:", Array.from(highlightedVerses));
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
                 const isRedLetter = isRedLetterVerse(selectedBook.apiAbbrev, selectedChapter, verse.number);

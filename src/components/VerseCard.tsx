@@ -21,12 +21,42 @@ interface VerseCardProps {
   version?: string;
 }
 
-function parseReference(ref: string): { book: string; chapter: number; verse: number } | null {
-  // e.g. "Gênesis 1:3" or "1 João 3:16"
-  const match = ref.match(/^(.+?)\s+(\d+):(\d+)$/);
+function parseReference(
+  ref: string,
+): { book: string; chapter: number; verses: number[] } | null {
+  // Aceita "Gênesis 1:3", "1 João 3:16", "João 3:16-17", "Sl 23:1,3,5"
+  const match = ref.trim().match(/^(.+?)\s+(\d+):([\d,\-\s]+)$/);
   if (!match) return null;
-  return { book: match[1], chapter: parseInt(match[2]), verse: parseInt(match[3]) };
+  const versesRaw = match[3];
+  const verses: number[] = [];
+  for (const part of versesRaw.split(",")) {
+    const seg = part.trim();
+    const range = seg.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (range) {
+      const a = parseInt(range[1]);
+      const b = parseInt(range[2]);
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) verses.push(i);
+    } else if (/^\d+$/.test(seg)) {
+      verses.push(parseInt(seg));
+    }
+  }
+  if (!verses.length) return null;
+  return { book: match[1].trim(), chapter: parseInt(match[2]), verses };
 }
+
+// Normaliza variantes comuns de nome de livro para bater com o mapa
+const BOOK_ALIASES: Record<string, string> = {
+  "Salmo": "Salmos",
+  "Sl": "Salmos",
+  "Gn": "Gênesis", "Ex": "Êxodo", "Lv": "Levítico", "Nm": "Números", "Dt": "Deuteronômio",
+  "Js": "Josué", "Jz": "Juízes", "Rt": "Rute",
+  "Pv": "Provérbios", "Ec": "Eclesiastes", "Ct": "Cânticos",
+  "Is": "Isaías", "Jr": "Jeremias", "Lm": "Lamentações", "Ez": "Ezequiel", "Dn": "Daniel",
+  "Mt": "Mateus", "Mc": "Marcos", "Lc": "Lucas", "Jo": "João",
+  "At": "Atos", "Rm": "Romanos", "Gl": "Gálatas", "Ef": "Efésios",
+  "Fp": "Filipenses", "Cl": "Colossenses", "Hb": "Hebreus", "Tg": "Tiago",
+  "Ap": "Apocalipse", "Fm": "Filemom", "Tt": "Tito",
+};
 
 // Map Portuguese book names to API abbreviations
 const bookNameToAbbrev: Record<string, string> = {

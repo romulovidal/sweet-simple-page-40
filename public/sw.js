@@ -1,4 +1,5 @@
-var SW_VERSION = "v18";
+// Versão substituída no build por scripts/stamp-sw.mjs (procura pelo literal abaixo).
+var SW_VERSION = "__BUILD_VERSION__";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";

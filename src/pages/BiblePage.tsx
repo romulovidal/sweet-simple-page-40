@@ -399,6 +399,9 @@ const BiblePage = () => {
       chapter: selectedChapter!,
       verses: sortedNumbers,
       fallbackLong: link,
+      textSnippet: text,
+      bookName: selectedBook!.name,
+      version: versionShort,
     });
     const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {
@@ -531,6 +534,9 @@ const BiblePage = () => {
       chapter: selectedChapter,
       verses: [verse.number],
       fallbackLong: longLink,
+      textSnippet: verse.text,
+      bookName: selectedBook.name,
+      version: versionShort,
     });
     const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {

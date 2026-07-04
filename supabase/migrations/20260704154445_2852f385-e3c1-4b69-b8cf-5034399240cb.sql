@@ -1,0 +1,4 @@
+ALTER TABLE public.verse_shares
+  ADD COLUMN IF NOT EXISTS text_snippet TEXT,
+  ADD COLUMN IF NOT EXISTS book_name TEXT,
+  ADD COLUMN IF NOT EXISTS version TEXT;

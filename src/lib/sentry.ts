@@ -23,3 +23,8 @@ export function initSentry() {
 }
 
 export { Sentry };
+
+// Botão temporário de teste — remova após validar no dashboard do Sentry
+export function throwTestError() {
+  throw new Error("Sentry test error — " + new Date().toISOString());
+}

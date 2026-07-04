@@ -725,7 +725,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      current_daily_verse: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          scheduled_date: string | null
+          verse_ref: string | null
+          verse_text: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {

@@ -2,7 +2,8 @@
 // Open Graph tags + client redirect to the SPA for humans.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const APP_ORIGIN = "https://biblia-atalaia.lovable.app";
+const APP_ORIGIN =
+  Deno.env.get("APP_PUBLIC_ORIGIN") ?? "https://biblia.atalaias.online";
 const FUNC_ORIGIN = `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
 
 function escapeHtml(s: string) {

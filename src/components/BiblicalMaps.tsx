@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 
 interface Props {
   onNavigateReference?: (reference: string) => void;
+  hideTrigger?: boolean;
 }
 
 // Custom colored divIcon marker
@@ -37,7 +38,7 @@ const FitBounds = ({ points }: { points: MapPoint[] }) => {
   return null;
 };
 
-const BiblicalMaps = ({ onNavigateReference }: Props) => {
+const BiblicalMaps = ({ onNavigateReference, hideTrigger }: Props) => {
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<string>(BIBLE_MAPS[0].id);
   useBackHandler(open, () => setOpen(false));
@@ -53,14 +54,16 @@ const BiblicalMaps = ({ onNavigateReference }: Props) => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Mapas Bíblicos"
-        aria-label="Mapas Bíblicos"
-        className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
-      >
-        <MapPin className="w-4 h-4" />
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          title="Mapas Bíblicos"
+          aria-label="Mapas Bíblicos"
+          className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
+        >
+          <MapPin className="w-4 h-4" />
+        </button>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

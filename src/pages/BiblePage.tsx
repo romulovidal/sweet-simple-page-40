@@ -28,10 +28,6 @@ import AITimeline from "@/components/ai/AITimeline";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
-import VisualTimeline from "@/components/VisualTimeline";
-import BiblicalMaps from "@/components/BiblicalMaps";
-import BibleCharacters from "@/components/BibleCharacters";
-import ExploreToolsBar from "@/components/ExploreToolsBar";
 import AudioBible from "@/components/AudioBible";
 import PersonalNotes from "@/components/PersonalNotes";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -557,61 +553,6 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
-              <VisualTimeline
-                onNavigateReference={(ref) => {
-                  // Parse "Gênesis 12" or "Êxodo 7—12" → book + first chapter
-                  const match = ref.match(/^(.+?)\s+(\d+)/);
-                  if (!match) return;
-                  const bookName = match[1].trim();
-                  const chapter = parseInt(match[2], 10);
-                  const book = bibleBooks.find(
-                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                  );
-                  if (!book) return;
-                  setSelectedBook(book);
-                  setTestament(book.testament);
-                  setSelectedChapter(Math.min(chapter, book.chapters));
-                  setSelectedVerses(new Set());
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                onCharacterClick={(name) =>
-                  window.dispatchEvent(new CustomEvent("open-bible-character", { detail: { name } }))
-                }
-              />
-              <BiblicalMaps
-                onNavigateReference={(ref) => {
-                  const match = ref.match(/^(.+?)\s+(\d+)/);
-                  if (!match) return;
-                  const bookName = match[1].trim();
-                  const chapter = parseInt(match[2], 10);
-                  const book = bibleBooks.find(
-                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                  );
-                  if (!book) return;
-                  setSelectedBook(book);
-                  setTestament(book.testament);
-                  setSelectedChapter(Math.min(chapter, book.chapters));
-                  setSelectedVerses(new Set());
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              />
-              <BibleCharacters
-                onNavigateReference={(ref) => {
-                  const match = ref.match(/^(.+?)\s+(\d+)/);
-                  if (!match) return;
-                  const bookName = match[1].trim();
-                  const chapter = parseInt(match[2], 10);
-                  const book = bibleBooks.find(
-                    (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                  );
-                  if (!book) return;
-                  setSelectedBook(book);
-                  setTestament(book.testament);
-                  setSelectedChapter(Math.min(chapter, book.chapters));
-                  setSelectedVerses(new Set());
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              />
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}
@@ -636,11 +577,6 @@ const BiblePage = () => {
             </div>
           )}
         </header>
-
-        {/* Barra Explorar (mobile prominente) */}
-        {!hasSelection && (
-          <ExploreToolsBar className="px-5 pt-3" />
-        )}
 
         {/* Floating action bar */}
         {hasSelection && (
@@ -1082,60 +1018,6 @@ const BiblePage = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Bíblia</h1>
           <div className="flex items-center gap-2">
-            <VisualTimeline
-              onNavigateReference={(ref) => {
-                const match = ref.match(/^(.+?)\s+(\d+)/);
-                if (!match) return;
-                const bookName = match[1].trim();
-                const chapter = parseInt(match[2], 10);
-                const book = bibleBooks.find(
-                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                );
-                if (!book) return;
-                setSelectedBook(book);
-                setTestament(book.testament);
-                setSelectedChapter(Math.min(chapter, book.chapters));
-                setSelectedVerses(new Set());
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              onCharacterClick={(name) =>
-                window.dispatchEvent(new CustomEvent("open-bible-character", { detail: { name } }))
-              }
-            />
-            <BiblicalMaps
-              onNavigateReference={(ref) => {
-                const match = ref.match(/^(.+?)\s+(\d+)/);
-                if (!match) return;
-                const bookName = match[1].trim();
-                const chapter = parseInt(match[2], 10);
-                const book = bibleBooks.find(
-                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                );
-                if (!book) return;
-                setSelectedBook(book);
-                setTestament(book.testament);
-                setSelectedChapter(Math.min(chapter, book.chapters));
-                setSelectedVerses(new Set());
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
-            <BibleCharacters
-              onNavigateReference={(ref) => {
-                const match = ref.match(/^(.+?)\s+(\d+)/);
-                if (!match) return;
-                const bookName = match[1].trim();
-                const chapter = parseInt(match[2], 10);
-                const book = bibleBooks.find(
-                  (b) => b.name.toLowerCase() === bookName.toLowerCase(),
-                );
-                if (!book) return;
-                setSelectedBook(book);
-                setTestament(book.testament);
-                setSelectedChapter(Math.min(chapter, book.chapters));
-                setSelectedVerses(new Set());
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
             <button
               onClick={() => setShowVersionPicker(true)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
@@ -1171,7 +1053,6 @@ const BiblePage = () => {
           ))}
         </div>
       </header>
-      <ExploreToolsBar className="px-5 mb-4 max-w-2xl mx-auto" />
       <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6">
         {filteredBooks.map((book) => (
           <button

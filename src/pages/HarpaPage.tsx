@@ -16,6 +16,7 @@ import PageHead from "@/components/PageHead";
 import harpaIcon from "@/assets/harpa-atalaia-icon.png";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import { toast } from "sonner";
+import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -295,6 +296,9 @@ const HarpaPage = () => {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+            <div className="px-4 pb-3 max-w-3xl mx-auto flex justify-center">
+              <HarpaMiniPlayer number={selected.number} title={selected.title} />
             </div>
           </header>
 

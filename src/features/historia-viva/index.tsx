@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles } from "lucide-react";
+import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles, Map as MapIcon, GitBranch } from "lucide-react";
 import HistoriaTimeline from "./components/Timeline/HistoriaTimeline";
+import HistoriaMap from "./components/Map/HistoriaMap";
+import ParallelsView from "./components/Parallels/ParallelsView";
 import EntityDetail from "./components/EntityDetail";
 import Chip from "./components/shared/Chip";
 import { PERIODS } from "./data/periods";
@@ -14,7 +16,7 @@ import type { CharacterTag, EntityRef } from "./types";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void }
 
-type Tab = "timeline" | "characters" | "events" | "places";
+type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels";
 
 const CHAR_FILTERS: { id: CharacterTag; label: string; icon: string }[] = [
   { id: "patriarca", label: "Patriarcas", icon: "🌟" },
@@ -82,6 +84,8 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
             <div className="flex gap-1.5 mt-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
               {([
                 { id: "timeline", label: "Linha do tempo", icon: <Clock className="w-3.5 h-3.5" /> },
+                { id: "map", label: "Mapa", icon: <MapIcon className="w-3.5 h-3.5" /> },
+                { id: "parallels", label: "Paralelas", icon: <GitBranch className="w-3.5 h-3.5" /> },
                 { id: "characters", label: `Personagens`, icon: <Users className="w-3.5 h-3.5" /> },
                 { id: "events", label: `Eventos`, icon: <Sparkles className="w-3.5 h-3.5" /> },
                 { id: "places", label: `Lugares`, icon: <MapPin className="w-3.5 h-3.5" /> },

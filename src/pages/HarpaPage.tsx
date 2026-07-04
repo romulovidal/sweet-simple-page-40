@@ -214,7 +214,7 @@ const HarpaPage = () => {
             {results.map(({ hino: h, match }) => (
               <li key={h.number}>
                 <button
-                  onClick={() => setSelected(h)}
+                  onClick={() => { setAutoPlayNext(false); setSelected(h); }}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
                 >
                   <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-sm">
@@ -242,7 +242,7 @@ const HarpaPage = () => {
           <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))]">
             <div className="flex items-center gap-3 px-4 py-3 max-w-3xl mx-auto">
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setAutoPlayNext(false); setSelected(null); }}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Fechar"
               >

@@ -46,7 +46,18 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled, labe
     setSaving(false);
     if (error) {
       if ((error as any).code === "23505") {
-        toast.error("Já existe um versículo agendado para esta data");
+        const { error: updateError } = await supabase
+          .from("daily_verse_queue")
+          .update({ verse_text: text, verse_ref: reference, scheduled_date })
+          .eq("scheduled_date", scheduled_date);
+        if (updateError) {
+          toast.error("Não foi possível substituir");
+          return;
+        }
+        toast.success(`Substituído para ${format(date, "dd 'de' MMMM", { locale: ptBR })}`);
+        setOpen(false);
+        setDate(undefined);
+        onScheduled?.();
       } else {
         toast.error("Não foi possível agendar");
       }

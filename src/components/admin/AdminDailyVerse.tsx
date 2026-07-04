@@ -169,8 +169,18 @@ const AdminDailyVerse = () => {
     } else {
       const { error } = await supabase.from("daily_verse_queue").insert(data);
       if (error) {
-        if (error.code === "23505") toast.error("Já existe um versículo para esta data");
-        else toast.error("Erro ao criar");
+        if (error.code === "23505") {
+          const { error: updateError } = await supabase
+            .from("daily_verse_queue")
+            .update(data)
+            .eq("scheduled_date", editing.scheduled_date);
+          if (updateError) { toast.error("Erro ao substituir"); return; }
+          toast.success("Versículo substituído para esta data!");
+          setEditing(null);
+          loadData();
+          return;
+        }
+        toast.error("Erro ao criar");
         return;
       }
       toast.success("Versículo agendado!");

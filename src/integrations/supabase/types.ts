@@ -190,6 +190,36 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          event_name: string
+          id: string
+          path: string | null
+          props: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          event_name: string
+          id?: string
+          path?: string | null
+          props?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          event_name?: string
+          id?: string
+          path?: string | null
+          props?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string | null
@@ -882,6 +912,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_data: { Args: never; Returns: Json }
+      get_analytics_summary: { Args: { _days_back?: number }; Returns: Json }
       get_prayer_author_names: {
         Args: { _user_ids: string[] }
         Returns: {

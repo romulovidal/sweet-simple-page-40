@@ -413,6 +413,24 @@ const HarpaPage = () => {
                 </p>
               </div>
               <button
+                onClick={() => handleToggleFav(selected.number)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label={favorites.includes(selected.number) ? "Remover favorito" : "Adicionar favorito"}
+              >
+                <Star
+                  className={`w-4 h-4 ${favorites.includes(selected.number) ? "text-yellow-400" : ""}`}
+                  fill={favorites.includes(selected.number) ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={() => setPresenting(selected)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label="Modo apresentação"
+                title="Apresentar"
+              >
+                <Presentation className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => shareHymn(selected)}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Compartilhar hino"

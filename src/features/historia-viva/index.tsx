@@ -206,6 +206,10 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                   );
                 })}
             </div>
+          ) : tab === "map" ? (
+            <HistoriaMap onOpenPlace={(id) => openRef({ kind: "place", id })} onNavigate={openRef} />
+          ) : tab === "parallels" ? (
+            <ParallelsView onNavigate={openRef} />
           ) : tab === "events" ? (
             <div className="p-4 space-y-2">
               {EVENTS.sort((a, b) => a.year - b.year).map((e) => {

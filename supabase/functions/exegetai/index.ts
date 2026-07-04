@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIdentifier,
+  getRequestUserId,
+  createAdminClient,
+} from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +27,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Rate limit: 15 requests / 60s per user (or IP)
+    const userId = await getRequestUserId(req);
+    const identifier = getClientIdentifier(req, userId);
+    const admin = createAdminClient();
+    const rl = await checkRateLimit(admin, identifier, `exegetai:${mode ?? "exegesis"}`, 15, 60);
+    if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");

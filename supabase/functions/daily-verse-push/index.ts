@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const APP_BASE_URL = "https://biblia.atalaias.online";
-
 function limitNotificationBody(text: string) {
   const normalized = text.replace(/\s+/g, " ").trim();
   return normalized.length > 480 ? `${normalized.slice(0, 477).trimEnd()}...` : normalized;
@@ -53,8 +51,7 @@ serve(async (req) => {
         const { data: queueVerse } = await supabase
           .from("daily_verse_queue")
           .select("verse_text, verse_ref")
-          .lte("scheduled_date", todayBR)
-          .order("scheduled_date", { ascending: false })
+          .eq("scheduled_date", todayBR)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();

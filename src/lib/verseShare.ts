@@ -1,16 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// URL da Edge Function pública que renderiza a prévia (OG) + redireciona
-// humanos para o app. É o alvo dos crawlers do WhatsApp, Facebook, Twitter etc.
-const FUNCTIONS_ORIGIN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+// Domínio público do app. Preferimos SEMPRE compartilhar via este domínio,
+// não via URL do backend. Fallback: origin atual (útil em preview).
+const APP_ORIGIN =
+  (import.meta.env.VITE_APP_URL as string | undefined) ||
+  "https://biblia.atalaias.online";
 
 /**
  * Cria (ou reusa) um link curto para um conjunto de versículos.
- * O link resultante aponta para uma edge function que:
- *   - Devolve HTML com meta tags Open Graph dinâmicas (título + trecho) para bots
- *   - Redireciona o usuário humano para a leitura no app
+ * O link fica no formato `<seu-domínio>/v/:slug` e resolve para a
+ * rota `VerseShareRedirect`, que redireciona para a leitura do capítulo
+ * com os versículos destacados. Meta tags dinâmicas são aplicadas no
+ * cliente via Helmet (funcionam para Google e crawlers que executam JS).
  *
- * Em caso de falha, retorna o fallback (URL longa) para não bloquear o compartilhamento.
+ * Em caso de falha, retorna o fallback (URL longa) para não bloquear
+ * o compartilhamento.
  */
 export async function createShortVerseLink(params: {
   bookAbbrev: string;
@@ -33,7 +37,7 @@ export async function createShortVerseLink(params: {
       },
     });
     if (error || !data?.slug) return params.fallbackLong;
-    return `${FUNCTIONS_ORIGIN}/s/${data.slug}`;
+    return `${APP_ORIGIN}/v/${data.slug}`;
   } catch {
     return params.fallbackLong;
   }

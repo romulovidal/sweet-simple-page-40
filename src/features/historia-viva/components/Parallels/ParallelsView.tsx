@@ -12,7 +12,7 @@ interface Props {
 type Lane = "reis" | "profetas" | "sacerdotes" | "eventos";
 
 const LANES: { id: Lane; label: string; icon: string; color: string }[] = [
-  { id: "reis", label: "Reis", icon: "👑", color: "45 95% 55%" },
+  { id: "reis", label: "Reis", icon: "👑", color: "38 92% 50%" },
   { id: "profetas", label: "Profetas", icon: "📖", color: "271 76% 62%" },
   { id: "sacerdotes", label: "Sacerdotes/Líderes", icon: "🕎", color: "142 60% 45%" },
   { id: "eventos", label: "Eventos", icon: "✨", color: "38 92% 55%" },

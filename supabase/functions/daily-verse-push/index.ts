@@ -37,12 +37,44 @@ function getBrazilTimeKey(date = new Date()) {
   }).format(date);
 }
 
+async function isAuthorizedTrigger(
+  req: Request,
+  supabaseUrl: string,
+  anonKey: string,
+  serviceKey: string,
+): Promise<{ ok: boolean; manual: boolean }> {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) return { ok: false, manual: false };
+  const token = authHeader.slice(7).trim();
+
+  // Internal cron / server-to-server: exact service-role key match.
+  if (token === serviceKey) return { ok: true, manual: true };
+
+  // Otherwise require an authenticated admin user.
+  try {
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await userClient.auth.getUser();
+    if (!userData?.user) return { ok: false, manual: false };
+    const { data: isAdmin } = await userClient.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (isAdmin === true) return { ok: true, manual: true };
+  } catch {
+    return { ok: false, manual: false };
+  }
+  return { ok: false, manual: false };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const { data: settings } = await supabase.from("admin_settings").select("key, value");
@@ -60,8 +92,17 @@ serve(async (req) => {
      const lastVerseDate = getVal("last_daily_verse_push_date") || "";
      const lastMotivationalDate = getVal("last_motivational_push_date") || "";
  
-     const authHeader = req.headers.get("Authorization");
-     const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
+     // Manual triggers must come from an admin user or the internal service role.
+     // Otherwise, the endpoint only runs on its scheduled time window.
+     const auth = await isAuthorizedTrigger(req, supabaseUrl, anonKey, serviceKey);
+     const hasAuthHeader = !!req.headers.get("Authorization");
+     if (hasAuthHeader && !auth.ok) {
+       return new Response(JSON.stringify({ error: "Unauthorized" }), {
+         status: 401,
+         headers: { ...corsHeaders, "Content-Type": "application/json" },
+       });
+     }
+     const isManual = auth.manual;
  
       const brTimeStr = getBrazilTimeKey();
       const todayBR = getBrazilDateKey();

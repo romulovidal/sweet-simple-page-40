@@ -235,7 +235,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 );
               })}
             </div>
-          ) : (
+          ) : tab === "places" ? (
             <div className="p-4 grid grid-cols-2 gap-2">
               {PLACES.map((p) => (
                 <button
@@ -251,8 +251,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 </button>
               ))}
             </div>
-          )}
-          {!query && tab === "books" && (
+          ) : (
             <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
               {BOOKS.map((b) => {
                 const period = PERIODS.find((p) => p.id === b.periodId);

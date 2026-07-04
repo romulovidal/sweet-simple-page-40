@@ -6,6 +6,7 @@ import { BIBLE_CHARACTERS, findCharacterByName, type BibleCharacter, type Charac
 
 interface Props {
   onNavigateReference?: (reference: string) => void;
+  hideTrigger?: boolean;
 }
 
 const CATEGORY_LABELS: Record<CharacterCategory | "todos", string> = {
@@ -30,7 +31,7 @@ const CATEGORY_ORDER: (CharacterCategory | "todos")[] = [
   "outro",
 ];
 
-const BibleCharacters = ({ onNavigateReference }: Props) => {
+const BibleCharacters = ({ onNavigateReference, hideTrigger }: Props) => {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<BibleCharacter | null>(null);
   const [filter, setFilter] = useState<CharacterCategory | "todos">("todos");
@@ -85,14 +86,16 @@ const BibleCharacters = ({ onNavigateReference }: Props) => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Personagens Bíblicos"
-        aria-label="Personagens Bíblicos"
-        className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
-      >
-        <Users className="w-4 h-4" />
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          title="Personagens Bíblicos"
+          aria-label="Personagens Bíblicos"
+          className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
+        >
+          <Users className="w-4 h-4" />
+        </button>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

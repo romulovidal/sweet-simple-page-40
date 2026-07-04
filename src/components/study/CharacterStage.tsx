@@ -210,21 +210,21 @@ const CharacterStage = ({
       {!selected ? (
         <div className="h-full flex flex-col">
           {/* Search */}
-          <div className="flex-shrink-0 px-5 pt-3 pb-2">
-            <div className="relative">
+          <div className="flex-shrink-0 px-5 pt-3 pb-2 lg:max-w-7xl lg:mx-auto lg:w-full lg:px-8 lg:pt-6">
+            <div className="relative lg:max-w-xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar personagem..."
-                className="w-full bg-[hsl(var(--dark-card))] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-[hsl(var(--dark-card))] rounded-xl pl-10 pr-4 py-2.5 lg:py-3 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>
           {/* Categories */}
-          <div className="flex-shrink-0 overflow-x-auto scrollbar-none border-b border-[hsl(var(--dark-card-hover))]">
-            <div className="flex gap-2 px-5 py-3 min-w-max">
+          <div className="flex-shrink-0 overflow-x-auto scrollbar-none border-b border-[hsl(var(--dark-card-hover))] lg:overflow-visible">
+            <div className="flex gap-2 px-5 py-3 min-w-max lg:min-w-0 lg:flex-wrap lg:max-w-7xl lg:mx-auto lg:w-full lg:px-8 lg:py-4">
               {CATEGORY_ORDER.map((cat) => {
                 const active = filter === cat;
                 return (
@@ -251,27 +251,27 @@ const CharacterStage = ({
             </div>
           </div>
           {/* Grid */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 lg:px-8 lg:py-6">
             {filtered.length === 0 ? (
               <p className="text-center text-sm text-[hsl(var(--dark-muted))] mt-8">
                 Nenhum personagem encontrado.
               </p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4 lg:max-w-7xl lg:mx-auto">
                 {filtered.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
-                    className="group relative text-left rounded-2xl p-3 bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-all active:scale-[0.98] overflow-hidden"
+                    className="group relative text-left rounded-2xl p-3 lg:p-4 bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-all active:scale-[0.98] hover:-translate-y-0.5 overflow-hidden"
                     style={{ border: `1px solid hsl(${c.color} / 0.2)` }}
                   >
                     <div
                       className="pointer-events-none absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"
                       style={{ background: `hsl(${c.color} / 0.5)` }}
                     />
-                    <div className="relative flex items-center gap-2 mb-2">
+                    <div className="relative flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-lg"
+                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center text-lg lg:text-xl flex-shrink-0 shadow-lg"
                         style={{
                           background: `linear-gradient(135deg, hsl(${c.color}) 0%, hsl(${c.color} / 0.5) 100%)`,
                         }}
@@ -279,18 +279,18 @@ const CharacterStage = ({
                         {c.icon}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-[13px] font-bold text-[hsl(var(--dark-text))] leading-tight truncate">
+                        <h4 className="text-[13px] lg:text-sm font-bold text-[hsl(var(--dark-text))] leading-tight truncate">
                           {c.name}
                         </h4>
                         <p
-                          className="text-[9px] uppercase tracking-wider font-semibold truncate"
+                          className="text-[9px] lg:text-[10px] uppercase tracking-wider font-semibold truncate"
                           style={{ color: `hsl(${c.color})` }}
                         >
                           {CATEGORY_LABELS[c.category]}
                         </p>
                       </div>
                     </div>
-                    <p className="relative text-[10px] text-[hsl(var(--dark-muted))] leading-snug line-clamp-2">
+                    <p className="relative text-[10px] lg:text-xs text-[hsl(var(--dark-muted))] leading-snug line-clamp-2 lg:line-clamp-3">
                       {c.role}
                     </p>
                   </button>
@@ -303,7 +303,7 @@ const CharacterStage = ({
         /* ─── Presentation ─── */
         <div className="h-full flex flex-col">
           {/* Progress bar (stories) */}
-          <div className="flex-shrink-0 flex gap-1 px-4 pt-3 pb-2">
+          <div className="flex-shrink-0 flex gap-1 px-4 pt-3 pb-2 lg:max-w-6xl lg:mx-auto lg:w-full lg:px-8 lg:pt-5">
             {script.map((_, i) => (
               <div
                 key={i}
@@ -327,12 +327,14 @@ const CharacterStage = ({
             ))}
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="lg:max-w-6xl lg:mx-auto lg:w-full lg:px-8 lg:py-4 lg:grid lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-8 lg:items-start">
+            <div className="lg:sticky lg:top-4 lg:self-start">
             {/* Portrait stage */}
             <div
               ref={portraitRef}
               onPointerMove={onPointerMove}
               onPointerLeave={onPointerLeave}
-              className="relative mx-4 mt-2 rounded-3xl overflow-hidden aspect-[4/5] max-h-[440px] flex items-center justify-center select-none"
+              className="relative mx-4 lg:mx-0 mt-2 lg:mt-0 rounded-3xl overflow-hidden aspect-[4/5] max-h-[440px] lg:max-h-[520px] flex items-center justify-center select-none"
               style={{
                 background: `radial-gradient(120% 100% at 50% 20%, hsl(${selected.color} / 0.35) 0%, hsl(var(--dark-bg)) 70%)`,
                 border: `1px solid hsl(${selected.color} / 0.35)`,
@@ -402,7 +404,7 @@ const CharacterStage = ({
             </div>
 
             {/* Speech bubble */}
-            <div className="mx-4 mt-3">
+            <div className="mx-4 lg:mx-0 mt-3">
               <div
                 className="relative rounded-2xl p-4 min-h-[110px]"
                 style={{
@@ -432,7 +434,7 @@ const CharacterStage = ({
             </div>
 
             {/* Controls */}
-            <div className="mx-4 mt-3 flex items-center gap-2">
+            <div className="mx-4 lg:mx-0 mt-3 flex items-center gap-2">
               <button
                 onClick={() => setSlideIdx((i) => Math.max(0, i - 1))}
                 disabled={slideIdx === 0}
@@ -471,13 +473,15 @@ const CharacterStage = ({
                 {slideIdx < script.length - 1 ? "Próxima fala" : "Próximo personagem"}
               </button>
             </div>
+            </div>
+            <div className="lg:min-w-0">
 
             {/* Bio */}
-            <div className="mx-4 mt-5 rounded-2xl p-4 bg-[hsl(var(--dark-card))]">
+            <div className="mx-4 lg:mx-0 mt-5 lg:mt-0 rounded-2xl p-4 lg:p-5 bg-[hsl(var(--dark-card))]">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))] mb-2">
                 Quem foi
               </p>
-              <p className="text-[13px] text-[hsl(var(--dark-text))] leading-relaxed">
+              <p className="text-[13px] lg:text-sm text-[hsl(var(--dark-text))] leading-relaxed">
                 {selected.bio}
               </p>
               <button
@@ -491,7 +495,7 @@ const CharacterStage = ({
             </div>
 
             {/* Moments */}
-            <div className="mx-4 mt-4">
+            <div className="mx-4 lg:mx-0 mt-4 lg:mt-6">
               <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))] mb-3 px-1">
                 <Clock className="w-3 h-3" />
                 Momentos marcantes
@@ -539,12 +543,12 @@ const CharacterStage = ({
             </div>
 
             {/* Verses */}
-            <div className="mx-4 mt-5 mb-6">
+            <div className="mx-4 lg:mx-0 mt-5 lg:mt-6 mb-6">
               <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--dark-muted))] mb-3 px-1">
                 <BookOpen className="w-3 h-3" />
                 Versículos-chave
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                 {selected.keyVerses.map((v, idx) => (
                   <li key={idx}>
                     <button
@@ -568,7 +572,7 @@ const CharacterStage = ({
             </div>
 
             {/* Character nav footer */}
-            <div className="mx-4 mb-6 flex items-center gap-2">
+            <div className="mx-4 lg:mx-0 mb-6 flex items-center gap-2">
               <button
                 onClick={goPrevChar}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-[hsl(var(--dark-card))] text-[12px] font-semibold text-[hsl(var(--dark-muted))]"
@@ -583,6 +587,8 @@ const CharacterStage = ({
                 Próximo
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
+            </div>
+            </div>
             </div>
           </div>
         </div>

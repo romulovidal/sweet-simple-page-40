@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, BookOpen, FileText, Bell, TrendingUp, Flame, Loader2, Smartphone } from "lucide-react";
+import { getBrazilDateKey } from "@/lib/date";
 
 interface DashboardStats {
   totalUsers: number;
@@ -26,7 +27,7 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     setLoading(true);
-    const today = new Date().toISOString().split("T")[0];
+    const today = getBrazilDateKey();
     const [usersRes, plansRes, postsRes, pushRes, streaksRes, versesRes, devicesRes] = await Promise.all([
       supabase.from("profiles").select("created_at"),
       supabase.from("admin_plans").select("is_active"),

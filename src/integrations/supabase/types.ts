@@ -889,6 +889,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_retention_metrics: { Args: { _days_back?: number }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -11,6 +11,30 @@ function limitNotificationBody(text: string) {
   return normalized.length > 480 ? `${normalized.slice(0, 477).trimEnd()}...` : normalized;
 }
 
+function getSaoPauloDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+  const day = parts.find((part) => part.type === "day")?.value ?? "00";
+
+  return `${year}-${month}-${day}`;
+}
+
+function getSaoPauloTimeKey(date = new Date()) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -37,11 +61,8 @@ serve(async (req) => {
      const authHeader = req.headers.get("Authorization");
      const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
  
-     const nowBR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-     const brTimeStr = new Intl.DateTimeFormat("pt-BR", {
-       hour: "2-digit", minute: "2-digit", hour12: false,
-     }).format(nowBR);
-     const todayBR = nowBR.toISOString().split("T")[0];
+      const brTimeStr = getSaoPauloTimeKey();
+      const todayBR = getSaoPauloDateKey();
  
      const results: any = { brTime: brTimeStr, date: todayBR };
  

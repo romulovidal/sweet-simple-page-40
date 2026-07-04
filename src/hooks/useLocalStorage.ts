@@ -2,6 +2,7 @@
  import { LOCAL_DATA_CHANGED_EVENT, readJsonStorage, writeJsonStorage } from "@/lib/localData";
  import { supabase } from "@/integrations/supabase/client";
  import { toast } from "sonner";
+ import { getBrazilDateKey, getBrazilYesterdayDateKey } from "@/lib/date";
 
 function readLocalStorageValue<T>(key: string, initialValue: T): T {
   return readJsonStorage(key, initialValue);
@@ -83,7 +84,7 @@ export interface StreakData {
 }
 
 export function getToday(): string {
-  return new Date().toISOString().split("T")[0];
+  return getBrazilDateKey();
 }
 
 /** Returns the display streak: 0 if user hasn't read today or yesterday */
@@ -91,9 +92,7 @@ export function getDisplayStreak(streak: StreakData): number {
   const today = getToday();
   if (streak.lastDate === today) return streak.current;
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  const yesterdayStr = getBrazilYesterdayDateKey();
 
   if (streak.lastDate === yesterdayStr) return streak.current;
 
@@ -110,9 +109,7 @@ export function updateStreak(streak: StreakData): StreakData {
   // If already registered activity today, do nothing
   if (streak.history.includes(today)) return streak;
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  const yesterdayStr = getBrazilYesterdayDateKey();
 
   // Consecutive if the last activity was yesterday
   const isConsecutive = streak.lastDate === yesterdayStr;

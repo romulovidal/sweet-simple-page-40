@@ -16,6 +16,7 @@ import {
   formatVerseRange,
 } from "@/lib/dailyVerseVersion";
 import { bibleBooks } from "@/data/bible";
+import { getBrazilDateKey, parseDateKeyAtNoon } from "@/lib/date";
 
 
 interface VerseQueueItem {
@@ -26,6 +27,7 @@ interface VerseQueueItem {
 }
 
 const AdminDailyVerse = () => {
+  const todayKey = getBrazilDateKey();
   const [version, setVersion] = useState<string>(DEFAULT_DAILY_VERSION);
   const [pushTime, setPushTime] = useState<string>("08:00");
   const [motivationalEnabled, setMotivationalEnabled] = useState(true);
@@ -89,7 +91,7 @@ const AdminDailyVerse = () => {
       supabase
         .from("daily_verse_queue")
         .select("*")
-        .gte("scheduled_date", new Date().toISOString().split("T")[0])
+        .gte("scheduled_date", getBrazilDateKey())
         .order("scheduled_date", { ascending: true }),
     ]);
 
@@ -167,8 +169,18 @@ const AdminDailyVerse = () => {
     } else {
       const { error } = await supabase.from("daily_verse_queue").insert(data);
       if (error) {
-        if (error.code === "23505") toast.error("Já existe um versículo para esta data");
-        else toast.error("Erro ao criar");
+        if (error.code === "23505") {
+          const { error: updateError } = await supabase
+            .from("daily_verse_queue")
+            .update(data)
+            .eq("scheduled_date", editing.scheduled_date);
+          if (updateError) { toast.error("Erro ao substituir"); return; }
+          toast.success("Versículo substituído para esta data!");
+          setEditing(null);
+          loadData();
+          return;
+        }
+        toast.error("Erro ao criar");
         return;
       }
       toast.success("Versículo agendado!");
@@ -376,7 +388,7 @@ const AdminDailyVerse = () => {
             <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">📅 Data de Exibição</label>
             <Input type="date" value={editing.scheduled_date || ""}
               onChange={(e) => setEditing({ ...editing, scheduled_date: e.target.value })}
-              min={new Date().toISOString().split("T")[0]}
+              min={todayKey}
               className="bg-[hsl(var(--dark-card))] border-none" />
           </div>
           <div>
@@ -529,7 +541,7 @@ const AdminDailyVerse = () => {
         )}
       </div>
 
-      <Button onClick={() => setEditing({ scheduled_date: new Date().toISOString().split("T")[0] })} className="w-full">
+      <Button onClick={() => setEditing({ scheduled_date: getBrazilDateKey() })} className="w-full">
         <Plus className="w-4 h-4 mr-2" /> Agendar Versículo
       </Button>
 
@@ -542,14 +554,15 @@ const AdminDailyVerse = () => {
       ) : (
         <div className="space-y-2">
           {queue.map((item) => {
-            const isToday = item.scheduled_date === new Date().toISOString().split("T")[0];
+            const isToday = item.scheduled_date === todayKey;
+            const displayDate = parseDateKeyAtNoon(item.scheduled_date);
             return (
               <div key={item.id} className={`bg-[hsl(var(--dark-card))] rounded-xl p-4 ${isToday ? "ring-1 ring-primary" : ""}`}>
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-primary">
-                        {new Date(item.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                        {displayDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) ?? item.scheduled_date}
                       </span>
                       {isToday && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">Hoje</span>}
                     </div>

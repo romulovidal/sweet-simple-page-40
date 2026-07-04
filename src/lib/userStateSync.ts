@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { emitLocalDataChanged, readJsonStorage, writeJsonStorage } from "@/lib/localData";
+import { addDaysToDateKey, getBrazilDateKey, getBrazilYesterdayDateKey } from "@/lib/date";
 import type {
   DailyVerseEntry,
   HighlightedVerse,
@@ -55,10 +56,8 @@ function computeCurrentStreak(history: string[], lastDate: string) {
   if (history.length === 0) return 0;
 
   const uniqueHistory = new Set(history);
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  const today = getBrazilDateKey();
+  const yesterdayStr = getBrazilYesterdayDateKey();
 
   // If no activity today or yesterday, streak is broken
   if (!uniqueHistory.has(today) && !uniqueHistory.has(yesterdayStr)) {
@@ -68,13 +67,10 @@ function computeCurrentStreak(history: string[], lastDate: string) {
   // Start counting back from the most recent activity (today or yesterday)
   let current = 0;
   let cursorStr = uniqueHistory.has(today) ? today : yesterdayStr;
-  const cursor = new Date(`${cursorStr}T12:00:00`); // Use noon to avoid timezone edge cases
-
   while (true) {
-    const key = cursor.toISOString().split("T")[0];
-    if (!uniqueHistory.has(key)) break;
+    if (!uniqueHistory.has(cursorStr)) break;
     current += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursorStr = addDaysToDateKey(cursorStr, -1);
   }
 
   return current;

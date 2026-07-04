@@ -828,24 +828,33 @@ export type Database = {
       verse_shares: {
         Row: {
           book_abbrev: string
+          book_name: string | null
           chapter: number
           created_at: string
           slug: string
+          text_snippet: string | null
           verses: number[]
+          version: string | null
         }
         Insert: {
           book_abbrev: string
+          book_name?: string | null
           chapter: number
           created_at?: string
           slug: string
+          text_snippet?: string | null
           verses?: number[]
+          version?: string | null
         }
         Update: {
           book_abbrev?: string
+          book_name?: string | null
           chapter?: number
           created_at?: string
           slug?: string
+          text_snippet?: string | null
           verses?: number[]
+          version?: string | null
         }
         Relationships: []
       }

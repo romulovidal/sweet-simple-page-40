@@ -7,6 +7,7 @@ import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolve
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
 import StudyHub from "@/components/study/StudyHub";
+import PageHead from "@/components/PageHead";
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -231,6 +232,11 @@ const DiscoverPage = () => {
 
   return (
     <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
+      <PageHead
+        title="Descubra Versículos e Estudos Bíblicos — A Bíblia do Atalaia"
+        description="Busque versículos por tema, referência ou palavra. Descubra estudos, personagens e conexões da Palavra de Deus."
+        path="/descubra"
+      />
       <header className="px-5 pt-12 pb-4 max-w-4xl mx-auto lg:pt-8">
          <h1 className="text-2xl font-bold">Explore</h1>
         <p className="text-sm text-dark-muted mt-1">

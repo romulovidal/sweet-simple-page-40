@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { registerAppServiceWorker } from "@/lib/registerServiceWorker";
@@ -21,6 +22,10 @@ const lockPortraitOrientation = () => {
 lockPortraitOrientation();
 window.addEventListener("pageshow", lockPortraitOrientation);
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
+    <App />
+  </HelmetProvider>
+);
 
 void registerAppServiceWorker();

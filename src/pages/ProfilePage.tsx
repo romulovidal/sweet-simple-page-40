@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import LGPDTermsDialog from "@/components/LGPDTermsDialog";
 import ReadingGoals from "@/components/ReadingGoals";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
+import PageHead from "@/components/PageHead";
 
 interface PlanProgress {
   planId: string;
@@ -173,9 +174,12 @@ const ProfilePage = () => {
   // Loading state
   if (authLoading) {
     return (
-      <div className="pb-20 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
+      <>
+        <PageHead title="Meu Perfil — A Bíblia do Atalaia" description="Seus versículos salvos, sequência de leitura, planos e configurações pessoais." path="/perfil" noindex />
+        <div className="pb-20 min-h-screen flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </>
     );
   }
 
@@ -183,6 +187,8 @@ const ProfilePage = () => {
   if (!user || view === "auth") {
     if (!user) {
       return (
+        <>
+        <PageHead title="Entrar — A Bíblia do Atalaia" description="Entre ou cadastre-se para salvar seu progresso, versículos e sequência de leitura." path="/perfil" noindex />
         <div className="pb-20 min-h-screen">
           <header className="px-5 pt-12 pb-6 text-center">
             <img src="/logo.png" alt="Logo" className="w-20 h-20 mx-auto mb-4 rounded-2xl" />
@@ -246,6 +252,7 @@ const ProfilePage = () => {
             </button>
           </div>
         </div>
+        </>
       );
     }
   }
@@ -417,6 +424,12 @@ const ProfilePage = () => {
 
   return (
     <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
+      <PageHead
+        title="Meu Perfil — A Bíblia do Atalaia"
+        description="Seus versículos salvos, sequência de leitura, planos e configurações pessoais."
+        path="/perfil"
+        noindex
+      />
       <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto lg:pt-8 lg:mx-0">
         <h1 className="text-2xl font-bold">Você</h1>
       </header>

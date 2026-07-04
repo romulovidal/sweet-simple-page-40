@@ -8,6 +8,7 @@ import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
 import PostPreviewDialog from "@/components/PostPreviewDialog";
+import PageHead from "@/components/PageHead";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type ReadingProgress, type StreakData, type DailyVerseEntry, getDisplayStreak } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -188,6 +189,11 @@ const HomePage = () => {
 
   return (
     <div className="pb-20 min-h-screen">
+      <PageHead
+        title="Bíblia do Atalaia — Versículo do Dia, Leia e Medite"
+        description="Comece o dia com o versículo do Atalaia, mantenha sua sequência de leitura e receba a Palavra que Deus tem para você hoje."
+        path="/"
+      />
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between lg:pt-8">
         <div data-tour="home-streak"><StreakBadge days={getDisplayStreak(streak)} /></div>

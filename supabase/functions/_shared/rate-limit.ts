@@ -29,9 +29,10 @@ export async function checkRateLimit(
       _window_seconds: windowSeconds,
     });
     if (error) {
-      console.error("[rate-limit] rpc error:", error);
+      console.error("[rate-limit] rpc error:", JSON.stringify(error), "for", endpoint, identifier);
       return { allowed: true, current: 0, limit: max, retryAfter: 0 };
     }
+    console.log("[rate-limit] ok:", endpoint, identifier, JSON.stringify(data));
     const d = data as { allowed: boolean; current: number; limit: number; retry_after: number };
     return {
       allowed: d.allowed,

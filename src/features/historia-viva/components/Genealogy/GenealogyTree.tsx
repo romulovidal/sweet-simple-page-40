@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { getCharacter } from "../../data/characters";
 import type { HistoriaCharacter, EntityRef } from "../../types";
-import { textOn } from "../../lib/contrast";
 
 interface Props {
   character: HistoriaCharacter;
@@ -24,11 +23,11 @@ const GenealogyTree = ({ character, onNavigate }: Props) => {
     const push = (id: string, role: Node["role"], level: number) => {
       const c = getCharacter(id);
       if (!c) return;
-      list.push({ id: c.id, name: c.name, icon: c.icon, color: c.color ?? "217 91% 60%", level, role });
+      list.push({ id: c.id, name: c.name, icon: c.icon, level, role });
     };
     (character.family?.fathers ?? []).forEach((id) => push(id, "parent", 0));
     (character.family?.mothers ?? []).forEach((id) => push(id, "parent", 0));
-    list.push({ id: character.id, name: character.name, icon: character.icon, color: character.color ?? "217 91% 60%", level: 1, role: "self" });
+    list.push({ id: character.id, name: character.name, icon: character.icon, level: 1, role: "self" });
     (character.family?.spouses ?? []).forEach((id) => push(id, "spouse", 1));
     (character.family?.siblings ?? []).forEach((id) => push(id, "sibling", 1));
     (character.family?.children ?? []).forEach((id) => push(id, "child", 2));

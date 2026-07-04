@@ -5,7 +5,7 @@ import { bibleUrlFromReference } from "@/lib/bibleNav";
 interface Props {
   reference: string;
   note?: string;
-  color?: string; // hsl triplet
+  color?: string; // aceito por compat, ignorado — sempre usa tokens do app
 }
 
 const RefLink = ({ reference, note }: Props) => {

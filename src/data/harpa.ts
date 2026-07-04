@@ -49,12 +49,15 @@ function normalize(raw: RawFile): HarpaHino[] {
 let cache: HarpaHino[] | null = null;
 let inflight: Promise<HarpaHino[]> | null = null;
 
+const HARPA_URL = "/harpa/harpa-crista.json";
+
 export async function loadHarpa(): Promise<HarpaHino[]> {
   if (cache) return cache;
   if (inflight) return inflight;
-  inflight = import("./harpa-crista.json")
-    .then((mod) => {
-      const raw = (mod as unknown as { default: RawFile }).default;
+  inflight = fetch(HARPA_URL, { cache: "force-cache" })
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = (await res.json()) as RawFile;
       cache = normalize(raw);
       inflight = null;
       return cache;

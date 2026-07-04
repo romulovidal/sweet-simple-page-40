@@ -25,7 +25,7 @@ const share = async (title: string, text: string) => {
   } catch {}
 };
 
-const EntityDetail = ({ ref, onBack, onClose, onNavigate }: Props) => {
+const EntityDetail = ({ target, onBack, onClose, onNavigate }: Props) => {
   const { isFav, toggle } = useFavorites();
 
   if (target.kind === "character") return <CharacterView id={target.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;

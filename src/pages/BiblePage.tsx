@@ -223,6 +223,7 @@ const BiblePage = () => {
     const chapterParam = searchParams.get("chapter");
     const verseParam = searchParams.get("verse");
     const versesParam = searchParams.get("verses");
+    console.log("[BiblePage effect] params:", { bookParam, chapterParam, verseParam, versesParam });
 
     if (!bookParam || !chapterParam) return;
 

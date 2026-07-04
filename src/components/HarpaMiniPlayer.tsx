@@ -4,20 +4,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadYouTubeApi } from "@/lib/youtubeApi";
 import { toast } from "sonner";
 
-type Props = { number: number; title: string };
+type Props = {
+  number: number;
+  title: string;
+  autoPlay?: boolean;
+  onEnded?: () => void;
+};
 
 type SearchResult = { videoId: string; title: string; channel: string };
 
-export default function HarpaMiniPlayer({ number, title }: Props) {
+export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
   const [found, setFound] = useState<SearchResult | null>(null);
   const playerRef = useRef<any>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const onEndedRef = useRef<typeof onEnded>(onEnded);
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
 
   // Reset when hymn changes
   useEffect(() => {
     stop();
     setFound(null);
+    if (autoPlay) {
+      const t = setTimeout(() => play(), 50);
+      return () => clearTimeout(t);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [number]);
 

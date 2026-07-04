@@ -834,7 +834,9 @@ const BiblePage = () => {
             <div className="space-y-0.5">
               {verses.map((verse) => {
                 const verseEpigraphs = epigraphs.filter((epigraph) => epigraph.displayVerse === verse.number);
-                const isUrlHighlighted = highlightedVerse === verse.number && !hasSelection;
+                const isUrlHighlighted =
+                  !hasSelection &&
+                  (highlightedVerse === verse.number || highlightedVerses.has(verse.number));
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
                 const isRedLetter = isRedLetterVerse(selectedBook.apiAbbrev, selectedChapter, verse.number);

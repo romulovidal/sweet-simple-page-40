@@ -1,15 +1,11 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, History, MapPin, Sparkles, ChevronRight, GraduationCap } from "lucide-react";
-import { BIBLE_CHARACTERS, findCharacterByName } from "@/data/bibleCharacters";
-import { BIBLE_TIMELINE } from "@/data/bibleTimeline";
-import { BIBLE_MAPS } from "@/data/bibleMaps";
+import { Users, Sparkles, ChevronRight, GraduationCap } from "lucide-react";
+import { BIBLE_CHARACTERS } from "@/data/bibleCharacters";
 import { bibleUrlFromReference } from "@/lib/bibleNav";
 import CharacterStage from "./CharacterStage";
-import TimelineStage from "./TimelineStage";
-import MapStage from "./MapStage";
 
-type Module = "characters" | "timeline" | "maps" | null;
+type Module = "characters" | null;
 
 /**
  * Estudos Bíblicos hub — 3 modules that open as fullscreen stages.
@@ -31,14 +27,6 @@ const StudyHub = () => {
     [navigate]
   );
 
-  const openCharacterByName = useCallback((name: string) => {
-    const c = findCharacterByName(name);
-    if (c) {
-      setInitialCharacterId(c.id);
-      setActive("characters");
-    }
-  }, []);
-
   const modules = [
     {
       id: "characters" as const,
@@ -49,26 +37,6 @@ const StudyHub = () => {
       count: BIBLE_CHARACTERS.length,
       countLabel: "perfis",
       preview: BIBLE_CHARACTERS.slice(0, 8).map((c) => c.icon),
-    },
-    {
-      id: "timeline" as const,
-      label: "Linha do Tempo",
-      sub: "Da Criação ao Apocalipse",
-      icon: History,
-      color: "38 92% 55%",
-      count: BIBLE_TIMELINE.length,
-      countLabel: "eras",
-      preview: BIBLE_TIMELINE.map((e) => e.icon),
-    },
-    {
-      id: "maps" as const,
-      label: "Mapas Bíblicos",
-      sub: "Rotas que mudaram a história",
-      icon: MapPin,
-      color: "142 71% 45%",
-      count: BIBLE_MAPS.length,
-      countLabel: "jornadas",
-      preview: BIBLE_MAPS.map((m) => m.icon),
     },
   ];
 
@@ -185,17 +153,6 @@ const StudyHub = () => {
         onOpenChange={(v) => !v && setActive(null)}
         onNavigateReference={openBibleReference}
         initialCharacterId={initialCharacterId}
-      />
-      <TimelineStage
-        open={active === "timeline"}
-        onOpenChange={(v) => !v && setActive(null)}
-        onNavigateReference={openBibleReference}
-        onOpenCharacter={openCharacterByName}
-      />
-      <MapStage
-        open={active === "maps"}
-        onOpenChange={(v) => !v && setActive(null)}
-        onNavigateReference={openBibleReference}
       />
     </div>
   );

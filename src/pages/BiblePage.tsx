@@ -26,6 +26,7 @@ import AIConnections from "@/components/ai/AIConnections";
 import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import PageHead from "@/components/PageHead";
+import { createShortVerseLink } from "@/lib/verseShare";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
@@ -390,7 +391,14 @@ const BiblePage = () => {
     const { text, reference, link } = buildShareContent();
     if (!reference) return;
     const versionShort = getVersionById(bibleVersion).shortName;
-    const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
+    const sortedNumbers = Array.from(selectedVerses).sort((a, b) => a - b);
+    const shortLink = await createShortVerseLink({
+      bookAbbrev: selectedBook!.apiAbbrev,
+      chapter: selectedChapter!,
+      verses: sortedNumbers,
+      fallbackLong: link,
+    });
+    const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });
@@ -514,9 +522,15 @@ const BiblePage = () => {
   const handleShareVerse = async (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
-    const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${verse.number}`;
     const versionShort = getVersionById(bibleVersion).shortName;
-    const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
+    const longLink = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${verse.number}`;
+    const shortLink = await createShortVerseLink({
+      bookAbbrev: selectedBook.apiAbbrev,
+      chapter: selectedChapter,
+      verses: [verse.number],
+      fallbackLong: longLink,
+    });
+    const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });

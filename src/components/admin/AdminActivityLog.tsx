@@ -167,13 +167,13 @@ const AdminActivityLog = () => {
                         </div>
                       ) : null}
                       <span className="text-[9px] font-medium text-[hsl(var(--dark-muted))] ml-auto italic">
-                        {new Date(entry.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(entry.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
                 ) : (
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">
-                    {new Date(entry.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(entry.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
               </div>

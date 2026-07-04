@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Search,
@@ -29,6 +29,13 @@ const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
+  const readerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (selected && readerRef.current) {
+      readerRef.current.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [selected]);
   const [hinos, setHinos] = useState<HarpaHino[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -227,7 +234,7 @@ const HarpaPage = () => {
 
       {/* Leitor de hino */}
       {selected && (
-        <div className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] overflow-y-auto animate-fade-in">
+        <div ref={readerRef} className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] overflow-y-auto animate-fade-in">
           <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))]">
             <div className="flex items-center gap-3 px-4 py-3 max-w-3xl mx-auto">
               <button

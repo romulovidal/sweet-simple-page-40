@@ -10,6 +10,12 @@ import {
   Minus,
   Plus,
   Share2,
+  Star,
+  Clock,
+  Tag,
+  ListMusic,
+  Presentation,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -17,6 +23,17 @@ import harpaIcon from "@/assets/harpa-atalaia-icon.png";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
+import HarpaPresenter from "@/components/HarpaPresenter";
+import {
+  getFavorites,
+  isFavorite,
+  toggleFavorite,
+  getHistory,
+  pushHistory,
+  clearHistory,
+  type HarpaHistoryEntry,
+} from "@/lib/harpaUserData";
+import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -25,18 +42,38 @@ const FONT_KEY = "harpa:font-size";
 const MIN_FONT = 14;
 const MAX_FONT = 26;
 
+type TabKey = "todos" | "favoritos" | "historico" | "temas";
+
 const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
+  const [presenting, setPresenting] = useState<HarpaHino | null>(null);
+  const [tab, setTab] = useState<TabKey>("todos");
+  const [favorites, setFavorites] = useState<number[]>(() => getFavorites());
+  const [history, setHistory] = useState<HarpaHistoryEntry[]>(() => getHistory());
+  const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (selected && readerRef.current) {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
+    if (selected) pushHistory(selected.number);
   }, [selected]);
+
+  useEffect(() => {
+    const onFav = () => setFavorites(getFavorites());
+    const onHist = () => setHistory(getHistory());
+    window.addEventListener("harpa:favorites-changed", onFav);
+    window.addEventListener("harpa:history-changed", onHist);
+    return () => {
+      window.removeEventListener("harpa:favorites-changed", onFav);
+      window.removeEventListener("harpa:history-changed", onHist);
+    };
+  }, []);
+
   const [hinos, setHinos] = useState<HarpaHino[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,14 +119,35 @@ const HarpaPage = () => {
     [hinos]
   );
 
+  const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
+
+  const baseList = useMemo<HarpaHino[]>(() => {
+    if (tab === "favoritos") {
+      const set = new Set(favorites);
+      return hinos.filter((h) => set.has(h.number));
+    }
+    if (tab === "historico") {
+      const map = new Map(hinos.map((h) => [h.number, h] as const));
+      return history.map((e) => map.get(e.number)).filter(Boolean) as HarpaHino[];
+    }
+    if (tab === "temas" && activeTheme) {
+      const theme = HARPA_THEMES.find((t) => t.id === activeTheme);
+      if (!theme) return [];
+      return hymnsByTheme(themeIndex, theme);
+    }
+    return hinos;
+  }, [tab, hinos, favorites, history, activeTheme, themeIndex]);
+
   const results = useMemo(() => {
     const raw = query.trim();
-    if (!raw) return hinos.map((h) => ({ hino: h, match: null as string | null }));
+    if (!raw) return baseList.map((h) => ({ hino: h, match: null as string | null }));
     const q = normalize(raw);
     const asNumber = Number(raw);
     const numericOnly = /^\d+$/.test(raw);
+    const baseSet = new Set(baseList.map((h) => h.number));
     return searchIndex
       .filter((it) => {
+        if (!baseSet.has(it.hino.number)) return false;
         if (numericOnly && String(it.hino.number) === raw) return true;
         if (numericOnly && String(it.hino.number).startsWith(raw)) return true;
         if (!Number.isNaN(asNumber) && String(it.hino.number).includes(q)) return true;
@@ -104,7 +162,7 @@ const HarpaPage = () => {
           .find((l) => normalize(l).includes(q));
         return { hino: it.hino, match: line ?? null };
       });
-  }, [query, hinos, searchIndex]);
+  }, [query, baseList, searchIndex]);
 
   const empty = !loading && hinos.length === 0;
 
@@ -117,6 +175,13 @@ const HarpaPage = () => {
       setSelected(next);
     }
   };
+
+  const handleToggleFav = (n: number) => {
+    const now = toggleFavorite(n);
+    toast.success(now ? "Adicionado aos favoritos" : "Removido dos favoritos");
+  };
+
+  const showThemeGrid = tab === "temas" && !activeTheme;
 
   const shareHymn = async (h: HarpaHino) => {
     const text = [
@@ -165,6 +230,38 @@ const HarpaPage = () => {
         </div>
 
         {!empty && !loading && (
+          <div className="px-4 pb-2 max-w-3xl mx-auto">
+            <div className="flex gap-1 p-1 rounded-full bg-[hsl(var(--dark-card))] text-xs">
+              {(
+                [
+                  { id: "todos", label: "Todos", Icon: ListMusic },
+                  { id: "favoritos", label: "Favoritos", Icon: Star },
+                  { id: "historico", label: "Recentes", Icon: Clock },
+                  { id: "temas", label: "Temas", Icon: Tag },
+                ] as { id: TabKey; label: string; Icon: typeof Star }[]
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setTab(id);
+                    setActiveTheme(null);
+                    setQuery("");
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full transition font-medium ${
+                    tab === id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))]"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!empty && !loading && !showThemeGrid && (
           <div className="px-4 pb-3 max-w-3xl mx-auto">
             <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--dark-card))] border border-transparent focus-within:border-primary/40">
               <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
@@ -182,10 +279,33 @@ const HarpaPage = () => {
                 </button>
               )}
             </label>
-            {query && (
-              <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1.5 px-1">
-                {results.length} resultado{results.length === 1 ? "" : "s"}
+            <div className="flex items-center justify-between mt-1.5 px-1">
+              {activeTheme ? (
+                <button
+                  onClick={() => setActiveTheme(null)}
+                  className="text-[11px] text-primary flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3 h-3" /> Voltar aos temas
+                </button>
+              ) : (
+                <span />
+              )}
+              <p className="text-[11px] text-[hsl(var(--dark-muted))]">
+                {query
+                  ? `${results.length} resultado${results.length === 1 ? "" : "s"}`
+                  : `${baseList.length} hino${baseList.length === 1 ? "" : "s"}`}
               </p>
+            </div>
+            {tab === "historico" && history.length > 0 && (
+              <button
+                onClick={() => {
+                  clearHistory();
+                  toast.success("Histórico limpo");
+                }}
+                className="mt-2 text-[11px] text-[hsl(var(--destructive))] flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Limpar histórico
+              </button>
             )}
           </div>
         )}
@@ -204,6 +324,37 @@ const HarpaPage = () => {
           <div className="text-center py-16">
             <img src={harpaIcon} alt="" width={96} height={96} className="w-24 h-24 mx-auto opacity-80" />
             <h2 className="mt-4 text-lg font-semibold">Hinário ainda não carregado</h2>
+          </div>
+        ) : showThemeGrid ? (
+          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {HARPA_THEMES.map((t) => {
+              const count = hymnsByTheme(themeIndex, t).length;
+              return (
+                <li key={t.id}>
+                  <button
+                    onClick={() => setActiveTheme(t.id)}
+                    className="w-full text-left p-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
+                  >
+                    <div className="text-2xl mb-1">{t.emoji}</div>
+                    <div className="font-semibold text-sm">{t.label}</div>
+                    <div className="text-[11px] text-[hsl(var(--dark-muted))]">
+                      {count} hino{count === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : tab === "favoritos" && favorites.length === 0 ? (
+          <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+            <Star className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nenhum favorito ainda.</p>
+            <p className="text-xs mt-1">Toque na estrela ao abrir um hino para salvá-lo.</p>
+          </div>
+        ) : tab === "historico" && history.length === 0 ? (
+          <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+            <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nenhum hino aberto recentemente.</p>
           </div>
         ) : results.length === 0 ? (
           <p className="text-center text-sm text-[hsl(var(--dark-muted))] py-16">
@@ -228,7 +379,11 @@ const HarpaPage = () => {
                       </span>
                     )}
                   </span>
-                  <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
+                  {favorites.includes(h.number) ? (
+                    <Star className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" />
+                  ) : (
+                    <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
+                  )}
                 </button>
               </li>
             ))}
@@ -257,6 +412,24 @@ const HarpaPage = () => {
                   Hino {selected.number} de {hinos.length}
                 </p>
               </div>
+              <button
+                onClick={() => handleToggleFav(selected.number)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label={favorites.includes(selected.number) ? "Remover favorito" : "Adicionar favorito"}
+              >
+                <Star
+                  className={`w-4 h-4 ${favorites.includes(selected.number) ? "text-yellow-400" : ""}`}
+                  fill={favorites.includes(selected.number) ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={() => setPresenting(selected)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label="Modo apresentação"
+                title="Apresentar"
+              >
+                <Presentation className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => shareHymn(selected)}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -378,6 +551,10 @@ const HarpaPage = () => {
             </div>
           </article>
         </div>
+      )}
+
+      {presenting && (
+        <HarpaPresenter hino={presenting} onClose={() => setPresenting(null)} />
       )}
     </div>
   );

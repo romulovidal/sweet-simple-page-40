@@ -66,8 +66,7 @@ const CompareView = ({ onOpen }: Props) => {
           <button
             key={key}
             onClick={() => setTarget(key)}
-            className="rounded-2xl p-3 bg-dark-card border-2 text-left min-h-[92px] flex flex-col justify-between"
-            style={{ borderColor: target === key ? "hsl(var(--primary) / 0.6)" : "transparent" }}
+            className={`rounded-2xl p-3 bg-dark-card border-2 text-left min-h-[92px] flex flex-col justify-between ${target === key ? "border-primary/60" : "border-transparent"}`}
           >
             <span className="text-[10px] font-black uppercase tracking-widest text-dark-muted">Selecionado {label}</span>
             {item ? (
@@ -118,8 +117,7 @@ const CompareView = ({ onOpen }: Props) => {
           {rows.map((row, i) => {
             const diff = row.a !== row.b;
             return (
-              <div key={i} className="grid grid-cols-[92px_1fr_1fr] text-[12px] border-b border-dark-card-hover last:border-0"
-                style={{ background: diff ? "hsl(var(--primary) / 0.06)" : undefined }}>
+              <div key={i} className={`grid grid-cols-[92px_1fr_1fr] text-[12px] border-b border-dark-card-hover last:border-0 ${diff ? "bg-dark-card-hover/40" : ""}`}>
                 <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-dark-muted border-r border-dark-card-hover">{row.label}</div>
                 <div className="px-3 py-2 text-dark-text border-r border-dark-card-hover">{row.a || "—"}</div>
                 <div className="px-3 py-2 text-dark-text">{row.b || "—"}</div>

@@ -55,14 +55,9 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col bg-background border-0">
+      <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col bg-dark-bg text-dark-text border-0">
         {/* Header */}
-        <header
-          className="px-4 pt-4 pb-2 relative"
-          style={{
-            background: "linear-gradient(180deg, hsl(var(--primary) / 0.18) 0%, transparent 100%)",
-          }}
-        >
+        <header className="px-4 pt-4 pb-2 relative bg-dark-bg border-b border-dark-card">
           <div className="flex items-center justify-between mb-2 pr-10">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">História Viva</p>
@@ -217,13 +212,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                       className="relative aspect-[3/4] rounded-2xl overflow-hidden text-left active:scale-[0.98] transition-transform bg-dark-card border border-dark-card-hover"
                     >
                       <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-90">{c.icon}</div>
-                      <div
-                        className="absolute bottom-0 inset-x-0 p-2.5"
-                        style={{
-                          background:
-                            "linear-gradient(to top, hsl(var(--dark-card) / 0.98) 15%, hsl(var(--dark-card) / 0.75) 60%, transparent 100%)",
-                        }}
-                      >
+                      <div className="absolute bottom-0 inset-x-0 p-2.5 bg-dark-card border-t border-dark-card-hover">
                         <p className="text-sm font-bold text-dark-text truncate">{c.name}</p>
                         <p className="text-[10px] text-dark-muted truncate">{period?.name}</p>
                       </div>
@@ -300,7 +289,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
         {/* Detail overlay */}
         <Sheet open={!!nav.current} onOpenChange={(v) => !v && nav.reset()}>
-          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-dark-bg text-dark-text border-0 overflow-y-auto">
             {nav.current && (
               <EntityDetail
                 target={nav.current}
@@ -314,7 +303,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
         {/* Quiz overlay */}
         <Sheet open={!!activeQuiz} onOpenChange={(v) => !v && setActiveQuiz(null)}>
-          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-dark-bg text-dark-text border-0 overflow-y-auto">
             {activeQuiz && (
               <QuizPlayer
                 quizId={activeQuiz}
@@ -327,7 +316,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
         {/* Plan overlay */}
         <Sheet open={!!activePlan} onOpenChange={(v) => !v && setActivePlan(null)}>
-          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-dark-bg text-dark-text border-0 overflow-y-auto">
             {activePlan && (
               <PlanReader
                 planId={activePlan}
@@ -340,8 +329,8 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
         {/* Favoritos overlay */}
         <Sheet open={showFavs} onOpenChange={setShowFavs}>
-          <SheetContent side="bottom" className="h-[85dvh] p-0 bg-background border-0 overflow-y-auto">
-            <header className="px-4 pt-4 pb-3 flex items-center gap-2 sticky top-0 bg-background z-10 border-b border-dark-card">
+          <SheetContent side="bottom" className="h-[85dvh] p-0 bg-dark-bg text-dark-text border-0 overflow-y-auto">
+            <header className="px-4 pt-4 pb-3 flex items-center gap-2 sticky top-0 bg-dark-bg z-10 border-b border-dark-card">
               <Heart className="w-4 h-4 text-primary" />
               <h2 className="text-lg font-black">Meus favoritos</h2>
             </header>

@@ -52,14 +52,12 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
   const rel = useMemo(() => (c ? relatedForCharacter(c) : null), [c]);
   if (!c || !rel) return null;
   const period = getPeriod(c.periodId);
-  const color = c.color ?? period?.color ?? "217 91% 60%";
   return (
     <div className="pb-24">
       <EntityHeader
         title={c.name}
         subtitle={`${period?.name ?? ""} · ${formatYear(c.year)} · aprox.`}
         icon={c.icon}
-        color={color}
         onBack={onBack}
         onToggleFav={() => toggle("character", c.id)}
         isFav={isFav("character", c.id)}
@@ -92,7 +90,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
                   {ids.map((cid) => {
                     const co = getCharacter(cid);
                     return (
-                      <Chip key={cid} color={color} onClick={() => co && onNavigate({ kind: "character", id: cid })}>
+                      <Chip key={cid} onClick={() => co && onNavigate({ kind: "character", id: cid })}>
                         {co ? `${co.icon} ${co.name}` : cid}
                       </Chip>
                     );
@@ -113,7 +111,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
       {c.keyVerses?.length ? (
         <Section title="Versículos principais" icon={<Book className="w-3.5 h-3.5" />}>
           <div className="grid grid-cols-1 gap-2">
-            {c.keyVerses.map((v) => <RefLink key={v.ref} reference={v.ref} note={v.note} color={color} />)}
+            {c.keyVerses.map((v) => <RefLink key={v.ref} reference={v.ref} note={v.note} />)}
           </div>
         </Section>
       ) : null}
@@ -122,7 +120,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
         <Section title="Eventos" icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.events.map((e) => (
-              <Chip key={e.id} color={color} onClick={() => onNavigate({ kind: "event", id: e.id })}>
+              <Chip key={e.id} onClick={() => onNavigate({ kind: "event", id: e.id })}>
                 {e.icon} {e.name}
               </Chip>
             ))}
@@ -134,7 +132,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
         <Section title="Lugares" icon={<MapPin className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.places.map((p) => (
-              <Chip key={p.id} color={color} onClick={() => onNavigate({ kind: "place", id: p.id })}>📍 {p.name}</Chip>
+              <Chip key={p.id} onClick={() => onNavigate({ kind: "place", id: p.id })}>📍 {p.name}</Chip>
             ))}
           </div>
         </Section>
@@ -144,7 +142,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
         <Section title="Quem viveu com ele" icon={<Users className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.contemporaries.map((o) => (
-              <Chip key={o.id} color={color} onClick={() => onNavigate({ kind: "character", id: o.id })}>
+              <Chip key={o.id} onClick={() => onNavigate({ kind: "character", id: o.id })}>
                 {o.icon} {o.name}
               </Chip>
             ))}
@@ -155,7 +153,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
       {c.curiosities?.length ? (
         <Section title="Curiosidades" icon={<Sparkles className="w-3.5 h-3.5" />}>
           <ul className="space-y-1 text-[12px] text-dark-text">
-            {c.curiosities.map((cu, i) => <li key={i} className="pl-3 border-l-2" style={{ borderColor: `hsl(${color} / 0.5)` }}>{cu}</li>)}
+            {c.curiosities.map((cu, i) => <li key={i} className="pl-3 border-l-2 border-primary">{cu}</li>)}
           </ul>
         </Section>
       ) : null}
@@ -163,7 +161,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
       {c.lessons?.length ? (
         <Section title="Lições" icon={<Lightbulb className="w-3.5 h-3.5" />}>
           <ul className="space-y-1 text-[12px] text-dark-text">
-            {c.lessons.map((l, i) => <li key={i} className="pl-3 border-l-2" style={{ borderColor: `hsl(${color} / 0.5)` }}>{l}</li>)}
+            {c.lessons.map((l, i) => <li key={i} className="pl-3 border-l-2 border-primary">{l}</li>)}
           </ul>
         </Section>
       ) : null}
@@ -172,7 +170,7 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
         <Section title="Livros relacionados" icon={<BookOpen className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.books.map((b) => (
-              <Chip key={b.id} color={color} onClick={() => onNavigate({ kind: "book", id: b.id })}>
+              <Chip key={b.id} onClick={() => onNavigate({ kind: "book", id: b.id })}>
                 📖 {b.name}
               </Chip>
             ))}
@@ -188,14 +186,12 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
   const e = getEvent(id);
   const rel = useMemo(() => (e ? relatedForEvent(e) : null), [e]);
   if (!e || !rel) return null;
-  const color = rel.period?.color ?? "38 92% 55%";
   return (
     <div className="pb-24">
       <EntityHeader
         title={e.name}
         subtitle={`${rel.period?.name ?? ""} · ${e.approximate ? "~" : ""}${formatYear(e.year)}`}
         icon={e.icon}
-        color={color}
         onBack={onBack}
         onToggleFav={() => toggle("event", e.id)}
         isFav={isFav("event", e.id)}
@@ -214,15 +210,15 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
 
       {e.tags.length > 0 && (
         <div className="px-4 flex flex-wrap gap-1.5">
-          {e.tags.map((t) => <Chip key={t} color={color}>{t}</Chip>)}
-          {e.approximate && <Chip color={color} title="Data aproximada">≈ estimativa</Chip>}
+          {e.tags.map((t) => <Chip key={t}>{t}</Chip>)}
+          {e.approximate && <Chip title="Data aproximada">≈ estimativa</Chip>}
         </div>
       )}
 
       {e.references.length > 0 && (
         <Section title="Referências bíblicas" icon={<Book className="w-3.5 h-3.5" />}>
           <div className="grid grid-cols-1 gap-2">
-            {e.references.map((r) => <RefLink key={r} reference={r} color={color} />)}
+            {e.references.map((r) => <RefLink key={r} reference={r} />)}
           </div>
         </Section>
       )}
@@ -231,7 +227,7 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         <Section title="Personagens envolvidos" icon={<Users className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.characters.map((c) => (
-              <Chip key={c.id} color={color} onClick={() => onNavigate({ kind: "character", id: c.id })}>
+              <Chip key={c.id} onClick={() => onNavigate({ kind: "character", id: c.id })}>
                 {c.icon} {c.name}
               </Chip>
             ))}
@@ -243,7 +239,7 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         <Section title="Lugares" icon={<MapPin className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.places.map((p) => (
-              <Chip key={p.id} color={color} onClick={() => onNavigate({ kind: "place", id: p.id })}>📍 {p.name}</Chip>
+              <Chip key={p.id} onClick={() => onNavigate({ kind: "place", id: p.id })}>📍 {p.name}</Chip>
             ))}
           </div>
         </Section>
@@ -258,7 +254,7 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
       {e.curiosities?.length ? (
         <Section title="Curiosidades" icon={<Sparkles className="w-3.5 h-3.5" />}>
           <ul className="space-y-1 text-[12px]">
-            {e.curiosities.map((cu, i) => <li key={i} className="pl-3 border-l-2" style={{ borderColor: `hsl(${color} / 0.5)` }}>{cu}</li>)}
+            {e.curiosities.map((cu, i) => <li key={i} className="pl-3 border-l-2 border-primary">{cu}</li>)}
           </ul>
         </Section>
       ) : null}
@@ -267,7 +263,7 @@ const EventView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         <Section title="Eventos próximos no tempo" icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.nearbyEvents.map((n) => (
-              <Chip key={n.id} color={color} onClick={() => onNavigate({ kind: "event", id: n.id })}>
+              <Chip key={n.id} onClick={() => onNavigate({ kind: "event", id: n.id })}>
                 {n.icon} {n.name}
               </Chip>
             ))}
@@ -283,14 +279,12 @@ const PlaceView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
   const p = getPlace(id);
   const rel = useMemo(() => (p ? relatedForPlace(p) : null), [p]);
   if (!p || !rel) return null;
-  const color = "142 71% 45%";
   return (
     <div className="pb-24">
       <EntityHeader
         title={p.name}
         subtitle={p.region}
         icon="📍"
-        color={color}
         onBack={onBack}
         onToggleFav={() => toggle("place", p.id)}
         isFav={isFav("place", p.id)}
@@ -303,7 +297,7 @@ const PlaceView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         <Section title="Eventos que aconteceram aqui" icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.events.map((e) => (
-              <Chip key={e.id} color={color} onClick={() => onNavigate({ kind: "event", id: e.id })}>
+              <Chip key={e.id} onClick={() => onNavigate({ kind: "event", id: e.id })}>
                 {e.icon} {e.name}
               </Chip>
             ))}
@@ -314,7 +308,7 @@ const PlaceView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps
         <Section title="Personagens" icon={<Users className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.characters.map((c) => (
-              <Chip key={c.id} color={color} onClick={() => onNavigate({ kind: "character", id: c.id })}>
+              <Chip key={c.id} onClick={() => onNavigate({ kind: "character", id: c.id })}>
                 {c.icon} {c.name}
               </Chip>
             ))}
@@ -330,14 +324,12 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
   const b = getBook(id);
   const rel = useMemo(() => (b ? relatedForBook(b) : null), [b]);
   if (!b || !rel) return null;
-  const color = rel.period?.color ?? "217 91% 60%";
   return (
     <div className="pb-24">
       <EntityHeader
         title={b.name}
         subtitle={b.theme}
         icon="📖"
-        color={color}
         onBack={onBack}
         onToggleFav={() => toggle("book", b.id)}
         isFav={isFav("book", b.id)}
@@ -358,32 +350,32 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
       {b.keyEvents?.length ? (
         <Section title="Eventos-chave" icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
-            {b.keyEvents.map((e) => <Chip key={e} color={color}>{e}</Chip>)}
+            {b.keyEvents.map((e) => <Chip key={e}>{e}</Chip>)}
           </div>
         </Section>
       ) : null}
       {b.keyMiracles?.length ? (
         <Section title="Milagres" icon={<Sparkles className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
-            {b.keyMiracles.map((m) => <Chip key={m} color={color}>✨ {m}</Chip>)}
+            {b.keyMiracles.map((m) => <Chip key={m}>✨ {m}</Chip>)}
           </div>
         </Section>
       ) : null}
       {b.keyProphecies?.length ? (
         <Section title="Profecias" icon={<Book className="w-3.5 h-3.5" />}>
           <div className="grid grid-cols-1 gap-2">
-            {b.keyProphecies.map((p) => <RefLink key={p.ref} reference={p.ref} note={p.note} color={color} />)}
+            {b.keyProphecies.map((p) => <RefLink key={p.ref} reference={p.ref} note={p.note} />)}
           </div>
         </Section>
       ) : null}
       <Section title="Ler no aplicativo" icon={<Book className="w-3.5 h-3.5" />}>
-        <RefLink reference={`${b.name} 1`} note="Abrir capítulo 1" color={color} />
+        <RefLink reference={`${b.name} 1`} note="Abrir capítulo 1" />
       </Section>
       {rel.characters.length > 0 && (
         <Section title="Personagens desta época" icon={<Users className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.characters.map((c) => (
-              <Chip key={c.id} color={color} onClick={() => onNavigate({ kind: "character", id: c.id })}>
+              <Chip key={c.id} onClick={() => onNavigate({ kind: "character", id: c.id })}>
                 {c.icon} {c.name}
               </Chip>
             ))}
@@ -394,7 +386,7 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
         <Section title="Eventos desta época" icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {rel.events.map((e) => (
-              <Chip key={e.id} color={color} onClick={() => onNavigate({ kind: "event", id: e.id })}>
+              <Chip key={e.id} onClick={() => onNavigate({ kind: "event", id: e.id })}>
                 {e.icon} {e.name}
               </Chip>
             ))}
@@ -411,14 +403,12 @@ const PeriodView = ({ id, onBack, onClose, onNavigate }: Omit<ViewProps, "isFav"
   if (!p) return null;
   const chars = useMemo(() => CHARACTERS.filter((c) => c.periodId === p.id), [p]);
   const evts = useMemo(() => EVENTS.filter((e) => e.periodId === p.id), [p]);
-  const color = p.color;
   return (
     <div className="pb-24">
       <EntityHeader
         title={p.name}
         subtitle={`${p.subtitle} · ${formatYear(p.startYear)} → ${formatYear(p.endYear)}`}
         icon={p.icon}
-        color={color}
         onBack={onBack}
       />
       <Section title="Sobre este período" icon={<Info className="w-3.5 h-3.5" />}>
@@ -428,7 +418,7 @@ const PeriodView = ({ id, onBack, onClose, onNavigate }: Omit<ViewProps, "isFav"
         <Section title={`Personagens (${chars.length})`} icon={<Users className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {chars.map((c: any) => (
-              <Chip key={c.id} color={color} onClick={() => onNavigate({ kind: "character", id: c.id })}>
+              <Chip key={c.id} onClick={() => onNavigate({ kind: "character", id: c.id })}>
                 {c.icon} {c.name}
               </Chip>
             ))}
@@ -439,7 +429,7 @@ const PeriodView = ({ id, onBack, onClose, onNavigate }: Omit<ViewProps, "isFav"
         <Section title={`Eventos (${evts.length})`} icon={<Clock className="w-3.5 h-3.5" />}>
           <div className="flex flex-wrap gap-1.5">
             {evts.map((e: any) => (
-              <Chip key={e.id} color={color} onClick={() => onNavigate({ kind: "event", id: e.id })}>
+              <Chip key={e.id} onClick={() => onNavigate({ kind: "event", id: e.id })}>
                 {e.icon} {e.name}
               </Chip>
             ))}

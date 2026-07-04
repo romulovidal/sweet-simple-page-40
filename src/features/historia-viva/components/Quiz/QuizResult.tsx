@@ -27,7 +27,7 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
   const seconds = Math.round(durationMs / 1000);
 
   return (
-    <div className="min-h-full flex flex-col bg-background">
+    <div className="min-h-full flex flex-col bg-dark-bg text-dark-text">
       <header className="px-4 pt-4 pb-6 text-center border-b border-dark-card">
         <div className="flex items-center mb-4">
           <button onClick={onExit} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Voltar">
@@ -55,10 +55,10 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-dark-muted mb-2 mt-3">Revisar erradas ({wrong.length})</h3>
             <div className="space-y-2">
               {wrong.map(({ q, chosen }) => (
-                <div key={q.id} className="rounded-xl p-3 bg-dark-card space-y-2 border border-red-500/20">
+                <div key={q.id} className="rounded-xl p-3 bg-dark-card space-y-2 border border-dark-card-hover">
                   <p className="text-[13px] font-semibold text-dark-text">{q.prompt}</p>
-                  <p className="text-[11px] text-red-400">Sua resposta: {q.choices[chosen] ?? "—"}</p>
-                  <p className="text-[11px] text-emerald-400">Correta: {q.choices[q.correct]}</p>
+                  <p className="text-[11px] text-dark-muted">Sua resposta: {q.choices[chosen] ?? "—"}</p>
+                  <p className="text-[11px] text-primary">Correta: {q.choices[q.correct]}</p>
                   <p className="text-[11px] text-dark-muted">{q.explanation}</p>
                   {q.ref && <RefLink reference={q.ref} />}
                   {q.entityRef && (

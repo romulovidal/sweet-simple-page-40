@@ -1,3 +1,5 @@
+import { textOn } from "../../lib/contrast";
+
 interface Props {
   total: number;
   done: Set<number>;
@@ -20,7 +22,7 @@ const PlanCalendar = ({ total, done, current, color, onPick }: Props) => {
             className="aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all"
             style={{
               background: isDone ? `hsl(${color})` : "hsl(var(--dark-card))",
-              color: isDone ? "#fff" : "hsl(var(--dark-text))",
+              color: isDone ? textOn(color) : "hsl(var(--dark-text))",
               border: isCurrent ? `2px solid hsl(${color})` : "2px solid transparent",
               opacity: isDone || isCurrent ? 1 : 0.85,
             }}

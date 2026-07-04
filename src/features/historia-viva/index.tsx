@@ -227,9 +227,15 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                       }}
                     >
                       <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-90">{c.icon}</div>
-                      <div className="absolute bottom-0 inset-x-0 p-2.5 bg-gradient-to-t from-black/70 to-transparent">
-                        <p className="text-sm font-bold text-white truncate">{c.name}</p>
-                        <p className="text-[10px] text-white/70 truncate">{period?.name}</p>
+                      <div
+                        className="absolute bottom-0 inset-x-0 p-2.5"
+                        style={{
+                          background:
+                            "linear-gradient(to top, hsl(var(--dark-bg) / 0.92) 15%, hsl(var(--dark-bg) / 0.65) 60%, transparent 100%)",
+                        }}
+                      >
+                        <p className="text-sm font-bold text-dark-text truncate">{c.name}</p>
+                        <p className="text-[10px] text-dark-muted truncate">{period?.name}</p>
                       </div>
                     </button>
                   );

@@ -210,21 +210,21 @@ const CharacterStage = ({
       {!selected ? (
         <div className="h-full flex flex-col">
           {/* Search */}
-          <div className="flex-shrink-0 px-5 pt-3 pb-2">
-            <div className="relative">
+          <div className="flex-shrink-0 px-5 pt-3 pb-2 lg:max-w-7xl lg:mx-auto lg:w-full lg:px-8 lg:pt-6">
+            <div className="relative lg:max-w-xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar personagem..."
-                className="w-full bg-[hsl(var(--dark-card))] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-[hsl(var(--dark-card))] rounded-xl pl-10 pr-4 py-2.5 lg:py-3 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>
           {/* Categories */}
-          <div className="flex-shrink-0 overflow-x-auto scrollbar-none border-b border-[hsl(var(--dark-card-hover))]">
-            <div className="flex gap-2 px-5 py-3 min-w-max">
+          <div className="flex-shrink-0 overflow-x-auto scrollbar-none border-b border-[hsl(var(--dark-card-hover))] lg:overflow-visible">
+            <div className="flex gap-2 px-5 py-3 min-w-max lg:min-w-0 lg:flex-wrap lg:max-w-7xl lg:mx-auto lg:w-full lg:px-8 lg:py-4">
               {CATEGORY_ORDER.map((cat) => {
                 const active = filter === cat;
                 return (
@@ -251,27 +251,27 @@ const CharacterStage = ({
             </div>
           </div>
           {/* Grid */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 lg:px-8 lg:py-6">
             {filtered.length === 0 ? (
               <p className="text-center text-sm text-[hsl(var(--dark-muted))] mt-8">
                 Nenhum personagem encontrado.
               </p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 lg:gap-4 lg:max-w-7xl lg:mx-auto">
                 {filtered.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
-                    className="group relative text-left rounded-2xl p-3 bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-all active:scale-[0.98] overflow-hidden"
+                    className="group relative text-left rounded-2xl p-3 lg:p-4 bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-all active:scale-[0.98] hover:-translate-y-0.5 overflow-hidden"
                     style={{ border: `1px solid hsl(${c.color} / 0.2)` }}
                   >
                     <div
                       className="pointer-events-none absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"
                       style={{ background: `hsl(${c.color} / 0.5)` }}
                     />
-                    <div className="relative flex items-center gap-2 mb-2">
+                    <div className="relative flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-lg"
+                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center text-lg lg:text-xl flex-shrink-0 shadow-lg"
                         style={{
                           background: `linear-gradient(135deg, hsl(${c.color}) 0%, hsl(${c.color} / 0.5) 100%)`,
                         }}
@@ -279,18 +279,18 @@ const CharacterStage = ({
                         {c.icon}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-[13px] font-bold text-[hsl(var(--dark-text))] leading-tight truncate">
+                        <h4 className="text-[13px] lg:text-sm font-bold text-[hsl(var(--dark-text))] leading-tight truncate">
                           {c.name}
                         </h4>
                         <p
-                          className="text-[9px] uppercase tracking-wider font-semibold truncate"
+                          className="text-[9px] lg:text-[10px] uppercase tracking-wider font-semibold truncate"
                           style={{ color: `hsl(${c.color})` }}
                         >
                           {CATEGORY_LABELS[c.category]}
                         </p>
                       </div>
                     </div>
-                    <p className="relative text-[10px] text-[hsl(var(--dark-muted))] leading-snug line-clamp-2">
+                    <p className="relative text-[10px] lg:text-xs text-[hsl(var(--dark-muted))] leading-snug line-clamp-2 lg:line-clamp-3">
                       {c.role}
                     </p>
                   </button>

@@ -1,0 +1,122 @@
+// História Viva da Bíblia — tipos compartilhados
+// Prontos para consumo via JSON/API sem alteração de shape.
+
+export type PeriodId =
+  | "principio"
+  | "patriarcas"
+  | "exodo"
+  | "juizes"
+  | "reino-unido"
+  | "reino-dividido"
+  | "exilio"
+  | "intertestamentario"
+  | "vida-jesus"
+  | "igreja-primitiva";
+
+export interface Period {
+  id: PeriodId;
+  name: string;
+  subtitle: string;
+  description: string;
+  /** hsl triplet: "38 92% 55%" */
+  color: string;
+  icon: string;
+  /** Ano aproximado de início (negativo = aC) */
+  startYear: number;
+  /** Ano aproximado de fim */
+  endYear: number;
+  bookIds?: string[];
+}
+
+export type CharacterTag =
+  | "patriarca"
+  | "profeta"
+  | "rei"
+  | "juiz"
+  | "apostolo"
+  | "mulher"
+  | "sacerdote"
+  | "lider"
+  | "jesus"
+  | "outro";
+
+export interface HistoriaCharacter {
+  id: string;
+  name: string;
+  meaning?: string;
+  periodId: PeriodId;
+  tags: CharacterTag[];
+  /** Ano aproximado (nascimento/atuação) */
+  year: number;
+  icon: string;
+  /** hsl triplet opcional; usa cor do período se omitido */
+  color?: string;
+  bio: string;
+  family?: { fathers?: string[]; mothers?: string[]; spouses?: string[]; children?: string[]; siblings?: string[] };
+  curiosities?: string[];
+  lessons?: string[];
+  contemporaryKings?: string[];
+  contemporaryProphets?: string[];
+  placeIds?: string[];
+  eventIds?: string[];
+  bookIds?: string[];
+  /** Referências bíblicas principais, ex: "Gênesis 12" */
+  keyVerses?: { ref: string; note?: string }[];
+}
+
+export type EventTag =
+  | "criacao"
+  | "aliança"
+  | "milagre"
+  | "batalha"
+  | "profecia"
+  | "cumprimento"
+  | "parabola"
+  | "viagem"
+  | "templo"
+  | "juizo"
+  | "messianico";
+
+export interface HistoriaEvent {
+  id: string;
+  name: string;
+  periodId: PeriodId;
+  /** Ano aproximado */
+  year: number;
+  approximate?: boolean;
+  description: string;
+  context?: string;
+  application?: string;
+  tags: EventTag[];
+  characterIds?: string[];
+  placeIds?: string[];
+  references: string[]; // Bible refs
+  curiosities?: string[];
+  icon: string;
+}
+
+export interface HistoriaPlace {
+  id: string;
+  name: string;
+  description: string;
+  region?: string;
+  /** Coordenadas aproximadas para futuros mapas */
+  lat?: number;
+  lng?: number;
+  eventIds?: string[];
+  characterIds?: string[];
+}
+
+export interface HistoriaBook {
+  id: string; // ex: "genesis"
+  name: string; // "Gênesis"
+  abbrev: string; // "gn" (compatível com bibleNav)
+  author?: string;
+  theme?: string;
+  periodId: PeriodId;
+  intro?: string;
+  order: number;
+}
+
+export type EntityKind = "character" | "event" | "place" | "book" | "period";
+export interface EntityRef { kind: EntityKind; id: string }

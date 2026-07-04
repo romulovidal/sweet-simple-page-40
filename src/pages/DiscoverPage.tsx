@@ -7,6 +7,8 @@ import { getSmartBibleMatches, normalizeSearchText, parseBibleReference, resolve
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
 import StudyHub from "@/components/study/StudyHub";
+import HistoriaVivaHub from "@/features/historia-viva";
+import { Compass } from "lucide-react";
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -88,6 +90,7 @@ const DiscoverPage = () => {
   const [searched, setSearched] = useState(false);
   const latestRequest = useRef(0);
   const navigate = useNavigate();
+  const [historiaOpen, setHistoriaOpen] = useState(false);
 
   const openBibleReference = useCallback(
     (bookAbbrev: string, chapter: number, verse?: number) => {
@@ -316,6 +319,46 @@ const DiscoverPage = () => {
           <div className="px-5 mb-10 max-w-4xl mx-auto">
             <StudyHub />
           </div>
+
+          {/* História Viva da Bíblia */}
+          <div className="px-5 mb-10 max-w-4xl mx-auto">
+            <button
+              onClick={() => setHistoriaOpen(true)}
+              className="relative overflow-hidden w-full rounded-2xl px-5 py-5 text-left active:scale-[0.99] transition-transform"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(38 92% 55% / 0.22) 0%, hsl(352 78% 55% / 0.18) 55%, hsl(217 91% 60% / 0.22) 100%)",
+                border: "1px solid hsl(var(--primary) / 0.35)",
+                boxShadow: "0 20px 45px -25px hsl(var(--primary) / 0.6)",
+              }}
+              aria-label="Abrir História Viva da Bíblia"
+            >
+              <div className="pointer-events-none absolute -top-16 -right-16 w-56 h-56 rounded-full blur-3xl opacity-40 bg-primary" />
+              <div className="relative flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/25 flex items-center justify-center flex-shrink-0">
+                  <Compass className="w-6 h-6 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary">Novo</p>
+                  <h2 className="text-lg font-black leading-tight mt-0.5">História Viva da Bíblia</h2>
+                  <p className="text-xs text-dark-muted leading-snug mt-1">
+                    Explore a Bíblia em ordem: 10 grandes períodos, personagens, eventos, lugares e livros
+                    — todos conectados e clicáveis.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {["🌌 Princípio", "🌟 Patriarcas", "🔥 Êxodo", "👑 Reino", "✝️ Jesus", "🕊️ Igreja"].map((t) => (
+                      <span key={t} className="text-[10px] font-semibold text-dark-text bg-black/30 backdrop-blur rounded-full px-2 py-0.5">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <HistoriaVivaHub open={historiaOpen} onOpenChange={setHistoriaOpen} />
+
 
           <div className="px-5 mb-10 max-w-4xl mx-auto" data-tour="discover-categories">
             <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">

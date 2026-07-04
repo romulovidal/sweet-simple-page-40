@@ -6,6 +6,7 @@ const UpdatePrompt = () => {
   const [dismissed, setDismissed] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -47,6 +48,18 @@ const UpdatePrompt = () => {
     };
   }, []);
 
+  // Auto-update countdown: sem intervenção do usuário
+  useEffect(() => {
+    if (!showUpdate || dismissed || updating) return;
+    if (countdown <= 0) {
+      handleUpdate();
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showUpdate, dismissed, updating, countdown]);
+
   const handleUpdate = () => {
     setUpdating(true);
     window.localStorage.removeItem("daily-verse-cache");
@@ -68,7 +81,9 @@ const UpdatePrompt = () => {
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[hsl(var(--dark-text))] leading-tight">Nova versão disponível</p>
-          <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">Atualize sem reinstalar o app</p>
+          <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">
+            {updating ? "Atualizando..." : `Atualizando em ${countdown}s`}
+          </p>
         </div>
         <button
           onClick={handleUpdate}
@@ -76,7 +91,7 @@ const UpdatePrompt = () => {
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition disabled:opacity-70"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${updating ? "animate-spin" : ""}`} />
-          {updating ? "Atualizando..." : "Atualizar"}
+          {updating ? "Atualizando..." : "Agora"}
         </button>
         <button
           onClick={() => setDismissed(true)}

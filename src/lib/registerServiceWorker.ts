@@ -13,6 +13,10 @@ const BIBLE_VERSION_URLS = [
   "/biblias/NVI.json",
 ];
 
+const HARPA_URLS = [
+  "/harpa/harpa-crista.json",
+];
+
 function normalizeUrl(value: string): string | null {
   try {
     const url = new URL(value, window.location.origin);
@@ -24,7 +28,7 @@ function normalizeUrl(value: string): string | null {
 }
 
 function collectRuntimeUrls() {
-  const urls = new Set<string>([...APP_SHELL_URLS, ...BIBLE_VERSION_URLS]);
+  const urls = new Set<string>([...APP_SHELL_URLS, ...BIBLE_VERSION_URLS, ...HARPA_URLS]);
 
   document.querySelectorAll<HTMLLinkElement | HTMLScriptElement>('link[href], script[src]').forEach((element) => {
     const rawUrl = element instanceof HTMLLinkElement ? element.href : element.src;

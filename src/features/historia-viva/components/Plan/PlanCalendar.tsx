@@ -1,14 +1,11 @@
-import { textOn } from "../../lib/contrast";
-
 interface Props {
   total: number;
   done: Set<number>;
   current: number;
-  color: string;
   onPick: (day: number) => void;
 }
 
-const PlanCalendar = ({ total, done, current, color, onPick }: Props) => {
+const PlanCalendar = ({ total, done, current, onPick }: Props) => {
   const days = Array.from({ length: total }, (_, i) => i + 1);
   return (
     <div className="grid grid-cols-7 gap-1.5">
@@ -19,13 +16,13 @@ const PlanCalendar = ({ total, done, current, color, onPick }: Props) => {
           <button
             key={d}
             onClick={() => onPick(d)}
-            className="aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all"
-            style={{
-              background: isDone ? `hsl(${color})` : "hsl(var(--dark-card))",
-              color: isDone ? textOn(color) : "hsl(var(--dark-text))",
-              border: isCurrent ? `2px solid hsl(${color})` : "2px solid transparent",
-              opacity: isDone || isCurrent ? 1 : 0.85,
-            }}
+            className={`aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all border-2 ${
+              isDone
+                ? "bg-primary text-primary-foreground border-primary"
+                : isCurrent
+                ? "bg-dark-card text-dark-text border-primary"
+                : "bg-dark-card text-dark-text border-transparent opacity-85"
+            }`}
             aria-label={`Dia ${d}${isDone ? " concluído" : ""}`}
           >
             {isDone ? "✓" : d}

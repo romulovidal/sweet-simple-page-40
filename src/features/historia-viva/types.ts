@@ -18,8 +18,6 @@ export interface Period {
   name: string;
   subtitle: string;
   description: string;
-  /** hsl triplet: "38 92% 55%" */
-  color: string;
   icon: string;
   /** Ano aproximado de início (negativo = aC) */
   startYear: number;
@@ -49,8 +47,6 @@ export interface HistoriaCharacter {
   /** Ano aproximado (nascimento/atuação) */
   year: number;
   icon: string;
-  /** hsl triplet opcional; usa cor do período se omitido */
-  color?: string;
   bio: string;
   family?: { fathers?: string[]; mothers?: string[]; spouses?: string[]; children?: string[]; siblings?: string[] };
   curiosities?: string[];
@@ -145,7 +141,6 @@ export interface Quiz {
   description: string;
   icon: string;
   difficulty: QuizDifficulty;
-  color?: string; // hsl triplet
   periodId?: PeriodId;
   questions: QuizQuestion[];
 }
@@ -174,7 +169,6 @@ export interface ReadingPlan {
   title: string;
   description: string;
   icon: string;
-  color?: string; // hsl triplet
   periodId?: PeriodId;
   days: PlanDay[];
 }

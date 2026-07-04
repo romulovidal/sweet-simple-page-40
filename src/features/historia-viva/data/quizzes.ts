@@ -7,7 +7,6 @@ export const QUIZZES: Quiz[] = [
     description: "De Abraão a José — as promessas e o povo escolhido.",
     icon: "🌟",
     difficulty: "facil",
-    color: "38 92% 55%",
     periodId: "patriarcas",
     questions: [
       { id: "p1", prompt: "De qual cidade Deus chamou Abraão?", choices: ["Ur dos Caldeus", "Babel", "Nínive", "Jericó"], correct: 0, explanation: "Abraão foi chamado de Ur dos Caldeus para ir à terra que Deus lhe mostraria.", ref: "Gênesis 12:1", entityRef: { kind: "character", id: "abraao" } },
@@ -28,7 +27,6 @@ export const QUIZZES: Quiz[] = [
     description: "Moisés, pragas, mar aberto e caminho para Canaã.",
     icon: "🔥",
     difficulty: "medio",
-    color: "0 84% 60%",
     periodId: "exodo",
     questions: [
       { id: "e1", prompt: "Quem foi criado no palácio do faraó e fugiu para Midiã?", choices: ["Arão", "Moisés", "Josué", "Calebe"], correct: 1, explanation: "Moisés matou um egípcio e fugiu para Midiã.", ref: "Êxodo 2", entityRef: { kind: "character", id: "moises" } },
@@ -47,7 +45,6 @@ export const QUIZZES: Quiz[] = [
     description: "Do reino unido à queda de Jerusalém.",
     icon: "👑",
     difficulty: "medio",
-    color: "271 76% 53%",
     periodId: "reino-unido",
     questions: [
       { id: "r1", prompt: "Quem foi o primeiro rei de Israel?", choices: ["Davi", "Saul", "Salomão", "Samuel"], correct: 1, explanation: "Saul, ungido pelo profeta Samuel.", ref: "1 Samuel 10" },
@@ -68,7 +65,6 @@ export const QUIZZES: Quiz[] = [
     description: "Do nascimento em Belém à ressurreição.",
     icon: "✝️",
     difficulty: "facil",
-    color: "142 76% 40%",
     periodId: "vida-jesus",
     questions: [
       { id: "j1", prompt: "Onde Jesus nasceu?", choices: ["Nazaré", "Belém", "Jerusalém", "Cafarnaum"], correct: 1, explanation: "Em Belém da Judeia, cumprindo Miqueias 5:2.", ref: "Lucas 2:4-7" },
@@ -89,7 +85,6 @@ export const QUIZZES: Quiz[] = [
     description: "Missões, conversão e teologia paulina.",
     icon: "✉️",
     difficulty: "medio",
-    color: "217 91% 60%",
     periodId: "igreja-primitiva",
     questions: [
       { id: "pa1", prompt: "Qual era o nome de Paulo antes da conversão?", choices: ["Silas", "Saulo", "Barnabé", "Estêvão"], correct: 1, explanation: "Saulo de Tarso, fariseu.", ref: "Atos 9:1-9", entityRef: { kind: "character", id: "paulo" } },
@@ -108,7 +103,6 @@ export const QUIZZES: Quiz[] = [
     description: "Cidades, rios e regiões da Terra Santa.",
     icon: "🗺️",
     difficulty: "facil",
-    color: "199 89% 48%",
     questions: [
       { id: "g1", prompt: "Qual rio Josué atravessou para entrar em Canaã?", choices: ["Nilo", "Jordão", "Eufrates", "Tigre"], correct: 1, explanation: "O Jordão parou de correr enquanto passavam.", ref: "Josué 3" },
       { id: "g2", prompt: "Qual foi a primeira cidade conquistada em Canaã?", choices: ["Ai", "Hebron", "Jericó", "Siquém"], correct: 2, explanation: "Jericó, com muralhas que caíram.", ref: "Josué 6", entityRef: { kind: "place", id: "jerico" } },

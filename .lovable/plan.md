@@ -1,131 +1,150 @@
 
-# Refactor Estudos Bíblicos
+# Fase 3 — "História Viva da Bíblia"
 
-Reescrever a experiência de Explorar como uma **plataforma de ensino dinâmica** dentro de `/descubra`, com 3 módulos ricos e coerentes, todos linkando para a Bíblia.
-
-## 1. Nova arquitetura da tela
-
-Substituir a seção atual (3 cards que abrem sheets) por um **hub próprio** — `src/components/study/StudyHub.tsx` — com:
-
-- Hero de abertura ("Estudos Bíblicos · Conheça a história por trás dos versículos")
-- 3 módulos como grandes cards visuais com preview animado:
-  - **Personagens** → gallery + perfil "se apresentando"
-  - **Linha do Tempo** → timeline cinematográfica horizontal
-  - **Mapas** → mapa SVG interativo do mundo bíblico
-- Cada módulo abre em **tela cheia interna** (não sheet pequeno), com header próprio, back button e navegação entre itens sem fechar.
-
-Roteamento leve por estado (sem mudar rotas do app), preservando back handler nativo.
-
-## 2. Personagens "se apresentando" (card interativo animado)
-
-Novo componente `CharacterStage.tsx` — cada personagem aparece como se estivesse **se apresentando ao usuário**:
-
-- Retrato ilustrado grande (gerado por IA, 1 por personagem principal) com **parallax sutil**, brilho pulsante e vinheta na cor do personagem.
-- **Fala em 1ª pessoa** aparecendo com efeito typewriter frase por frase ("Sou Abraão. Deus me chamou de Ur dos caldeus...").
-- Controles: ▶ próxima fala, ⟲ repetir, → próximo personagem (navegação estilo stories).
-- Barra de progresso das falas no topo (tipo Instagram Stories).
-- Rodapé com chips: **Momentos marcantes** (timeline vertical), **Versículos-chave** (clicáveis → Bíblia), **Perguntar à IA**.
-- Transição entre personagens: crossfade + slide horizontal.
-
-Dados: expandir `bibleCharacters.ts` para ~50 personagens, cada um com novo campo `presentation: string[]` (falas em 1ª pessoa, 4–6 frases).
-
-Retratos: gerar 12–16 imagens dos principais (Jesus, Moisés, Davi, Abraão, Paulo, Maria, Pedro, Elias, Daniel, Ester, João Batista, Sansão, Rute, Salomão, José, Noé). Personagens sem retrato usam gradiente estilizado + monograma.
-
-## 3. Linha do Tempo cinematográfica
-
-Reescrever `VisualTimeline` como `TimelineStage.tsx`:
-
-- **Scroll horizontal** com snap por era, cada era com cor de fundo dominante e degradê.
-- Cabeçalho fixo mostrando era atual + intervalo (ex.: "Patriarcas · 2000–1500 a.C.").
-- Cards de evento grandes com: ano, título, resumo, personagem envolvido (avatar clicável → abre Personagem), referência bíblica (chip clicável → Bíblia).
-- Mini-mapa da timeline no rodapé para navegação rápida.
-- Animação de entrada por card (fade + slide) conforme entra em viewport.
-
-Expandir `bibleTimeline.ts` para 40+ eventos cobrindo Criação → Apocalipse.
-
-## 4. Mapas interativos
-
-Reescrever `BiblicalMaps` como `MapStage.tsx`:
-
-- **SVG estilizado do mundo bíblico** (Mediterrâneo oriental) desenhado à mão em paths — Egito, Canaã, Mesopotâmia, Ásia Menor, Grécia, Roma, Mar Vermelho, Mar Morto, Jordão.
-- Cidades como **pontos clicáveis** com halo pulsante (Ur, Harã, Betel, Jerusalém, Belém, Nínive, Babilônia, Éfeso, Corinto, Roma, etc.).
-- Seletor de **jornada** (Êxodo, Abraão, Paulo 1ª/2ª/3ª viagem, Exílio, 7 Igrejas): ao selecionar, **rota animada** desenha os traços entre pontos com `stroke-dashoffset`.
-- Clicar em cidade abre painel lateral com: descrição, personagens ligados (chips → Personagens), eventos ligados (chips → Timeline), referências bíblicas (→ Bíblia).
-- Controle de zoom/pan simples com clamp.
-
-Expandir `bibleMaps.ts` para 10+ jornadas e ~30 cidades com metadados ricos.
-
-## 5. Integração com Bíblia
-
-Todos os módulos usam um único helper `openBibleReference(ref)` que:
-- Faz parse do texto (livro + capítulo, e versículo quando existe)
-- Navega para `/biblia?book=abbrev&chapter=N&verse=V`
-- Fecha o hub
-
-Já existe base disso no `DiscoverPage`; centralizar em `src/lib/bibleNav.ts`.
-
-## 6. Limpeza
-
-- Remover `VisualTimeline`, `BiblicalMaps`, `BibleCharacters` antigos (ou marcar como deprecated e não montar mais).
-- Remover event listeners globais (`open-bible-character`, `open-bible-map`, `open-bible-timeline`) e substituir por API interna do hub via prop/context.
-- Manter o botão de disparar cada módulo pelo hub, sem os triggers antigos espalhados.
+Cinco módulos novos integrados ao hub, mantendo o design system (dark theme, tokens semânticos, Inter, PT-BR) e o padrão de navegação por `useHistoryNav`.
 
 ---
 
-## Detalhes técnicos
+## 1. Favoritos e progresso na nuvem (base de tudo)
 
-**Novos arquivos**
-```
-src/components/study/
-  StudyHub.tsx              # Hub central com 3 módulos
-  CharacterStage.tsx        # Personagem se apresentando (stories-like)
-  CharacterGallery.tsx      # Grid com busca e filtros
-  TimelineStage.tsx         # Timeline horizontal cinematográfica
-  MapStage.tsx              # Mapa SVG interativo
-  MapSvg.tsx                # SVG do mundo bíblico (paths desenhados)
-  shared/StageShell.tsx     # Layout fullscreen com header + back
-  shared/RefChip.tsx        # Chip clicável de referência bíblica
-src/lib/bibleNav.ts         # openBibleReference helper
-src/assets/characters/*.jpg # ~15 retratos gerados
-```
+Hoje `useFavorites` guarda em `localStorage`. Vamos migrar para Lovable Cloud e usar a mesma infraestrutura para o progresso do Quiz e do Plano Cronológico.
 
-**Arquivos modificados**
-- `src/pages/DiscoverPage.tsx` — substitui a seção Estudos Bíblicos pelo `<StudyHub />`
-- `src/data/bibleCharacters.ts` — +17 personagens, novo campo `presentation` + `portrait?`
-- `src/data/bibleTimeline.ts` — +eventos até chegar em ~40, com `characterId` e `mapCityId` opcionais
-- `src/data/bibleMaps.ts` — reestruturar em `CITIES` + `JOURNEYS` (rotas por ids de cidade)
+### Tabelas novas (com GRANT + RLS por `auth.uid()`)
+- `historia_favorites` — `id, user_id, kind, ref_id, created_at` (kind = character/event/place/book/period).
+- `historia_quiz_attempts` — `id, user_id, quiz_id, score, total, duration_ms, answers jsonb, created_at`.
+- `historia_plan_progress` — `id, user_id, plan_id, day_index, completed_at, unique(user_id, plan_id, day_index)`.
+- `historia_stats` (view materializada leve, calculada no cliente a partir das três acima; sem tabela extra).
 
-**Arquivos removidos**
-- `src/components/VisualTimeline.tsx`
-- `src/components/BiblicalMaps.tsx`
-- `src/components/BibleCharacters.tsx`
+### Código
+- `hooks/useFavorites.ts` reescrito: se logado → Supabase; se anônimo → fallback `localStorage` (migração one-shot quando faz login).
+- Novo `hooks/useCloudSync.ts` que expõe `savePlanDay`, `getPlanProgress`, `saveQuizAttempt`, `listQuizAttempts`.
+- Toasts curtos em falha (`sonner`).
 
-**Animações**
-- Typewriter: `interval` limpo no unmount, respeita `prefers-reduced-motion`.
-- Parallax do retrato: `transform` baseado em `mousemove` (desktop) e `deviceorientation` opcional (mobile).
-- Stories progress bar: CSS transition + estado controlado.
-- Timeline scroll snap: `scroll-snap-type: x mandatory`.
-- Mapa rota: `stroke-dashoffset` animado com `requestAnimationFrame` (não CSS transition; determinístico).
+---
 
-**Design tokens**
-- Manter dark theme atual. Usar cor de cada personagem/era como accent local via `hsl(var(--*))` inline (padrão já usado no app).
-- Sem hardcode de cores fora do que já existe.
+## 2. Quiz Bíblico
 
-**Escopo do que NÃO muda**
-- Rotas, autenticação, backend, timezone, PWA.
-- Botão flutuante de Perguntar à IA continua igual.
-- Nada na tela `/biblia` além de receber o parâmetro `verse` (já suportado).
+Motor genérico de quizzes com bancos por tema, dificuldade e período.
+
+### Dados (`data/quizzes.ts`)
+Cada quiz: `{ id, title, description, icon, difficulty: 'facil'|'medio'|'dificil', periodId?, tags[], questions[] }`
+Cada questão: `{ id, prompt, choices[4], correct: 0-3, explanation, ref?: BibleRef, entityRef?: EntityRef }`.
+Bancos iniciais (≥ 60 perguntas):
+1. **Patriarcas** (Gênesis) — 12 questões.
+2. **Êxodo e Deserto** — 10.
+3. **Reis e Profetas** — 12.
+4. **Vida de Jesus** — 12.
+5. **Cartas de Paulo** — 8.
+6. **Geografia bíblica** — 8.
+
+### Componentes (`components/Quiz/`)
+- `QuizHub.tsx` — grid de quizzes, badges de "Melhor pontuação" e "Tentativas".
+- `QuizPlayer.tsx` — tela full com barra de progresso, contador, 4 alternativas grandes, feedback imediato colorido (verde/vermelho), explicação + `RefLink` + link para a entidade relacionada.
+- `QuizResult.tsx` — pontuação, tempo, medalha (🥉/🥈/🥇), CTA "Refazer" / "Revisar erradas" / "Explorar personagens do tema".
+- Persistência: cada finalização chama `saveQuizAttempt`.
+
+### UX
+- Animação de acerto (ping) e erro (shake) usando classes existentes.
+- Contraste garantido: alternativas em `bg-dark-card`, estado ativo com `hsl(var(--primary))` sobre `text-white`.
+- Acessível: `aria-live` no feedback, teclas 1-4 no desktop.
+
+---
+
+## 3. Comparações lado a lado
+
+Comparar duas entidades do mesmo tipo (dois personagens, dois lugares, dois livros).
+
+### Componente `components/Compare/CompareView.tsx`
+- Tab dentro do hub: **Comparar**.
+- 2 seletores (usa a mesma `useHistoriaSearch`) → gera 2 colunas com linhas alinhadas:
+  - Período, datas, tags, lugares principais, eventos-chave, referências, contemporâneos, palavras-chave.
+- Linhas divergentes destacadas com barra lateral `bg-primary/40`.
+- Botão "Trocar", "Comparar aleatórios", "Salvar comparação" (armazena par nos favoritos).
+
+---
+
+## 4. Plano de leitura cronológico
+
+Roteiros diários que percorrem a Bíblia em ordem de eventos, não canônica.
+
+### Dados (`data/plans.ts`)
+- `{ id, title, description, durationDays, coverColor, days: PlanDay[] }`
+- `PlanDay { index, title, summary, readings: BibleRef[], entities: EntityRef[] }`
+Planos iniciais:
+1. **Bíblia em 90 dias — cronológico** (esqueleto: 90 dias, referências abreviadas).
+2. **De Abraão a Josué em 21 dias**.
+3. **Vida de Jesus em 30 dias** (harmonia dos evangelhos).
+4. **Igreja Primitiva em 14 dias** (Atos + cartas).
+
+### Componentes (`components/Plan/`)
+- `PlanHub.tsx` — cards com progresso circular (`% concluído`), botão "Continuar" salta para o próximo dia não lido.
+- `PlanReader.tsx` — dia atual: resumo, lista de leituras com `RefLink` (abre a Bíblia), chips de personagens/eventos/lugares (`openRef`), checkbox "Marcar como lido" → grava em `historia_plan_progress`.
+- `PlanCalendar.tsx` — grid 7 colunas mostrando dias ✅/⏳, permite pular para qualquer dia.
+- Streak local: dias consecutivos concluídos (reutiliza padrão já existente do app).
+
+---
+
+## 5. Estatísticas pessoais
+
+Dashboard que consolida uso do módulo História Viva.
+
+### Componente `components/Stats/StatsView.tsx`
+Cards:
+- **Personagens explorados** (# distintos abertos, favoritados).
+- **Períodos visitados** (barra empilhada colorida pelas cores de `PERIODS`).
+- **Quiz** — total tentativas, média, melhor tema, gráfico de linhas das últimas 10 tentativas.
+- **Plano** — plano ativo, % concluído, dias em sequência.
+- **Mapa** — lugares tocados (contagem simples via favoritos).
+- **Conquistas / Badges** locais: primeiros marcos (1º quiz, 10 favoritos, 7 dias seguidos, ler 3 evangelhos).
+
+Tracking mínimo: novo hook `useHistoriaTracking` — grava `viewed:entityRef` em memória + `historia_favorites` como fonte principal; sem tabela adicional de views para não inflar backend.
+
+---
+
+## 6. Integração no hub
+
+`index.tsx`:
+- Novos tabs: **Quiz** (🧠), **Comparar** (⚖️), **Plano** (📅), **Estatísticas** (📊).
+- Ordem final dos tabs: Linha do tempo · Mapa · Paralelas · Personagens · Eventos · Lugares · Livros · **Plano · Quiz · Comparar · Estatísticas**.
+- Header ganha ícone ♥ que abre modal de Favoritos (aproveita `EntityDetail` via `openRef`).
+
+### Padrões de contraste (aplicado em todos os módulos novos)
+- Superfícies: `bg-dark-card` / `bg-dark-card-hover` com `text-dark-text` para textos primários e `text-dark-muted` para secundários.
+- Chips ativos: fundo `hsl(var(--primary))`, texto branco (Chip já usa `textOn`).
+- Faixas coloridas por período: sempre com `text-white` + `paintOrder: stroke` quando sobre SVG.
+- Nenhum `text-black`/`bg-white` cru; sempre tokens.
+
+---
+
+## Arquivos que serão criados/alterados
+
+**Migração SQL** (Lovable Cloud): 3 tabelas + GRANT + RLS.
+
+**Criar**
+- `hooks/useCloudSync.ts`
+- `hooks/useHistoriaTracking.ts`
+- `data/quizzes.ts`, `data/plans.ts`
+- `components/Quiz/{QuizHub,QuizPlayer,QuizResult}.tsx`
+- `components/Compare/CompareView.tsx`
+- `components/Plan/{PlanHub,PlanReader,PlanCalendar}.tsx`
+- `components/Stats/StatsView.tsx`
+- `components/shared/ProgressRing.tsx`
+
+**Editar**
+- `hooks/useFavorites.ts` (cloud + migração)
+- `index.tsx` (novos tabs + Favoritos)
+- `types.ts` (tipos Quiz, Plan, PlanDay, QuizAttempt)
 
 ---
 
 ## Ordem de execução
 
-1. Criar `bibleNav.ts` + `StageShell` + `RefChip`
-2. Expandir dados (`bibleCharacters`, `bibleTimeline`, `bibleMaps`)
-3. Gerar retratos IA em batch (15 imagens)
-4. Construir `CharacterStage` + `CharacterGallery`
-5. Construir `TimelineStage`
-6. Construir `MapSvg` + `MapStage`
-7. Construir `StudyHub` e integrar em `DiscoverPage`
-8. Remover componentes antigos e event listeners
-9. Verificar build e testar navegação → Bíblia
+1. Migração SQL (tabelas + policies + GRANT).
+2. `useCloudSync` + `useFavorites` cloud.
+3. Quiz completo (dados + 3 componentes).
+4. Plano cronológico (dados + 3 componentes).
+5. Comparações.
+6. Estatísticas.
+7. Wire-up final no `index.tsx` + revisão de contraste.
+
+Confirma que sigo com esse escopo? Se preferir cortar algo (ex.: começar sem "Comparações" ou sem "Plano de 90 dias"), me diga antes que eu abra a migração.

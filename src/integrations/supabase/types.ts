@@ -354,6 +354,87 @@ export type Database = {
         }
         Relationships: []
       }
+      historia_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          ref_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          ref_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          ref_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      historia_plan_progress: {
+        Row: {
+          completed_at: string
+          day_index: number
+          id: string
+          plan_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          day_index: number
+          id?: string
+          plan_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          day_index?: number
+          id?: string
+          plan_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      historia_quiz_attempts: {
+        Row: {
+          answers: Json
+          created_at: string
+          duration_ms: number
+          id: string
+          quiz_id: string
+          score: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          quiz_id: string
+          score: number
+          total: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          quiz_id?: string
+          score?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       prayer_reactions: {
         Row: {
           created_at: string

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getBrazilDateKey, parseDateKeyAtNoon } from "@/lib/date";
 
 interface Props {
   reference: string;
@@ -27,7 +28,7 @@ const ScheduleDailyVerseButton = ({ reference, text, disabled, onScheduled, labe
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
-  const today = new Date();
+  const today = parseDateKeyAtNoon(getBrazilDateKey()) ?? new Date();
   today.setHours(0, 0, 0, 0);
 
   const handleSave = async () => {

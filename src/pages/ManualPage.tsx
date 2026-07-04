@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
 import { motion } from "framer-motion";
+import PageHead from "@/components/PageHead";
 
 const ManualPage = () => {
   const navigate = useNavigate();
@@ -93,6 +94,11 @@ const ManualPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-white overflow-x-hidden">
+      <PageHead
+        title="Manual do Aplicativo — A Bíblia do Atalaia"
+        description="Guia completo do app: leitura offline, planos, versões da Bíblia, notas, destaques e recursos de IA."
+        path="/manual"
+      />
       {/* Ambient background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-amber-500/10 blur-[120px]" />

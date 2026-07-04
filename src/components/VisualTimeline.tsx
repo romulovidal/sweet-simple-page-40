@@ -7,9 +7,10 @@ import { BIBLE_TIMELINE, type TimelineEra, type TimelineEvent } from "@/data/bib
 interface Props {
   onNavigateReference?: (reference: string) => void;
   onCharacterClick?: (name: string) => void;
+  hideTrigger?: boolean;
 }
 
-const VisualTimeline = ({ onNavigateReference, onCharacterClick }: Props) => {
+const VisualTimeline = ({ onNavigateReference, onCharacterClick, hideTrigger }: Props) => {
   const [open, setOpen] = useState(false);
   const [activeEraId, setActiveEraId] = useState<string>(BIBLE_TIMELINE[0].id);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,14 +54,16 @@ const VisualTimeline = ({ onNavigateReference, onCharacterClick }: Props) => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Linha do Tempo Bíblica"
-        aria-label="Linha do Tempo Bíblica"
-        className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
-      >
-        <History className="w-4 h-4" />
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          title="Linha do Tempo Bíblica"
+          aria-label="Linha do Tempo Bíblica"
+          className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center hover:bg-dark-card-hover transition-colors"
+        >
+          <History className="w-4 h-4" />
+        </button>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

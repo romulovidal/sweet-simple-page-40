@@ -27,7 +27,9 @@ Deno.serve(async (req) => {
       return json({ ...cached, cached: true });
     }
 
-    const q = `Harpa Cristã ${n} ${t}`;
+    // Formato otimizado: "01 Título harpa cristã" (número com 2 dígitos)
+    const padded = String(n).padStart(2, "0");
+    const q = `${padded} ${t} harpa cristã`;
     const url = new URL("https://www.googleapis.com/youtube/v3/search");
     url.searchParams.set("part", "snippet");
     url.searchParams.set("type", "video");

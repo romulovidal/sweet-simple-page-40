@@ -7,66 +7,6 @@ const corsHeaders = {
 };
 
 const APP_BASE_URL = "https://biblia.atalaias.online";
-const VERSION_FILES: Record<string, string> = {
-  ara: "ARA", arc: "ARC", acf: "ACF", nvi: "NVI", ntlh: "NTLH", kja: "KJA",
-};
-const DEFAULT_VERSION = "arc";
-
-const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-function parseVerseNumbers(versePart: string) {
-  const numbers: number[] = [];
-
-  for (const segment of versePart.split(",")) {
-    const [startRaw, endRaw] = segment.split("-").map((value) => parseInt(value.trim(), 10));
-    if (Number.isNaN(startRaw)) continue;
-
-    if (Number.isNaN(endRaw)) {
-      numbers.push(startRaw);
-      continue;
-    }
-
-    const start = Math.min(startRaw, endRaw);
-    const end = Math.max(startRaw, endRaw);
-    for (let number = start; number <= end; number++) {
-      numbers.push(number);
-    }
-  }
-
-  return [...new Set(numbers)].sort((a, b) => a - b);
-}
-
-function parseRef(ref: string) {
-  const m = ref.trim().match(/^(.+?)\s+(\d+):([\d,\-\s]+)/);
-  if (!m) return null;
-  return { bookName: m[1].trim(), chapter: parseInt(m[2], 10), verses: parseVerseNumbers(m[3]) };
-}
-
-async function getVerseTextInVersion(ref: string, versionId: string) {
-  const parsed = parseRef(ref);
-  if (!parsed) return null;
-  try {
-    const fileName = VERSION_FILES[versionId] || "ARC";
-    const res = await fetch(`${APP_BASE_URL}/biblias/${fileName}.json`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const target = norm(parsed.bookName);
-    const book = data.find((b: any) => norm(b.name) === target);
-    if (!book) return null;
-    const chapter = book.chapters[parsed.chapter - 1];
-    if (!chapter || parsed.verses.length === 0) return null;
-
-    const texts = parsed.verses
-      .map((verseNumber) => {
-        const text = chapter[verseNumber - 1];
-        if (!text) return "";
-        return parsed.verses.length === 1 ? String(text).trim() : `${verseNumber} ${String(text).trim()}`;
-      })
-      .filter(Boolean);
-
-    return texts.length > 0 ? texts.join(" ") : null;
-  } catch { return null; }
-}
 
 function limitNotificationBody(text: string) {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -91,7 +31,6 @@ serve(async (req) => {
      };
  
      const verseTime = getVal("daily_verse_push_time") || "08:00";
-     const versionId = getVal("daily_verse_version") || DEFAULT_VERSION;
      const motivationalEnabled = getVal("motivational_push_enabled") === "true";
      const motivationalTime = getVal("motivational_push_time") || "10:00";
      const lastVerseDate = getVal("last_daily_verse_push_date") || "";
@@ -131,8 +70,7 @@ serve(async (req) => {
        }
 
         if (baseVerse) {
-          const versionedText = await getVerseTextInVersion(baseVerse.ref, versionId);
-          const finalVerse = { ref: baseVerse.ref, text: versionedText || baseVerse.text };
+          const finalVerse = { ref: baseVerse.ref, text: baseVerse.text };
 
           const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
             method: "POST",

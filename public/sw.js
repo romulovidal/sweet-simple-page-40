@@ -1,4 +1,4 @@
-var SW_VERSION = "v17";
+var SW_VERSION = "v18";
 var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";

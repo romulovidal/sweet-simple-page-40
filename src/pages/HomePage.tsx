@@ -129,16 +129,12 @@ const HomePage = () => {
       )
       .subscribe();
 
-    // Checagem de sincronização: mantém os dispositivos alinhados caso tenham dormido/offline.
-    const pollId = window.setInterval(() => loadVerse(), 60_000);
-
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
       supabase.removeChannel(realtimeChannel);
-      window.clearInterval(pollId);
     };
   }, [setVerseHistory]);
 

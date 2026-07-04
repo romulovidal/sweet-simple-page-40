@@ -237,9 +237,11 @@ const BiblePage = () => {
     const parsedVerses = new Set<number>();
     if (versesParam) {
       for (const part of versesParam.split(",")) {
-        const [a, b] = part.split("-").map((n) => Number(n.trim()));
-        if (Number.isNaN(a)) continue;
-        const end = Number.isNaN(b) ? a : b;
+        const bits = part.split("-").map((n) => Number(n.trim()));
+        const a = bits[0];
+        const b = bits[1];
+        if (!Number.isFinite(a)) continue;
+        const end = Number.isFinite(b) ? b : a;
         for (let i = a; i <= end; i++) parsedVerses.add(i);
       }
     }

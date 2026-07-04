@@ -43,7 +43,10 @@ serve(async (req) => {
     // Require admin or internal service-role invocation.
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    let authorized = token && token === serviceKey;
+    // Scheduled cron calls arrive with only the anon `apikey` header (no Authorization).
+    // Manual triggers must be admin or service-role.
+    const isScheduledCron = !authHeader;
+    let authorized = isScheduledCron || (token && token === serviceKey);
     if (!authorized && token) {
       try {
         const userClient = createClient(supabaseUrl, anonKey, {
@@ -72,6 +75,22 @@ serve(async (req) => {
 
     const today = getBrazilDateKey();
     const threeDaysAgoStr = addDaysToDateKey(today, -3);
+
+    // Idempotency: for scheduled cron, only run once per BR day.
+    if (isScheduledCron) {
+      const { data: last } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "last_smart_notifications_date")
+        .maybeSingle();
+      const lastDate = (last?.value as string | undefined)?.replace(/"/g, "") ?? "";
+      if (lastDate === today) {
+        return new Response(JSON.stringify({ skipped: true, reason: "already ran today", date: today }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await supabase.from("admin_settings").upsert({ key: "last_smart_notifications_date", value: JSON.stringify(today) });
+    }
 
     // 1. Inactivity reminder
     const { data: inactiveUsers } = await supabase

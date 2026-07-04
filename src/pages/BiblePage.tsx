@@ -523,6 +523,12 @@ const BiblePage = () => {
 
     return (
       <div className="pb-20 min-h-screen">
+        <PageHead
+          title={`${selectedBook.name} ${selectedChapter} — Bíblia do Atalaia`}
+          description={`Leia ${selectedBook.name} capítulo ${selectedChapter} na versão ${currentVersion.shortName}, com destaques, notas e compartilhamento.`}
+          path={`/biblia?book=${selectedBook.id}&chapter=${selectedChapter}`}
+          type="article"
+        />
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
           <button
             onClick={() => {
@@ -1015,6 +1021,11 @@ const BiblePage = () => {
   // ── Book list ──
   return (
     <div className="pb-20 min-h-screen max-w-4xl mx-auto">
+      <PageHead
+        title="Bíblia Online — Todos os Livros | A Bíblia do Atalaia"
+        description="Escolha o livro e capítulo. 66 livros da Bíblia disponíveis nas versões ARC, ACF, NVI e mais, com leitura offline."
+        path="/biblia"
+      />
       <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Bíblia</h1>

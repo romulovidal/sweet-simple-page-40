@@ -128,6 +128,23 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      <div className="bg-[hsl(var(--dark-card))] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">🧪 Testar Sentry</span>
+        </div>
+        <p className="text-xs text-[hsl(var(--dark-muted))] mb-3">
+          Dispara um erro proposital para validar o monitoramento. Remova este botão após confirmar.
+        </p>
+        <button
+          onClick={() => {
+            throw new Error("Sentry test error — " + new Date().toISOString());
+          }}
+          className="px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 text-xs font-semibold hover:bg-yellow-500/20 transition-colors"
+        >
+          Disparar erro de teste
+        </button>
+      </div>
     </div>
   );
 };

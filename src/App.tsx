@@ -1,6 +1,5 @@
  import AskBibleFloat from "@/components/AskBibleFloat";
  import AskBible from "@/components/AskBible";
-import HarpaAtalaiaFloat from "@/components/HarpaAtalaiaFloat";
  import { useAppFeatures } from "@/hooks/useAppFeatures";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -87,7 +86,6 @@ const AppContent = () => {
       {!isAdmin && !isLanding && <PushPermissionPrompt />}
        {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
        {!isAdmin && !isLanding && <AskBibleFloat />}
-       {!isAdmin && !isLanding && <HarpaAtalaiaFloat />}
        {showBottomNav && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />

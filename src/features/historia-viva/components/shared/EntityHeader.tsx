@@ -13,13 +13,9 @@ interface Props {
   isFav?: boolean;
 }
 
-const EntityHeader = ({ title, subtitle, color = "var(--primary)", icon, onBack, onClose, onShare, onToggleFav, isFav }: Props) => (
+const EntityHeader = ({ title, subtitle, icon, onBack, onClose, onShare, onToggleFav, isFav }: Props) => (
   <div
-    className="sticky top-0 z-10 px-4 py-3 backdrop-blur-lg"
-    style={{
-      background: `linear-gradient(180deg, hsl(${color} / 0.18) 0%, hsl(var(--background) / 0.95) 100%)`,
-      borderBottom: `1px solid hsl(${color} / 0.25)`,
-    }}
+    className="sticky top-0 z-10 px-4 py-3 backdrop-blur-lg bg-background/95 border-b border-dark-card-hover"
   >
     <div className="flex items-center gap-2">
       {onBack && (
@@ -30,8 +26,7 @@ const EntityHeader = ({ title, subtitle, color = "var(--primary)", icon, onBack,
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {icon && (
           <span
-            className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 shadow-lg"
-            style={{ background: `linear-gradient(135deg, hsl(${color}) 0%, hsl(${color} / 0.6) 100%)` }}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 bg-dark-card border border-dark-card-hover"
           >
             {icon}
           </span>
@@ -43,7 +38,7 @@ const EntityHeader = ({ title, subtitle, color = "var(--primary)", icon, onBack,
       </div>
       {onToggleFav && (
         <Button size="icon" variant="ghost" onClick={onToggleFav} aria-label={isFav ? "Remover dos favoritos" : "Adicionar aos favoritos"} className="h-9 w-9">
-          <Heart className={`w-5 h-5 ${isFav ? "fill-current" : ""}`} style={{ color: isFav ? `hsl(${color})` : undefined }} />
+          <Heart className={`w-5 h-5 ${isFav ? "fill-current text-primary" : ""}`} />
         </Button>
       )}
       {onShare && (

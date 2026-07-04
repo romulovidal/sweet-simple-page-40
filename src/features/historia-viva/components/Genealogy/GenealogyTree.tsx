@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { getCharacter } from "../../data/characters";
 import type { HistoriaCharacter, EntityRef } from "../../types";
-import { textOn } from "../../lib/contrast";
 
 interface Props {
   character: HistoriaCharacter;
@@ -12,7 +11,6 @@ interface Node {
   id: string;
   name: string;
   icon: string;
-  color: string;
   level: number; // 0 = ancestors above, 1 = self, 2 = descendants below
   role: "parent" | "spouse" | "self" | "sibling" | "child";
 }
@@ -24,11 +22,11 @@ const GenealogyTree = ({ character, onNavigate }: Props) => {
     const push = (id: string, role: Node["role"], level: number) => {
       const c = getCharacter(id);
       if (!c) return;
-      list.push({ id: c.id, name: c.name, icon: c.icon, color: c.color ?? "217 91% 60%", level, role });
+      list.push({ id: c.id, name: c.name, icon: c.icon, level, role });
     };
     (character.family?.fathers ?? []).forEach((id) => push(id, "parent", 0));
     (character.family?.mothers ?? []).forEach((id) => push(id, "parent", 0));
-    list.push({ id: character.id, name: character.name, icon: character.icon, color: character.color ?? "217 91% 60%", level: 1, role: "self" });
+    list.push({ id: character.id, name: character.name, icon: character.icon, level: 1, role: "self" });
     (character.family?.spouses ?? []).forEach((id) => push(id, "spouse", 1));
     (character.family?.siblings ?? []).forEach((id) => push(id, "sibling", 1));
     (character.family?.children ?? []).forEach((id) => push(id, "child", 2));
@@ -83,23 +81,15 @@ const TreeRow = ({ title, nodes, onNavigate, highlightSelf, lineDown }: RowProps
           <button
             key={`${n.id}-${n.role}`}
             onClick={() => !isSelf && onNavigate({ kind: "character", id: n.id })}
-            className="relative flex flex-col items-center rounded-2xl p-2 min-w-[84px] transition-transform active:scale-95"
-            style={{
-              background: isSelf
-                ? `linear-gradient(135deg, hsl(${n.color}), hsl(${n.color} / 0.7))`
-                : `hsl(${n.color} / 0.15)`,
-              border: `1px solid hsl(${n.color} / ${isSelf ? 1 : 0.4})`,
-              color: isSelf ? textOn(n.color) : `hsl(${n.color})`,
-            }}
+            className={`relative flex flex-col items-center rounded-2xl p-2 min-w-[84px] transition-transform active:scale-95 border ${
+              isSelf
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-dark-card text-dark-text border-dark-card-hover"
+            }`}
             aria-label={`${n.name} (${roleLabel[n.role]})`}
           >
             <span className="text-2xl">{n.icon}</span>
-            <span
-              className="text-[11px] font-bold truncate max-w-[72px]"
-              style={{ color: isSelf ? textOn(n.color) : "hsl(var(--dark-text))" }}
-            >
-              {n.name}
-            </span>
+            <span className="text-[11px] font-bold truncate max-w-[72px]">{n.name}</span>
             <span className="text-[9px] opacity-80">{roleLabel[n.role]}</span>
           </button>
         );

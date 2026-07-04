@@ -1,7 +1,6 @@
 import { ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
 import type { EntityRef, Quiz } from "../../types";
 import RefLink from "../shared/RefLink";
-import { textOn } from "../../lib/contrast";
 
 interface Props {
   quiz: Quiz;
@@ -24,13 +23,12 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
   const total = quiz.questions.length;
   const pct = Math.round((score / total) * 100);
   const m = medal(pct);
-  const color = quiz.color ?? "217 91% 60%";
   const wrong = quiz.questions.map((q, i) => ({ q, i, chosen: answers[i] })).filter((x) => x.chosen !== x.q.correct);
   const seconds = Math.round(durationMs / 1000);
 
   return (
     <div className="min-h-full flex flex-col bg-background">
-      <header className="px-4 pt-4 pb-6 text-center" style={{ background: `linear-gradient(180deg, hsl(${color} / 0.28), transparent)` }}>
+      <header className="px-4 pt-4 pb-6 text-center border-b border-dark-card">
         <div className="flex items-center mb-4">
           <button onClick={onExit} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Voltar">
             <ArrowLeft className="w-4 h-4" />
@@ -47,7 +45,7 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
           <button onClick={onRetry} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-dark-card active:bg-dark-card-hover text-dark-text">
             <RotateCcw className="w-4 h-4" /> Refazer
           </button>
-          <button onClick={onExit} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: `hsl(${color})`, color: textOn(color) }}>
+          <button onClick={onExit} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-primary text-primary-foreground">
             <Sparkles className="w-4 h-4" /> Ver outros
           </button>
         </div>
@@ -62,7 +60,7 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
                   <p className="text-[11px] text-red-400">Sua resposta: {q.choices[chosen] ?? "—"}</p>
                   <p className="text-[11px] text-emerald-400">Correta: {q.choices[q.correct]}</p>
                   <p className="text-[11px] text-dark-muted">{q.explanation}</p>
-                  {q.ref && <RefLink reference={q.ref} color={color} />}
+                  {q.ref && <RefLink reference={q.ref} />}
                   {q.entityRef && (
                     <button onClick={() => onOpenEntity(q.entityRef!)} className="text-[11px] font-bold text-primary underline underline-offset-2">
                       Explorar →

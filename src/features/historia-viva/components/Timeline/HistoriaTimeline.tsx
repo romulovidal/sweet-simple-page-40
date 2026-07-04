@@ -162,15 +162,11 @@ const HistoriaTimeline = ({ onOpenEvent, onOpenPeriod }: Props) => {
               >
                 <button
                   onClick={() => onOpenPeriod?.(p.id)}
-                  className="w-full h-full rounded-2xl px-3 py-2 text-left overflow-hidden relative active:scale-[0.98] transition-transform"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(${p.color} / 0.35) 0%, hsl(${p.color} / 0.08) 100%)`,
-                    border: `1px solid hsl(${p.color} / 0.5)`,
-                  }}
+                  className="w-full h-full rounded-2xl px-3 py-2 text-left overflow-hidden relative active:scale-[0.98] transition-transform bg-dark-card border border-dark-card-hover hover:border-primary/60"
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-base">{p.icon}</span>
-                    <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: `hsl(${p.color})` }}>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-primary">
                       {p.name}
                     </span>
                   </div>
@@ -186,7 +182,6 @@ const HistoriaTimeline = ({ onOpenEvent, onOpenPeriod }: Props) => {
           {/* Event markers */}
           {EVENTS.map((e) => {
             const x = yearToX(e.year);
-            const period = PERIODS.find((p) => p.id === e.periodId)!;
             return (
               <button
                 key={e.id}
@@ -196,14 +191,12 @@ const HistoriaTimeline = ({ onOpenEvent, onOpenPeriod }: Props) => {
                 aria-label={`Evento: ${e.name}, ${formatYear(e.year)}`}
               >
                 <div
-                  className="w-3 h-3 rounded-full ring-4 ring-background transition-transform group-hover:scale-150"
-                  style={{ background: `hsl(${period.color})` }}
+                  className="w-3 h-3 rounded-full ring-4 ring-background transition-transform group-hover:scale-150 bg-primary"
                 />
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 top-4 whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus:opacity-100 pointer-events-none transition-opacity"
-                  style={{ color: `hsl(${period.color})` }}
+                  className="absolute left-1/2 -translate-x-1/2 top-4 whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus:opacity-100 pointer-events-none transition-opacity text-dark-text"
                 >
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-background/95 shadow">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-dark-card border border-dark-card-hover shadow">
                     {e.icon} {e.name}
                   </span>
                 </div>

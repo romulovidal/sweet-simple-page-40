@@ -33,26 +33,19 @@ const QuizHub = ({ onStart }: Props) => {
       )}
       {QUIZZES.map((q) => {
         const s = stats[q.id];
-        const color = q.color ?? "217 91% 60%";
         return (
           <button
             key={q.id}
             onClick={() => onStart(q.id)}
-            className="w-full flex items-center gap-3 p-3 rounded-2xl text-left active:scale-[0.99] transition-transform"
-            style={{
-              background: `linear-gradient(135deg, hsl(${color} / 0.22), hsl(var(--dark-card)) 65%)`,
-              border: `1px solid hsl(${color} / 0.35)`,
-            }}
+            className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors bg-dark-card active:bg-dark-card-hover border border-dark-card-hover"
           >
-            <span
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 shadow-lg"
-              style={{ background: `hsl(${color})` }}
-            >{q.icon}</span>
+            <span className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 bg-dark-card-hover">
+              {q.icon}
+            </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="text-sm font-bold text-dark-text truncate">{q.title}</p>
-                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ background: `hsl(${color} / 0.25)`, color: `hsl(${color})` }}>
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
                   {DIFF_LABEL[q.difficulty]}
                 </span>
               </div>
@@ -60,7 +53,7 @@ const QuizHub = ({ onStart }: Props) => {
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-[10px] text-dark-muted">{q.questions.length} perguntas</span>
                 {s && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold" style={{ color: `hsl(${color})` }}>
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-primary">
                     <Trophy className="w-3 h-3" /> {s.best}% · {s.runs}x
                   </span>
                 )}

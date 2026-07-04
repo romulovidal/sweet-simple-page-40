@@ -5,8 +5,6 @@ import RefLink from "../shared/RefLink";
 import { useSession, saveQuizAttempt } from "../../hooks/useCloudSync";
 import type { EntityRef } from "../../types";
 import QuizResult from "./QuizResult";
-import { textOn } from "../../lib/contrast";
-
 interface Props {
   quizId: string;
   onExit: () => void;
@@ -23,7 +21,6 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
   const [finished, setFinished] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const color = quiz?.color ?? "217 91% 60%";
   const q = quiz?.questions[i];
 
   const score = useMemo(
@@ -76,19 +73,19 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
 
   return (
     <div className="min-h-full flex flex-col bg-background">
-      <header className="px-4 pt-4 pb-3" style={{ background: `linear-gradient(180deg, hsl(${color} / 0.22), transparent)` }}>
+      <header className="px-4 pt-4 pb-3 border-b border-dark-card">
         <div className="flex items-center gap-2 mb-3">
           <button onClick={onExit} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Sair">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: `hsl(${color})` }}>{quiz.icon} {quiz.title}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">{quiz.icon} {quiz.title}</p>
             <p className="text-[11px] text-dark-muted">Pergunta {i + 1} de {quiz.questions.length}</p>
           </div>
           <span className="text-xs font-bold text-dark-text">{score}/{quiz.questions.length}</span>
         </div>
         <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${progress}%`, background: `hsl(${color})` }} />
+          <div className="h-full transition-all bg-primary" style={{ width: `${progress}%` }} />
         </div>
       </header>
 
@@ -129,7 +126,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
               {selected === q!.correct ? "Correto!" : "Não foi dessa vez."}
             </p>
             <p className="text-[13px] text-dark-text leading-relaxed">{q!.explanation}</p>
-            {q!.ref && <RefLink reference={q!.ref} color={color} />}
+            {q!.ref && <RefLink reference={q!.ref} />}
             {q!.entityRef && (
               <button
                 onClick={() => onOpenEntity(q!.entityRef!)}
@@ -144,8 +141,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
         <button
           onClick={next}
           disabled={selected === null}
-          className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
-          style={{ background: `hsl(${color})`, color: textOn(color) }}
+          className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 bg-primary text-primary-foreground"
         >
           {i + 1 >= quiz.questions.length ? "Finalizar" : "Próxima"} <ChevronRight className="w-4 h-4" />
         </button>

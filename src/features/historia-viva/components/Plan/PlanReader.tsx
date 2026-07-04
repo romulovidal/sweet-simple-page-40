@@ -20,7 +20,6 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
   const [dayIdx, setDayIdx] = useState(1);
   const [showCal, setShowCal] = useState(false);
 
-  const color = plan?.color ?? "217 91% 60%";
   const day = plan?.days.find((d) => d.index === dayIdx);
   const total = plan?.days.length ?? 0;
 
@@ -38,13 +37,13 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
 
   return (
     <div className="min-h-full flex flex-col bg-background">
-      <header className="px-4 pt-4 pb-3" style={{ background: `linear-gradient(180deg, hsl(${color} / 0.22), transparent)` }}>
+      <header className="px-4 pt-4 pb-3 border-b border-dark-card">
         <div className="flex items-center gap-2 mb-3">
           <button onClick={onBack} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Voltar">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: `hsl(${color})` }}>{plan.icon} {plan.title}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">{plan.icon} {plan.title}</p>
             <p className="text-[11px] text-dark-muted">Dia {dayIdx} de {total} · {Math.round(donePct * 100)}% concluído</p>
           </div>
           <button onClick={() => setShowCal((v) => !v)} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Calendário">
@@ -52,7 +51,7 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
           </button>
         </div>
         <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${donePct * 100}%`, background: `hsl(${color})` }} />
+          <div className="h-full transition-all bg-primary" style={{ width: `${donePct * 100}%` }} />
         </div>
       </header>
 
@@ -62,7 +61,6 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
             total={total}
             done={done}
             current={dayIdx}
-            color={color}
             onPick={(d) => { setDayIdx(d); setShowCal(false); }}
           />
         </div>
@@ -77,7 +75,7 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
         <div>
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-dark-muted mb-2">Leituras</h3>
           <div className="space-y-1.5">
-            {day.readings.map((r) => <RefLink key={r} reference={r} color={color} />)}
+            {day.readings.map((r) => <RefLink key={r} reference={r} />)}
           </div>
         </div>
 
@@ -86,7 +84,7 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-dark-muted mb-2">Explore</h3>
             <div className="flex flex-wrap gap-1.5">
               {day.entities.map((e, i) => (
-                <Chip key={`${e.kind}-${e.id}-${i}`} color={color} onClick={() => onOpenEntity(e)}>
+                <Chip key={`${e.kind}-${e.id}-${i}`} onClick={() => onOpenEntity(e)}>
                   {e.kind === "character" ? "👤" : e.kind === "place" ? "📍" : e.kind === "event" ? "✨" : "📖"} {e.id}
                 </Chip>
               ))}
@@ -106,8 +104,11 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
         </button>
         <button
           onClick={() => setCompleted(dayIdx, !isDone)}
-          className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-          style={{ background: isDone ? "hsl(var(--dark-card))" : `hsl(${color})`, color: isDone ? "hsl(var(--dark-text))" : "#fff", border: isDone ? "1px solid hsl(var(--dark-card-hover))" : "none" }}
+          className={`flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 ${
+            isDone
+              ? "bg-dark-card text-dark-text border border-dark-card-hover"
+              : "bg-primary text-primary-foreground"
+          }`}
         >
           <Check className="w-4 h-4" /> {isDone ? "Concluído" : "Marcar como lido"}
         </button>

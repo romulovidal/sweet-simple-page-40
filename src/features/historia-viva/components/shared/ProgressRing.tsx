@@ -7,7 +7,9 @@ interface Props {
   children?: React.ReactNode;
 }
 
-const ProgressRing = ({ value, size = 56, stroke = 5, color = "217 91% 60%", trackOpacity = 0.2, children }: Props) => {
+const ProgressRing = ({ value, size = 56, stroke = 5, color, trackOpacity = 0.2, children }: Props) => {
+  const stops = color ? `hsl(${color})` : "hsl(var(--primary))";
+  const track = color ? `hsl(${color} / ${trackOpacity})` : `hsl(var(--primary) / ${trackOpacity})`;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(1, value));
@@ -15,12 +17,12 @@ const ProgressRing = ({ value, size = 56, stroke = 5, color = "217 91% 60%", tra
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke={`hsl(${color} / ${trackOpacity})`} strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={`hsl(${color})`}
+          stroke={stops}
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={c}

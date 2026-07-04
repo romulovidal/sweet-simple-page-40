@@ -59,6 +59,13 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
   const { theme } = useTheme();
   const tile = TILES[theme] ?? TILES.dark;
 
+  // Lê --primary do tema atual para pintar rotas/marcadores (Leaflet usa atributos SVG e não resolve var()).
+  const [primary, setPrimary] = useState("hsl(220 70% 50%)");
+  useEffect(() => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+    if (v) setPrimary(`hsl(${v})`);
+  }, [theme]);
+
   const route = useMemo(() => ROUTES.find((r) => r.id === selectedRoute) ?? null, [selectedRoute]);
 
   const routePoints = useMemo(() => {
@@ -83,7 +90,7 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
           Todas cidades
         </Chip>
         {ROUTES.map((r) => (
-          <Chip key={r.id} color={r.color} active={selectedRoute === r.id} onClick={() => setSelectedRoute(r.id)}>
+          <Chip key={r.id} active={selectedRoute === r.id} onClick={() => setSelectedRoute(r.id)}>
             {r.icon} {r.name}
           </Chip>
         ))}
@@ -118,9 +125,9 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
               center={[p.lat!, p.lng!]}
               radius={selectedRoute ? 3.5 : 5}
               pathOptions={{
-                color: "hsl(var(--hv-map-marker))",
+                color: primary,
                 weight: 1.5,
-                fillColor: "hsl(var(--hv-map-marker))",
+                fillColor: primary,
                 fillOpacity: selectedRoute ? 0.35 : 0.85,
               }}
               eventHandlers={{ click: () => onOpenPlace(p.id) }}
@@ -138,11 +145,11 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
             <>
               <Polyline
                 positions={routeLatLngs}
-                pathOptions={{ color: `hsl(${route.color})`, weight: 6, opacity: 0.25, lineCap: "round", lineJoin: "round" }}
+                pathOptions={{ color: primary, weight: 6, opacity: 0.25, lineCap: "round", lineJoin: "round" }}
               />
               <Polyline
                 positions={routeLatLngs}
-                pathOptions={{ color: `hsl(${route.color})`, weight: 3, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: "1 8" }}
+                pathOptions={{ color: primary, weight: 3, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: "1 8" }}
                 className="hv-route-animated"
               />
             </>
@@ -156,9 +163,9 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
                 center={[p.lat, p.lng]}
                 radius={7}
                 pathOptions={{
-                  color: "#fff",
+                  color: "hsl(var(--dark-bg))",
                   weight: 2,
-                  fillColor: `hsl(${route.color})`,
+                  fillColor: primary,
                   fillOpacity: 1,
                 }}
                 eventHandlers={{ click: () => p.placeId && onOpenPlace(p.placeId) }}
@@ -172,14 +179,11 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
       </div>
 
       {route && (
-        <div
-          className="mx-4 mt-3 rounded-xl p-3"
-          style={{ background: `hsl(${route.color} / 0.15)`, border: `1px solid hsl(${route.color} / 0.35)` }}
-        >
+        <div className="mx-4 mt-3 rounded-xl p-3 bg-dark-card border border-dark-card-hover border-l-4 border-l-primary">
           <p className="text-sm font-bold text-dark-text">{route.icon} {route.name}</p>
           <p className="text-[12px] text-dark-muted mt-0.5">{route.description}</p>
           <div className="grid grid-cols-1 gap-1.5 mt-2">
-            {route.references.map((r) => <RefLink key={r} reference={r} color={route.color} />)}
+            {route.references.map((r) => <RefLink key={r} reference={r} />)}
           </div>
           <p className="text-[10px] text-dark-muted mt-2">
             Toque em um ponto numerado para ver detalhes da cidade. Arraste e use o zoom para explorar.

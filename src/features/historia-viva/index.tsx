@@ -190,16 +190,11 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                     <button
                       key={p.id}
                       onClick={() => openRef({ kind: "period", id: p.id })}
-                      className="flex items-center gap-3 p-3 rounded-xl text-left active:scale-[0.99] transition-transform"
-                      style={{
-                        background: `linear-gradient(135deg, hsl(${p.color} / 0.22), hsl(var(--dark-card)) 60%)`,
-                        border: `1px solid hsl(${p.color} / 0.35)`,
-                      }}
+                      className="flex items-center gap-3 p-3 rounded-xl text-left bg-dark-card active:bg-dark-card-hover border-l-4 border-primary transition-colors"
                     >
-                      <span
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-lg flex-shrink-0"
-                        style={{ background: `hsl(${p.color})` }}
-                      >{p.icon}</span>
+                      <span className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0 bg-dark-card-hover">
+                        {p.icon}
+                      </span>
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-dark-text">{p.name}</p>
                         <p className="text-[11px] text-dark-muted line-clamp-1">{p.subtitle}</p>
@@ -215,23 +210,18 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 .filter((c) => !filters.length || c.tags.some((t) => filters.includes(t)))
                 .map((c) => {
                   const period = PERIODS.find((p) => p.id === c.periodId);
-                  const color = c.color ?? period?.color ?? "217 91% 60%";
                   return (
                     <button
                       key={c.id}
                       onClick={() => openRef({ kind: "character", id: c.id })}
-                      className="relative aspect-[3/4] rounded-2xl overflow-hidden text-left active:scale-[0.98] transition-transform"
-                      style={{
-                        background: `linear-gradient(160deg, hsl(${color} / 0.35) 0%, hsl(var(--dark-card)) 65%)`,
-                        border: `1px solid hsl(${color} / 0.4)`,
-                      }}
+                      className="relative aspect-[3/4] rounded-2xl overflow-hidden text-left active:scale-[0.98] transition-transform bg-dark-card border border-dark-card-hover"
                     >
                       <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-90">{c.icon}</div>
                       <div
                         className="absolute bottom-0 inset-x-0 p-2.5"
                         style={{
                           background:
-                            "linear-gradient(to top, hsl(var(--dark-bg) / 0.92) 15%, hsl(var(--dark-bg) / 0.65) 60%, transparent 100%)",
+                            "linear-gradient(to top, hsl(var(--dark-card) / 0.98) 15%, hsl(var(--dark-card) / 0.75) 60%, transparent 100%)",
                         }}
                       >
                         <p className="text-sm font-bold text-dark-text truncate">{c.name}</p>
@@ -256,13 +246,11 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
           ) : tab === "events" ? (
             <div className="p-4 space-y-2">
               {EVENTS.sort((a, b) => a.year - b.year).map((e) => {
-                const period = PERIODS.find((p) => p.id === e.periodId)!;
                 return (
                   <button
                     key={e.id}
                     onClick={() => openRef({ kind: "event", id: e.id })}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-dark-card active:bg-dark-card-hover text-left transition-colors"
-                    style={{ borderLeft: `3px solid hsl(${period.color})` }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-dark-card active:bg-dark-card-hover text-left transition-colors border-l-4 border-primary"
                   >
                     <span className="text-xl flex-shrink-0">{e.icon}</span>
                     <div className="min-w-0 flex-1">
@@ -295,17 +283,11 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
           ) : (
             <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
               {BOOKS.map((b) => {
-                const period = PERIODS.find((p) => p.id === b.periodId);
-                const color = period?.color ?? "217 91% 60%";
                 return (
                   <button
                     key={b.id}
                     onClick={() => openRef({ kind: "book", id: b.id })}
-                    className="p-3 rounded-xl text-left transition-transform active:scale-[0.98]"
-                    style={{
-                      background: "hsl(var(--dark-card))",
-                      borderLeft: `3px solid hsl(${color})`,
-                    }}
+                    className="p-3 rounded-xl text-left transition-colors bg-dark-card active:bg-dark-card-hover border-l-4 border-primary"
                   >
                     <p className="text-sm font-bold text-dark-text truncate">📖 {b.name}</p>
                     {b.theme && <p className="text-[11px] text-dark-muted line-clamp-2 mt-0.5">{b.theme}</p>}

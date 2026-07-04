@@ -75,10 +75,10 @@ const StatsView = () => {
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 gap-2">
-        <StatCard icon={<Heart className="w-4 h-4" />} label="Favoritos" value={favList.length} color="0 84% 60%" />
-        <StatCard icon={<Trophy className="w-4 h-4" />} label="Tentativas quiz" value={quizStats.totalRuns} color="38 92% 55%" />
-        <StatCard icon={<Sparkles className="w-4 h-4" />} label="Média quiz" value={`${quizStats.avgPct}%`} color="271 76% 53%" />
-        <StatCard icon={<Calendar className="w-4 h-4" />} label="Dias plano" value={planRows.length} color="217 91% 60%" />
+        <StatCard icon={<Heart className="w-4 h-4" />} label="Favoritos" value={favList.length} />
+        <StatCard icon={<Trophy className="w-4 h-4" />} label="Tentativas quiz" value={quizStats.totalRuns} />
+        <StatCard icon={<Sparkles className="w-4 h-4" />} label="Média quiz" value={`${quizStats.avgPct}%`} />
+        <StatCard icon={<Calendar className="w-4 h-4" />} label="Dias plano" value={planRows.length} />
       </div>
 
       {/* Best quiz */}
@@ -86,7 +86,7 @@ const StatsView = () => {
         <h3 className="text-[11px] font-bold uppercase tracking-widest text-dark-muted mb-2">Melhor quiz</h3>
         {quizStats.bestQuiz ? (
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{ background: "hsl(38 92% 55% / 0.2)" }}>
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl bg-dark-card-hover">
               {QUIZZES.find((q) => q.id === quizStats.bestQuiz![0])?.icon ?? "🏆"}
             </span>
             <div className="min-w-0 flex-1">
@@ -110,7 +110,7 @@ const StatsView = () => {
               <div key={p.id} className="flex items-center gap-2">
                 <span className="text-[10px] w-24 truncate text-dark-text">{p.icon} {p.name}</span>
                 <div className="flex-1 h-2 rounded-full bg-dark-card-hover overflow-hidden">
-                  <div className="h-full transition-all" style={{ width: `${w}%`, background: `hsl(${p.color})` }} />
+                  <div className="h-full transition-all bg-primary" style={{ width: `${w}%` }} />
                 </div>
                 <span className="text-[10px] font-bold text-dark-muted w-6 text-right">{v}</span>
               </div>
@@ -138,7 +138,6 @@ const StatsView = () => {
               const plan = PLANS.find((p) => p.id === pid);
               if (!plan) return null;
               const pct = Math.round((d / plan.days.length) * 100);
-              const color = plan.color ?? "217 91% 60%";
               return (
                 <div key={pid}>
                   <div className="flex justify-between text-[11px] mb-1">
@@ -146,7 +145,7 @@ const StatsView = () => {
                     <span className="text-dark-muted">{d}/{plan.days.length} · {pct}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-dark-card-hover overflow-hidden">
-                    <div className="h-full" style={{ width: `${pct}%`, background: `hsl(${color})` }} />
+                    <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -180,8 +179,8 @@ const StatsView = () => {
   );
 };
 
-const StatCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: React.ReactNode; color: string }) => (
-  <div className="rounded-2xl p-3" style={{ background: `linear-gradient(135deg, hsl(${color} / 0.22), hsl(var(--dark-card)) 65%)`, border: `1px solid hsl(${color} / 0.3)` }}>
+const StatCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) => (
+  <div className="rounded-2xl p-3 bg-dark-card border border-dark-card-hover border-l-4 border-l-primary">
     <div className="flex items-center gap-1.5 text-dark-muted mb-1">{icon}<span className="text-[10px] font-bold uppercase tracking-wider">{label}</span></div>
     <p className="text-2xl font-black text-dark-text">{value}</p>
   </div>

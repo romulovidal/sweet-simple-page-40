@@ -849,6 +849,13 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_data: { Args: never; Returns: Json }
+      get_prayer_author_names: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          display_name: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

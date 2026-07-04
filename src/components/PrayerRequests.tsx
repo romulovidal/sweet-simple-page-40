@@ -78,12 +78,11 @@ const PrayerRequests = ({ enabled }: PrayerRequestsProps) => {
         if (user && r.user_id === user.id) userReactedMap[r.request_id] = true;
       });
 
-      // Get display names
+      // Get display names (via RPC segura — não expõe avatar/email/etc)
       const userIds = [...new Set(reqs.map(r => r.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name")
-        .in("user_id", userIds);
+      const { data: profiles } = await supabase.rpc("get_prayer_author_names", {
+        _user_ids: userIds,
+      });
 
       const nameMap: Record<string, string> = {};
       (profiles || []).forEach((p: any) => {

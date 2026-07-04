@@ -6,9 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function getSaoPauloDateKey(date = new Date()) {
+const BRAZIL_TZ = "America/Fortaleza";
+
+function getBrazilDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Sao_Paulo",
+    timeZone: BRAZIL_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -38,7 +40,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const today = getSaoPauloDateKey();
+    const today = getBrazilDateKey();
     const threeDaysAgoStr = addDaysToDateKey(today, -3);
 
     // 1. Inactivity reminder

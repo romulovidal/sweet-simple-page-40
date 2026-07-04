@@ -578,6 +578,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          count: number
+          endpoint: string
+          identifier: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          endpoint: string
+          identifier: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          endpoint?: string
+          identifier?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       reading_goals: {
         Row: {
           completed_chapters: Json
@@ -818,6 +839,15 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_increment_rate_limit: {
+        Args: {
+          _endpoint: string
+          _identifier: string
+          _max: number
+          _window_seconds: number
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

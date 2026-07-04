@@ -825,6 +825,30 @@ export type Database = {
         }
         Relationships: []
       }
+      verse_shares: {
+        Row: {
+          book_abbrev: string
+          chapter: number
+          created_at: string
+          slug: string
+          verses: number[]
+        }
+        Insert: {
+          book_abbrev: string
+          chapter: number
+          created_at?: string
+          slug: string
+          verses?: number[]
+        }
+        Update: {
+          book_abbrev?: string
+          chapter?: number
+          created_at?: string
+          slug?: string
+          verses?: number[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       current_daily_verse: {

@@ -26,6 +26,7 @@ import AIConnections from "@/components/ai/AIConnections";
 import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import PageHead from "@/components/PageHead";
+import { createShortVerseLink } from "@/lib/verseShare";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
@@ -110,6 +111,7 @@ const BiblePage = () => {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
+  const [highlightedVerses, setHighlightedVerses] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [epigraphs, setEpigraphs] = useState<BibleChapterEpigraph[]>([]);
@@ -220,6 +222,7 @@ const BiblePage = () => {
     const bookParam = searchParams.get("book");
     const chapterParam = searchParams.get("chapter");
     const verseParam = searchParams.get("verse");
+    const versesParam = searchParams.get("verses");
 
     if (!bookParam || !chapterParam) return;
 
@@ -229,10 +232,30 @@ const BiblePage = () => {
 
     if (!book || Number.isNaN(nextChapter)) return;
 
+    // Parse "1,3-5" → Set([1,3,4,5])
+    const parsedVerses = new Set<number>();
+    if (versesParam) {
+      for (const part of versesParam.split(",")) {
+        const bits = part.split("-").map((n) => Number(n.trim()));
+        const a = bits[0];
+        const b = bits[1];
+        if (!Number.isFinite(a)) continue;
+        const end = Number.isFinite(b) ? b : a;
+        for (let i = a; i <= end; i++) parsedVerses.add(i);
+      }
+    }
+
     setSelectedBook(book);
     setTestament(book.testament);
     setSelectedChapter(nextChapter);
-    setHighlightedVerse(nextVerse && nextVerse > 0 ? nextVerse : null);
+    setHighlightedVerse(
+      nextVerse && nextVerse > 0
+        ? nextVerse
+        : parsedVerses.size > 0
+          ? Math.min(...parsedVerses)
+          : null,
+    );
+    setHighlightedVerses(parsedVerses);
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -370,7 +393,14 @@ const BiblePage = () => {
     const { text, reference, link } = buildShareContent();
     if (!reference) return;
     const versionShort = getVersionById(bibleVersion).shortName;
-    const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${link}`;
+    const sortedNumbers = Array.from(selectedVerses).sort((a, b) => a - b);
+    const shortLink = await createShortVerseLink({
+      bookAbbrev: selectedBook!.apiAbbrev,
+      chapter: selectedChapter!,
+      verses: sortedNumbers,
+      fallbackLong: link,
+    });
+    const shareText = `${reference} (${versionShort})\n\n"${text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });
@@ -494,9 +524,15 @@ const BiblePage = () => {
   const handleShareVerse = async (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
-    const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${verse.number}`;
     const versionShort = getVersionById(bibleVersion).shortName;
-    const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${link}`;
+    const longLink = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${verse.number}`;
+    const shortLink = await createShortVerseLink({
+      bookAbbrev: selectedBook.apiAbbrev,
+      chapter: selectedChapter,
+      verses: [verse.number],
+      fallbackLong: longLink,
+    });
+    const shareText = `${reference} (${versionShort})\n\n"${verse.text}"\n\n📖 Leia aqui: ${shortLink}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: shareText });
@@ -521,12 +557,36 @@ const BiblePage = () => {
 
     const currentVersion = getVersionById(bibleVersion);
 
+    // Build dynamic meta if user is viewing highlighted verses
+    const highlightedList = highlightedVerses.size > 0
+      ? Array.from(highlightedVerses).sort((a, b) => a - b)
+      : highlightedVerse
+        ? [highlightedVerse]
+        : [];
+    const highlightedTexts = highlightedList
+      .map((n) => verses.find((v) => v.number === n)?.text)
+      .filter(Boolean) as string[];
+    const metaVerseLabel = highlightedList.length
+      ? `${selectedBook.name} ${selectedChapter}:${highlightedList[0]}${
+          highlightedList.length > 1 ? `-${highlightedList[highlightedList.length - 1]}` : ""
+        }`
+      : null;
+    const metaTitle = metaVerseLabel
+      ? `${metaVerseLabel} — A Bíblia do Atalaia`
+      : `${selectedBook.name} ${selectedChapter} — Bíblia do Atalaia`;
+    const metaDesc = highlightedTexts.length
+      ? `"${highlightedTexts.join(" ").slice(0, 200)}${highlightedTexts.join(" ").length > 200 ? "…" : ""}" — ${currentVersion.shortName}`
+      : `Leia ${selectedBook.name} capítulo ${selectedChapter} na versão ${currentVersion.shortName}, com destaques, notas e compartilhamento.`;
+    const metaPath = highlightedList.length
+      ? `/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${highlightedList.join(",")}`
+      : `/biblia?book=${selectedBook.abbrev}&chapter=${selectedChapter}`;
+
     return (
       <div className="pb-20 min-h-screen">
         <PageHead
-          title={`${selectedBook.name} ${selectedChapter} — Bíblia do Atalaia`}
-          description={`Leia ${selectedBook.name} capítulo ${selectedChapter} na versão ${currentVersion.shortName}, com destaques, notas e compartilhamento.`}
-          path={`/biblia?book=${selectedBook.abbrev}&chapter=${selectedChapter}`}
+          title={metaTitle}
+          description={metaDesc}
+          path={metaPath}
           type="article"
         />
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
@@ -814,7 +874,9 @@ const BiblePage = () => {
             <div className="space-y-0.5">
               {verses.map((verse) => {
                 const verseEpigraphs = epigraphs.filter((epigraph) => epigraph.displayVerse === verse.number);
-                const isUrlHighlighted = highlightedVerse === verse.number && !hasSelection;
+                const isUrlHighlighted =
+                  !hasSelection &&
+                  (highlightedVerse === verse.number || highlightedVerses.has(verse.number));
                 const isSelected = selectedVerses.has(verse.number);
                 const highlightColor = getVerseHighlight(verse.number);
                 const isRedLetter = isRedLetterVerse(selectedBook.apiAbbrev, selectedChapter, verse.number);

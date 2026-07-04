@@ -29,6 +29,7 @@ const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
+  const [autoPlayNext, setAutoPlayNext] = useState(false);
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -111,7 +112,10 @@ const HarpaPage = () => {
     if (!selected) return;
     const idx = hinos.findIndex((h) => h.number === selected.number);
     const next = hinos[idx + delta];
-    if (next) setSelected(next);
+    if (next) {
+      setAutoPlayNext(false);
+      setSelected(next);
+    }
   };
 
   const shareHymn = async (h: HarpaHino) => {
@@ -305,7 +309,19 @@ const HarpaPage = () => {
               </div>
             </div>
             <div className="px-4 pb-3 max-w-3xl mx-auto flex justify-center">
-              <HarpaMiniPlayer number={selected.number} title={selected.title} />
+              <HarpaMiniPlayer
+                number={selected.number}
+                title={selected.title}
+                autoPlay={autoPlayNext}
+                onEnded={() => {
+                  const idx = hinos.findIndex((h) => h.number === selected.number);
+                  const next = hinos[idx + 1];
+                  if (next) {
+                    setAutoPlayNext(true);
+                    setSelected(next);
+                  }
+                }}
+              />
             </div>
           </header>
 

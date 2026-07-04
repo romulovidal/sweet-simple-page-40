@@ -353,7 +353,7 @@ const AdminCultoSchedule = () => {
                 )}
                 {r.last_sent && (
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1 ml-6">
-                    Último envio: {new Date(r.last_sent).toLocaleString("pt-BR")}
+                    Último envio: {new Date(r.last_sent).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}
                   </p>
                 )}
               </div>

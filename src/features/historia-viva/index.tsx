@@ -323,6 +323,65 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Quiz overlay */}
+        <Sheet open={!!activeQuiz} onOpenChange={(v) => !v && setActiveQuiz(null)}>
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
+            {activeQuiz && (
+              <QuizPlayer
+                quizId={activeQuiz}
+                onExit={() => setActiveQuiz(null)}
+                onOpenEntity={(ref) => { setActiveQuiz(null); openRef(ref); }}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Plan overlay */}
+        <Sheet open={!!activePlan} onOpenChange={(v) => !v && setActivePlan(null)}>
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
+            {activePlan && (
+              <PlanReader
+                planId={activePlan}
+                onBack={() => setActivePlan(null)}
+                onOpenEntity={openRef}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Favoritos overlay */}
+        <Sheet open={showFavs} onOpenChange={setShowFavs}>
+          <SheetContent side="bottom" className="h-[85dvh] p-0 bg-background border-0 overflow-y-auto">
+            <header className="px-4 pt-4 pb-3 flex items-center gap-2 sticky top-0 bg-background z-10 border-b border-dark-card">
+              <Heart className="w-4 h-4 text-primary" />
+              <h2 className="text-lg font-black">Meus favoritos</h2>
+            </header>
+            <div className="p-4">
+              {favList().length === 0 ? (
+                <p className="text-sm text-dark-muted text-center py-10">Nada favoritado ainda. Toque no ♥ ao abrir qualquer entidade.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {favList().map((f) => (
+                    <button
+                      key={`${f.kind}-${f.id}`}
+                      onClick={() => { setShowFavs(false); openRef(f); }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-dark-card active:bg-dark-card-hover text-left"
+                    >
+                      <span className="text-lg">
+                        {f.kind === "character" ? "👤" : f.kind === "place" ? "📍" : f.kind === "event" ? "✨" : f.kind === "book" ? "📖" : "🕰️"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-dark-text truncate">{labelFor(f)}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-dark-muted">{f.kind}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </SheetContent>
     </Sheet>
   );
@@ -330,6 +389,14 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
 function tagFor(k: string) {
   return k === "character" ? "Personagem" : k === "event" ? "Evento" : k === "place" ? "Lugar" : k === "book" ? "Livro" : "Período";
+}
+
+function labelFor(f: EntityRef) {
+  if (f.kind === "character") return CHARACTERS.find((c) => c.id === f.id)?.name ?? f.id;
+  if (f.kind === "event") return EVENTS.find((e) => e.id === f.id)?.name ?? f.id;
+  if (f.kind === "place") return PLACES.find((p) => p.id === f.id)?.name ?? f.id;
+  if (f.kind === "book") return BOOKS.find((b) => b.id === f.id)?.name ?? f.id;
+  return PERIODS.find((p) => p.id === f.id)?.name ?? f.id;
 }
 
 export default HistoriaVivaHub;

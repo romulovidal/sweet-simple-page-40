@@ -72,19 +72,6 @@ const HarpaPage = () => {
     }
   }, [selected]);
 
-  // Abrir hino automaticamente a partir da URL /harpa/:number
-  useEffect(() => {
-    if (!routeNumber || hinos.length === 0) return;
-    const n = Number(routeNumber);
-    if (!Number.isFinite(n)) return;
-    if (selected?.number === n) return;
-    const found = hinos.find((h) => h.number === n);
-    if (found) {
-      setAutoPlayNext(false);
-      setSelected(found);
-    }
-  }, [routeNumber, hinos]);
-
   useEffect(() => {
     const onFav = () => setFavorites(getFavorites());
     const onHist = () => setHistory(getHistory());
@@ -109,6 +96,20 @@ const HarpaPage = () => {
       localStorage.setItem(FONT_KEY, String(fontSize));
     } catch {}
   }, [fontSize]);
+
+  // Abrir hino automaticamente a partir da URL /harpa/:number
+  useEffect(() => {
+    if (!routeNumber || hinos.length === 0) return;
+    const n = Number(routeNumber);
+    if (!Number.isFinite(n)) return;
+    if (selected?.number === n) return;
+    const found = hinos.find((h) => h.number === n);
+    if (found) {
+      setAutoPlayNext(false);
+      setSelected(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeNumber, hinos]);
 
   useEffect(() => {
     let alive = true;

@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles, Map as MapIcon, GitBranch } from "lucide-react";
+import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles, Map as MapIcon, GitBranch, Heart, Trophy, Calendar, Scale, BarChart3 } from "lucide-react";
 import HistoriaTimeline from "./components/Timeline/HistoriaTimeline";
 import HistoriaMap from "./components/Map/HistoriaMap";
 import ParallelsView from "./components/Parallels/ParallelsView";
 import EntityDetail from "./components/EntityDetail";
 import Chip from "./components/shared/Chip";
+import QuizHub from "./components/Quiz/QuizHub";
+import QuizPlayer from "./components/Quiz/QuizPlayer";
+import PlanHub from "./components/Plan/PlanHub";
+import PlanReader from "./components/Plan/PlanReader";
+import CompareView from "./components/Compare/CompareView";
+import StatsView from "./components/Stats/StatsView";
 import { PERIODS } from "./data/periods";
 import { CHARACTERS } from "./data/characters";
 import { EVENTS } from "./data/events";
@@ -13,11 +19,12 @@ import { PLACES } from "./data/places";
 import { BOOKS } from "./data/books";
 import { useHistoriaSearch } from "./hooks/useHistoriaSearch";
 import { useHistoryNav } from "./hooks/useHistoryNav";
+import { useFavorites } from "./hooks/useFavorites";
 import type { CharacterTag, EntityRef } from "./types";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void }
 
-type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels" | "books";
+type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels" | "books" | "plan" | "quiz" | "compare" | "stats";
 
 const CHAR_FILTERS: { id: CharacterTag; label: string; icon: string }[] = [
   { id: "patriarca", label: "Patriarcas", icon: "🌟" },
@@ -33,8 +40,12 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
   const [tab, setTab] = useState<Tab>("timeline");
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<string[]>([]);
+  const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
+  const [activePlan, setActivePlan] = useState<string | null>(null);
+  const [showFavs, setShowFavs] = useState(false);
   const nav = useHistoryNav();
   const hits = useHistoriaSearch(query, filters);
+  const { list: favList } = useFavorites();
 
   const openRef = (ref: EntityRef) => nav.push(ref);
   const back = () => (nav.canBack ? nav.back() : nav.reset());
@@ -57,6 +68,18 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">História Viva</p>
               <h1 className="text-xl font-black leading-tight">A Bíblia contada em ordem</h1>
             </div>
+            <button
+              onClick={() => setShowFavs(true)}
+              className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center relative"
+              aria-label="Meus favoritos"
+            >
+              <Heart className="w-4 h-4 text-primary" />
+              {favList().length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center px-1">
+                  {favList().length}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Search */}
@@ -91,6 +114,10 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 { id: "events", label: `Eventos`, icon: <Sparkles className="w-3.5 h-3.5" /> },
                 { id: "places", label: `Lugares`, icon: <MapPin className="w-3.5 h-3.5" /> },
                 { id: "books", label: `Livros`, icon: <BookOpen className="w-3.5 h-3.5" /> },
+                { id: "plan", label: "Plano", icon: <Calendar className="w-3.5 h-3.5" /> },
+                { id: "quiz", label: "Quiz", icon: <Trophy className="w-3.5 h-3.5" /> },
+                { id: "compare", label: "Comparar", icon: <Scale className="w-3.5 h-3.5" /> },
+                { id: "stats", label: "Estatísticas", icon: <BarChart3 className="w-3.5 h-3.5" /> },
               ] as const).map((t) => (
                 <Chip
                   key={t.id}
@@ -212,6 +239,14 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
             <HistoriaMap onOpenPlace={(id) => openRef({ kind: "place", id })} onNavigate={openRef} />
           ) : tab === "parallels" ? (
             <ParallelsView onNavigate={openRef} />
+          ) : tab === "quiz" ? (
+            <QuizHub onStart={(id) => setActiveQuiz(id)} />
+          ) : tab === "plan" ? (
+            <PlanHub onOpen={(id) => setActivePlan(id)} />
+          ) : tab === "compare" ? (
+            <CompareView onOpen={openRef} />
+          ) : tab === "stats" ? (
+            <StatsView />
           ) : tab === "events" ? (
             <div className="p-4 space-y-2">
               {EVENTS.sort((a, b) => a.year - b.year).map((e) => {

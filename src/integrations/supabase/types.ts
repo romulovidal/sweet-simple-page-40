@@ -848,6 +848,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cleanup_old_data: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

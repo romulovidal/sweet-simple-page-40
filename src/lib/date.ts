@@ -1,4 +1,7 @@
-export const BRAZIL_TIME_ZONE = "America/Sao_Paulo";
+// Fortaleza-CE não observa horário de verão (UTC-3 o ano todo).
+// Usamos America/Fortaleza para garantir o fuso correto mesmo se algum dia
+// o Brasil voltar a adotar horário de verão em outras regiões.
+export const BRAZIL_TIME_ZONE = "America/Fortaleza";
 
 function getDatePartsInTimeZone(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -46,4 +49,30 @@ export function parseDateKeyAtNoon(dateKey: string): Date | null {
   }
 
   return date;
+}
+
+/**
+ * Formata uma data/ISO string em horário do Brasil (Fortaleza, UTC-3, sem horário de verão).
+ */
+export function formatBrazilDateTime(
+  input: string | number | Date,
+  options: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" },
+): string {
+  const date = input instanceof Date ? input : new Date(input);
+  if (isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: BRAZIL_TIME_ZONE, ...options }).format(date);
+}
+
+export function formatBrazilDate(
+  input: string | number | Date,
+  options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit", year: "numeric" },
+): string {
+  return formatBrazilDateTime(input, options);
+}
+
+export function formatBrazilTime(
+  input: string | number | Date,
+  options: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" },
+): string {
+  return formatBrazilDateTime(input, options);
 }

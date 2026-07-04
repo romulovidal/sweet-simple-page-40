@@ -60,7 +60,7 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
   const tile = TILES[theme] ?? TILES.dark;
 
   // Lê --primary do tema atual para pintar rotas/marcadores (Leaflet usa atributos SVG e não resolve var()).
-  const [primary, setPrimary] = useState("hsl(220 70% 50%)");
+  const [primary, setPrimary] = useState("hsl(var(--primary))");
   useEffect(() => {
     const v = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
     if (v) setPrimary(`hsl(${v})`);

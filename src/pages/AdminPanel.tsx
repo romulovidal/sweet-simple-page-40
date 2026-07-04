@@ -5,7 +5,7 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart
+  ArrowLeft, MoreHorizontal, LineChart, Activity
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -22,11 +22,12 @@ import AdminPosts from "@/components/admin/AdminPosts";
 import AdminPlans from "@/components/admin/AdminPlans";
 import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
 import AdminRetention from "@/components/admin/AdminRetention";
+import AdminAnalytics from "@/components/admin/AdminAnalytics";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -37,6 +38,7 @@ const ADMIN_SECTIONS = [
     sectionIcon: LayoutDashboard,
     tabs: [
       { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
+      { id: "analytics", label: "Analytics", desc: "Eventos e uso", icon: Activity },
       { id: "retention", label: "Retenção", desc: "D1 · D7 · D30", icon: LineChart },
       { id: "log", label: "Atividade", desc: "Histórico de ações", icon: Clock },
     ],
@@ -286,6 +288,7 @@ const AdminPanel = () => {
   const ToolContent = ({ id }: { id: ToolId }) => {
     switch (id) {
       case "dashboard": return <AdminDashboard />;
+      case "analytics": return <AdminAnalytics />;
       case "retention": return <AdminRetention />;
       case "verse": return <AdminDailyVerse />;
       case "push": return <AdminPushSender />;

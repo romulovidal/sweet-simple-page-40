@@ -27,6 +27,7 @@ import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import PageHead from "@/components/PageHead";
 import { createShortVerseLink } from "@/lib/verseShare";
+import { trackEvent } from "@/lib/analytics";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
@@ -248,6 +249,7 @@ const BiblePage = () => {
     setSelectedBook(book);
     setTestament(book.testament);
     setSelectedChapter(nextChapter);
+    trackEvent("chapter_view", { book: book.apiAbbrev, chapter: nextChapter });
     setHighlightedVerse(
       nextVerse && nextVerse > 0
         ? nextVerse
@@ -521,12 +523,14 @@ const BiblePage = () => {
       ...prev,
       { text: verse.text, reference, savedAt: new Date().toISOString() },
     ]);
+    trackEvent("verse_save", { book: selectedBook.apiAbbrev, chapter: selectedChapter, verse: verse.number });
     toast("Versículo salvo!");
   };
 
   const handleShareVerse = async (verse: BibleVerse) => {
     if (!selectedBook || !selectedChapter) return;
     const reference = `${selectedBook.name} ${selectedChapter}:${verse.number}`;
+    trackEvent("verse_share", { book: selectedBook.apiAbbrev, chapter: selectedChapter, verse: verse.number });
     const versionShort = getVersionById(bibleVersion).shortName;
     const longLink = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${verse.number}`;
     const shortLink = await createShortVerseLink({

@@ -23,6 +23,8 @@ import AppTour from "@/components/AppTour";
 import Onboarding from "@/components/Onboarding";
 import { useManifestSwap } from "@/hooks/useManifestSwap";
 import { useDailyOpenTracker } from "@/hooks/useDailyOpenTracker";
+import { useEffect } from "react";
+import { trackPageView } from "@/lib/analytics";
 import HomePage from "@/pages/HomePage";
 import BiblePage from "@/pages/BiblePage";
 import PlansPage from "@/pages/PlansPage";
@@ -50,6 +52,11 @@ const AppContent = () => {
 
   useManifestSwap();
   useDailyOpenTracker();
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/admin")) return;
+    trackPageView(location.pathname);
+  }, [location.pathname]);
 
   return (
     <div className={isAdmin || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>

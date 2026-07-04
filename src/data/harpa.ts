@@ -1,6 +1,5 @@
 // Schema interno + loader para o hinário Harpa Cristã Atalaia.
-// O JSON fica no CDN (Lovable Assets) e é carregado sob demanda.
-import harpaAsset from "@/assets/harpa-crista.json.asset.json";
+// O JSON é code-split via dynamic import — só carrega quando /harpa abre.
 
 export interface HarpaStrophe {
   /** true quando é o refrão/coro do hino */
@@ -53,12 +52,9 @@ let inflight: Promise<HarpaHino[]> | null = null;
 export async function loadHarpa(): Promise<HarpaHino[]> {
   if (cache) return cache;
   if (inflight) return inflight;
-  inflight = fetch(harpaAsset.url, { cache: "force-cache" })
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<RawFile>;
-    })
-    .then((raw) => {
+  inflight = import("./harpa-crista.json")
+    .then((mod) => {
+      const raw = (mod as unknown as { default: RawFile }).default;
       cache = normalize(raw);
       inflight = null;
       return cache;

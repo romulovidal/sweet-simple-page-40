@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import harpaIcon from "@/assets/harpa-atalaia-icon.png";
+import harpaIcon from "@/assets/harpa-atalaia-icon-v2.png";
 
 const HarpaAtalaiaFloat = () => {
   const location = useLocation();
@@ -11,18 +11,31 @@ const HarpaAtalaiaFloat = () => {
   return (
     <button
       onClick={() => navigate("/harpa")}
-      className="fixed bottom-24 left-5 lg:bottom-8 lg:left-8 lg:w-14 lg:h-14 z-50 w-12 h-12 rounded-full bg-[hsl(var(--dark-card))] border border-amber-500/30 shadow-lg shadow-amber-500/10 active:scale-95 transition-all animate-fade-in flex items-center justify-center overflow-hidden"
+      className="group fixed bottom-24 left-5 lg:bottom-8 lg:left-8 z-50 w-14 h-14 lg:w-16 lg:h-16 rounded-full active:scale-95 transition-all animate-fade-in"
       aria-label="Harpa Cristã Atalaia"
     >
-      <img
-        src={harpaIcon}
-        alt=""
+      {/* halo pulsante */}
+      <span className="absolute inset-0 rounded-full bg-amber-400/20 blur-xl group-hover:bg-amber-400/30 transition-colors" aria-hidden="true" />
+      {/* anel dourado gradiente */}
+      <span
+        className="absolute inset-0 rounded-full p-[1.5px]"
+        style={{ background: "linear-gradient(135deg, #fde68a, #f59e0b 40%, #b45309 80%, #fde68a)" }}
         aria-hidden="true"
-        loading="lazy"
-        width={40}
-        height={40}
-        className="w-8 h-8 lg:w-10 lg:h-10 object-contain"
-      />
+      >
+        <span className="block w-full h-full rounded-full bg-[hsl(var(--dark-card))]" />
+      </span>
+      {/* ícone */}
+      <span className="relative flex items-center justify-center w-full h-full">
+        <img
+          src={harpaIcon}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          width={48}
+          height={48}
+          className="w-9 h-9 lg:w-11 lg:h-11 object-contain drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
+        />
+      </span>
     </button>
   );
 };

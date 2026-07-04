@@ -325,6 +325,37 @@ const HarpaPage = () => {
             <img src={harpaIcon} alt="" width={96} height={96} className="w-24 h-24 mx-auto opacity-80" />
             <h2 className="mt-4 text-lg font-semibold">Hinário ainda não carregado</h2>
           </div>
+        ) : showThemeGrid ? (
+          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {HARPA_THEMES.map((t) => {
+              const count = hymnsByTheme(themeIndex, t).length;
+              return (
+                <li key={t.id}>
+                  <button
+                    onClick={() => setActiveTheme(t.id)}
+                    className="w-full text-left p-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
+                  >
+                    <div className="text-2xl mb-1">{t.emoji}</div>
+                    <div className="font-semibold text-sm">{t.label}</div>
+                    <div className="text-[11px] text-[hsl(var(--dark-muted))]">
+                      {count} hino{count === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : tab === "favoritos" && favorites.length === 0 ? (
+          <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+            <Star className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nenhum favorito ainda.</p>
+            <p className="text-xs mt-1">Toque na estrela ao abrir um hino para salvá-lo.</p>
+          </div>
+        ) : tab === "historico" && history.length === 0 ? (
+          <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+            <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">Nenhum hino aberto recentemente.</p>
+          </div>
         ) : results.length === 0 ? (
           <p className="text-center text-sm text-[hsl(var(--dark-muted))] py-16">
             Nenhum hino encontrado para "{query}".
@@ -348,7 +379,11 @@ const HarpaPage = () => {
                       </span>
                     )}
                   </span>
-                  <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
+                  {favorites.includes(h.number) ? (
+                    <Star className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" />
+                  ) : (
+                    <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
+                  )}
                 </button>
               </li>
             ))}

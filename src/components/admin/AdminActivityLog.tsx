@@ -149,7 +149,7 @@ const AdminActivityLog = () => {
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold truncate">{isPush ? entry.title : config.label}</p>
                   <p className="text-[9px] font-medium text-[hsl(var(--dark-muted))] whitespace-nowrap bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                    {new Date(entry.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}
+                    {new Date(entry.created_at).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza", day: '2-digit', month: '2-digit' })}
                   </p>
                 </div>
                 
@@ -167,13 +167,13 @@ const AdminActivityLog = () => {
                         </div>
                       ) : null}
                       <span className="text-[9px] font-medium text-[hsl(var(--dark-muted))] ml-auto italic">
-                        {new Date(entry.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(entry.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
                 ) : (
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">
-                    {new Date(entry.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(entry.created_at).toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
               </div>

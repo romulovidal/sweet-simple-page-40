@@ -11,9 +11,11 @@ function limitNotificationBody(text: string) {
   return normalized.length > 480 ? `${normalized.slice(0, 477).trimEnd()}...` : normalized;
 }
 
-function getSaoPauloDateKey(date = new Date()) {
+const BRAZIL_TZ = "America/Fortaleza";
+
+function getBrazilDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Sao_Paulo",
+    timeZone: BRAZIL_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -26,9 +28,9 @@ function getSaoPauloDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function getSaoPauloTimeKey(date = new Date()) {
+function getBrazilTimeKey(date = new Date()) {
   return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
+    timeZone: BRAZIL_TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -61,8 +63,8 @@ serve(async (req) => {
      const authHeader = req.headers.get("Authorization");
      const isManual = authHeader && (authHeader.includes(serviceKey) || authHeader.startsWith("Bearer "));
  
-      const brTimeStr = getSaoPauloTimeKey();
-      const todayBR = getSaoPauloDateKey();
+      const brTimeStr = getBrazilTimeKey();
+      const todayBR = getBrazilDateKey();
  
      const results: any = { brTime: brTimeStr, date: todayBR };
  

@@ -49,6 +49,7 @@ const fromLocalInput = (val: string): string | null => {
 const formatScheduled = (iso: string | null | undefined) => {
   if (!iso) return "";
   return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Fortaleza",
     weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 };
@@ -352,7 +353,7 @@ const AdminCultoSchedule = () => {
                 )}
                 {r.last_sent && (
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1 ml-6">
-                    Último envio: {new Date(r.last_sent).toLocaleString("pt-BR")}
+                    Último envio: {new Date(r.last_sent).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}
                   </p>
                 )}
               </div>

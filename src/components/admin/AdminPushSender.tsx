@@ -137,7 +137,7 @@ const AdminPushSender = () => {
                 <p className="text-sm font-semibold truncate">{entry.title}</p>
                 <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-1 mt-0.5">{entry.body}</p>
                 <div className="flex items-center gap-3 mt-2 text-[10px] text-[hsl(var(--dark-muted))]">
-                  <span>{new Date(entry.sent_at).toLocaleString("pt-BR")}</span>
+                  <span>{new Date(entry.sent_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}</span>
                   <span className="text-green-400">✓ {entry.total_sent}</span>
                   {entry.total_failed > 0 && <span className="text-destructive">✗ {entry.total_failed}</span>}
                 </div>

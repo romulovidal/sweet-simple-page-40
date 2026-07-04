@@ -223,7 +223,6 @@ const BiblePage = () => {
     const chapterParam = searchParams.get("chapter");
     const verseParam = searchParams.get("verse");
     const versesParam = searchParams.get("verses");
-    console.log("[BiblePage effect] params:", { bookParam, chapterParam, verseParam, versesParam });
 
     if (!bookParam || !chapterParam) return;
 
@@ -257,7 +256,6 @@ const BiblePage = () => {
           : null,
     );
     setHighlightedVerses(parsedVerses);
-    console.log("[BiblePage effect] setHighlightedVerses:", Array.from(parsedVerses));
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 

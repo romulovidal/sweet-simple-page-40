@@ -10,6 +10,12 @@ import {
   Minus,
   Plus,
   Share2,
+  Star,
+  Clock,
+  Tag,
+  ListMusic,
+  Presentation,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -17,6 +23,17 @@ import harpaIcon from "@/assets/harpa-atalaia-icon.png";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
+import HarpaPresenter from "@/components/HarpaPresenter";
+import {
+  getFavorites,
+  isFavorite,
+  toggleFavorite,
+  getHistory,
+  pushHistory,
+  clearHistory,
+  type HarpaHistoryEntry,
+} from "@/lib/harpaUserData";
+import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -25,18 +42,38 @@ const FONT_KEY = "harpa:font-size";
 const MIN_FONT = 14;
 const MAX_FONT = 26;
 
+type TabKey = "todos" | "favoritos" | "historico" | "temas";
+
 const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
+  const [presenting, setPresenting] = useState<HarpaHino | null>(null);
+  const [tab, setTab] = useState<TabKey>("todos");
+  const [favorites, setFavorites] = useState<number[]>(() => getFavorites());
+  const [history, setHistory] = useState<HarpaHistoryEntry[]>(() => getHistory());
+  const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (selected && readerRef.current) {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
+    if (selected) pushHistory(selected.number);
   }, [selected]);
+
+  useEffect(() => {
+    const onFav = () => setFavorites(getFavorites());
+    const onHist = () => setHistory(getHistory());
+    window.addEventListener("harpa:favorites-changed", onFav);
+    window.addEventListener("harpa:history-changed", onHist);
+    return () => {
+      window.removeEventListener("harpa:favorites-changed", onFav);
+      window.removeEventListener("harpa:history-changed", onHist);
+    };
+  }, []);
+
   const [hinos, setHinos] = useState<HarpaHino[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import LGPDTermsDialog from "@/components/LGPDTermsDialog";
 import ReadingGoals from "@/components/ReadingGoals";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
+import PageHead from "@/components/PageHead";
 
 interface PlanProgress {
   planId: string;
@@ -417,6 +418,12 @@ const ProfilePage = () => {
 
   return (
     <div className="pb-20 min-h-screen max-w-6xl mx-auto lg:px-8">
+      <PageHead
+        title="Meu Perfil — A Bíblia do Atalaia"
+        description="Seus versículos salvos, sequência de leitura, planos e configurações pessoais."
+        path="/perfil"
+        noindex
+      />
       <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto lg:pt-8 lg:mx-0">
         <h1 className="text-2xl font-bold">Você</h1>
       </header>

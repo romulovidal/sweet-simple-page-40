@@ -149,7 +149,7 @@ const AdminActivityLog = () => {
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold truncate">{isPush ? entry.title : config.label}</p>
                   <p className="text-[9px] font-medium text-[hsl(var(--dark-muted))] whitespace-nowrap bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                    {new Date(entry.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}
+                    {new Date(entry.created_at).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza", day: '2-digit', month: '2-digit' })}
                   </p>
                 </div>
                 

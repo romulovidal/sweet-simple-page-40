@@ -183,7 +183,7 @@ const AdminPrayerRequests = () => {
                   <p className="text-sm whitespace-pre-wrap break-words">{req.content}</p>
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
                     <p className="text-[10px] text-[hsl(var(--dark-muted))]">
-                      {new Date(req.created_at).toLocaleString("pt-BR")}
+                      {new Date(req.created_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })}
                     </p>
                     {(req.reaction_count || 0) > 0 && (
                       <span className="flex items-center gap-1 text-[10px] text-red-400">

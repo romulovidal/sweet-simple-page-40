@@ -24,7 +24,7 @@ const AdminUsers = ({ users, fetchData }: AdminUsersProps) => {
 
   const exportUsersCSV = () => {
     const headers = ["Nome", "Data de Cadastro"];
-    const rows = users.map(u => [u.display_name || "Sem nome", new Date(u.created_at).toLocaleDateString("pt-BR")]);
+    const rows = users.map(u => [u.display_name || "Sem nome", new Date(u.created_at).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" })]);
     const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -63,7 +63,7 @@ const AdminUsers = ({ users, fetchData }: AdminUsersProps) => {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
                 <p className="text-[10px] text-[hsl(var(--dark-muted))]">
-                  Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                  Cadastro: {new Date(u.created_at).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" })}
                 </p>
               </div>
             </div>

@@ -4,6 +4,8 @@ import { registerPushNotifications, isPushEnabled } from "@/lib/pushNotification
 
 type PromptPhase = "hidden" | "modal" | "waiting-system" | "done";
 
+const DISMISS_KEY = "push-prompt:dismissed-forever";
+
 function isPreviewEnv() {
   try {
     if (window.self !== window.top) return true;
@@ -18,6 +20,7 @@ function isPreviewEnv() {
 
 const PushPermissionPrompt = () => {
   const [phase, setPhase] = useState<PromptPhase>("hidden");
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   useEffect(() => {
     if (isPreviewEnv()) return;
@@ -40,6 +43,9 @@ const PushPermissionPrompt = () => {
         // If Onboarding hasn't been completed yet, don't show the separate prompt.
         const onboardingCompleted = localStorage.getItem("show-onboarding-v1") === "false";
         if (!onboardingCompleted) return;
+
+        // Respect a permanent dismissal
+        if (localStorage.getItem(DISMISS_KEY) === "true") return;
 
         // Check if browser already has permission (no need to show modal)
         if (Notification.permission === "granted" || Notification.permission === "denied") return;
@@ -75,7 +81,12 @@ const PushPermissionPrompt = () => {
   };
 
   const handleDismiss = () => {
-    // Only hide for this session — will show again on next app open
+    // If user opted out permanently, persist that choice
+    if (dontAskAgain) {
+      try {
+        localStorage.setItem(DISMISS_KEY, "true");
+      } catch {}
+    }
     setPhase("hidden");
     notifyClosed();
   };
@@ -155,11 +166,21 @@ const PushPermissionPrompt = () => {
             Ativar notificações
           </button>
 
+          <label className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontAskAgain}
+              onChange={(e) => setDontAskAgain(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-border accent-primary cursor-pointer"
+            />
+            Não perguntar novamente
+          </label>
+
           <button
             onClick={handleDismiss}
-            className="mt-2 w-full text-[10px] text-muted-foreground/40 py-1 hover:text-muted-foreground/60 transition-colors"
+            className="mt-2 w-full text-xs text-muted-foreground/60 py-1.5 hover:text-muted-foreground transition-colors"
           >
-            agora não
+            {dontAskAgain ? "Fechar" : "Agora não"}
           </button>
         </div>
       </div>

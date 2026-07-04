@@ -347,8 +347,35 @@ const BookView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewProps)
           {b.author && <p><span className="text-dark-muted">Autor:</span> {b.author}</p>}
           {b.theme && <p><span className="text-dark-muted">Tema:</span> {b.theme}</p>}
           {rel.period && <p><span className="text-dark-muted">Período:</span> {rel.period.name}</p>}
+          {b.chapters && <p><span className="text-dark-muted">Capítulos:</span> {b.chapters}</p>}
         </div>
       </Section>
+      {b.intro && (
+        <Section title="Introdução" icon={<Info className="w-3.5 h-3.5" />}>
+          <p className="text-sm leading-relaxed text-dark-text">{b.intro}</p>
+        </Section>
+      )}
+      {b.keyEvents?.length ? (
+        <Section title="Eventos-chave" icon={<Clock className="w-3.5 h-3.5" />}>
+          <div className="flex flex-wrap gap-1.5">
+            {b.keyEvents.map((e) => <Chip key={e} color={color}>{e}</Chip>)}
+          </div>
+        </Section>
+      ) : null}
+      {b.keyMiracles?.length ? (
+        <Section title="Milagres" icon={<Sparkles className="w-3.5 h-3.5" />}>
+          <div className="flex flex-wrap gap-1.5">
+            {b.keyMiracles.map((m) => <Chip key={m} color={color}>✨ {m}</Chip>)}
+          </div>
+        </Section>
+      ) : null}
+      {b.keyProphecies?.length ? (
+        <Section title="Profecias" icon={<Book className="w-3.5 h-3.5" />}>
+          <div className="grid grid-cols-1 gap-2">
+            {b.keyProphecies.map((p) => <RefLink key={p.ref} reference={p.ref} note={p.note} color={color} />)}
+          </div>
+        </Section>
+      ) : null}
       <Section title="Ler no aplicativo" icon={<Book className="w-3.5 h-3.5" />}>
         <RefLink reference={`${b.name} 1`} note="Abrir capítulo 1" color={color} />
       </Section>

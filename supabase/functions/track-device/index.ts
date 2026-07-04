@@ -29,6 +29,7 @@ function sanitizeHistory(input: unknown): string[] {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  console.log("[track-device] request received", req.method);
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method not allowed" }), {
       status: 405,

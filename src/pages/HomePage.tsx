@@ -19,7 +19,7 @@ import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 9; // Bump this to force all users to refresh
+const DAILY_VERSE_CACHE_VERSION = 10; // Bump this to force all users to refresh
 
 type CachedDailyVerse = {
   date: string;
@@ -135,19 +135,16 @@ const HomePage = () => {
       return text ? { text, ref: v.ref } : v;
     };
 
-    const tryManualVerse = async (today: string): Promise<{ text: string; ref: string } | null> => {
+    const tryManualVerse = async (): Promise<{ text: string; ref: string } | null> => {
       try {
         const { data: queueVerse, error } = await supabase
-          .from("daily_verse_queue")
+          .from("current_daily_verse" as never)
           .select("verse_text, verse_ref")
-          .lte("scheduled_date", today)
-          .order("scheduled_date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
         if (error) throw error;
         if (queueVerse) {
-          return { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
+          const row = queueVerse as { verse_text: string; verse_ref: string };
+          return { text: row.verse_text, ref: row.verse_ref };
         }
       } catch { /* fall through */ }
       return null;
@@ -178,7 +175,7 @@ const HomePage = () => {
       if (isOnline) {
         try {
           const activeVersion = await getActiveVersion();
-          const manual = await tryManualVerse(today);
+          const manual = await tryManualVerse();
 
           // Fonte única de verdade: apenas versículos manuais definidos pelo admin.
           if (!manual) {

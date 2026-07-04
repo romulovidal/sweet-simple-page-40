@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Users, MapPin, BookOpen, Clock, Sparkles, Book, Lightbulb, Info } from "lucide-react";
+import { Users, MapPin, BookOpen, Clock, Sparkles, Book, Lightbulb, Info, GitBranch } from "lucide-react";
 import { getCharacter, getEvent, getPlace, getBook, getPeriod, relatedForCharacter, relatedForEvent, relatedForPlace, relatedForBook } from "../lib/graph";
 import { CHARACTERS } from "../data/characters";
 import { EVENTS } from "../data/events";
@@ -10,6 +10,7 @@ import Section from "./shared/Section";
 import Chip from "./shared/Chip";
 import RefLink from "./shared/RefLink";
 import { useFavorites } from "../hooks/useFavorites";
+import GenealogyTree from "./Genealogy/GenealogyTree";
 
 interface Props {
   target: EntityRef;
@@ -100,6 +101,12 @@ const CharacterView = ({ id, onBack, onClose, onNavigate, isFav, toggle }: ViewP
               );
             })}
           </div>
+        </Section>
+      )}
+
+      {c.family && Object.values(c.family).some((v) => v && v.length) && (
+        <Section title="Genealogia" icon={<GitBranch className="w-3.5 h-3.5" />}>
+          <GenealogyTree character={c} onNavigate={onNavigate} />
         </Section>
       )}
 

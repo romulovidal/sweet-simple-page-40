@@ -29,6 +29,7 @@ const HarpaPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
+  const [autoPlayNext, setAutoPlayNext] = useState(false);
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -111,7 +112,10 @@ const HarpaPage = () => {
     if (!selected) return;
     const idx = hinos.findIndex((h) => h.number === selected.number);
     const next = hinos[idx + delta];
-    if (next) setSelected(next);
+    if (next) {
+      setAutoPlayNext(false);
+      setSelected(next);
+    }
   };
 
   const shareHymn = async (h: HarpaHino) => {
@@ -210,7 +214,7 @@ const HarpaPage = () => {
             {results.map(({ hino: h, match }) => (
               <li key={h.number}>
                 <button
-                  onClick={() => setSelected(h)}
+                  onClick={() => { setAutoPlayNext(false); setSelected(h); }}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
                 >
                   <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-sm">
@@ -238,7 +242,7 @@ const HarpaPage = () => {
           <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))]">
             <div className="flex items-center gap-3 px-4 py-3 max-w-3xl mx-auto">
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setAutoPlayNext(false); setSelected(null); }}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Fechar"
               >
@@ -305,7 +309,19 @@ const HarpaPage = () => {
               </div>
             </div>
             <div className="px-4 pb-3 max-w-3xl mx-auto flex justify-center">
-              <HarpaMiniPlayer number={selected.number} title={selected.title} />
+              <HarpaMiniPlayer
+                number={selected.number}
+                title={selected.title}
+                autoPlay={autoPlayNext}
+                onEnded={() => {
+                  const idx = hinos.findIndex((h) => h.number === selected.number);
+                  const next = hinos[idx + 1];
+                  if (next) {
+                    setAutoPlayNext(true);
+                    setSelected(next);
+                  }
+                }}
+              />
             </div>
           </header>
 

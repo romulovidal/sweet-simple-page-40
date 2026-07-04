@@ -17,7 +17,7 @@ import {
   Presentation,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import harpaIcon from "@/assets/harpa-atalaia-icon.png";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
@@ -46,6 +46,7 @@ type TabKey = "todos" | "favoritos" | "historico" | "temas";
 
 const HarpaPage = () => {
   const navigate = useNavigate();
+  const { number: routeNumber } = useParams();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
@@ -61,6 +62,14 @@ const HarpaPage = () => {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
     if (selected) pushHistory(selected.number);
+    if (selected) {
+      const target = `/harpa/${selected.number}`;
+      if (window.location.pathname !== target) {
+        window.history.replaceState(null, "", target);
+      }
+    } else if (window.location.pathname !== "/harpa") {
+      window.history.replaceState(null, "", "/harpa");
+    }
   }, [selected]);
 
   useEffect(() => {
@@ -87,6 +96,20 @@ const HarpaPage = () => {
       localStorage.setItem(FONT_KEY, String(fontSize));
     } catch {}
   }, [fontSize]);
+
+  // Abrir hino automaticamente a partir da URL /harpa/:number
+  useEffect(() => {
+    if (!routeNumber || hinos.length === 0) return;
+    const n = Number(routeNumber);
+    if (!Number.isFinite(n)) return;
+    if (selected?.number === n) return;
+    const found = hinos.find((h) => h.number === n);
+    if (found) {
+      setAutoPlayNext(false);
+      setSelected(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeNumber, hinos]);
 
   useEffect(() => {
     let alive = true;
@@ -184,20 +207,28 @@ const HarpaPage = () => {
   const showThemeGrid = tab === "temas" && !activeTheme;
 
   const shareHymn = async (h: HarpaHino) => {
+    const url = `${window.location.origin}/harpa/${h.number}`;
     const text = [
-      `Harpa Cristã Atalaia — ${h.number}. ${h.title}`,
+      `🎵 Harpa Cristã Atalaia — ${h.number}. ${h.title}`,
       "",
       ...h.strophes.flatMap((s) => {
         const header = s.chorus ? "Coro:" : s.index ? `${s.index}.` : "";
         return [header, ...s.lines, ""].filter(Boolean);
       }),
+      "",
+      "🎶 Cante e leia este hino no app Atalaia:",
+      url,
     ].join("\n");
     try {
       if (navigator.share) {
-        await navigator.share({ title: `Harpa ${h.number} — ${h.title}`, text });
+        await navigator.share({
+          title: `Harpa ${h.number} — ${h.title}`,
+          text,
+          url,
+        });
       } else {
         await navigator.clipboard.writeText(text);
-        toast.success("Hino copiado");
+        toast.success("Hino e link copiados");
       }
     } catch {}
   };

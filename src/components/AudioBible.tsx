@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Pause, Square, Volume2, Loader2, Headphones } from "lucide-react";
 import type { BibleVerse } from "@/services/bibleApi";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AudioBibleProps {
@@ -17,16 +16,27 @@ const VOICE = "alloy";
 // In-memory cache of blob URLs per verse for the current session.
 const audioCache = new Map<string, string>();
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
 async function fetchVerseAudio(cacheKey: string, text: string): Promise<string> {
   const cached = audioCache.get(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase.functions.invoke("tts-verse", {
-    body: { text, voice: VOICE },
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/tts-verse`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ text, voice: VOICE }),
   });
-  if (error) throw error;
-  // supabase-js returns a Blob for binary responses.
-  const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${errText}`);
+  }
+  const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   audioCache.set(cacheKey, url);
   return url;

@@ -119,14 +119,35 @@ const HarpaPage = () => {
     [hinos]
   );
 
+  const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
+
+  const baseList = useMemo<HarpaHino[]>(() => {
+    if (tab === "favoritos") {
+      const set = new Set(favorites);
+      return hinos.filter((h) => set.has(h.number));
+    }
+    if (tab === "historico") {
+      const map = new Map(hinos.map((h) => [h.number, h] as const));
+      return history.map((e) => map.get(e.number)).filter(Boolean) as HarpaHino[];
+    }
+    if (tab === "temas" && activeTheme) {
+      const theme = HARPA_THEMES.find((t) => t.id === activeTheme);
+      if (!theme) return [];
+      return hymnsByTheme(themeIndex, theme);
+    }
+    return hinos;
+  }, [tab, hinos, favorites, history, activeTheme, themeIndex]);
+
   const results = useMemo(() => {
     const raw = query.trim();
-    if (!raw) return hinos.map((h) => ({ hino: h, match: null as string | null }));
+    if (!raw) return baseList.map((h) => ({ hino: h, match: null as string | null }));
     const q = normalize(raw);
     const asNumber = Number(raw);
     const numericOnly = /^\d+$/.test(raw);
+    const baseSet = new Set(baseList.map((h) => h.number));
     return searchIndex
       .filter((it) => {
+        if (!baseSet.has(it.hino.number)) return false;
         if (numericOnly && String(it.hino.number) === raw) return true;
         if (numericOnly && String(it.hino.number).startsWith(raw)) return true;
         if (!Number.isNaN(asNumber) && String(it.hino.number).includes(q)) return true;
@@ -141,7 +162,7 @@ const HarpaPage = () => {
           .find((l) => normalize(l).includes(q));
         return { hino: it.hino, match: line ?? null };
       });
-  }, [query, hinos, searchIndex]);
+  }, [query, baseList, searchIndex]);
 
   const empty = !loading && hinos.length === 0;
 
@@ -154,6 +175,13 @@ const HarpaPage = () => {
       setSelected(next);
     }
   };
+
+  const handleToggleFav = (n: number) => {
+    const now = toggleFavorite(n);
+    toast.success(now ? "Adicionado aos favoritos" : "Removido dos favoritos");
+  };
+
+  const showThemeGrid = tab === "temas" && !activeTheme;
 
   const shareHymn = async (h: HarpaHino) => {
     const text = [

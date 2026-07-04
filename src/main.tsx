@@ -3,7 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerAppServiceWorker } from "@/lib/registerServiceWorker";
 import { initErrorMonitor } from "@/lib/errorMonitor";
+import { initSentry } from "@/lib/sentry";
 
+initSentry();
 initErrorMonitor();
 
 // Lock the app in portrait; fullscreen videos handle their own landscape lock.

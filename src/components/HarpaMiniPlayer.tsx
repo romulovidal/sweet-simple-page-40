@@ -92,6 +92,7 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Pr
             else if (s === 2) setState("paused");
             else if (s === 0) {
               setState("idle");
+              try { onEndedRef.current?.(); } catch {}
             } else if (s === 3) setState("loading");
           },
           onError: () => {

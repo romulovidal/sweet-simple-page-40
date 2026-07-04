@@ -32,24 +32,19 @@ const PlanHub = ({ onOpen }: Props) => {
       {PLANS.map((p) => {
         const done = progress[p.id]?.size ?? 0;
         const pct = done / p.days.length;
-        const color = p.color ?? "217 91% 60%";
         return (
           <button
             key={p.id}
             onClick={() => onOpen(p.id)}
-            className="w-full flex items-center gap-3 p-3 rounded-2xl text-left active:scale-[0.99] transition-transform"
-            style={{
-              background: `linear-gradient(135deg, hsl(${color} / 0.22), hsl(var(--dark-card)) 65%)`,
-              border: `1px solid hsl(${color} / 0.35)`,
-            }}
+            className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors bg-dark-card active:bg-dark-card-hover border border-dark-card-hover"
           >
-            <ProgressRing value={pct} color={color} size={54}>
+            <ProgressRing value={pct} size={54}>
               <span className="text-lg">{p.icon}</span>
             </ProgressRing>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-dark-text truncate">{p.title}</p>
               <p className="text-[11px] text-dark-muted line-clamp-2">{p.description}</p>
-              <p className="text-[10px] font-bold mt-1" style={{ color: `hsl(${color})` }}>
+              <p className="text-[10px] font-bold mt-1 text-primary">
                 {done}/{p.days.length} dias · {Math.round(pct * 100)}%
               </p>
             </div>

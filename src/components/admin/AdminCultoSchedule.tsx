@@ -49,6 +49,7 @@ const fromLocalInput = (val: string): string | null => {
 const formatScheduled = (iso: string | null | undefined) => {
   if (!iso) return "";
   return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Fortaleza",
     weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 };

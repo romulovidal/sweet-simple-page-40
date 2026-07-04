@@ -541,12 +541,36 @@ const BiblePage = () => {
 
     const currentVersion = getVersionById(bibleVersion);
 
+    // Build dynamic meta if user is viewing highlighted verses
+    const highlightedList = highlightedVerses.size > 0
+      ? Array.from(highlightedVerses).sort((a, b) => a - b)
+      : highlightedVerse
+        ? [highlightedVerse]
+        : [];
+    const highlightedTexts = highlightedList
+      .map((n) => verses.find((v) => v.number === n)?.text)
+      .filter(Boolean) as string[];
+    const metaVerseLabel = highlightedList.length
+      ? `${selectedBook.name} ${selectedChapter}:${highlightedList[0]}${
+          highlightedList.length > 1 ? `-${highlightedList[highlightedList.length - 1]}` : ""
+        }`
+      : null;
+    const metaTitle = metaVerseLabel
+      ? `${metaVerseLabel} — A Bíblia do Atalaia`
+      : `${selectedBook.name} ${selectedChapter} — Bíblia do Atalaia`;
+    const metaDesc = highlightedTexts.length
+      ? `"${highlightedTexts.join(" ").slice(0, 200)}${highlightedTexts.join(" ").length > 200 ? "…" : ""}" — ${currentVersion.shortName}`
+      : `Leia ${selectedBook.name} capítulo ${selectedChapter} na versão ${currentVersion.shortName}, com destaques, notas e compartilhamento.`;
+    const metaPath = highlightedList.length
+      ? `/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verses=${highlightedList.join(",")}`
+      : `/biblia?book=${selectedBook.abbrev}&chapter=${selectedChapter}`;
+
     return (
       <div className="pb-20 min-h-screen">
         <PageHead
-          title={`${selectedBook.name} ${selectedChapter} — Bíblia do Atalaia`}
-          description={`Leia ${selectedBook.name} capítulo ${selectedChapter} na versão ${currentVersion.shortName}, com destaques, notas e compartilhamento.`}
-          path={`/biblia?book=${selectedBook.abbrev}&chapter=${selectedChapter}`}
+          title={metaTitle}
+          description={metaDesc}
+          path={metaPath}
           type="article"
         />
         <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">

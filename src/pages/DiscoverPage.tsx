@@ -236,6 +236,10 @@ const DiscoverPage = () => {
         title="Descubra Versículos e Estudos Bíblicos — A Bíblia do Atalaia"
         description="Busque versículos por tema, referência ou palavra. Descubra estudos, personagens e conexões da Palavra de Deus."
         path="/descubra"
+        breadcrumbs={[
+          { name: "Início", path: "/" },
+          { name: "Descubra", path: "/descubra" },
+        ]}
       />
       <header className="px-5 pt-12 pb-4 max-w-4xl mx-auto lg:pt-8">
          <h1 className="text-2xl font-bold">Explore</h1>

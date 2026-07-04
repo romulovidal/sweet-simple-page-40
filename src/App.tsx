@@ -1,5 +1,6 @@
  import AskBibleFloat from "@/components/AskBibleFloat";
  import AskBible from "@/components/AskBible";
+import HarpaAtalaiaFloat from "@/components/HarpaAtalaiaFloat";
  import { useAppFeatures } from "@/hooks/useAppFeatures";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -33,6 +34,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
+import HarpaPage from "@/pages/HarpaPage";
 import VerseShareRedirect from "@/pages/VerseShareRedirect";
 import NotFound from "@/pages/NotFound";
 
@@ -71,6 +73,7 @@ const AppContent = () => {
             <Route path="/descubra" element={<PageTransition><DiscoverPage /></PageTransition>} />
             <Route path="/perfil" element={<PageTransition><ProfilePage /></PageTransition>} />
             <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
+            <Route path="/harpa" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/v/:slug" element={<VerseShareRedirect />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/app" element={<AppLanding />} />
@@ -84,6 +87,7 @@ const AppContent = () => {
       {!isAdmin && !isLanding && <PushPermissionPrompt />}
        {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
        {!isAdmin && !isLanding && <AskBibleFloat />}
+       {!isAdmin && !isLanding && <HarpaAtalaiaFloat />}
        {showBottomNav && <BottomNav />}
       {!isAdmin && !isLanding && <AppTour />}
       <PushNotificationViewer />

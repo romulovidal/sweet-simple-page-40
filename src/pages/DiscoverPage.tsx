@@ -8,6 +8,7 @@ import { useAppFeatures } from "@/hooks/useAppFeatures";
 import AskBible from "@/components/AskBible";
 import StudyHub from "@/components/study/StudyHub";
 import PageHead from "@/components/PageHead";
+import { trackEvent } from "@/lib/analytics";
 type DiscoverResult = {
   id: string;
   type: "referencia" | "tema" | "versiculo" | "ai-sugestao";
@@ -120,6 +121,7 @@ const DiscoverPage = () => {
     const requestId = Date.now();
     latestRequest.current = requestId;
     setSearched(true);
+    trackEvent("search", { q: rawQuery.slice(0, 80), len: rawQuery.length });
 
     const directReference = parseBibleReference(rawQuery);
     const smartMatches = getSmartBibleMatches(rawQuery).map<DiscoverResult>((match) => ({

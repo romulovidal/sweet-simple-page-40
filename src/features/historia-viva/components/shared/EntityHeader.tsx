@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 interface Props {
   title: string;
   subtitle?: string;
-  color?: string; // hsl triplet
+  color?: string; // aceito por compat, ignorado — sempre usa tokens do app
   icon?: string;
   onBack?: () => void;
   onClose?: () => void;
@@ -15,7 +15,7 @@ interface Props {
 
 const EntityHeader = ({ title, subtitle, icon, onBack, onClose, onShare, onToggleFav, isFav }: Props) => (
   <div
-    className="sticky top-0 z-10 px-4 py-3 backdrop-blur-lg bg-background/95 border-b border-dark-card-hover"
+    className="sticky top-0 z-10 px-4 py-3 backdrop-blur-lg bg-dark-bg/95 border-b border-dark-card-hover"
   >
     <div className="flex items-center gap-2">
       {onBack && (

@@ -108,7 +108,6 @@ const HistoriaTimeline = ({ onOpenEvent, onOpenPeriod }: Props) => {
           {PERIODS.map((p) => (
             <Chip
               key={p.id}
-              color={p.color}
               active={p.id === activePeriod}
               onClick={() => goToPeriod(p)}
               aria-label={`Ir para ${p.name}`}

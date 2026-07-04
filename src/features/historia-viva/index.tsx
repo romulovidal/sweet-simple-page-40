@@ -10,13 +10,14 @@ import { PERIODS } from "./data/periods";
 import { CHARACTERS } from "./data/characters";
 import { EVENTS } from "./data/events";
 import { PLACES } from "./data/places";
+import { BOOKS } from "./data/books";
 import { useHistoriaSearch } from "./hooks/useHistoriaSearch";
 import { useHistoryNav } from "./hooks/useHistoryNav";
 import type { CharacterTag, EntityRef } from "./types";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void }
 
-type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels";
+type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels" | "books";
 
 const CHAR_FILTERS: { id: CharacterTag; label: string; icon: string }[] = [
   { id: "patriarca", label: "Patriarcas", icon: "🌟" },
@@ -89,6 +90,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 { id: "characters", label: `Personagens`, icon: <Users className="w-3.5 h-3.5" /> },
                 { id: "events", label: `Eventos`, icon: <Sparkles className="w-3.5 h-3.5" /> },
                 { id: "places", label: `Lugares`, icon: <MapPin className="w-3.5 h-3.5" /> },
+                { id: "books", label: `Livros`, icon: <BookOpen className="w-3.5 h-3.5" /> },
               ] as const).map((t) => (
                 <Chip
                   key={t.id}
@@ -248,6 +250,28 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                   <p className="text-[11px] text-dark-muted line-clamp-2">{p.description}</p>
                 </button>
               ))}
+            </div>
+          )}
+          {!query && tab === "books" && (
+            <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {BOOKS.map((b) => {
+                const period = PERIODS.find((p) => p.id === b.periodId);
+                const color = period?.color ?? "217 91% 60%";
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => openRef({ kind: "book", id: b.id })}
+                    className="p-3 rounded-xl text-left transition-transform active:scale-[0.98]"
+                    style={{
+                      background: "hsl(var(--dark-card))",
+                      borderLeft: `3px solid hsl(${color})`,
+                    }}
+                  >
+                    <p className="text-sm font-bold text-dark-text truncate">📖 {b.name}</p>
+                    {b.theme && <p className="text-[11px] text-dark-muted line-clamp-2 mt-0.5">{b.theme}</p>}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

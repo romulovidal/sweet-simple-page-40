@@ -81,11 +81,22 @@ Deno.serve(async (req) => {
   const appUrl = `${APP_ORIGIN}/biblia?book=${encodeURIComponent(
     data.book_abbrev,
   )}&chapter=${data.chapter}&verses=${encodeURIComponent(versesParam)}`;
-  const canonicalUrl = `${FUNC_ORIGIN}/s/${slug}`;
+  const shareUrl = `${APP_ORIGIN}/v/${slug}`;
+  const canonicalUrl = shareUrl;
   const ogImage = `${FUNC_ORIGIN}/og/${slug}.png`;
 
   const ua = req.headers.get("user-agent") ?? "";
   const bot = isBotUA(ua);
+
+  if (!bot) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: appUrl,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
 
   const html = `<!doctype html>
 <html lang="pt-BR">
@@ -108,7 +119,6 @@ Deno.serve(async (req) => {
 <meta name="twitter:title" content="${escapeHtml(reference)}${escapeHtml(versionLabel)}" />
 <meta name="twitter:description" content="${escapeHtml(description)}" />
 <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
-${bot ? "" : `<meta http-equiv="refresh" content="0; url=${escapeHtml(appUrl)}" />`}
 <style>
   html,body{margin:0;padding:0;background:#0b0b10;color:#e8e6f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
   .wrap{max-width:640px;margin:0 auto;padding:32px 20px;text-align:center;}
@@ -126,9 +136,7 @@ ${bot ? "" : `<meta http-equiv="refresh" content="0; url=${escapeHtml(appUrl)}" 
   <a href="${escapeHtml(appUrl)}">Abrir no app</a>
 </div>
 ${
-  bot
-    ? ""
-    : `<script>window.location.replace(${JSON.stringify(appUrl)});</script>`
+    ""
 }
 </body>
 </html>`;

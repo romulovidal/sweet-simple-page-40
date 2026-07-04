@@ -41,7 +41,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col bg-background border-0" hideClose>
+      <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col bg-background border-0">
         {/* Header */}
         <header
           className="px-4 pt-4 pb-2 relative"
@@ -49,18 +49,11 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
             background: "linear-gradient(180deg, hsl(var(--primary) / 0.18) 0%, transparent 100%)",
           }}
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 pr-10">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">História Viva</p>
               <h1 className="text-xl font-black leading-tight">A Bíblia contada em ordem</h1>
             </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              aria-label="Fechar"
-              className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Search */}
@@ -253,7 +246,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
 
         {/* Detail overlay */}
         <Sheet open={!!nav.current} onOpenChange={(v) => !v && nav.reset()}>
-          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto" hideClose>
+          <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
             {nav.current && (
               <EntityDetail
                 ref={nav.current}

@@ -249,7 +249,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
           <SheetContent side="bottom" className="h-[100dvh] p-0 bg-background border-0 overflow-y-auto">
             {nav.current && (
               <EntityDetail
-                ref={nav.current}
+                target={nav.current}
                 onBack={nav.canBack ? back : undefined}
                 onClose={() => nav.reset()}
                 onNavigate={openRef}

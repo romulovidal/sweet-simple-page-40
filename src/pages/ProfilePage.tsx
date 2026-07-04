@@ -398,15 +398,6 @@ const ProfilePage = () => {
             <p className="font-semibold text-sm text-destructive">Reiniciar progresso</p>
             <p className="text-xs text-dark-muted mt-1">Zerar sequência e última leitura do aplicativo.</p>
           </button>
-          <button
-            onClick={() => {
-              throw new Error("Sentry test error — " + new Date().toISOString());
-            }}
-            className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors"
-          >
-            <p className="font-semibold text-sm text-yellow-500">🧪 Testar Sentry (temporário)</p>
-            <p className="text-xs text-dark-muted mt-1">Dispara um erro de teste para verificar o monitoramento.</p>
-          </button>
           {user && (
             <button onClick={handleSignOut} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
               <p className="font-semibold text-sm text-destructive flex items-center gap-2">

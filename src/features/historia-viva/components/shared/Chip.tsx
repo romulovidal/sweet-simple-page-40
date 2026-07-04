@@ -7,8 +7,15 @@ interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
+/** Extrai lightness de "H S% L%" para escolher texto branco ou preto no estado active */
+function textOn(color: string) {
+  const m = color.match(/(\d+(?:\.\d+)?)%\s*$/);
+  const l = m ? parseFloat(m[1]) : 50;
+  return l > 62 ? "hsl(220 40% 8%)" : "#fff";
+}
+
 const Chip = forwardRef<HTMLButtonElement, ChipProps>(
-  ({ color = "var(--primary)", active, icon, className, children, ...props }, ref) => (
+  ({ color = "217 91% 60%", active, icon, className, children, ...props }, ref) => (
     <button
       ref={ref}
       type="button"
@@ -17,9 +24,9 @@ const Chip = forwardRef<HTMLButtonElement, ChipProps>(
         className
       )}
       style={{
-        color: active ? "#fff" : `hsl(${color})`,
+        color: active ? textOn(color) : "hsl(var(--dark-text))",
         background: active ? `hsl(${color})` : `hsl(${color} / 0.15)`,
-        border: `1px solid hsl(${color} / ${active ? 1 : 0.35})`,
+        border: `1px solid hsl(${color} / ${active ? 1 : 0.4})`,
       }}
       {...props}
     >

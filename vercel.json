@@ -3,10 +3,10 @@
     {
       "source": "/v/:slug",
       "destination": "https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/s/:slug"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

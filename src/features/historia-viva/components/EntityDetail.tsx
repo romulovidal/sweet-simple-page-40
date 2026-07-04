@@ -12,10 +12,10 @@ import RefLink from "./shared/RefLink";
 import { useFavorites } from "../hooks/useFavorites";
 
 interface Props {
-  ref: EntityRef;
+  target: EntityRef;
   onBack?: () => void;
   onClose: () => void;
-  onNavigate: (ref: EntityRef) => void;
+  onNavigate: (target: EntityRef) => void;
 }
 
 const share = async (title: string, text: string) => {
@@ -28,11 +28,11 @@ const share = async (title: string, text: string) => {
 const EntityDetail = ({ ref, onBack, onClose, onNavigate }: Props) => {
   const { isFav, toggle } = useFavorites();
 
-  if (ref.kind === "character") return <CharacterView id={ref.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
-  if (ref.kind === "event") return <EventView id={ref.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
-  if (ref.kind === "place") return <PlaceView id={ref.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
-  if (ref.kind === "book") return <BookView id={ref.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
-  if (ref.kind === "period") return <PeriodView id={ref.id} {...{ onBack, onClose, onNavigate }} />;
+  if (target.kind === "character") return <CharacterView id={target.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
+  if (target.kind === "event") return <EventView id={target.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
+  if (target.kind === "place") return <PlaceView id={target.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
+  if (target.kind === "book") return <BookView id={target.id} {...{ onBack, onClose, onNavigate, isFav, toggle }} />;
+  if (target.kind === "period") return <PeriodView id={target.id} {...{ onBack, onClose, onNavigate }} />;
   return null;
 };
 

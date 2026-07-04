@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
 
   const verses = (data.verses ?? []) as number[];
   const versesParam = formatVerseRanges(verses);
+  const firstVerse = verses.length ? Math.min(...verses) : null;
   const bookLabel = data.book_name ?? data.book_abbrev.toUpperCase();
   const reference = `${bookLabel} ${data.chapter}:${versesParam}`;
   const versionLabel = data.version ? ` (${data.version})` : "";
@@ -80,7 +81,9 @@ Deno.serve(async (req) => {
 
   const appUrl = `${APP_ORIGIN}/biblia?book=${encodeURIComponent(
     data.book_abbrev,
-  )}&chapter=${data.chapter}&verses=${encodeURIComponent(versesParam)}`;
+  )}&chapter=${data.chapter}${
+    firstVerse ? `&verse=${firstVerse}` : ""
+  }&verses=${encodeURIComponent(versesParam)}`;
   const shareUrl = `${APP_ORIGIN}/v/${slug}`;
   const canonicalUrl = shareUrl;
   const ogImage = `${FUNC_ORIGIN}/og/${slug}.png`;

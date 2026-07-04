@@ -34,9 +34,17 @@ const VerseShareRedirect = () => {
         return;
       }
 
-      const versesParam = (data.verses ?? []).join(",");
+      const verses = (data.verses ?? []) as number[];
+      const versesParam = verses.join(",");
+      const firstVerse = verses.length ? Math.min(...verses) : null;
+      const params = new URLSearchParams({
+        book: data.book_abbrev,
+        chapter: String(data.chapter),
+      });
+      if (firstVerse) params.set("verse", String(firstVerse));
+      if (versesParam) params.set("verses", versesParam);
       navigate(
-        `/biblia?book=${data.book_abbrev}&chapter=${data.chapter}&verses=${versesParam}`,
+        `/biblia?${params.toString()}`,
         { replace: true },
       );
     })();

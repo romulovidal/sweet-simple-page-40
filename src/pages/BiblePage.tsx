@@ -371,7 +371,13 @@ const BiblePage = () => {
 
     const reference = `${selectedBook.name} ${selectedChapter}:${ranges.join(",")}`;
     const content = selectedTexts.map((v) => `${v.number} ${v.text}`).join(" ");
-    const link = `${APP_URL}/biblia?book=${selectedBook.apiAbbrev}&chapter=${selectedChapter}&verse=${sortedNumbers[0]}`;
+    const linkParams = new URLSearchParams({
+      book: selectedBook.apiAbbrev,
+      chapter: String(selectedChapter),
+      verse: String(sortedNumbers[0]),
+      verses: ranges.join(","),
+    });
+    const link = `${APP_URL}/biblia?${linkParams.toString()}`;
 
     return { text: content, reference, link };
   }, [selectedBook, selectedChapter, selectedVerses, verses]);

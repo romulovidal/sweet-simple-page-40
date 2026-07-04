@@ -27,6 +27,7 @@ import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
 import PageHead from "@/components/PageHead";
 import { createShortVerseLink } from "@/lib/verseShare";
+import { trackEvent } from "@/lib/analytics";
 import { useAIFeatures } from "@/hooks/useAIFeatures";
 import { useAppFeatures } from "@/hooks/useAppFeatures";
 import PresentationMode from "@/components/PresentationMode";
@@ -248,6 +249,7 @@ const BiblePage = () => {
     setSelectedBook(book);
     setTestament(book.testament);
     setSelectedChapter(nextChapter);
+    trackEvent("chapter_view", { book: book.apiAbbrev, chapter: nextChapter });
     setHighlightedVerse(
       nextVerse && nextVerse > 0
         ? nextVerse

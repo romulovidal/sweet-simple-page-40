@@ -116,6 +116,11 @@ export interface HistoriaBook {
   periodId: PeriodId;
   intro?: string;
   order: number;
+  keyEvents?: string[];
+  keyProphecies?: { ref: string; note: string }[];
+  keyMiracles?: string[];
+  characters?: string[];
+  chapters?: number;
 }
 
 export type EntityKind = "character" | "event" | "place" | "book" | "period";

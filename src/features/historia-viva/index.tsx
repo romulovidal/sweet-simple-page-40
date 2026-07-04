@@ -1,20 +1,23 @@
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles } from "lucide-react";
+import { Search, X, Clock, Users, MapPin, BookOpen, Sparkles, Map as MapIcon, GitBranch } from "lucide-react";
 import HistoriaTimeline from "./components/Timeline/HistoriaTimeline";
+import HistoriaMap from "./components/Map/HistoriaMap";
+import ParallelsView from "./components/Parallels/ParallelsView";
 import EntityDetail from "./components/EntityDetail";
 import Chip from "./components/shared/Chip";
 import { PERIODS } from "./data/periods";
 import { CHARACTERS } from "./data/characters";
 import { EVENTS } from "./data/events";
 import { PLACES } from "./data/places";
+import { BOOKS } from "./data/books";
 import { useHistoriaSearch } from "./hooks/useHistoriaSearch";
 import { useHistoryNav } from "./hooks/useHistoryNav";
 import type { CharacterTag, EntityRef } from "./types";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void }
 
-type Tab = "timeline" | "characters" | "events" | "places";
+type Tab = "timeline" | "characters" | "events" | "places" | "map" | "parallels" | "books";
 
 const CHAR_FILTERS: { id: CharacterTag; label: string; icon: string }[] = [
   { id: "patriarca", label: "Patriarcas", icon: "🌟" },
@@ -82,9 +85,12 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
             <div className="flex gap-1.5 mt-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
               {([
                 { id: "timeline", label: "Linha do tempo", icon: <Clock className="w-3.5 h-3.5" /> },
+                { id: "map", label: "Mapa", icon: <MapIcon className="w-3.5 h-3.5" /> },
+                { id: "parallels", label: "Paralelas", icon: <GitBranch className="w-3.5 h-3.5" /> },
                 { id: "characters", label: `Personagens`, icon: <Users className="w-3.5 h-3.5" /> },
                 { id: "events", label: `Eventos`, icon: <Sparkles className="w-3.5 h-3.5" /> },
                 { id: "places", label: `Lugares`, icon: <MapPin className="w-3.5 h-3.5" /> },
+                { id: "books", label: `Livros`, icon: <BookOpen className="w-3.5 h-3.5" /> },
               ] as const).map((t) => (
                 <Chip
                   key={t.id}
@@ -168,7 +174,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                         style={{ background: `hsl(${p.color})` }}
                       >{p.icon}</span>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold" style={{ color: `hsl(${p.color})` }}>{p.name}</p>
+                        <p className="text-sm font-bold text-dark-text">{p.name}</p>
                         <p className="text-[11px] text-dark-muted line-clamp-1">{p.subtitle}</p>
                       </div>
                     </button>
@@ -202,6 +208,10 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                   );
                 })}
             </div>
+          ) : tab === "map" ? (
+            <HistoriaMap onOpenPlace={(id) => openRef({ kind: "place", id })} onNavigate={openRef} />
+          ) : tab === "parallels" ? (
+            <ParallelsView onNavigate={openRef} />
           ) : tab === "events" ? (
             <div className="p-4 space-y-2">
               {EVENTS.sort((a, b) => a.year - b.year).map((e) => {
@@ -225,7 +235,7 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                 );
               })}
             </div>
-          ) : (
+          ) : tab === "places" ? (
             <div className="p-4 grid grid-cols-2 gap-2">
               {PLACES.map((p) => (
                 <button
@@ -240,6 +250,27 @@ const HistoriaVivaHub = ({ open, onOpenChange }: Props) => {
                   <p className="text-[11px] text-dark-muted line-clamp-2">{p.description}</p>
                 </button>
               ))}
+            </div>
+          ) : (
+            <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {BOOKS.map((b) => {
+                const period = PERIODS.find((p) => p.id === b.periodId);
+                const color = period?.color ?? "217 91% 60%";
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => openRef({ kind: "book", id: b.id })}
+                    className="p-3 rounded-xl text-left transition-transform active:scale-[0.98]"
+                    style={{
+                      background: "hsl(var(--dark-card))",
+                      borderLeft: `3px solid hsl(${color})`,
+                    }}
+                  >
+                    <p className="text-sm font-bold text-dark-text truncate">📖 {b.name}</p>
+                    {b.theme && <p className="text-[11px] text-dark-muted line-clamp-2 mt-0.5">{b.theme}</p>}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

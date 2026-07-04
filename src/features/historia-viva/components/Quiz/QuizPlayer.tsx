@@ -5,6 +5,7 @@ import RefLink from "../shared/RefLink";
 import { useSession, saveQuizAttempt } from "../../hooks/useCloudSync";
 import type { EntityRef } from "../../types";
 import QuizResult from "./QuizResult";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   quizId: string;

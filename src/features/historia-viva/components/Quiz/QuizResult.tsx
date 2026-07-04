@@ -1,6 +1,7 @@
 import { ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
 import type { EntityRef, Quiz } from "../../types";
 import RefLink from "../shared/RefLink";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   quiz: Quiz;

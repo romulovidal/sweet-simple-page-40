@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getCharacter } from "../../data/characters";
 import type { HistoriaCharacter, EntityRef } from "../../types";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   character: HistoriaCharacter;

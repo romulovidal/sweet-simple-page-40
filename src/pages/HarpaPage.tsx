@@ -30,6 +30,7 @@ const HarpaPage = () => {
       <PageHead
         title="Harpa Cristã Atalaia — Hinário"
         description="Hinário Harpa Cristã Atalaia para uso congregacional: consulte hinos por número ou título."
+        path="/harpa"
       />
 
       {/* Header */}

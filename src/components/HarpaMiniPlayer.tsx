@@ -12,7 +12,7 @@ export default function HarpaMiniPlayer({ number, title }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
   const [found, setFound] = useState<SearchResult | null>(null);
   const playerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
 
   // Reset when hymn changes
   useEffect(() => {
@@ -57,8 +57,12 @@ export default function HarpaMiniPlayer({ number, title }: Props) {
         playerRef.current.playVideo();
         return;
       }
-      if (!containerRef.current) return;
-      playerRef.current = new YT.Player(containerRef.current, {
+      if (!hostRef.current) return;
+      // YT replaces the target element with an iframe. Create a throwaway
+      // child div so React never tries to unmount the swapped node.
+      const target = document.createElement("div");
+      hostRef.current.appendChild(target);
+      playerRef.current = new YT.Player(target, {
         height: "0",
         width: "0",
         videoId: video.videoId,
@@ -102,6 +106,7 @@ export default function HarpaMiniPlayer({ number, title }: Props) {
       playerRef.current?.destroy?.();
     } catch {}
     playerRef.current = null;
+    if (hostRef.current) hostRef.current.innerHTML = "";
     setState("idle");
     if ("mediaSession" in navigator) {
       try {
@@ -171,8 +176,12 @@ export default function HarpaMiniPlayer({ number, title }: Props) {
           )}
         </>
       )}
-      {/* Hidden YouTube iframe container */}
-      <div ref={containerRef} className="sr-only" aria-hidden="true" />
+      {/* Hidden YouTube iframe host */}
+      <div
+        ref={hostRef}
+        aria-hidden="true"
+        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0, pointerEvents: "none" }}
+      />
     </div>
   );
 }

@@ -105,23 +105,6 @@ const DiscoverPage = () => {
     [navigate]
   );
 
-  const openReferenceByString = useCallback(
-    (ref: string) => {
-      const parsed = parseBibleReference(ref);
-      if (parsed) {
-        openBibleReference(parsed.book.apiAbbrev, parsed.chapter, parsed.verse);
-        return;
-      }
-      // Fallback: "Livro 12" or "Livro 7—12"
-      const match = ref.match(/^(.+?)\s+(\d+)/);
-      if (!match) return;
-      const bookAbbrev = resolveBookAbbrev(match[1].trim());
-      if (!bookAbbrev) return;
-      openBibleReference(bookAbbrev, parseInt(match[2], 10));
-    },
-    [openBibleReference],
-  );
-
   const handleSearch = useCallback(async (rawQuery: string) => {
     const normalizedQuery = normalizeSearchText(rawQuery);
 

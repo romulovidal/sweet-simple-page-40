@@ -11,7 +11,7 @@ interface AudioBibleProps {
   enabled: boolean;
 }
 
-const VOICE = "alloy";
+const VOICE = "onyx";
 
 // In-memory cache of blob URLs per verse for the current session.
 const audioCache = new Map<string, string>();

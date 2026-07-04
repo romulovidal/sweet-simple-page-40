@@ -185,6 +185,3 @@ export const readingPlans: ReadingPlan[] = [
   },
 ];
 
-export function getDailyVerse(): { text: string; ref: string } {
-  throw new Error("O versículo do dia automático foi desativado. Use daily_verse_queue.");
-}

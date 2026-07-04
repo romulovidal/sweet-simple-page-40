@@ -14,19 +14,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { readJsonStorage, writeJsonStorage } from "@/lib/localData";
-import { getVerseTextByReference, getVersesTextByNumbers, parseReference, DAILY_VERSE_VERSION_KEY, DEFAULT_DAILY_VERSION } from "@/lib/dailyVerseVersion";
 
 type AdminPost = Database["public"]["Tables"]["admin_posts"]["Row"];
 
 const DAILY_VERSE_CACHE_KEY = "daily-verse-cache";
-const DAILY_VERSE_CACHE_VERSION = 10; // Bump this to force all users to refresh
-
-type CachedDailyVerse = {
-  date: string;
-  version?: number;
-  source?: "manual";
-  verse: { text: string; ref: string };
-};
 const ADMIN_POSTS_CACHE_KEY = "cached-admin-posts";
 
 const HomePage = () => {
@@ -71,150 +62,47 @@ const HomePage = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const getToday = () => {
-      try {
-        const parts = new Intl.DateTimeFormat("en-CA", {
-          timeZone: "America/Sao_Paulo",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).formatToParts(new Date());
-        const year = parts.find((part) => part.type === "year")?.value;
-        const month = parts.find((part) => part.type === "month")?.value;
-        const day = parts.find((part) => part.type === "day")?.value;
-        if (year && month && day) return `${year}-${month}-${day}`;
-      } catch { /* fall back to device date */ }
+    const loadVerse = async () => {
+      window.localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
 
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const getActiveVersion = async (): Promise<string> => {
-      try {
-        const { data } = await supabase
-          .from("admin_settings")
-          .select("value")
-          .eq("key", DAILY_VERSE_VERSION_KEY)
-          .maybeSingle();
-        if (!data) return DEFAULT_DAILY_VERSION;
-        const val = typeof data.value === "string" ? data.value : JSON.stringify(data.value);
-        return (val.replace(/"/g, "") || DEFAULT_DAILY_VERSION).toLowerCase();
-      } catch {
-        return DEFAULT_DAILY_VERSION;
-      }
-    };
-
-    const applyVersion = async (
-      v: { text: string; ref: string },
-      versionId: string
-    ): Promise<{ text: string; ref: string }> => {
-      // Detect multi-verse refs like "João 3:16-17" or "João 3:16,18"
-      const versePart = v.ref.split(":")[1]?.trim() ?? "";
-      const hasRange = /[,-]/.test(versePart);
-      if (hasRange) {
-        const parsed = parseReference(v.ref);
-        if (parsed) {
-          const nums: number[] = [];
-          for (const seg of versePart.split(",")) {
-            const [a, b] = seg.split("-").map((n) => parseInt(n, 10));
-            if (Number.isNaN(a)) continue;
-            if (Number.isNaN(b)) nums.push(a);
-            else for (let i = a; i <= b; i++) nums.push(i);
-          }
-          if (nums.length > 0) {
-            const text = await getVersesTextByNumbers(parsed.bookName, parsed.chapter, nums, versionId);
-            if (text) return { text, ref: v.ref };
-          }
-        }
-        return v;
-      }
-      const text = await getVerseTextByReference(v.ref, versionId);
-      return text ? { text, ref: v.ref } : v;
-    };
-
-    const tryManualVerse = async (): Promise<{ text: string; ref: string } | null> => {
-      try {
-        const { data: queueVerse, error } = await supabase
-          .from("current_daily_verse" as never)
-          .select("verse_text, verse_ref")
-          .maybeSingle();
-        if (error) throw error;
-        if (queueVerse) {
-          const row = queueVerse as { verse_text: string; verse_ref: string };
-          return { text: row.verse_text, ref: row.verse_ref };
-        }
-      } catch { /* fall through */ }
-      return null;
-    };
-
-    const loadVerse = async (force = false) => {
-      const today = getToday();
-      const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
-      const cached = readJsonStorage<CachedDailyVerse | null>(DAILY_VERSE_CACHE_KEY, null);
-
-      const isCacheValid = !force && cached?.date === today && (cached.version ?? 0) >= DAILY_VERSE_CACHE_VERSION && !!cached.verse?.text;
-
-      // 1. Mostrar o cache imediatamente se for válido (velocidade)
-      if (isCacheValid && !cancelled) {
-        setVerse(cached.verse);
-        setVerseLoading(false);
-        setVerseHistory((prev) => {
-          if (prev.some((e) => e.date === today)) return prev;
-          return [{ date: today, ...cached.verse }, ...prev].slice(0, 90);
-        });
-      } else if (!cancelled) {
-        // Sem cache confiável: mantém o card em carregamento para não exibir versículo automático antigo.
+      if (!cancelled) {
         setVerse(null);
         setVerseLoading(true);
       }
 
-      // 2. Se estiver online, sempre buscar a versão atual (Tempo Real)
-      if (isOnline) {
-        try {
-          const activeVersion = await getActiveVersion();
-          const manual = await tryManualVerse();
+      try {
+        const { data: queueVerse, error } = await supabase
+          .from("current_daily_verse" as never)
+          .select("verse_text, verse_ref, scheduled_date")
+          .maybeSingle();
 
-          // Fonte única de verdade: apenas versículos manuais definidos pelo admin.
-          if (!manual) {
-            localStorage.removeItem(DAILY_VERSE_CACHE_KEY);
-            if (!cancelled) {
-              setVerse(null);
-              setVerseLoading(false);
-            }
-            return;
-          }
+        if (error) throw error;
 
-          const finalVerse = await applyVersion(manual, activeVersion);
-          const source: "manual" = "manual";
-
+        if (!queueVerse) {
           if (!cancelled) {
-            setVerse({ ...finalVerse, versionShortName: activeVersion.toUpperCase() });
+            setVerse(null);
             setVerseLoading(false);
-            
-            // Atualizar cache se algo mudou ou se é um novo dia
-            if (!isCacheValid || cached?.verse.text !== finalVerse.text || cached?.verse.ref !== finalVerse.ref || cached?.source !== source) {
-              writeJsonStorage(
-                DAILY_VERSE_CACHE_KEY,
-                { date: today, version: DAILY_VERSE_CACHE_VERSION, source, verse: finalVerse },
-                false,
-                "cache"
-              );
-              
-              setVerseHistory((prev) => {
-                const filtered = prev.filter((e) => e.date !== today);
-                return [{ date: today, ...finalVerse }, ...filtered].slice(0, 90);
-              });
-            }
           }
-        } catch (err) {
-          console.error("Erro ao carregar versículo em tempo real:", err);
-          if (!cancelled && !isCacheValid) setVerseLoading(false);
+          return;
         }
-      } else {
-        if (!cancelled) setVerseLoading(false);
+
+        const row = queueVerse as { verse_text: string; verse_ref: string; scheduled_date: string };
+        const finalVerse = { text: row.verse_text, ref: row.verse_ref };
+
+        if (!cancelled) {
+          setVerse(finalVerse);
+          setVerseLoading(false);
+          setVerseHistory((prev) => {
+            const filtered = prev.filter((entry) => entry.date !== row.scheduled_date);
+            return [{ date: row.scheduled_date, ...finalVerse }, ...filtered].slice(0, 90);
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar versículo manual do admin:", err);
+        if (!cancelled) {
+          setVerse(null);
+          setVerseLoading(false);
+        }
       }
     };
 
@@ -226,7 +114,7 @@ const HomePage = () => {
       if (document.visibilityState === "visible") loadVerse();
     };
     const onFocus = () => loadVerse();
-    const onOnline = () => loadVerse(true);
+    const onOnline = () => loadVerse();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
@@ -237,12 +125,12 @@ const HomePage = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "daily_verse_queue" },
-        () => loadVerse(true)
+        () => loadVerse()
       )
       .subscribe();
 
-    // Fallback: keep a light poll in case the device was asleep/offline when the event happened.
-    const pollId = window.setInterval(() => loadVerse(true), 60_000);
+    // Checagem de sincronização: mantém os dispositivos alinhados caso tenham dormido/offline.
+    const pollId = window.setInterval(() => loadVerse(), 60_000);
 
     return () => {
       cancelled = true;
@@ -355,17 +243,17 @@ const HomePage = () => {
                   <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
                     Versículo do dia
                   </h2>
-                  {verseLoading || !verse ? (
+                  {verseLoading ? (
                     <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
                       <Loader2 className="w-6 h-6 animate-spin text-white" />
                     </div>
-                  ) : (
+                  ) : verse ? (
                     <VerseCard 
                       text={verse.text} 
                       reference={verse.ref} 
                       version={verse.versionShortName} 
                     />
-                  )}
+                  ) : null}
                    {!verseLoading && verse && (
                      <AIDevotional verseRef={verse.ref} verseText={verse.text} enabled={aiFeatures.devotional} />
                    )}

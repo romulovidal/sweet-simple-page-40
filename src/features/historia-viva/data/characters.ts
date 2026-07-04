@@ -239,7 +239,6 @@ export const CHARACTERS: HistoriaCharacter[] = [
   },
   {
     id: "jesus", name: "Jesus Cristo", meaning: "O Senhor salva · Ungido", periodId: "vida-jesus", tags: ["jesus"], year: -4, icon: "✝️",
-    color: "352 78% 55%",
     bio: "O Verbo eterno que se fez carne. Viveu sem pecado, morreu pelos pecadores, ressuscitou ao terceiro dia e está assentado à direita do Pai.",
     family: { mothers: ["maria"], fathers: ["jose-nt"] },
     keyVerses: [{ ref: "João 1", note: "O Verbo se fez carne" }, { ref: "João 3", note: "'Deus amou o mundo'" }, { ref: "Isaías 53", note: "Servo Sofredor" }, { ref: "Mateus 28", note: "Ide e fazei discípulos" }],

@@ -6,7 +6,6 @@ export const PLANS: ReadingPlan[] = [
     title: "De Abraão a Josué",
     description: "21 dias percorrendo Gênesis, Êxodo, Números e Josué em ordem cronológica.",
     icon: "🌟",
-    color: "38 92% 55%",
     periodId: "patriarcas",
     days: [
       { index: 1, title: "O chamado de Abraão", summary: "Deus chama Abrão de Ur e promete uma grande nação.", readings: ["Gênesis 11:27-12:9"], entities: [{ kind: "character", id: "abraao" }] },
@@ -37,7 +36,6 @@ export const PLANS: ReadingPlan[] = [
     title: "Vida de Jesus em 30 dias",
     description: "Harmonia dos quatro evangelhos do nascimento à ressurreição.",
     icon: "✝️",
-    color: "142 76% 40%",
     periodId: "vida-jesus",
     days: [
       { index: 1, title: "O prólogo", summary: "'No princípio era o Verbo.'", readings: ["João 1:1-18"] },
@@ -77,7 +75,6 @@ export const PLANS: ReadingPlan[] = [
     title: "Igreja Primitiva em 14 dias",
     description: "Atos e cartas: nascimento e expansão da Igreja.",
     icon: "🕊️",
-    color: "217 91% 60%",
     periodId: "igreja-primitiva",
     days: [
       { index: 1, title: "Pentecostes", summary: "O Espírito desce em poder.", readings: ["Atos 1", "Atos 2"] },

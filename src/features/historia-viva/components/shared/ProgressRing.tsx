@@ -2,14 +2,14 @@ interface Props {
   value: number; // 0..1
   size?: number;
   stroke?: number;
-  color?: string; // hsl triplet
+  color?: string; // aceito por compat, ignorado — sempre usa --primary
   trackOpacity?: number;
   children?: React.ReactNode;
 }
 
-const ProgressRing = ({ value, size = 56, stroke = 5, color, trackOpacity = 0.2, children }: Props) => {
-  const stops = color ? `hsl(${color})` : "hsl(var(--primary))";
-  const track = color ? `hsl(${color} / ${trackOpacity})` : `hsl(var(--primary) / ${trackOpacity})`;
+const ProgressRing = ({ value, size = 56, stroke = 5, color: _color, trackOpacity = 0.2, children }: Props) => {
+  const stops = "hsl(var(--primary))";
+  const track = `hsl(var(--primary) / ${trackOpacity})`;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(1, value));

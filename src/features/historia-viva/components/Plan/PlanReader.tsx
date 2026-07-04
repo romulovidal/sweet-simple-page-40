@@ -36,7 +36,7 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
   const isDone = done.has(dayIdx);
 
   return (
-    <div className="min-h-full flex flex-col bg-background">
+    <div className="min-h-full flex flex-col bg-dark-bg text-dark-text">
       <header className="px-4 pt-4 pb-3 border-b border-dark-card">
         <div className="flex items-center gap-2 mb-3">
           <button onClick={onBack} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Voltar">
@@ -93,7 +93,7 @@ const PlanReader = ({ planId, onBack, onOpenEntity }: Props) => {
         )}
       </div>
 
-      <div className="p-3 border-t border-dark-card sticky bottom-0 bg-background flex items-center gap-2">
+      <div className="p-3 border-t border-dark-card sticky bottom-0 bg-dark-bg flex items-center gap-2">
         <button
           onClick={() => setDayIdx((d) => Math.max(1, d - 1))}
           disabled={dayIdx <= 1}

@@ -62,16 +62,6 @@
     --dark-text: 220 15% 90%;
     --dark-muted: 220 10% 55%;
 
-    /* História Viva — mapa temático */
-    --hv-map-sea-inner: 199 60% 15%;
-    --hv-map-sea-outer: 217 55% 8%;
-    --hv-map-land: 35 30% 22%;
-    --hv-map-land-opacity: 0.55;
-    --hv-map-grid: 217 30% 20%;
-    --hv-map-marker: 217 91% 60%;
-    --hv-map-dot: 217 30% 55%;
-    --hv-map-label: 0 0% 100%;
-    --hv-map-label-stroke: 0 0% 0% / 0.8;
   }
 
   /* Light theme overrides */
@@ -81,16 +71,6 @@
     --dark-card-hover: 220 15% 88%;
     --dark-text: 220 20% 12%;
     --dark-muted: 220 10% 45%;
-
-    --hv-map-sea-inner: 199 70% 82%;
-    --hv-map-sea-outer: 217 55% 72%;
-    --hv-map-land: 35 45% 78%;
-    --hv-map-land-opacity: 0.75;
-    --hv-map-grid: 217 20% 70%;
-    --hv-map-marker: 220 70% 45%;
-    --hv-map-dot: 217 25% 45%;
-    --hv-map-label: 220 30% 12%;
-    --hv-map-label-stroke: 0 0% 100% / 0.9;
   }
 
   /* Sepia theme overrides */
@@ -101,16 +81,6 @@
     --dark-text: 35 45% 15%;
     --dark-muted: 35 25% 45%;
     --primary: 35 70% 40%;
-
-    --hv-map-sea-inner: 200 45% 72%;
-    --hv-map-sea-outer: 200 40% 60%;
-    --hv-map-land: 35 55% 72%;
-    --hv-map-land-opacity: 0.8;
-    --hv-map-grid: 35 25% 55%;
-    --hv-map-marker: 35 80% 40%;
-    --hv-map-dot: 35 35% 40%;
-    --hv-map-label: 35 45% 15%;
-    --hv-map-label-stroke: 35 55% 95% / 0.9;
   }
 }
 

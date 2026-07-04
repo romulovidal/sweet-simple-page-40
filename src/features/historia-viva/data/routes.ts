@@ -5,7 +5,6 @@ export interface Route {
   name: string;
   description: string;
   periodId: PeriodId;
-  color: string; // hsl triplet
   icon: string;
   /** IDs de lugares em ordem (usa PLACES.lat/lng). Pontos avulsos com {lat,lng,label} também aceitos. */
   stops: Array<{ placeId?: string; label?: string; lat?: number; lng?: number }>;
@@ -18,7 +17,6 @@ export const ROUTES: Route[] = [
     name: "A jornada de Abraão",
     description: "De Ur dos Caldeus a Canaã, pela promessa de Deus.",
     periodId: "patriarcas",
-    color: "38 92% 55%",
     icon: "🌟",
     stops: [
       { placeId: "ur" },
@@ -33,7 +31,6 @@ export const ROUTES: Route[] = [
     name: "O Êxodo",
     description: "Do Egito ao Sinai até Canaã.",
     periodId: "exodo",
-    color: "18 88% 55%",
     icon: "🔥",
     stops: [
       { placeId: "egito" },
@@ -49,7 +46,6 @@ export const ROUTES: Route[] = [
     name: "Exílio para Babilônia",
     description: "Judá é levada cativa por Nabucodonosor.",
     periodId: "reino-dividido",
-    color: "217 45% 55%",
     icon: "🏛️",
     stops: [
       { placeId: "jerusalem" },
@@ -63,7 +59,6 @@ export const ROUTES: Route[] = [
     name: "Retorno do exílio",
     description: "Os judeus voltam com Zorobabel, Esdras e Neemias.",
     periodId: "exilio",
-    color: "142 60% 45%",
     icon: "🚪",
     stops: [
       { placeId: "babilonia" },
@@ -76,7 +71,6 @@ export const ROUTES: Route[] = [
     name: "Ministério de Jesus",
     description: "Belém, Nazaré, Galileia e Jerusalém.",
     periodId: "vida-jesus",
-    color: "352 78% 55%",
     icon: "✝️",
     stops: [
       { placeId: "belem" },
@@ -92,7 +86,6 @@ export const ROUTES: Route[] = [
     name: "1ª viagem missionária de Paulo",
     description: "Antioquia → Chipre → Ásia Menor → volta.",
     periodId: "igreja-primitiva",
-    color: "199 89% 55%",
     icon: "⛵",
     stops: [
       { placeId: "antioquia" },
@@ -112,7 +105,6 @@ export const ROUTES: Route[] = [
     name: "2ª viagem missionária de Paulo",
     description: "Alcance do Evangelho à Europa.",
     periodId: "igreja-primitiva",
-    color: "271 76% 62%",
     icon: "🚢",
     stops: [
       { placeId: "antioquia" },
@@ -131,7 +123,6 @@ export const ROUTES: Route[] = [
     name: "3ª viagem missionária de Paulo",
     description: "Ministério intenso em Éfeso.",
     periodId: "igreja-primitiva",
-    color: "45 95% 55%",
     icon: "✉️",
     stops: [
       { placeId: "antioquia" },
@@ -146,7 +137,6 @@ export const ROUTES: Route[] = [
     name: "Viagem de Paulo a Roma",
     description: "Prisioneiro, mas testemunhando até no naufrágio.",
     periodId: "igreja-primitiva",
-    color: "0 78% 55%",
     icon: "⚓",
     stops: [
       { placeId: "jerusalem" },
@@ -162,7 +152,6 @@ export const ROUTES: Route[] = [
     name: "As sete igrejas do Apocalipse",
     description: "As cartas de Jesus à Sua igreja.",
     periodId: "igreja-primitiva",
-    color: "142 71% 45%",
     icon: "📜",
     stops: [
       { label: "Éfeso", lat: 37.94, lng: 27.34 },

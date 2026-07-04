@@ -72,7 +72,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
   const progress = ((i + (selected !== null ? 1 : 0)) / quiz.questions.length) * 100;
 
   return (
-    <div className="min-h-full flex flex-col bg-background">
+    <div className="min-h-full flex flex-col bg-dark-bg text-dark-text">
       <header className="px-4 pt-4 pb-3 border-b border-dark-card">
         <div className="flex items-center gap-2 mb-3">
           <button onClick={onExit} className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center" aria-label="Sair">
@@ -99,8 +99,8 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
             let cls = "bg-dark-card border-transparent";
             let icon: React.ReactNode = <span className="text-[11px] font-bold text-dark-muted">{String.fromCharCode(65 + idx)}</span>;
             if (revealed) {
-              if (isCorrect) { cls = "border-emerald-500/60"; icon = <Check className="w-4 h-4 text-emerald-400" />; }
-              else if (isSel) { cls = "border-red-500/60"; icon = <XIcon className="w-4 h-4 text-red-400" />; }
+              if (isCorrect) { cls = "border-primary"; icon = <Check className="w-4 h-4 text-primary" />; }
+              else if (isSel) { cls = "border-dark-card-hover opacity-70"; icon = <XIcon className="w-4 h-4 text-dark-muted" />; }
               else cls = "bg-dark-card opacity-60 border-transparent";
             } else if (isSel) {
               cls = "border-primary/60";
@@ -111,7 +111,6 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
                 onClick={() => pick(idx)}
                 disabled={revealed}
                 className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-colors text-dark-text ${cls}`}
-                style={revealed && isCorrect ? { background: "hsl(142 76% 40% / 0.15)" } : revealed && isSel ? { background: "hsl(0 84% 60% / 0.15)" } : undefined}
               >
                 <span className="w-7 h-7 rounded-lg bg-dark-card-hover flex items-center justify-center flex-shrink-0">{icon}</span>
                 <span className="text-sm font-medium">{c}</span>
@@ -122,7 +121,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
 
         {selected !== null && (
           <div className="rounded-xl p-3 bg-dark-card border border-primary/20 space-y-2" aria-live="polite">
-            <p className="text-xs font-bold" style={{ color: selected === q!.correct ? "hsl(142 76% 50%)" : "hsl(0 84% 65%)" }}>
+            <p className={`text-xs font-bold ${selected === q!.correct ? "text-primary" : "text-dark-muted"}`}>
               {selected === q!.correct ? "Correto!" : "Não foi dessa vez."}
             </p>
             <p className="text-[13px] text-dark-text leading-relaxed">{q!.explanation}</p>
@@ -137,7 +136,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
         )}
       </div>
 
-      <div className="p-4 border-t border-dark-card sticky bottom-0 bg-background">
+      <div className="p-4 border-t border-dark-card sticky bottom-0 bg-dark-bg">
         <button
           onClick={next}
           disabled={selected === null}

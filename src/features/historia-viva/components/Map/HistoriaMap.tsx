@@ -63,11 +63,11 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label="Mapa bíblico interativo">
           <defs>
             <pattern id="hv-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(217 30% 20%)" strokeWidth="0.5" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="hsl(var(--hv-map-grid))" strokeWidth="0.5" />
             </pattern>
             <radialGradient id="hv-sea" cx="50%" cy="50%" r="60%">
-              <stop offset="0%" stopColor="hsl(199 60% 15%)" />
-              <stop offset="100%" stopColor="hsl(217 55% 8%)" />
+              <stop offset="0%" stopColor="hsl(var(--hv-map-sea-inner))" />
+              <stop offset="100%" stopColor="hsl(var(--hv-map-sea-outer))" />
             </radialGradient>
           </defs>
           <rect width={W} height={H} fill="url(#hv-sea)" />
@@ -75,17 +75,17 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
 
           <path
             d="M 0 220 Q 120 200 200 240 T 380 260 Q 440 220 500 250 Q 560 210 640 240 Q 720 200 820 230 L 900 210 L 900 520 L 0 520 Z"
-            fill="hsl(35 30% 22%)"
-            opacity="0.55"
+            fill="hsl(var(--hv-map-land))"
+            style={{ opacity: "var(--hv-map-land-opacity)" }}
           />
           <path
             d="M 0 100 Q 200 80 400 110 Q 600 90 900 120 L 900 0 L 0 0 Z"
-            fill="hsl(35 30% 22%)"
-            opacity="0.45"
+            fill="hsl(var(--hv-map-land))"
+            style={{ opacity: "calc(var(--hv-map-land-opacity) * 0.82)" }}
           />
 
           {projectedPlaces.map((p) => (
-            <circle key={`bg-${p.id}`} cx={p.x} cy={p.y} r={3} fill="hsl(217 30% 55%)" opacity={selectedRoute ? 0.35 : 0.85} />
+            <circle key={`bg-${p.id}`} cx={p.x} cy={p.y} r={3} fill="hsl(var(--hv-map-dot))" opacity={selectedRoute ? 0.35 : 0.85} />
           ))}
 
           {route && (
@@ -106,8 +106,8 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
               {routePoints.map((p, i) => (
                 <g key={`pt-${i}`} className="cursor-pointer" onClick={() => p.placeId && onOpenPlace(p.placeId)} role="button" aria-label={`Ponto ${i + 1}: ${p.label}`}>
                   <circle cx={p.x} cy={p.y} r={9} fill={`hsl(${route.color})`} opacity="0.25" style={{ animation: `hv-pulse 2s ${i * 0.2}s ease-in-out infinite` }} />
-                  <circle cx={p.x} cy={p.y} r={4.5} fill={`hsl(${route.color})`} stroke="white" strokeWidth="1.5" />
-                  <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="white" style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.8)", strokeWidth: 3 }}>
+                  <circle cx={p.x} cy={p.y} r={4.5} fill={`hsl(${route.color})`} stroke="hsl(var(--hv-map-label))" strokeWidth="1.5" />
+                  <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="hsl(var(--hv-map-label))" style={{ paintOrder: "stroke", stroke: "hsl(var(--hv-map-label-stroke))", strokeWidth: 3 }}>
                     {p.label}
                   </text>
                 </g>
@@ -117,8 +117,8 @@ const HistoriaMap = ({ onOpenPlace }: Props) => {
 
           {!selectedRoute && projectedPlaces.map((p) => (
             <g key={p.id} className="cursor-pointer" onClick={() => onOpenPlace(p.id)} role="button" aria-label={p.name}>
-              <circle cx={p.x} cy={p.y} r={5} fill="hsl(217 91% 60%)" stroke="white" strokeWidth="1.2" />
-              <text x={p.x + 7} y={p.y + 3} fontSize="10" fontWeight="600" fill="white" style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.75)", strokeWidth: 3 }}>
+              <circle cx={p.x} cy={p.y} r={5} fill="hsl(var(--hv-map-marker))" stroke="hsl(var(--hv-map-label))" strokeWidth="1.2" />
+              <text x={p.x + 7} y={p.y + 3} fontSize="10" fontWeight="600" fill="hsl(var(--hv-map-label))" style={{ paintOrder: "stroke", stroke: "hsl(var(--hv-map-label-stroke))", strokeWidth: 3 }}>
                 {p.name}
               </text>
             </g>

@@ -1,6 +1,7 @@
 import { ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
 import type { EntityRef, Quiz } from "../../types";
 import RefLink from "../shared/RefLink";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   quiz: Quiz;
@@ -46,7 +47,7 @@ const QuizResult = ({ quiz, score, answers, durationMs, onExit, onRetry, onOpenE
           <button onClick={onRetry} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-dark-card active:bg-dark-card-hover text-dark-text">
             <RotateCcw className="w-4 h-4" /> Refazer
           </button>
-          <button onClick={onExit} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: `hsl(${color})`, color: "#fff" }}>
+          <button onClick={onExit} className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ background: `hsl(${color})`, color: textOn(color) }}>
             <Sparkles className="w-4 h-4" /> Ver outros
           </button>
         </div>

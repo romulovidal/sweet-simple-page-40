@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getCharacter } from "../../data/characters";
 import type { HistoriaCharacter, EntityRef } from "../../types";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   character: HistoriaCharacter;
@@ -88,12 +89,15 @@ const TreeRow = ({ title, nodes, onNavigate, highlightSelf, lineDown }: RowProps
                 ? `linear-gradient(135deg, hsl(${n.color}), hsl(${n.color} / 0.7))`
                 : `hsl(${n.color} / 0.15)`,
               border: `1px solid hsl(${n.color} / ${isSelf ? 1 : 0.4})`,
-              color: isSelf ? "#fff" : `hsl(${n.color})`,
+              color: isSelf ? textOn(n.color) : `hsl(${n.color})`,
             }}
             aria-label={`${n.name} (${roleLabel[n.role]})`}
           >
             <span className="text-2xl">{n.icon}</span>
-            <span className={`text-[11px] font-bold truncate max-w-[72px] ${isSelf ? "text-white" : "text-dark-text"}`}>
+            <span
+              className="text-[11px] font-bold truncate max-w-[72px]"
+              style={{ color: isSelf ? textOn(n.color) : "hsl(var(--dark-text))" }}
+            >
               {n.name}
             </span>
             <span className="text-[9px] opacity-80">{roleLabel[n.role]}</span>

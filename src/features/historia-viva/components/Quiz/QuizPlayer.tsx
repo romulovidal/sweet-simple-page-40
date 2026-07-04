@@ -5,6 +5,7 @@ import RefLink from "../shared/RefLink";
 import { useSession, saveQuizAttempt } from "../../hooks/useCloudSync";
 import type { EntityRef } from "../../types";
 import QuizResult from "./QuizResult";
+import { textOn } from "../../lib/contrast";
 
 interface Props {
   quizId: string;
@@ -144,7 +145,7 @@ const QuizPlayer = ({ quizId, onExit, onOpenEntity }: Props) => {
           onClick={next}
           disabled={selected === null}
           className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
-          style={{ background: `hsl(${color})`, color: "#fff" }}
+          style={{ background: `hsl(${color})`, color: textOn(color) }}
         >
           {i + 1 >= quiz.questions.length ? "Finalizar" : "Próxima"} <ChevronRight className="w-4 h-4" />
         </button>

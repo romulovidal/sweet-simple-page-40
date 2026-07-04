@@ -1,17 +1,11 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
+import { textOn } from "../../lib/contrast";
 
 interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   color?: string; // hsl triplet
   active?: boolean;
   icon?: React.ReactNode;
-}
-
-/** Extrai lightness de "H S% L%" para escolher texto branco ou preto no estado active */
-function textOn(color: string) {
-  const m = color.match(/(\d+(?:\.\d+)?)%\s*$/);
-  const l = m ? parseFloat(m[1]) : 50;
-  return l > 62 ? "hsl(220 40% 8%)" : "#fff";
 }
 
 const Chip = forwardRef<HTMLButtonElement, ChipProps>(

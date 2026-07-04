@@ -110,6 +110,7 @@ const BiblePage = () => {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
+  const [highlightedVerses, setHighlightedVerses] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [epigraphs, setEpigraphs] = useState<BibleChapterEpigraph[]>([]);
@@ -220,6 +221,7 @@ const BiblePage = () => {
     const bookParam = searchParams.get("book");
     const chapterParam = searchParams.get("chapter");
     const verseParam = searchParams.get("verse");
+    const versesParam = searchParams.get("verses");
 
     if (!bookParam || !chapterParam) return;
 
@@ -229,10 +231,28 @@ const BiblePage = () => {
 
     if (!book || Number.isNaN(nextChapter)) return;
 
+    // Parse "1,3-5" → Set([1,3,4,5])
+    const parsedVerses = new Set<number>();
+    if (versesParam) {
+      for (const part of versesParam.split(",")) {
+        const [a, b] = part.split("-").map((n) => Number(n.trim()));
+        if (Number.isNaN(a)) continue;
+        const end = Number.isNaN(b) ? a : b;
+        for (let i = a; i <= end; i++) parsedVerses.add(i);
+      }
+    }
+
     setSelectedBook(book);
     setTestament(book.testament);
     setSelectedChapter(nextChapter);
-    setHighlightedVerse(nextVerse && nextVerse > 0 ? nextVerse : null);
+    setHighlightedVerse(
+      nextVerse && nextVerse > 0
+        ? nextVerse
+        : parsedVerses.size > 0
+          ? Math.min(...parsedVerses)
+          : null,
+    );
+    setHighlightedVerses(parsedVerses);
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 

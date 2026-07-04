@@ -5,11 +5,13 @@ import satori, { init as initSatori } from "https://esm.sh/satori@0.10.14/wasm";
 import initYoga from "https://esm.sh/yoga-wasm-web@0.3.3";
 import { Resvg, initWasm } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 
-const YOGA_WASM = "https://esm.sh/yoga-wasm-web@0.3.3/dist/yoga.wasm";
-const RESVG_WASM = "https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm";
-// Inter is a reliable web font hosted by rsms (used across satori examples).
-const FONT_REGULAR = "https://rsms.me/inter/font-files/Inter-Regular.woff";
-const FONT_BOLD = "https://rsms.me/inter/font-files/Inter-Bold.woff";
+const YOGA_WASM = "https://unpkg.com/yoga-wasm-web@0.3.3/dist/yoga.wasm";
+const RESVG_WASM = "https://unpkg.com/@resvg/resvg-wasm@2.6.2/index_bg.wasm";
+// Fontsource ships TTF binaries via unpkg — stable, versioned URLs.
+const FONT_REGULAR =
+  "https://unpkg.com/@fontsource/inter@5.0.16/files/inter-latin-400-normal.woff";
+const FONT_BOLD =
+  "https://unpkg.com/@fontsource/inter@5.0.16/files/inter-latin-700-normal.woff";
 
 let ready: Promise<{ fontRegular: ArrayBuffer; fontBold: ArrayBuffer }> | null = null;
 

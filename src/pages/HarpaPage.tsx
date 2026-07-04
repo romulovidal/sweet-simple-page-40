@@ -552,6 +552,10 @@ const HarpaPage = () => {
           </article>
         </div>
       )}
+
+      {presenting && (
+        <HarpaPresenter hino={presenting} onClose={() => setPresenting(null)} />
+      )}
     </div>
   );
 };

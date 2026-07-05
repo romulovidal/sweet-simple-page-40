@@ -20,15 +20,21 @@ async function addUrlToCache(cache, url) {
 }
 
 async function precacheShell() {
-  // App-shell precache intentionally disabled. The installed app must always fetch
-  // the latest HTML/JS so removed automatic daily-verse code cannot remain alive.
-  return Promise.resolve();
+  // Precache do shell mínimo para o app abrir offline.
+  // O HTML segue network-first (para pegar deploys novos), mas cai neste cache quando offline.
+  var cache = await caches.open(SHELL_CACHE);
+  await Promise.all(CORE_URLS.map(function(url) { return addUrlToCache(cache, url); }));
 }
 
 async function cleanupCaches() {
+  // Mantém: cache atual do shell/runtime + caches offline persistentes (Bíblia, Harpa).
+  // Remove apenas versões antigas do shell/runtime de deploys anteriores.
+  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE, HARPA_CACHE];
   var cacheNames = await caches.keys();
   for (var i = 0; i < cacheNames.length; i++) {
-    await caches.delete(cacheNames[i]);
+    if (keep.indexOf(cacheNames[i]) === -1) {
+      await caches.delete(cacheNames[i]);
+    }
   }
 }
 
@@ -98,14 +104,22 @@ self.addEventListener("fetch", function(event) {
   var url = new URL(request.url);
   if (!isSameOrigin(url)) return;
 
-  // Navigation: always network-first, never app-shell-cache-first. This prevents old installed apps
-  // from keeping the removed automatic daily verse bundle alive.
+  // Navegação HTML: network-first (pega deploys novos) com fallback para o shell "/" cacheado (offline).
   if (request.mode === "navigate") {
     event.respondWith(
-      (function() {
-        return fetch(request, { cache: "no-store" }).catch(function() {
+      (async function() {
+        try {
+          var fresh = await fetch(request, { cache: "no-store" });
+          if (fresh && fresh.ok) {
+            var cache = await caches.open(SHELL_CACHE);
+            cache.put("/", fresh.clone()).catch(function() {});
+          }
+          return fresh;
+        } catch (e) {
+          var shell = await caches.match("/", { cacheName: SHELL_CACHE });
+          if (shell) return shell;
           return new Response("", { status: 503, statusText: "Offline" });
-        });
+        }
       })()
     );
     return;
@@ -154,10 +168,33 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  // App assets/control files: network-only so stale bundles cannot survive deploys.
+  // Assets hasheados do build (/assets/xxx-<hash>.js|css|...): cache-first (imutáveis).
+  // Permite abrir o app offline mesmo após uma navegação vinda do fallback.
+  if (isHashedAsset(url)) {
+    event.respondWith(
+      caches.open(SHELL_CACHE).then(function(cache) {
+        return cache.match(request).then(function(cached) {
+          if (cached) return cached;
+          return fetch(request).then(function(response) {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          }).catch(function() { return Response.error(); });
+        });
+      })
+    );
+    return;
+  }
+
+  // Demais arquivos cacheáveis (manifest, logo, etc.): stale-while-revalidate no runtime cache.
   event.respondWith(
-    fetch(request, { cache: "no-store" }).catch(function() {
-      return Response.error();
+    caches.open(RUNTIME_CACHE).then(function(cache) {
+      return cache.match(request).then(function(cached) {
+        var networkPromise = fetch(request, { cache: "no-store" }).then(function(response) {
+          if (response && response.ok) cache.put(request, response.clone());
+          return response;
+        }).catch(function() { return cached || Response.error(); });
+        return cached || networkPromise;
+      });
     })
   );
 });

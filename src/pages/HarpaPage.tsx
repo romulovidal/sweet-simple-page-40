@@ -242,19 +242,21 @@ const HarpaPage = () => {
       />
 
       {/* Header */}
-      <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold truncate">Harpa Cristã</h1>
-          <p className="text-[10px] text-dark-muted font-medium uppercase tracking-wider">
-            {loading ? "Carregando…" : empty ? "Hinário indisponível" : `${hinos.length} hinos`}
-          </p>
+      <header className="sticky top-0 z-10 bg-dark-bg/95 backdrop-blur-sm max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))]">
+        <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold truncate">Harpa Cristã</h1>
+            <p className="text-[10px] text-dark-muted font-medium uppercase tracking-wider">
+              {loading ? "Carregando…" : empty ? "Hinário indisponível" : `${hinos.length} hinos`}
+            </p>
+          </div>
         </div>
 
         {!empty && !loading && (

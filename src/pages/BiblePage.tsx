@@ -10,9 +10,13 @@ import {
   type BibleVerse,
   DEFAULT_VERSION_ID,
   getVersionById,
+  searchBible,
+  BIBLE_VERSIONS,
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
-import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings, StickyNote } from "lucide-react";
+import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings, StickyNote, Sparkles, ArrowRight, BookOpen } from "lucide-react";
+import { parseBibleReference } from "@/lib/bibleSearch";
+import { supabase } from "@/integrations/supabase/client";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import BibleEpigraph from "@/components/BibleEpigraph";
@@ -114,6 +118,14 @@ const BiblePage = () => {
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
   const [highlightedVerses, setHighlightedVerses] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
+  // Enhanced search state
+  const [verseHits, setVerseHits] = useState<{ reference: string; text: string; bookAbbrev: string; chapter: number; verse: number }[]>([]);
+  const [verseHitsLoading, setVerseHitsLoading] = useState(false);
+  const [otherVersionHits, setOtherVersionHits] = useState<{ versionId: string; results: { reference: string; text: string; bookAbbrev: string; chapter: number; verse: number }[] }[]>([]);
+  const [searchingOtherVersions, setSearchingOtherVersions] = useState(false);
+  const [smartResults, setSmartResults] = useState<{ ref: string; text: string; explanation: string }[] | null>(null);
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartError, setSmartError] = useState<string | null>(null);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [epigraphs, setEpigraphs] = useState<BibleChapterEpigraph[]>([]);
   const [loading, setLoading] = useState(false);
@@ -266,6 +278,108 @@ const BiblePage = () => {
       book.testament === testament &&
       book.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const trimmedSearch = search.trim();
+  const isSearching = trimmedSearch.length >= 2;
+  const parsedReference = isSearching ? parseBibleReference(trimmedSearch) : null;
+  const booksMatchingSearch = isSearching
+    ? bibleBooks.filter((book) => book.name.toLowerCase().includes(trimmedSearch.toLowerCase()))
+    : [];
+
+  // Reset extras when query changes
+  useEffect(() => {
+    setOtherVersionHits([]);
+    setSmartResults(null);
+    setSmartError(null);
+  }, [trimmedSearch]);
+
+  // Debounced verse text search on current version
+  useEffect(() => {
+    if (!isSearching || trimmedSearch.length < 3) {
+      setVerseHits([]);
+      setVerseHitsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setVerseHitsLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const results = await searchBible(trimmedSearch, bibleVersion);
+        if (!cancelled) setVerseHits(results);
+      } catch (e) {
+        if (!cancelled) setVerseHits([]);
+      } finally {
+        if (!cancelled) setVerseHitsLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [trimmedSearch, isSearching, bibleVersion]);
+
+  const openReference = useCallback(
+    (bookAbbrev: string, chapter: number, verse?: number) => {
+      const params: Record<string, string> = { book: bookAbbrev, chapter: String(chapter) };
+      if (verse) params.verse = String(verse);
+      setSearch("");
+      setSearchParams(params);
+    },
+    [setSearchParams]
+  );
+
+  const handleSearchOtherVersions = useCallback(async () => {
+    if (searchingOtherVersions || trimmedSearch.length < 3) return;
+    setSearchingOtherVersions(true);
+    try {
+      const others = BIBLE_VERSIONS.filter((v) => v.id !== bibleVersion);
+      const results = await Promise.all(
+        others.map(async (v) => ({
+          versionId: v.id,
+          results: await searchBible(trimmedSearch, v.id).catch(() => []),
+        }))
+      );
+      setOtherVersionHits(results.filter((r) => r.results.length > 0));
+    } finally {
+      setSearchingOtherVersions(false);
+    }
+  }, [bibleVersion, searchingOtherVersions, trimmedSearch]);
+
+  const handleSmartSearch = useCallback(async () => {
+    if (smartLoading || trimmedSearch.length < 2) return;
+    setSmartLoading(true);
+    setSmartError(null);
+    setSmartResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-tools", {
+        body: { tool: "semantic-search", text: trimmedSearch },
+      });
+      if (error) throw error;
+      const raw = (data as { result?: string })?.result ?? "[]";
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = [];
+      }
+      // Some models wrap arrays in { verses: [...] } or { results: [...] }
+      const arr = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray((parsed as { verses?: unknown[] })?.verses)
+          ? (parsed as { verses: unknown[] }).verses
+          : Array.isArray((parsed as { results?: unknown[] })?.results)
+            ? (parsed as { results: unknown[] }).results
+            : [];
+      const clean = (arr as { ref?: string; text?: string; explanation?: string }[])
+        .filter((r) => r && typeof r.ref === "string" && typeof r.text === "string")
+        .map((r) => ({ ref: r.ref!, text: r.text!, explanation: r.explanation ?? "" }));
+      setSmartResults(clean);
+    } catch (e) {
+      setSmartError(e instanceof Error ? e.message : "Erro ao buscar com IA");
+    } finally {
+      setSmartLoading(false);
+    }
+  }, [smartLoading, trimmedSearch]);
 
   const versionPickerModal = (
     <BibleVersionPicker
@@ -1149,10 +1263,20 @@ const BiblePage = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar livro..."
+            placeholder="Buscar livro, versículo ou referência..."
             className="w-full bg-dark-card rounded-xl pl-10 pr-4 py-3 text-sm placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-dark-muted"
+              aria-label="Limpar busca"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+        {!isSearching && (
         <div className="flex gap-2">
           {(["VT", "NT"] as const).map((currentTestament) => (
             <button
@@ -1168,7 +1292,179 @@ const BiblePage = () => {
             </button>
           ))}
         </div>
+        )}
       </header>
+      {isSearching ? (
+        <div className="px-5 space-y-6 max-w-3xl mx-auto">
+          {parsedReference && (
+            <section>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">Ir para</h2>
+              <button
+                onClick={() =>
+                  openReference(parsedReference.book.apiAbbrev, parsedReference.chapter, parsedReference.verse)
+                }
+                className="w-full flex items-center justify-between p-4 rounded-xl bg-primary/10 border border-primary/30 active:bg-primary/20 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {parsedReference.book.name} {parsedReference.chapter}
+                      {parsedReference.verse ? `:${parsedReference.verse}` : ""}
+                    </p>
+                    <p className="text-xs text-dark-muted">Abrir referência</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary" />
+              </button>
+            </section>
+          )}
+
+          {booksMatchingSearch.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">Livros</h2>
+              <div className="space-y-1">
+                {booksMatchingSearch.slice(0, 8).map((book) => (
+                  <button
+                    key={book.abbrev}
+                    onClick={() => {
+                      setSearch("");
+                      setHighlightedVerse(null);
+                      setSelectedBook(book);
+                      setTestament(book.testament);
+                    }}
+                    className="w-full flex items-center justify-between py-3 px-4 rounded-xl active:bg-dark-card transition-colors text-left"
+                  >
+                    <div>
+                      <p className="font-semibold text-sm">{book.name}</p>
+                      <p className="text-xs text-dark-muted">
+                        {book.chapters} capítulo{book.chapters > 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span className="text-xs text-dark-muted">{book.abbrev}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2 flex items-center gap-2">
+              Versículos ({getVersionById(bibleVersion).shortName})
+              {verseHitsLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+            </h2>
+            {trimmedSearch.length < 3 ? (
+              <p className="text-xs text-dark-muted">Digite pelo menos 3 letras para buscar em versículos.</p>
+            ) : verseHits.length === 0 && !verseHitsLoading ? (
+              <p className="text-xs text-dark-muted">Nenhum versículo encontrado nesta versão.</p>
+            ) : (
+              <div className="space-y-2">
+                {verseHits.slice(0, 20).map((hit) => (
+                  <button
+                    key={`${hit.bookAbbrev}-${hit.chapter}-${hit.verse}`}
+                    onClick={() => openReference(hit.bookAbbrev, hit.chapter, hit.verse)}
+                    className="w-full text-left p-3 rounded-xl bg-dark-card active:bg-dark-card-hover transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-primary mb-1">{hit.reference}</p>
+                    <p className="text-sm leading-relaxed line-clamp-3">{hit.text}</p>
+                  </button>
+                ))}
+                {verseHits.length > 20 && (
+                  <p className="text-xs text-dark-muted text-center pt-1">
+                    Mostrando 20 de {verseHits.length} resultados
+                  </p>
+                )}
+                {trimmedSearch.length >= 3 && (
+                  <button
+                    onClick={handleSearchOtherVersions}
+                    disabled={searchingOtherVersions}
+                    className="w-full mt-2 py-2.5 rounded-xl bg-dark-card text-xs font-semibold text-dark-muted active:bg-dark-card-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {searchingOtherVersions ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" /> Buscando em outras versões...
+                      </>
+                    ) : otherVersionHits.length > 0 ? (
+                      "Atualizar busca em outras versões"
+                    ) : (
+                      "Buscar em outras versões"
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {otherVersionHits.map(({ versionId, results }) => (
+            <section key={versionId}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">
+                Versículos ({getVersionById(versionId).shortName})
+              </h2>
+              <div className="space-y-2">
+                {results.slice(0, 10).map((hit) => (
+                  <button
+                    key={`${versionId}-${hit.bookAbbrev}-${hit.chapter}-${hit.verse}`}
+                    onClick={() => openReference(hit.bookAbbrev, hit.chapter, hit.verse)}
+                    className="w-full text-left p-3 rounded-xl bg-dark-card active:bg-dark-card-hover transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-primary mb-1">{hit.reference}</p>
+                    <p className="text-sm leading-relaxed line-clamp-3">{hit.text}</p>
+                  </button>
+                ))}
+                {results.length > 10 && (
+                  <p className="text-xs text-dark-muted text-center">+{results.length - 10} outros</p>
+                )}
+              </div>
+            </section>
+          ))}
+
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-dark-muted mb-2">Busca inteligente</h2>
+            <button
+              onClick={handleSmartSearch}
+              disabled={smartLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 text-sm font-semibold text-primary active:opacity-80 transition disabled:opacity-60"
+            >
+              {smartLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Pensando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" /> {smartResults ? "Buscar novamente com IA" : "Buscar com IA"}
+                </>
+              )}
+            </button>
+            {smartError && <p className="text-xs text-destructive mt-2">{smartError}</p>}
+            {smartResults && smartResults.length === 0 && !smartLoading && (
+              <p className="text-xs text-dark-muted mt-2">A IA não encontrou versículos relacionados.</p>
+            )}
+            {smartResults && smartResults.length > 0 && (
+              <div className="space-y-2 mt-3">
+                {smartResults.map((r, idx) => {
+                  const parsed = parseBibleReference(r.ref);
+                  return (
+                    <button
+                      key={`${r.ref}-${idx}`}
+                      onClick={() => {
+                        if (parsed) openReference(parsed.book.apiAbbrev, parsed.chapter, parsed.verse);
+                      }}
+                      disabled={!parsed}
+                      className="w-full text-left p-3 rounded-xl bg-dark-card active:bg-dark-card-hover transition-colors disabled:opacity-70"
+                    >
+                      <p className="text-xs font-semibold text-primary mb-1">{r.ref}</p>
+                      <p className="text-sm leading-relaxed mb-1.5">{r.text}</p>
+                      {r.explanation && (
+                        <p className="text-xs text-dark-muted italic">{r.explanation}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : (
       <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6">
         {filteredBooks.map((book) => (
           <button
@@ -1189,6 +1485,7 @@ const BiblePage = () => {
           </button>
         ))}
       </div>
+      )}
       {versionPickerModal}
       <ShareMenu text={shareMenuText} open={showShareMenu} onClose={() => setShowShareMenu(false)} />
     </div>

@@ -279,6 +279,108 @@ const BiblePage = () => {
       book.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const trimmedSearch = search.trim();
+  const isSearching = trimmedSearch.length >= 2;
+  const parsedReference = isSearching ? parseBibleReference(trimmedSearch) : null;
+  const booksMatchingSearch = isSearching
+    ? bibleBooks.filter((book) => book.name.toLowerCase().includes(trimmedSearch.toLowerCase()))
+    : [];
+
+  // Reset extras when query changes
+  useEffect(() => {
+    setOtherVersionHits([]);
+    setSmartResults(null);
+    setSmartError(null);
+  }, [trimmedSearch]);
+
+  // Debounced verse text search on current version
+  useEffect(() => {
+    if (!isSearching || trimmedSearch.length < 3) {
+      setVerseHits([]);
+      setVerseHitsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setVerseHitsLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const results = await searchBible(trimmedSearch, bibleVersion);
+        if (!cancelled) setVerseHits(results);
+      } catch (e) {
+        if (!cancelled) setVerseHits([]);
+      } finally {
+        if (!cancelled) setVerseHitsLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [trimmedSearch, isSearching, bibleVersion]);
+
+  const openReference = useCallback(
+    (bookAbbrev: string, chapter: number, verse?: number) => {
+      const params: Record<string, string> = { book: bookAbbrev, chapter: String(chapter) };
+      if (verse) params.verse = String(verse);
+      setSearch("");
+      setSearchParams(params);
+    },
+    [setSearchParams]
+  );
+
+  const handleSearchOtherVersions = useCallback(async () => {
+    if (searchingOtherVersions || trimmedSearch.length < 3) return;
+    setSearchingOtherVersions(true);
+    try {
+      const others = BIBLE_VERSIONS.filter((v) => v.id !== bibleVersion);
+      const results = await Promise.all(
+        others.map(async (v) => ({
+          versionId: v.id,
+          results: await searchBible(trimmedSearch, v.id).catch(() => []),
+        }))
+      );
+      setOtherVersionHits(results.filter((r) => r.results.length > 0));
+    } finally {
+      setSearchingOtherVersions(false);
+    }
+  }, [bibleVersion, searchingOtherVersions, trimmedSearch]);
+
+  const handleSmartSearch = useCallback(async () => {
+    if (smartLoading || trimmedSearch.length < 2) return;
+    setSmartLoading(true);
+    setSmartError(null);
+    setSmartResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-tools", {
+        body: { tool: "semantic-search", text: trimmedSearch },
+      });
+      if (error) throw error;
+      const raw = (data as { result?: string })?.result ?? "[]";
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = [];
+      }
+      // Some models wrap arrays in { verses: [...] } or { results: [...] }
+      const arr = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray((parsed as { verses?: unknown[] })?.verses)
+          ? (parsed as { verses: unknown[] }).verses
+          : Array.isArray((parsed as { results?: unknown[] })?.results)
+            ? (parsed as { results: unknown[] }).results
+            : [];
+      const clean = (arr as { ref?: string; text?: string; explanation?: string }[])
+        .filter((r) => r && typeof r.ref === "string" && typeof r.text === "string")
+        .map((r) => ({ ref: r.ref!, text: r.text!, explanation: r.explanation ?? "" }));
+      setSmartResults(clean);
+    } catch (e) {
+      setSmartError(e instanceof Error ? e.message : "Erro ao buscar com IA");
+    } finally {
+      setSmartLoading(false);
+    }
+  }, [smartLoading, trimmedSearch]);
+
   const versionPickerModal = (
     <BibleVersionPicker
       open={showVersionPicker}

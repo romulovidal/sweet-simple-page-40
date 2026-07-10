@@ -118,6 +118,14 @@ const BiblePage = () => {
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
   const [highlightedVerses, setHighlightedVerses] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
+  // Enhanced search state
+  const [verseHits, setVerseHits] = useState<{ reference: string; text: string; bookAbbrev: string; chapter: number; verse: number }[]>([]);
+  const [verseHitsLoading, setVerseHitsLoading] = useState(false);
+  const [otherVersionHits, setOtherVersionHits] = useState<{ versionId: string; results: { reference: string; text: string; bookAbbrev: string; chapter: number; verse: number }[] }[]>([]);
+  const [searchingOtherVersions, setSearchingOtherVersions] = useState(false);
+  const [smartResults, setSmartResults] = useState<{ ref: string; text: string; explanation: string }[] | null>(null);
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartError, setSmartError] = useState<string | null>(null);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [epigraphs, setEpigraphs] = useState<BibleChapterEpigraph[]>([]);
   const [loading, setLoading] = useState(false);

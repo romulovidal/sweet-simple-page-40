@@ -15,7 +15,7 @@ import {
 } from "@/services/bibleApi";
 import { isRedLetterVerse } from "@/data/redLetterVerses";
 import { ChevronLeft, Search, BookmarkPlus, Share2, Loader2, ImageIcon, X, Palette, Ban, ChevronDown, GitCompareArrows, Monitor, Settings, StickyNote, Sparkles, ArrowRight, BookOpen } from "lucide-react";
-import { parseBibleReference } from "@/lib/bibleSearch";
+import { parseBibleReference, normalizeSearchText } from "@/lib/bibleSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocalStorage, type SavedVerse, type ReadingProgress, type StreakData, type HighlightedVerse, updateStreak } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
@@ -273,17 +273,18 @@ const BiblePage = () => {
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const normalizedSearch = normalizeSearchText(search);
   const filteredBooks = bibleBooks.filter(
     (book) =>
       book.testament === testament &&
-      book.name.toLowerCase().includes(search.toLowerCase())
+      (normalizedSearch === "" || normalizeSearchText(book.name).includes(normalizedSearch))
   );
 
   const trimmedSearch = search.trim();
   const isSearching = trimmedSearch.length >= 2;
   const parsedReference = isSearching ? parseBibleReference(trimmedSearch) : null;
   const booksMatchingSearch = isSearching
-    ? bibleBooks.filter((book) => book.name.toLowerCase().includes(trimmedSearch.toLowerCase()))
+    ? bibleBooks.filter((book) => normalizeSearchText(book.name).includes(normalizedSearch))
     : [];
 
   // Reset extras when query changes

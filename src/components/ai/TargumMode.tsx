@@ -180,9 +180,9 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
             <div className="space-y-5 pt-2">
               {source === "BSB" && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
-                  Texto original (BHS/WLC + NA/SBL) e transliteração offline.
-                  Tradução literal em <strong>inglês</strong> (Berean Standard Bible, domínio público) —
-                  fonte acadêmica confiável, alinhada palavra a palavra ao original.
+                  Original (BHS/WLC + NA/SBL) e transliteração da <strong>Berean Standard Bible</strong>.
+                  Tradução em português da <strong>Almeida Corrigida Fiel (ACF)</strong> — literal,
+                  formal-equivalência, preserva hebraísmos do texto original.
                 </div>
               )}
               {data.map((v) => (
@@ -220,18 +220,24 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
 
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-amber-400/60 mb-1">
-                      Tradução literal {source === "BSB" ? "(BSB · inglês)" : ""}
+                      Tradução literal {v.literalPt ? "(ACF · português)" : source === "BSB" ? "(BSB · inglês)" : ""}
                     </p>
                     <p className="text-sm leading-relaxed text-[hsl(var(--dark-text))]">
-                      {v.literal}
+                      {v.literalPt || v.literal}
                     </p>
+                    {v.literalPt && v.literal && (
+                      <p className="text-[11px] leading-relaxed text-[hsl(var(--dark-muted))]/80 italic mt-2">
+                        <span className="not-italic text-amber-400/60 mr-1">EN:</span>
+                        {v.literal}
+                      </p>
+                    )}
                   </div>
                 </article>
               ))}
 
               <p className="text-[10px] text-[hsl(var(--dark-muted))] text-center pt-2">
                 {source === "BSB"
-                  ? "Fonte: Berean Standard Bible Translation Tables (bereanbible.com) · WLC/Nestle base · uso livre."
+                  ? "Fontes: BSB Translation Tables (original + transliteração + inglês literal) · Almeida Corrigida Fiel (português)."
                   : "Gerado por IA a partir de BHS/WLC (AT) e NA28/SBLGNT (NT). Podem existir variações — confira com fontes acadêmicas em estudos formais."}
               </p>
             </div>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { BibleVerse } from "@/services/bibleApi";
+import { bibleBooks } from "@/data/bible";
 
 function safeParseJson(raw: string): any {
   let s = String(raw).trim();
@@ -68,6 +69,32 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
         ? verses.filter((v) => selectedVerses.has(v.number))
         : verses;
       const numbers = target.map((v) => v.number);
+
+      // 1) Tenta arquivo offline pré-gerado: /metarguem/{apiAbbrev}/{chapter}.json
+      const book = bibleBooks.find((b) => b.name === bookName);
+      if (book) {
+        try {
+          const res = await fetch(`/metarguem/${book.apiAbbrev}/${chapter}.json`, {
+            cache: "force-cache",
+          });
+          if (res.ok) {
+            const parsed = await res.json();
+            const all: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
+            const filtered = hasSelection
+              ? all.filter((v) => selectedVerses.has(v.number))
+              : all;
+            if (filtered.length > 0) {
+              setData(filtered);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {
+          // ignora, cai para IA
+        }
+      }
+
+      // 2) Fallback: IA sob demanda (requer internet)
       const payloadText =
         `Referência: ${bookName} ${chapter}\n` +
         `Versículos solicitados (números): ${numbers.join(", ")}\n\n` +

@@ -51,7 +51,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
       if (error) throw error;
       const raw = (res as any)?.result;
       if (!raw) throw new Error("Resposta vazia");
-      const parsed = JSON.parse(raw);
+      const parsed = safeParseJson(raw);
       const list: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
       if (list.length === 0) throw new Error("Nenhum versículo retornado");
       setData(list);

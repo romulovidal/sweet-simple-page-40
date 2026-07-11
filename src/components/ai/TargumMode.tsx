@@ -87,7 +87,17 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
       const parsed = safeParseJson(raw);
       const list: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
       if (list.length === 0) throw new Error("Nenhum versículo retornado");
-      setData(list);
+      const stripBrackets = (s: string) =>
+        String(s || "")
+          .replace(/\[([^\[\]]*)\]/g, "$1")
+          .replace(/\s{2,}/g, " ")
+          .trim();
+      setData(
+        list.map((v) => ({
+          ...v,
+          literal: stripBrackets(v.literal),
+        }))
+      );
     } catch (e: any) {
       toast.error(e?.message || "Falha ao gerar Modo Metarguem");
       setOpen(false);

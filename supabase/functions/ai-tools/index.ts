@@ -184,7 +184,7 @@ Use markdown para formatação. Responda em português brasileiro.`;
       }
     }
 
-    const isJsonTool = tool === "plan-generator" || tool === "semantic-search";
+    const isJsonTool = tool === "plan-generator" || tool === "semantic-search" || tool === "targum";
 
     const userContent = reference
       ? `**${reference}**\n\n"${text}"`

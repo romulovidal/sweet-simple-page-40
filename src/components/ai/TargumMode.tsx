@@ -181,8 +181,9 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
               {source === "BSB" && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
                   Original (BHS/WLC + NA/SBL) e transliteração da <strong>Berean Standard Bible</strong>.
-                  Tradução em português da <strong>Almeida Corrigida Fiel (ACF)</strong> — literal,
-                  formal-equivalência, preserva hebraísmos do texto original.
+                  Tradução em português da <strong>Tradução Brasileira (1917)</strong> — a mais literal
+                  em português, traduzida direto do hebraico e grego, preserva hebraísmos e restaura
+                  o Tetragrama ("Jeová").
                 </div>
               )}
               {data.map((v) => (
@@ -220,7 +221,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
 
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-amber-400/60 mb-1">
-                      Tradução literal {v.literalPt ? "(ACF · português)" : source === "BSB" ? "(BSB · inglês)" : ""}
+                      Tradução literal {v.literalPt ? "(TB · português)" : source === "BSB" ? "(BSB · inglês)" : ""}
                     </p>
                     <p className="text-sm leading-relaxed text-[hsl(var(--dark-text))]">
                       {v.literalPt || v.literal}
@@ -237,7 +238,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
 
               <p className="text-[10px] text-[hsl(var(--dark-muted))] text-center pt-2">
                 {source === "BSB"
-                  ? "Fontes: BSB Translation Tables (original + transliteração + inglês literal) · Almeida Corrigida Fiel (português)."
+                  ? "Fontes: BSB Translation Tables (original + transliteração + inglês) · Tradução Brasileira 1917 (português literal, domínio público)."
                   : "Gerado por IA a partir de BHS/WLC (AT) e NA28/SBLGNT (NT). Podem existir variações — confira com fontes acadêmicas em estudos formais."}
               </p>
             </div>

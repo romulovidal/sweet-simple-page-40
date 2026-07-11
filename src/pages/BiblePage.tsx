@@ -29,6 +29,7 @@ import AIChapterSummary from "@/components/ai/AIChapterSummary";
 import AIConnections from "@/components/ai/AIConnections";
 import AIWordMeaning from "@/components/ai/AIWordMeaning";
 import AITimeline from "@/components/ai/AITimeline";
+import TargumMode from "@/components/ai/TargumMode";
 import PageHead from "@/components/PageHead";
 import { createShortVerseLink } from "@/lib/verseShare";
 import { trackEvent } from "@/lib/analytics";
@@ -987,6 +988,18 @@ const BiblePage = () => {
             text={verses.map((v) => `${v.number} ${v.text}`).join("\n")}
             enabled={aiFeatures.summary}
           />
+        )}
+
+        {/* Targum Mode — original + transliteração + literal */}
+        {!loading && !error && verses.length > 0 && (
+          <div className="mx-5 mb-4">
+            <TargumMode
+              bookName={selectedBook.name}
+              chapter={selectedChapter}
+              verses={verses}
+              selectedVerses={selectedVerses}
+            />
+          </div>
         )}
 
         <div className="px-5 py-4 max-w-6xl mx-auto lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:px-8">

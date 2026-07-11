@@ -53,10 +53,16 @@ interface TargumVerse {
   literal: string;
 }
 
+interface TargumPayload {
+  verses: TargumVerse[];
+  source?: string;
+}
+
 const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TargumVerse[]>([]);
+  const [source, setSource] = useState<string | null>(null);
 
   const hasSelection = selectedVerses.size > 0;
 
@@ -78,13 +84,14 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
             cache: "force-cache",
           });
           if (res.ok) {
-            const parsed = await res.json();
+            const parsed: TargumPayload = await res.json();
             const all: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
             const filtered = hasSelection
               ? all.filter((v) => selectedVerses.has(v.number))
               : all;
             if (filtered.length > 0) {
               setData(filtered);
+              setSource(parsed?.source || null);
               setLoading(false);
               return;
             }
@@ -125,6 +132,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
           literal: stripBrackets(v.literal),
         }))
       );
+      setSource(null);
     } catch (e: any) {
       toast.error(e?.message || "Falha ao gerar Modo Metarguem");
       setOpen(false);
@@ -169,6 +177,13 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
 
           {!loading && data.length > 0 && (
             <div className="space-y-5 pt-2">
+              {source === "BSB" && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
+                  Texto original (BHS/WLC + NA/SBL) e transliteração offline.
+                  Tradução literal em <strong>inglês</strong> (Berean Standard Bible, domínio público) —
+                  fonte acadêmica confiável, alinhada palavra a palavra ao original.
+                </div>
+              )}
               {data.map((v) => (
                 <article
                   key={v.number}
@@ -204,7 +219,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
 
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-amber-400/60 mb-1">
-                      Tradução literal
+                      Tradução literal {source === "BSB" ? "(BSB · inglês)" : ""}
                     </p>
                     <p className="text-sm leading-relaxed text-[hsl(var(--dark-text))]">
                       {v.literal}
@@ -214,8 +229,9 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
               ))}
 
               <p className="text-[10px] text-[hsl(var(--dark-muted))] text-center pt-2">
-                Gerado por IA a partir de BHS/WLC (AT) e NA28/SBLGNT (NT). Podem existir
-                variações — confira com fontes acadêmicas em estudos formais.
+                {source === "BSB"
+                  ? "Fonte: Berean Standard Bible Translation Tables (bereanbible.com) · WLC/Nestle base · uso livre."
+                  : "Gerado por IA a partir de BHS/WLC (AT) e NA28/SBLGNT (NT). Podem existir variações — confira com fontes acadêmicas em estudos formais."}
               </p>
             </div>
           )}

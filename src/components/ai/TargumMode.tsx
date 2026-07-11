@@ -56,7 +56,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
       if (list.length === 0) throw new Error("Nenhum versículo retornado");
       setData(list);
     } catch (e: any) {
-      toast.error(e?.message || "Falha ao gerar Modo Targum");
+      toast.error(e?.message || "Falha ao gerar Modo Metarguem");
       setOpen(false);
     } finally {
       setLoading(false);
@@ -72,7 +72,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
         <div className="flex items-center gap-2">
           <ScrollText className="w-4 h-4 text-amber-400" />
           <span className="text-xs font-semibold text-amber-400">
-            Modo Targum {hasSelection ? `(${selectedVerses.size} vers.)` : "(capítulo)"}
+            Modo Metarguem {hasSelection ? `(${selectedVerses.size} vers.)` : "(capítulo)"}
           </span>
           <Sparkles className="w-3 h-3 text-amber-400/60" />
         </div>
@@ -84,7 +84,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-300">
               <ScrollText className="w-5 h-5" />
-              Modo Targum — {bookName} {chapter}
+              Modo Metarguem — {bookName} {chapter}
             </DialogTitle>
           </DialogHeader>
 

@@ -55,6 +55,18 @@ const TOOL_PROMPTS: Record<string, string> = {
     "Retorne APENAS um JSON válido no formato:\n" +
     '[{"ref": "João 3:16", "text": "...", "explanation": "Por que este versículo é relevante"}, ...]\n\n' +
     "Responda em português brasileiro.",
+  targum:
+    "Você é um exegeta e linguista bíblico erudito, especialista em hebraico bíblico (Antigo Testamento) e grego koiné (Novo Testamento).\n" +
+    "Você receberá uma referência bíblica (livro e capítulo) e a lista de versículos solicitados (com o texto em português para orientação).\n\n" +
+    "Para CADA versículo solicitado, produza:\n" +
+    "1) 'original': o texto no idioma original (hebraico com vogais/pontuação massorética para AT; grego com acentos e espíritos para NT). Use o texto crítico consagrado (BHS/WLC para AT; NA28/SBLGNT para NT).\n" +
+    "2) 'transliteration': transliteração acadêmica legível para falantes de português (SBL simplificada), preservando sílabas e acentos tônicos.\n" +
+    "3) 'literal': tradução PALAVRA POR PALAVRA o mais próxima possível do original (ordem sintática do original, sem parafrasear, sem suavizar), em português brasileiro. Marque em [colchetes] palavras acrescentadas por clareza.\n\n" +
+    "REGRAS ABSOLUTAS:\n" +
+    "- NÃO inclua comentário, introdução, cabeçalho ou notas.\n" +
+    "- NÃO invente versículos ausentes. Só devolva os que foram solicitados.\n" +
+    "- Retorne APENAS um JSON válido no formato exato:\n" +
+    '{"verses":[{"number":1,"original":"...","transliteration":"...","literal":"..."}]}',
   "ask-bible": "", // placeholder — loaded from admin_settings
 };
 
@@ -172,7 +184,7 @@ Use markdown para formatação. Responda em português brasileiro.`;
       }
     }
 
-    const isJsonTool = tool === "plan-generator" || tool === "semantic-search";
+    const isJsonTool = tool === "plan-generator" || tool === "semantic-search" || tool === "targum";
 
     const userContent = reference
       ? `**${reference}**\n\n"${text}"`

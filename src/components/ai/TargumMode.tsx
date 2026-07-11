@@ -51,6 +51,7 @@ interface TargumVerse {
   original: string;
   transliteration: string;
   literal: string;
+  literalPt?: string | null;
 }
 
 interface TargumPayload {

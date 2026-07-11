@@ -1,8 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+// Merge de uma tradução PT (mesmo formato thiagobodruk/damarals — 66 livros)
+// no campo literalPt de cada versículo dos JSONs do metarguem.
+// Uso: node scripts/merge-acf-into-metarguem.mjs [caminho.json] [nome-fonte]
 const OUT = "/dev-server/public/metarguem";
-const ACF_PATH = "/dev-server/public/biblias/ACF.json";
+const SRC_PATH = process.argv[2] || "/tmp/TB.json";
+const SRC_NAME = process.argv[3] || "TB";
 
 // Ordem canônica idêntica ao ACF (66 livros)
 const APIABBR = [
@@ -13,31 +17,31 @@ const APIABBR = [
   "1tm","2tm","tt","fm","hb","tg","1pe","2pe","1jo","2jo","3jo","jd","ap",
 ];
 
-const acf = JSON.parse(await fs.readFile(ACF_PATH, "utf8"));
+const src = JSON.parse(await fs.readFile(SRC_PATH, "utf8"));
 let written = 0, unmatched = 0;
 
-for (let i = 0; i < acf.length; i++) {
+for (let i = 0; i < src.length; i++) {
   const abbr = APIABBR[i];
-  const book = acf[i];
+  const book = src[i];
   const dir = path.join(OUT, abbr);
   try { await fs.access(dir); } catch { continue; }
   for (let ch = 1; ch <= book.chapters.length; ch++) {
     const fp = path.join(dir, `${ch}.json`);
     let data;
     try { data = JSON.parse(await fs.readFile(fp, "utf8")); } catch { continue; }
-    const acfVerses = book.chapters[ch - 1]; // array de strings, índice = versículo-1
+    const srcVerses = book.chapters[ch - 1];
     const merged = data.verses.map(v => {
-      const pt = acfVerses[v.number - 1];
+      const pt = srcVerses[v.number - 1];
       if (!pt) unmatched++;
       return { ...v, literalPt: pt ? String(pt).trim() : null };
     });
     const out = {
       ...data,
       verses: merged,
-      literalPtSource: "ACF",
+      literalPtSource: SRC_NAME,
     };
     await fs.writeFile(fp, JSON.stringify(out));
     written++;
   }
 }
-console.log(`arquivos atualizados: ${written} | versículos sem correspondência: ${unmatched}`);
+console.log(`[${SRC_NAME}] arquivos atualizados: ${written} | sem correspondência: ${unmatched}`);

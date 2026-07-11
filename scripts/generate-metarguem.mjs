@@ -44,14 +44,19 @@ const BOOKS = [
   ["fm",1],["hb",13],["tg",5],["1pe",5],["2pe",3],["1jo",5],["2jo",1],["3jo",1],["jd",1],["ap",22],
 ];
 
-async function loadChapterVerses(apiAbbrev, chapter) {
-  // Usa a ARC estática do próprio app.
+let ARC_CACHE = null;
+async function loadArc() {
+  if (ARC_CACHE) return ARC_CACHE;
   const p = path.resolve(__dirname, "..", "public", "biblias", "ARC.json");
-  const raw = JSON.parse(await fs.readFile(p, "utf8"));
-  const book = raw.find((b) => b.abbrev?.pt === apiAbbrev || b.abbrev === apiAbbrev);
-  if (!book) throw new Error(`Livro ${apiAbbrev} não achado em ARC.json`);
+  ARC_CACHE = JSON.parse(await fs.readFile(p, "utf8"));
+  return ARC_CACHE;
+}
+async function loadChapterVerses(bookIndex, chapter) {
+  const arc = await loadArc();
+  const book = arc[bookIndex];
+  if (!book) throw new Error(`Livro idx ${bookIndex} não achado em ARC.json`);
   const ch = book.chapters?.[chapter - 1];
-  if (!ch) throw new Error(`Cap ${chapter} não achado em ${apiAbbrev}`);
+  if (!ch) throw new Error(`Cap ${chapter} não achado em ${book.abbrev}`);
   return ch.map((text, i) => ({ number: i + 1, text }));
 }
 
@@ -115,7 +120,8 @@ function displayName(apiAbbrev) {
 
 async function main() {
   let done = 0, skipped = 0, failed = 0;
-  for (const [abbr, chapters] of BOOKS) {
+  for (let i = 0; i < BOOKS.length; i++) {
+    const [abbr, chapters] = BOOKS[i];
     if (ONLY && ONLY !== abbr) continue;
     const dir = path.join(OUT_DIR, abbr);
     await fs.mkdir(dir, { recursive: true });
@@ -130,7 +136,7 @@ async function main() {
       let attempt = 0;
       while (true) {
         try {
-          const verses = await loadChapterVerses(abbr, ch);
+          const verses = await loadChapterVerses(i, ch);
           const data = await callTargum(bookName, ch, verses);
           await fs.writeFile(out, JSON.stringify(data));
           done++;

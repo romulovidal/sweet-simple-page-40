@@ -203,7 +203,9 @@ Use markdown para formatação. Responda em português brasileiro.`;
           { role: "user", content: userContent },
         ],
         stream: !isJsonTool,
-        ...(isJsonTool ? { response_format: { type: "json_object" } } : {}),
+        ...(isJsonTool
+          ? { response_format: { type: "json_object" }, max_tokens: tool === "targum" ? 8000 : 4000 }
+          : {}),
       }),
     });
 

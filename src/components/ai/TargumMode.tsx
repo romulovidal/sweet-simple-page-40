@@ -5,6 +5,39 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { BibleVerse } from "@/services/bibleApi";
 
+function safeParseJson(raw: string): any {
+  let s = String(raw).trim();
+  // strip markdown fences
+  s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  // slice to outermost braces
+  const start = s.indexOf("{");
+  const end = s.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) s = s.slice(start, end + 1);
+  try {
+    return JSON.parse(s);
+  } catch {
+    // remove trailing commas + control chars, then retry
+    const cleaned = s
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      // last resort: try to close unbalanced braces/brackets
+      let fixed = cleaned;
+      const opens = (fixed.match(/\{/g) || []).length;
+      const closes = (fixed.match(/\}/g) || []).length;
+      const opensB = (fixed.match(/\[/g) || []).length;
+      const closesB = (fixed.match(/\]/g) || []).length;
+      fixed += "]".repeat(Math.max(0, opensB - closesB));
+      fixed += "}".repeat(Math.max(0, opens - closes));
+      return JSON.parse(fixed);
+    }
+  }
+}
+
 interface Props {
   bookName: string;
   chapter: number;
@@ -51,7 +84,7 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
       if (error) throw error;
       const raw = (res as any)?.result;
       if (!raw) throw new Error("Resposta vazia");
-      const parsed = JSON.parse(raw);
+      const parsed = safeParseJson(raw);
       const list: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
       if (list.length === 0) throw new Error("Nenhum versículo retornado");
       setData(list);

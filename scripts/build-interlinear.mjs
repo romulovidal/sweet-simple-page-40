@@ -20,22 +20,23 @@ const strongsPt = JSON.parse(fs.readFileSync('/tmp/interlinear/strong-pt.json','
 function shortPt(entry) {
   if (!entry) return '';
   const d = entry.d || '';
-  // Grab meanings after -- or : or the very first cluster of alphabetical PT words
-  let m = d.match(/--\s*([^.]+)/);
-  if (m) return m[1].split(/[,;]/).map(s=>s.trim()).filter(Boolean).slice(0,3).join(', ');
-  m = d.match(/;\s*([a-záéíóúâêôãõçà][^.;:]{1,60})/i);
-  if (m) return m[1].trim();
-  // fallback: first noun-ish word
-  return d.split(/[;.]/)[0].slice(0,60);
+  // Prefer the gloss list after "--" (traditional Strong's format)
+  let m = d.match(/--\s*(.+?)(?:\.|$)/);
+  if (m) {
+    return m[1].split(/[,;]/).map(s=>s.replace(/\[.*?\]/g,'').trim())
+      .filter(s=>s && s.length<40).slice(0,3).join(', ');
+  }
+  // Fallback: last "; something" clause
+  const parts = d.split(/[;:]/).map(s=>s.trim()).filter(Boolean);
+  return (parts[parts.length-1] || d).slice(0,80);
 }
 
 function cleanStrong(raw) {
   if (!raw) return null;
-  // Take first primary in curly braces {H1234} else first Hnnnn or Gnnnn
-  const m = raw.match(/\{([HG]\d+)[A-Za-z]?\}/);
-  if (m) return m[1];
-  const m2 = raw.match(/([HG]\d+)/);
-  return m2 ? m2[1] : null;
+  const m = raw.match(/\{([HG])(\d+)[A-Za-z]?\}/) || raw.match(/([HG])(\d+)/);
+  if (!m) return null;
+  // Strip leading zeros: H0430 -> H430
+  return m[1] + String(parseInt(m[2], 10));
 }
 
 function parseFile(filePath, testament) {

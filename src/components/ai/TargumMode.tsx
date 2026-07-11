@@ -52,6 +52,17 @@ interface TargumVerse {
   transliteration: string;
   literal: string;
   literalPt?: string | null;
+  interlinear?: InterlinearWord[] | null;
+}
+
+interface InterlinearWord {
+  o: string;   // original hebraico/grego
+  t: string;   // transliteração
+  g: string;   // glossa em inglês (STEP)
+  s: string;   // número de Strong
+  pt: string;  // glossa em português (dicionário Strong PT)
+  l: string;   // lema
+  m: string;   // morfologia (código STEP)
 }
 
 interface TargumPayload {
@@ -81,15 +92,24 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
       const book = bibleBooks.find((b) => b.name === bookName);
       if (book) {
         try {
-          const res = await fetch(`/metarguem/${book.apiAbbrev}/${chapter}.json`, {
-            cache: "force-cache",
-          });
-          if (res.ok) {
-            const parsed: TargumPayload = await res.json();
+          const [metaRes, interRes] = await Promise.all([
+            fetch(`/metarguem/${book.apiAbbrev}/${chapter}.json`, { cache: "force-cache" }),
+            fetch(`/interlinear/${book.apiAbbrev}/${chapter}.json`, { cache: "force-cache" }),
+          ]);
+          let interlinearMap = new Map<number, InterlinearWord[]>();
+          if (interRes.ok) {
+            const inter = await interRes.json();
+            for (const v of inter?.verses || []) {
+              interlinearMap.set(v.n, v.w);
+            }
+          }
+          if (metaRes.ok) {
+            const parsed: TargumPayload = await metaRes.json();
             const all: TargumVerse[] = Array.isArray(parsed?.verses) ? parsed.verses : [];
+            const merged = all.map((v) => ({ ...v, interlinear: interlinearMap.get(v.number) || null }));
             const filtered = hasSelection
-              ? all.filter((v) => selectedVerses.has(v.number))
-              : all;
+              ? merged.filter((v) => selectedVerses.has(v.number))
+              : merged;
             if (filtered.length > 0) {
               setData(filtered);
               setSource(parsed?.source || null);
@@ -233,12 +253,41 @@ const TargumMode = ({ bookName, chapter, verses, selectedVerses }: Props) => {
                       </p>
                     )}
                   </div>
+
+                  {v.interlinear && v.interlinear.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-amber-400/60 mb-2">
+                        Interlinear palavra-por-palavra (STEP Bible + Strong PT)
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {v.interlinear.map((w, i) => (
+                          <div
+                            key={i}
+                            className="rounded-md border border-amber-500/10 bg-black/30 p-2 space-y-1"
+                          >
+                            <p dir="auto" className="text-base font-serif text-[hsl(var(--dark-text))] leading-tight">
+                              {w.o}
+                            </p>
+                            <p className="text-[10px] italic text-[hsl(var(--dark-muted))] leading-tight">
+                              {w.t}
+                            </p>
+                            <p className="text-[11px] text-amber-200/90 leading-snug">
+                              {w.pt || w.g}
+                            </p>
+                            <p className="text-[9px] text-amber-400/50 font-mono">
+                              {w.s} · {w.m}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </article>
               ))}
 
               <p className="text-[10px] text-[hsl(var(--dark-muted))] text-center pt-2">
                 {source === "BSB"
-                  ? "Fontes: BSB Translation Tables (original + transliteração + inglês) · Tradução Brasileira 1917 (português literal, domínio público)."
+                  ? "Fontes: BSB Translation Tables · Tradução Brasileira 1917 · STEP Bible TAHOT/TAGNT (CC BY) + Dicionário Strong em português."
                   : "Gerado por IA a partir de BHS/WLC (AT) e NA28/SBLGNT (NT). Podem existir variações — confira com fontes acadêmicas em estudos formais."}
               </p>
             </div>

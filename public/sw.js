@@ -4,6 +4,7 @@ var SHELL_CACHE = "app-shell-" + SW_VERSION;
 var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
 var HARPA_CACHE = "harpa-offline-v1";
+var METARGUEM_CACHE = "metarguem-offline-v1";
 var OFFLINE_FALLBACK_URL = "/";
 var CORE_URLS = [
   "/",
@@ -29,7 +30,7 @@ async function precacheShell() {
 async function cleanupCaches() {
   // Mantém: cache atual do shell/runtime + caches offline persistentes (Bíblia, Harpa).
   // Remove apenas versões antigas do shell/runtime de deploys anteriores.
-  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE, HARPA_CACHE];
+  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE, HARPA_CACHE, METARGUEM_CACHE];
   var cacheNames = await caches.keys();
   for (var i = 0; i < cacheNames.length; i++) {
     if (keep.indexOf(cacheNames[i]) === -1) {
@@ -48,6 +49,7 @@ function isCacheableRequest(requestUrl) {
     requestUrl.pathname.indexOf("/assets/") === 0 ||
     requestUrl.pathname.indexOf("/biblias/") === 0 ||
     requestUrl.pathname.indexOf("/harpa/") === 0 ||
+    requestUrl.pathname.indexOf("/metarguem/") === 0 ||
     requestUrl.pathname === "/manifest.json" ||
     requestUrl.pathname === "/admin-manifest.json" ||
     requestUrl.pathname === "/logo.png" ||
@@ -61,6 +63,10 @@ function isBibleRequest(requestUrl) {
 
 function isHarpaRequest(requestUrl) {
   return requestUrl.pathname.indexOf("/harpa/") === 0;
+}
+
+function isMetarguemRequest(requestUrl) {
+  return requestUrl.pathname.indexOf("/metarguem/") === 0;
 }
 
 function isHashedAsset(requestUrl) {
@@ -158,6 +164,22 @@ self.addEventListener("fetch", function(event) {
             }).catch(function() {});
             return cached;
           }
+          return fetch(request, { cache: "no-store" }).then(function(response) {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          }).catch(function() { return Response.error(); });
+        });
+      })
+    );
+    return;
+  }
+
+  // Metarguem — cache-first para funcionar 100% offline após primeiro acesso.
+  if (isMetarguemRequest(url)) {
+    event.respondWith(
+      caches.open(METARGUEM_CACHE).then(function(cache) {
+        return cache.match(request).then(function(cached) {
+          if (cached) return cached;
           return fetch(request, { cache: "no-store" }).then(function(response) {
             if (response && response.ok) cache.put(request, response.clone());
             return response;

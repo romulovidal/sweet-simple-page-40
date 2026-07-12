@@ -1,12 +1,13 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+import { aiChatFetch } from "../_shared/ai-fetch.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY não configurada" }, 500);
+    if (!Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("LOVABLE_API_KEY")) {
+      return json({ error: "Nenhuma chave de IA configurada (GEMINI_API_KEY ou LOVABLE_API_KEY)" }, 500);
+    }
 
     // Auth: only admins
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -38,20 +39,13 @@ Deno.serve(async (req) => {
 
     const user = `Gere uma notificação nova e criativa (variação #${seed}) anunciando: ${theme}. Convide o irmão a abrir a Harpa e destacar que pode LER e OUVIR os hinos.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const resp = await aiChatFetch({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
     });
 
     if (!resp.ok) {

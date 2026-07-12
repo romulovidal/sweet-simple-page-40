@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { aiChatFetch } from "../_shared/ai-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,8 +35,7 @@ async function generateInviteMessage(params: {
   minutesUntil: number;
   cultoDay: number;
 }): Promise<string | null> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return null;
+  if (!Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("LOVABLE_API_KEY")) return null;
   const { cultoName, timeStr, daysUntil, minutesUntil, cultoDay } = params;
 
   const timing = describeWhen(daysUntil, minutesUntil, timeStr, cultoDay);
@@ -45,19 +45,12 @@ async function generateInviteMessage(params: {
   const user = `Escreva uma mensagem única e original convidando a participar do culto "${cultoName}", que ${timing}. Varie a inspiração bíblica a cada geração. Não repita o nome do culto no início. Deixe claro quando é (hoje, amanhã, depois de amanhã, ou o dia da semana).`;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
+    const res = await aiChatFetch({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
     });
     if (!res.ok) {
       console.error("AI gateway error", res.status, await res.text());

@@ -32,18 +32,33 @@ interface CultoReminder {
 
 const MAX_REMINDERS = 4;
 
-// Convert an ISO timestamp to the value expected by <input type="datetime-local"> in local tz
+// All datetime-local inputs are interpreted in America/Fortaleza (UTC-3, sem horário de verão)
+// regardless of the admin's device timezone.
+const FORTALEZA_OFFSET_MIN = -180; // UTC-3
+
 const toLocalInput = (iso: string | null | undefined): string => {
   if (!iso) return "";
   const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (isNaN(d.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Fortaleza",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
 };
 
 const fromLocalInput = (val: string): string | null => {
   if (!val) return null;
-  const d = new Date(val); // interpreted as local time
-  return isNaN(d.getTime()) ? null : d.toISOString();
+  // val looks like "YYYY-MM-DDTHH:mm" — treat it as Fortaleza wall time.
+  const m = val.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m;
+  // UTC ms = wall-time-as-UTC minus TZ offset. Fortaleza offset = -180 min → subtract (-180) = +180 min.
+  const asUtc = Date.UTC(+y, +mo - 1, +d, +h, +mi, 0);
+  const iso = new Date(asUtc - FORTALEZA_OFFSET_MIN * 60000).toISOString();
+  return iso;
 };
 
 const formatScheduled = (iso: string | null | undefined) => {
@@ -58,14 +73,19 @@ const formatScheduled = (iso: string | null | undefined) => {
 // next occurrence of that weekday+time, minus 1h.
 const defaultScheduledFor = (schedule: CultoSchedule): string => {
   const [h, m] = schedule.time.split(":").map(Number);
-  const now = new Date();
-  const target = new Date(now);
-  const delta = (schedule.day_of_week - now.getDay() + 7) % 7;
-  target.setDate(now.getDate() + delta);
-  target.setHours(h, m, 0, 0);
-  if (delta === 0 && target.getTime() < now.getTime()) target.setDate(target.getDate() + 7);
+  // Compute in Fortaleza local time to be device-agnostic.
+  const nowFortaleza = new Date(Date.now() + (new Date().getTimezoneOffset() - FORTALEZA_OFFSET_MIN) * 60000);
+  const currentDow = nowFortaleza.getUTCDay();
+  const delta = (schedule.day_of_week - currentDow + 7) % 7;
+  const target = new Date(nowFortaleza);
+  target.setUTCDate(nowFortaleza.getUTCDate() + delta);
+  target.setUTCHours(h, m, 0, 0);
+  if (delta === 0 && target.getTime() < nowFortaleza.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 7);
+  }
   target.setTime(target.getTime() - 60 * 60 * 1000);
-  return target.toISOString();
+  // target now holds Fortaleza wall time in UTC fields; convert to real UTC.
+  return new Date(target.getTime() - FORTALEZA_OFFSET_MIN * 60000).toISOString();
 };
 
 const AdminCultoSchedule = () => {

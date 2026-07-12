@@ -26,7 +26,7 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
   // Prefer Gemini directly when the user provided their own key.
   if (GEMINI_API_KEY) {
     const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
-    return await fetch(GEMINI_URL, {
+    const res = await fetch(GEMINI_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GEMINI_API_KEY}`,
@@ -34,6 +34,34 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
       },
       body: JSON.stringify(geminiBody),
     });
+
+    // If Gemini rate-limits or exhausts quota (free tier: ~10 RPM, 250 RPD),
+    // log the real reason and try Lovable AI as a fallback when available.
+    if ((res.status === 429 || res.status === 402) && LOVABLE_API_KEY) {
+      try {
+        const cloned = res.clone();
+        const errText = await cloned.text();
+        console.error(`[ai-fetch] Gemini ${res.status}, falling back to Lovable. Body:`, errText.slice(0, 500));
+      } catch { /* ignore */ }
+      return await fetch(LOVABLE_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
+
+    if (!res.ok) {
+      try {
+        const cloned = res.clone();
+        const errText = await cloned.text();
+        console.error(`[ai-fetch] Gemini ${res.status}:`, errText.slice(0, 500));
+      } catch { /* ignore */ }
+    }
+
+    return res;
   }
 
   // Fallback to Lovable if no Gemini key.

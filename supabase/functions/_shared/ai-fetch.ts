@@ -35,9 +35,9 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
       body: JSON.stringify(geminiBody),
     });
 
-    // If Gemini rate-limits or exhausts quota (free tier: ~10 RPM, 250 RPD),
+    // If Gemini rate-limits, exhausts quota, or rejects the key (403 leaked/permission),
     // log the real reason and try Lovable AI as a fallback when available.
-    if ((res.status === 429 || res.status === 402) && LOVABLE_API_KEY) {
+    if ((res.status === 429 || res.status === 402 || res.status === 403) && LOVABLE_API_KEY) {
       try {
         const cloned = res.clone();
         const errText = await cloned.text();

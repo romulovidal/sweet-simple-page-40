@@ -7,6 +7,7 @@ import {
   getRequestUserId,
   createAdminClient,
 } from "../_shared/rate-limit.ts";
+import { aiChatFetch } from "../_shared/ai-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,30 +37,23 @@ serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error("Nenhuma chave de IA configurada");
+    }
 
     const MODEL = "google/gemini-2.5-flash";
 
     if (mode === "image_prompt") {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            { 
-              role: "system", 
-              content: "You are a creative assistant. Create ONE English keyword that best represents the spiritual setting of the given verse. Return ONLY the word, no other text." 
-            },
-            {
-              role: "user",
-              content: `Verse: ${reference} - "${text}"`,
-            },
-          ],
-        }),
+      const response = await aiChatFetch({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "You are a creative assistant. Create ONE English keyword that best represents the spiritual setting of the given verse. Return ONLY the word, no other text.",
+          },
+          { role: "user", content: `Verse: ${reference} - "${text}"` },
+        ],
       });
 
       if (!response.ok) {
@@ -118,23 +112,16 @@ serve(async (req) => {
       if (customPrompt.trim()) systemPrompt = customPrompt;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Faça a exegese do seguinte texto bíblico:\n\n**${reference}**\n\n"${text}"`,
-          },
-        ],
-        stream: true,
-      }),
+    const response = await aiChatFetch({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Faça a exegese do seguinte texto bíblico:\n\n**${reference}**\n\n"${text}"`,
+        },
+      ],
+      stream: true,
     });
 
     if (!response.ok) {

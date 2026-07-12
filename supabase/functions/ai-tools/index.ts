@@ -7,6 +7,7 @@ import {
   getRequestUserId,
   createAdminClient,
 } from "../_shared/rate-limit.ts";
+import { aiChatFetch } from "../_shared/ai-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,7 +101,10 @@ serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error("Nenhuma chave de IA configurada (LOVABLE_API_KEY ou GEMINI_API_KEY)");
+    }
 
     // Check if feature is enabled
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -192,23 +196,16 @@ Use markdown para formatação. Responda em português brasileiro.`;
       ? `**${reference}**\n\n"${text}"`
       : text;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        stream: !isJsonTool,
-        ...(isJsonTool
-          ? { response_format: { type: "json_object" }, max_tokens: tool === "targum" ? 8000 : 4000 }
-          : {}),
-      }),
+    const response = await aiChatFetch({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      stream: !isJsonTool,
+      ...(isJsonTool
+        ? { response_format: { type: "json_object" }, max_tokens: tool === "targum" ? 8000 : 4000 }
+        : {}),
     });
 
     if (!response.ok) {

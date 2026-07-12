@@ -23,7 +23,20 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
-  // Try Lovable first if configured
+  // Prefer Gemini directly when the user provided their own key.
+  if (GEMINI_API_KEY) {
+    const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
+    return await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(geminiBody),
+    });
+  }
+
+  // Fallback to Lovable if no Gemini key.
   if (LOVABLE_API_KEY) {
     const res = await fetch(LOVABLE_URL, {
       method: "POST",
@@ -33,27 +46,8 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
       },
       body: JSON.stringify(body),
     });
-
-    // Fallback only for credit/rate errors
-    if (res.ok || !GEMINI_API_KEY || (res.status !== 402 && res.status !== 429)) {
-      return res;
-    }
-    // Drain body to free connection
-    try { await res.text(); } catch { /* ignore */ }
+    return res;
   }
 
-  if (!GEMINI_API_KEY) {
-    // Return a synthetic 402 if we have nothing to try
-    return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
-  }
-
-  const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
-  return await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${GEMINI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(geminiBody),
-  });
+  return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
 }

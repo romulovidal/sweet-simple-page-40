@@ -24,6 +24,7 @@ import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
+import HarpaReportButton from "@/components/HarpaReportButton";
 import {
   getFavorites,
   isFavorite,
@@ -578,6 +579,13 @@ const HarpaPage = () => {
               >
                 Próximo <ChevronRight className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="flex justify-center pt-2">
+              <HarpaReportButton
+                hinoNumber={selected.number}
+                hinoTitle={selected.title}
+              />
             </div>
           </article>
         </div>

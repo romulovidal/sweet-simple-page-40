@@ -34,6 +34,12 @@ interface RawFile {
   hinos: RawHino[];
 }
 
+// Remove traços/hifens soltos no início de linhas — artefatos da conversão
+// do PDF original que aparecem em vários hinos (ex.: 467).
+function cleanLine(line: string): string {
+  return line.replace(/^\s*[-–—]+\s*/, "");
+}
+
 function normalize(raw: RawFile): HarpaHino[] {
   return raw.hinos.map((h) => ({
     number: h.numero,
@@ -41,7 +47,7 @@ function normalize(raw: RawFile): HarpaHino[] {
     strophes: h.secoes.map((s) => ({
       chorus: s.tipo === "refrao",
       index: s.tipo === "estrofe" ? s.numero : undefined,
-      lines: s.linhas,
+      lines: s.linhas.map(cleanLine).filter((l) => l.length > 0),
     })),
   }));
 }

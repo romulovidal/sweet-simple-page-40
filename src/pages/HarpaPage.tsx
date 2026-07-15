@@ -24,6 +24,7 @@ import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
+import HarpaReportButton from "@/components/HarpaReportButton";
 import {
   getFavorites,
   isFavorite,

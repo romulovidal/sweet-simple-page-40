@@ -580,6 +580,13 @@ const HarpaPage = () => {
                 Próximo <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+
+            <div className="flex justify-center pt-2">
+              <HarpaReportButton
+                hinoNumber={selected.number}
+                hinoTitle={selected.title}
+              />
+            </div>
           </article>
         </div>
       )}

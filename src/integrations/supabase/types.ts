@@ -384,6 +384,48 @@ export type Database = {
         }
         Relationships: []
       }
+      harpa_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          hino_number: number
+          hino_title: string
+          id: string
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          hino_number: number
+          hino_title: string
+          id?: string
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          hino_number?: number
+          hino_title?: string
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       historia_favorites: {
         Row: {
           created_at: string

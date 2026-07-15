@@ -58,10 +58,10 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
           onClick={() => !sending && setOpen(false)}
         >
           <div
-            className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4"
+            className="w-full sm:max-w-md max-h-[85dvh] flex flex-col bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3 p-5 pb-3 shrink-0">
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))]">
                   Relatar erro
@@ -80,12 +80,11 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
               </button>
             </div>
 
-            <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
-              Encontrou um erro de letra, coro trocado, palavra estranha ou
-              trecho faltando? Descreva abaixo — a equipe será notificada.
-            </p>
-
-            <div>
+            <div className="flex-1 overflow-y-auto px-5 space-y-3">
+              <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
+                Encontrou um erro de letra, coro trocado, palavra estranha ou
+                trecho faltando? Descreva abaixo — a equipe será notificada.
+              </p>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, MAX))}
@@ -94,12 +93,12 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
                 className="w-full rounded-xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] px-3 py-2.5 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))]/70 focus:outline-none focus:border-primary/60 resize-none"
                 disabled={sending}
               />
-              <div className="flex justify-end text-[10px] text-[hsl(var(--dark-muted))] mt-1">
+              <div className="flex justify-end text-[10px] text-[hsl(var(--dark-muted))]">
                 {message.length}/{MAX}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shrink-0 border-t border-[hsl(var(--dark-card))] bg-[hsl(var(--dark-bg))] rounded-b-2xl">
               <button
                 onClick={() => setOpen(false)}
                 disabled={sending}

@@ -5,7 +5,7 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart, Activity
+  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -23,11 +23,12 @@ import AdminPlans from "@/components/admin/AdminPlans";
 import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
 import AdminRetention from "@/components/admin/AdminRetention";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
+import AdminHarpaReports from "@/components/admin/AdminHarpaReports";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -63,6 +64,7 @@ const ADMIN_SECTIONS = [
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
       { id: "prayers", label: "Pedidos de Oração", desc: "Moderação", icon: HandHeart },
+      { id: "harpa-reports", label: "Relatos da Harpa", desc: "Erros reportados nos hinos", icon: Music2 },
     ],
   },
   {
@@ -299,6 +301,7 @@ const AdminPanel = () => {
       case "ai-prompts": return <AdminAIInstructions />;
       case "app-features": return <AdminAppFeatures />;
       case "prayers": return <AdminPrayerRequests />;
+      case "harpa-reports": return <AdminHarpaReports />;
       case "posts": return <AdminPosts posts={posts} fetchData={fetchData} />;
       case "plans": return <AdminPlans plans={plans} fetchData={fetchData} />;
       case "users": return <AdminUsers users={users} fetchData={fetchData} />;

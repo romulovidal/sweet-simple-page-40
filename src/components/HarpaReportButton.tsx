@@ -58,7 +58,7 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
           onClick={() => !sending && setOpen(false)}
         >
           <div
-            className="w-full sm:max-w-md bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl p-5 space-y-4"
+            className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
@@ -90,7 +90,7 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, MAX))}
                 placeholder="Ex.: na estrofe 2, a segunda linha começa com um traço fora do lugar."
-                rows={5}
+                rows={4}
                 className="w-full rounded-xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] px-3 py-2.5 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))]/70 focus:outline-none focus:border-primary/60 resize-none"
                 disabled={sending}
               />

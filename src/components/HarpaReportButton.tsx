@@ -54,11 +54,11 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => !sending && setOpen(false)}
         >
           <div
-            className="w-full sm:max-w-md max-h-[85dvh] flex flex-col bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl"
+            className="w-full sm:max-w-md max-h-[80dvh] mb-[calc(4rem+env(safe-area-inset-bottom))] sm:mb-0 flex flex-col bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card))] rounded-2xl sm:rounded-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 p-5 pb-3 shrink-0">

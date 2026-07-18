@@ -437,6 +437,35 @@ const ProfilePage = () => {
               <p className="text-xs text-dark-muted mt-1">{user.email}</p>
             </button>
           )}
+          <button onClick={() => navigate("/privacidade")} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3">
+            <Shield className="w-5 h-5 text-primary" />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Política de Privacidade</p>
+              <p className="text-xs text-dark-muted mt-1">Como tratamos seus dados (LGPD).</p>
+            </div>
+          </button>
+          <button onClick={() => navigate("/termos")} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3">
+            <FileText className="w-5 h-5 text-primary" />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Termos de Uso</p>
+              <p className="text-xs text-dark-muted mt-1">Regras e responsabilidades.</p>
+            </div>
+          </button>
+          {user && (
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+              className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors flex items-center gap-3 disabled:opacity-60 sm:col-span-2"
+            >
+              {deletingAccount ? <Loader2 className="w-5 h-5 animate-spin text-destructive" /> : <UserX className="w-5 h-5 text-destructive" />}
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-destructive">Excluir minha conta</p>
+                <p className="text-xs text-dark-muted mt-1">
+                  Apaga permanentemente conta, versículos salvos, notas, progresso e favoritos.
+                </p>
+              </div>
+            </button>
+          )}
         </div>
       </div>
     );

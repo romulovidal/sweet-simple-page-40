@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal,
+   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal, FileText, UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import { triggerAppTour } from "@/hooks/useAppTour";
@@ -49,6 +49,7 @@ const ProfilePage = () => {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
@@ -169,6 +170,29 @@ const ProfilePage = () => {
     await signOut();
     toast.success("Você saiu da conta.");
     setView("overview");
+  };
+
+  const handleDeleteAccount = async () => {
+    const first = window.prompt(
+      'Isso apagará permanentemente sua conta e todos os dados associados (versículos salvos, notas, progresso, favoritos).\n\nDigite EXCLUIR para confirmar:'
+    );
+    if (first !== "EXCLUIR") {
+      if (first !== null) toast("Confirmação incorreta. Nada foi excluído.");
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      try { localStorage.clear(); } catch {}
+      await supabase.auth.signOut();
+      toast.success("Conta excluída. Sentiremos sua falta.");
+      navigate("/");
+    } catch (err: any) {
+      toast.error(err?.message || "Não foi possível excluir a conta agora.");
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   // Loading state

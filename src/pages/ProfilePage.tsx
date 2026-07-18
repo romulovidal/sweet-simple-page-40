@@ -274,6 +274,12 @@ const ProfilePage = () => {
             >
               {authMode === "login" ? "Não tem conta? Cadastre-se" : "Já tem conta? Faça login"}
             </button>
+
+            <p className="text-[11px] text-muted-foreground text-center leading-relaxed px-2 pt-2">
+              Ao {authMode === "login" ? "entrar" : "criar sua conta"}, você concorda com os{" "}
+              <a href="/termos" className="text-primary underline">Termos de Uso</a> e a{" "}
+              <a href="/privacidade" className="text-primary underline">Política de Privacidade</a>.
+            </p>
           </div>
         </div>
         </>

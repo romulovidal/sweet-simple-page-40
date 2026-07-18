@@ -5,6 +5,7 @@ import "./index.css";
 import { registerAppServiceWorker } from "@/lib/registerServiceWorker";
 import { initErrorMonitor } from "@/lib/errorMonitor";
 import { initSentry } from "@/lib/sentry";
+import { initNative } from "@/lib/nativeBootstrap";
 
 initSentry();
 initErrorMonitor();
@@ -29,3 +30,4 @@ createRoot(document.getElementById("root")!).render(
 );
 
 void registerAppServiceWorker();
+void initNative();

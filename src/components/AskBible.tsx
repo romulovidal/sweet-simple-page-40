@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
- import { MessageSquareQuote, Send, Loader2, Trash2, Share2 } from "lucide-react";
+import { MessageSquareQuote, Send, Loader2, Trash2, Share2, Flag } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +48,16 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
         toast.success("Resposta copiada para a área de transferência!");
       });
     }
+  }, []);
+
+  const handleReport = useCallback((text: string) => {
+    if (!window.confirm("Reportar esta resposta como inadequada ou incorreta?")) return;
+    const subject = encodeURIComponent("Reportar resposta de IA — Bíblia do Atalaia");
+    const body = encodeURIComponent(
+      `Resposta reportada:\n\n"${text.slice(0, 1500)}"\n\nMotivo (descreva):\n`
+    );
+    window.location.href = `mailto:contato@vidalweb.com.br?subject=${subject}&body=${body}`;
+    toast.success("Obrigado por reportar. Vamos analisar.");
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -186,6 +196,13 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
                       title="Compartilhar resposta"
                     >
                       <Share2 className="w-3 h-3 text-primary" />
+                    </button>
+                    <button
+                      onClick={() => handleReport(msg.content)}
+                      className="absolute -bottom-2 -right-10 p-1.5 rounded-full bg-dark-card-hover border border-white/10 shadow-lg active:scale-90 transition-all opacity-0 group-hover:opacity-100 lg:opacity-100"
+                      title="Reportar resposta inadequada"
+                    >
+                      <Flag className="w-3 h-3 text-destructive" />
                     </button>
                   </div>
                 ) : (

@@ -249,24 +249,33 @@ self.addEventListener("notificationclick", function(event) {
   var notifData = event.notification.data || {};
   var title = notifData.title || "";
   var body = notifData.body || "";
+  var targetUrl = notifData.url || "/";
+  // Ensure it's a same-origin relative path
+  if (targetUrl.charAt(0) !== "/") targetUrl = "/";
+  var separator = targetUrl.indexOf("?") >= 0 ? "&" : "?";
+  var urlWithParams = targetUrl + separator +
+    "push_title=" + encodeURIComponent(title) +
+    "&push_body=" + encodeURIComponent(body);
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
-      // Try to find an existing window and post message to it
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
         if ("focus" in client && client.url.indexOf(self.location.origin) === 0) {
           client.postMessage({
             type: "PUSH_NOTIFICATION_CLICKED",
             title: title,
-            body: body
+            body: body,
+            url: targetUrl
           });
-          return client.focus();
+          return client.focus().then(function() {
+            if ("navigate" in client && targetUrl !== "/") {
+              try { return client.navigate(targetUrl); } catch (e) { /* ignore */ }
+            }
+          });
         }
       }
-      // No window open — open with query params so the app can show the modal
-      var url = "/?push_title=" + encodeURIComponent(title) + "&push_body=" + encodeURIComponent(body);
-      return clients.openWindow(url);
+      return clients.openWindow(urlWithParams);
     })
   );
 });

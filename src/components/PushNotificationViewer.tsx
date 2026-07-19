@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bell } from "lucide-react";
 
@@ -10,12 +11,17 @@ interface PushData {
 const PushNotificationViewer = () => {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<PushData | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type === "PUSH_NOTIFICATION_CLICKED") {
         setData({ title: event.data.title, body: event.data.body });
         setOpen(true);
+        const url = event.data.url;
+        if (url && typeof url === "string" && url.startsWith("/") && url !== "/" && url !== window.location.pathname + window.location.search) {
+          navigate(url);
+        }
       }
     };
 
@@ -27,13 +33,17 @@ const PushNotificationViewer = () => {
     if (pushTitle && pushBody) {
       setData({ title: decodeURIComponent(pushTitle), body: decodeURIComponent(pushBody) });
       setOpen(true);
-      window.history.replaceState({}, "", window.location.pathname);
+      // Strip only the push_* params, keep path and other query params intact
+      params.delete("push_title");
+      params.delete("push_body");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
     }
 
     return () => {
       navigator.serviceWorker?.removeEventListener("message", handler);
     };
-  }, []);
+  }, [navigate]);
 
   if (!data) return null;
 

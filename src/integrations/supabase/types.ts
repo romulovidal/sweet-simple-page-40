@@ -220,6 +220,293 @@ export type Database = {
         }
         Relationships: []
       }
+      atis_birthdays: {
+        Row: {
+          active: boolean
+          birth_date: string
+          created_at: string
+          group_id: string | null
+          id: string
+          message_template: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          birth_date: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          message_template?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          birth_date?: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          message_template?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_birthdays_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "atis_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atis_broadcasts: {
+        Row: {
+          body: string
+          content_type: string
+          created_at: string
+          error: string | null
+          id: string
+          recurrence: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target_ref: string | null
+          target_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          content_type?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          recurrence?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_ref?: string | null
+          target_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          content_type?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          recurrence?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_ref?: string | null
+          target_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      atis_config: {
+        Row: {
+          active: boolean
+          avatar_url: string | null
+          bot_name: string
+          bot_number: string | null
+          commands: Json
+          evolution_instance: string | null
+          evolution_url: string | null
+          id: number
+          mention_only_default: boolean
+          persona: string | null
+          timezone: string
+          trigger_words: string[]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string | null
+          bot_name?: string
+          bot_number?: string | null
+          commands?: Json
+          evolution_instance?: string | null
+          evolution_url?: string | null
+          id?: number
+          mention_only_default?: boolean
+          persona?: string | null
+          timezone?: string
+          trigger_words?: string[]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string | null
+          bot_name?: string
+          bot_number?: string | null
+          commands?: Json
+          evolution_instance?: string | null
+          evolution_url?: string | null
+          id?: number
+          mention_only_default?: boolean
+          persona?: string | null
+          timezone?: string
+          trigger_words?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      atis_contacts: {
+        Row: {
+          birthday: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          opt_in: boolean
+          phone: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          opt_in?: boolean
+          phone: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          opt_in?: boolean
+          phone?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      atis_groups: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          respond_mode: string
+          updated_at: string
+          wa_group_id: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          respond_mode?: string
+          updated_at?: string
+          wa_group_id?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          respond_mode?: string
+          updated_at?: string
+          wa_group_id?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
+      atis_messages_log: {
+        Row: {
+          body: string | null
+          command: string | null
+          created_at: string
+          direction: string
+          error: string | null
+          id: string
+          raw: Json | null
+          status: string | null
+          wa_from: string | null
+          wa_group_id: string | null
+          wa_to: string | null
+        }
+        Insert: {
+          body?: string | null
+          command?: string | null
+          created_at?: string
+          direction: string
+          error?: string | null
+          id?: string
+          raw?: Json | null
+          status?: string | null
+          wa_from?: string | null
+          wa_group_id?: string | null
+          wa_to?: string | null
+        }
+        Update: {
+          body?: string | null
+          command?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          raw?: Json | null
+          status?: string | null
+          wa_from?: string | null
+          wa_group_id?: string | null
+          wa_to?: string | null
+        }
+        Relationships: []
+      }
+      atis_studies: {
+        Row: {
+          base_text: string
+          created_at: string
+          id: string
+          published: boolean
+          questions: string[]
+          refs: string[]
+          theme: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_text: string
+          created_at?: string
+          id?: string
+          published?: boolean
+          questions?: string[]
+          refs?: string[]
+          theme?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_text?: string
+          created_at?: string
+          id?: string
+          published?: boolean
+          questions?: string[]
+          refs?: string[]
+          theme?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string | null

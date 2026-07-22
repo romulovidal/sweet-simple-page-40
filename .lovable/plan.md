@@ -1,150 +1,149 @@
+# Painel Atis — WhatsApp Bot Ministerial
 
-# Fase 3 — "História Viva da Bíblia"
+Antes de codar Evolution API (que roda fora, no Railway), vamos construir **primeiro o painel de controle dentro do próprio app da Bíblia Atalaia**. Ele já vai ficar pronto pra "plugar" no Evolution depois via webhook.
 
-Cinco módulos novos integrados ao hub, mantendo o design system (dark theme, tokens semânticos, Inter, PT-BR) e o padrão de navegação por `useHistoryNav`.
+## Arquitetura geral (visão)
 
----
+```text
+[App Bíblia Atalaia]  ──►  [Lovable Cloud / Edge Functions]  ◄──► [Evolution API no Railway]  ◄──►  [WhatsApp / Grupo]
+   Painel /atis              webhooks + regras + DB                 (fica pra fase 2)
+```
 
-## 1. Favoritos e progresso na nuvem (base de tudo)
+Fase 1 (agora): painel, tabelas, regras, agendamentos, endpoints.
+Fase 2 (depois): subir Evolution no Railway e apontar o webhook pro nosso endpoint.
 
-Hoje `useFavorites` guarda em `localStorage`. Vamos migrar para Lovable Cloud e usar a mesma infraestrutura para o progresso do Quiz e do Plano Cronológico.
+## Rota e acesso
 
-### Tabelas novas (com GRANT + RLS por `auth.uid()`)
-- `historia_favorites` — `id, user_id, kind, ref_id, created_at` (kind = character/event/place/book/period).
-- `historia_quiz_attempts` — `id, user_id, quiz_id, score, total, duration_ms, answers jsonb, created_at`.
-- `historia_plan_progress` — `id, user_id, plan_id, day_index, completed_at, unique(user_id, plan_id, day_index)`.
-- `historia_stats` (view materializada leve, calculada no cliente a partir das três acima; sem tabela extra).
+- Nova rota `/atis` — somente `admin` (mesma checagem do `/admin`).
+- Botão "Atis" dentro do `/admin` (header) → navega pra `/atis`.
+- Botão "Voltar ao Admin" dentro do `/atis`.
 
-### Código
-- `hooks/useFavorites.ts` reescrito: se logado → Supabase; se anônimo → fallback `localStorage` (migração one-shot quando faz login).
-- Novo `hooks/useCloudSync.ts` que expõe `savePlanDay`, `getPlanProgress`, `saveQuizAttempt`, `listQuizAttempts`.
-- Toasts curtos em falha (`sonner`).
+## Layout (segue o padrão do app da Bíblia)
 
----
+- Cores: mesmas variáveis (`--dark-bg`, `--dark-card`, `--primary`, streak orange). Nada de dourado novo.
+- Tipografia: Inter, mesmos títulos/sombras dos cards do `/admin`.
+- Ícones lucide, mesmos radius (`rounded-2xl`), mesmos botões shadcn.
 
-## 2. Quiz Bíblico
+**Mobile-first (< 768px):**
 
-Motor genérico de quizzes com bancos por tema, dificuldade e período.
+- Header fixo com logo "Atis" + status de conexão (bolinha verde/vermelha).
+- Conteúdo em cards empilhados.
+- **Bottom nav próprio do Atis** com 5 abas (mesmo estilo do `BottomNav` da Bíblia):
+`Painel · Contatos · Agenda · Estudos · Config`.
+- Ações principais em FAB / botões grandes.
 
-### Dados (`data/quizzes.ts`)
-Cada quiz: `{ id, title, description, icon, difficulty: 'facil'|'medio'|'dificil', periodId?, tags[], questions[] }`
-Cada questão: `{ id, prompt, choices[4], correct: 0-3, explanation, ref?: BibleRef, entityRef?: EntityRef }`.
-Bancos iniciais (≥ 60 perguntas):
-1. **Patriarcas** (Gênesis) — 12 questões.
-2. **Êxodo e Deserto** — 10.
-3. **Reis e Profetas** — 12.
-4. **Vida de Jesus** — 12.
-5. **Cartas de Paulo** — 8.
-6. **Geografia bíblica** — 8.
+**Desktop (≥ 768px):**
 
-### Componentes (`components/Quiz/`)
-- `QuizHub.tsx` — grid de quizzes, badges de "Melhor pontuação" e "Tentativas".
-- `QuizPlayer.tsx` — tela full com barra de progresso, contador, 4 alternativas grandes, feedback imediato colorido (verde/vermelho), explicação + `RefLink` + link para a entidade relacionada.
-- `QuizResult.tsx` — pontuação, tempo, medalha (🥉/🥈/🥇), CTA "Refazer" / "Revisar erradas" / "Explorar personagens do tema".
-- Persistência: cada finalização chama `saveQuizAttempt`.
+- Sidebar fixa esquerda (mesmo componente visual do `DesktopSidebar`) com as 5 seções.
+- Área central larga com grid de cards / tabelas.
+- Header com status + botão "Voltar ao Admin".
 
-### UX
-- Animação de acerto (ping) e erro (shake) usando classes existentes.
-- Contraste garantido: alternativas em `bg-dark-card`, estado ativo com `hsl(var(--primary))` sobre `text-white`.
-- Acessível: `aria-live` no feedback, teclas 1-4 no desktop.
+## Funções do painel (o que você vai controlar)
 
----
+### 1. Painel (dashboard)
 
-## 3. Comparações lado a lado
+- Status da conexão com Evolution (online/offline, número conectado, QR code quando desconectado).
+- Métricas: mensagens enviadas hoje, contatos ativos, grupos monitorados, últimas menções ao Atis.
+- Atalhos: "Enviar broadcast", "Testar bot", "Ver logs".
 
-Comparar duas entidades do mesmo tipo (dois personagens, dois lugares, dois livros).
+### 2. Contatos & Grupos
 
-### Componente `components/Compare/CompareView.tsx`
-- Tab dentro do hub: **Comparar**.
-- 2 seletores (usa a mesma `useHistoriaSearch`) → gera 2 colunas com linhas alinhadas:
-  - Período, datas, tags, lugares principais, eventos-chave, referências, contemporâneos, palavras-chave.
-- Linhas divergentes destacadas com barra lateral `bg-primary/40`.
-- Botão "Trocar", "Comparar aleatórios", "Salvar comparação" (armazena par nos favoritos).
+- Lista de contatos individuais (nome, telefone, tags, opt-in, aniversário).
+- Lista de grupos onde o Atis está + toggle "responder só se mencionado" por grupo.
+- Importar CSV / cadastro manual / edição inline.
+- Tags (ex.: "jovens", "obreiros", "visitantes") pra segmentar broadcasts.
 
----
+### 3. Aniversariantes
 
-## 4. Plano de leitura cronológico
+- CRUD de aniversariantes (nome, data, telefone opcional, grupo alvo).
+- Template da mensagem de parabéns (com variáveis `{nome}`, `{versiculo}`).
+- Horário de envio diário (padrão Fortaleza-CE).
+- Preview + histórico dos envios.
 
-Roteiros diários que percorrem a Bíblia em ordem de eventos, não canônica.
+### 4. Agenda de mensagens (broadcasts & recorrentes)
 
-### Dados (`data/plans.ts`)
-- `{ id, title, description, durationDays, coverColor, days: PlanDay[] }`
-- `PlanDay { index, title, summary, readings: BibleRef[], entities: EntityRef[] }`
-Planos iniciais:
-1. **Bíblia em 90 dias — cronológico** (esqueleto: 90 dias, referências abreviadas).
-2. **De Abraão a Josué em 21 dias**.
-3. **Vida de Jesus em 30 dias** (harmonia dos evangelhos).
-4. **Igreja Primitiva em 14 dias** (Atos + cartas).
+- Criar envio: destino (contato, tag, grupo), tipo (texto, versículo, hino, estudo), data/hora ou recorrência (diária/semanal).
+- Reaproveita **versículo do dia** e **culto de hoje** que já existem — só marca "enviar também no WhatsApp".
+- Fila de envios pendentes + log de enviados/falhas.
 
-### Componentes (`components/Plan/`)
-- `PlanHub.tsx` — cards com progresso circular (`% concluído`), botão "Continuar" salta para o próximo dia não lido.
-- `PlanReader.tsx` — dia atual: resumo, lista de leituras com `RefLink` (abre a Bíblia), chips de personagens/eventos/lugares (`openRef`), checkbox "Marcar como lido" → grava em `historia_plan_progress`.
-- `PlanCalendar.tsx` — grid 7 colunas mostrando dias ✅/⏳, permite pular para qualquer dia.
-- Streak local: dias consecutivos concluídos (reutiliza padrão já existente do app).
+### 5. Estudos ministeriais
 
----
+- CRUD de estudos (título, tema, texto base com referências, perguntas de reflexão).
+- Botão "Enviar agora" ou agendar.
+- Estudos ficam também disponíveis pra consumo dentro do próprio app (Descubra), sem duplicar conteúdo.
 
-## 5. Estatísticas pessoais
+### 6. Atis Bot (comportamento no grupo)
 
-Dashboard que consolida uso do módulo História Viva.
+- Toggle global: ativo/pausado.
+- Por grupo: "responder sempre" vs "só quando mencionado" (padrão: só mencionado, como você pediu).
+- Palavras-gatilho extras (ex.: "Atis", "@atis", "bíblia").
+- **Comandos habilitáveis** (cada um com switch on/off):
+  - `versículo <ref>` → busca na Bíblia (usa o mesmo motor do app).
+  - `buscar <palavra>` → busca inteligente (mesma da BiblePage).
+  - `hino <nº>` → letra da Harpa Cristã + link.
+  - `devocional` → devocional IA do dia.
+  - `oração` → registra pedido de oração (vai pro admin).
+  - `estudo` → envia o estudo do dia.
+  - `aniversariantes` → lista do dia.
+- Mensagem de boas-vindas quando entra em grupo novo.
+- Rate limit por usuário (evitar spam).
 
-### Componente `components/Stats/StatsView.tsx`
-Cards:
-- **Personagens explorados** (# distintos abertos, favoritados).
-- **Períodos visitados** (barra empilhada colorida pelas cores de `PERIODS`).
-- **Quiz** — total tentativas, média, melhor tema, gráfico de linhas das últimas 10 tentativas.
-- **Plano** — plano ativo, % concluído, dias em sequência.
-- **Mapa** — lugares tocados (contagem simples via favoritos).
-- **Conquistas / Badges** locais: primeiros marcos (1º quiz, 10 favoritos, 7 dias seguidos, ler 3 evangelhos).
+### 7. Logs & Auditoria
 
-Tracking mínimo: novo hook `useHistoriaTracking` — grava `viewed:entityRef` em memória + `historia_favorites` como fonte principal; sem tabela adicional de views para não inflar backend.
+- Todas as mensagens enviadas/recebidas (com filtro por grupo, contato, comando).
+- Erros de webhook / falhas Evolution.
+- Reutiliza `admin_activity_log`.
 
----
+### 8. Configuração
 
-## 6. Integração no hub
+- URL da Evolution API + API key (via secret).
+- Nome de instância, número do bot.
+- Prompt/persona do Atis (tom pastoral, saudação, assinatura).
+- Fuso horário (default America/Fortaleza).
+- Botão "Reconectar / mostrar QR".
 
-`index.tsx`:
-- Novos tabs: **Quiz** (🧠), **Comparar** (⚖️), **Plano** (📅), **Estatísticas** (📊).
-- Ordem final dos tabs: Linha do tempo · Mapa · Paralelas · Personagens · Eventos · Lugares · Livros · **Plano · Quiz · Comparar · Estatísticas**.
-- Header ganha ícone ♥ que abre modal de Favoritos (aproveita `EntityDetail` via `openRef`).
+## Integrações com o que já existe
 
-### Padrões de contraste (aplicado em todos os módulos novos)
-- Superfícies: `bg-dark-card` / `bg-dark-card-hover` com `text-dark-text` para textos primários e `text-dark-muted` para secundários.
-- Chips ativos: fundo `hsl(var(--primary))`, texto branco (Chip já usa `textOn`).
-- Faixas coloridas por período: sempre com `text-white` + `paintOrder: stroke` quando sobre SVG.
-- Nenhum `text-black`/`bg-white` cru; sempre tokens.
+- Bíblia: reusa `parseBibleReference` + `bibleSearch` (nenhum código duplicado).
+- Harpa: reusa `src/data/harpa.ts`.
+- IA: reusa `ai-fetch` (Gemini com fallback Lovable AI).
+- Push do app continua igual — o Atis é um **canal adicional**, não substitui.
+- Culto/versículo do dia: ganham checkbox "enviar também no WhatsApp".
 
----
+## O que precisa no backend (Lovable Cloud)
 
-## Arquivos que serão criados/alterados
+Tabelas novas (com RLS admin-only + GRANTs):
 
-**Migração SQL** (Lovable Cloud): 3 tabelas + GRANT + RLS.
+- `atis_config` (1 linha, config global do bot)
+- `atis_contacts` (contatos individuais)
+- `atis_groups` (grupos WhatsApp + regras)
+- `atis_birthdays`
+- `atis_broadcasts` (agendamentos e histórico)
+- `atis_studies`
+- `atis_messages_log` (in/out)
 
-**Criar**
-- `hooks/useCloudSync.ts`
-- `hooks/useHistoriaTracking.ts`
-- `data/quizzes.ts`, `data/plans.ts`
-- `components/Quiz/{QuizHub,QuizPlayer,QuizResult}.tsx`
-- `components/Compare/CompareView.tsx`
-- `components/Plan/{PlanHub,PlanReader,PlanCalendar}.tsx`
-- `components/Stats/StatsView.tsx`
-- `components/shared/ProgressRing.tsx`
+Edge functions (stubs agora, plugam no Evolution depois):
 
-**Editar**
-- `hooks/useFavorites.ts` (cloud + migração)
-- `index.tsx` (novos tabs + Favoritos)
-- `types.ts` (tipos Quiz, Plan, PlanDay, QuizAttempt)
+- `atis-webhook` — recebe eventos do Evolution.
+- `atis-send` — envia mensagem via Evolution.
+- `atis-cron` — dispara aniversariantes, versículo do dia, estudos agendados.
 
----
+Secrets a pedir **quando você subir o Evolution**:
 
-## Ordem de execução
+- `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`.
 
-1. Migração SQL (tabelas + policies + GRANT).
-2. `useCloudSync` + `useFavorites` cloud.
-3. Quiz completo (dados + 3 componentes).
-4. Plano cronológico (dados + 3 componentes).
-5. Comparações.
-6. Estatísticas.
-7. Wire-up final no `index.tsx` + revisão de contraste.
+## Ordem de entrega sugerida
 
-Confirma que sigo com esse escopo? Se preferir cortar algo (ex.: começar sem "Comparações" ou sem "Plano de 90 dias"), me diga antes que eu abra a migração.
+1. Rota `/atis` + guard admin + botão no `/admin`.
+2. Shell visual (sidebar desktop + bottom nav mobile + header).
+3. Tabelas + telas CRUD (Contatos, Grupos, Aniversariantes, Estudos).
+4. Dashboard com status "desconectado" (placeholder até o Evolution existir).
+5. Agenda + cron.
+6. Config + persona do Atis.
+7. (Fase 2) Ligar no Evolution real com webhook.
+
+## Perguntas rápidas antes de começar
+
+1. Confirma que quer **tudo isso no painel já nesta primeira leva**, ou começamos só por **Dashboard + Contatos + Aniversariantes + Config** e o resto vem depois? Da forma que achar melhor, se achar que dá pra fazer tudo pode fazer, mas se precisar de etapas não tem problema quero tudo perfeito
+2. Atis vai ter avatar/foto própria (posso gerar), ou usa o mesmo ícone do app? Vai ter um ícone próprio(avatar que seja editável)
+3. Quer que o botão de acesso ao painel Atis apareça **só dentro do /admin** (mais discreto) ou também no menu do perfil? Somente no admin 

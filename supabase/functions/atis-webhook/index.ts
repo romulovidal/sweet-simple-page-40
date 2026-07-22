@@ -51,10 +51,11 @@ Deno.serve(async (req) => {
 
         await admin.from('atis_messages_log').insert({
           direction: 'inbound',
-          from_number: jid,
+          wa_from: jid,
+          wa_group_id: isGroup ? jid : null,
           body: text,
           status: 'received',
-          meta: { isGroup, secretOk },
+          raw: { isGroup, secretOk },
         })
 
         if (!secretOk) continue
@@ -109,10 +110,12 @@ Deno.serve(async (req) => {
         const sendRes = await sendText(jid, reply)
         await admin.from('atis_messages_log').insert({
           direction: 'outbound',
-          to_number: jid,
+          wa_to: jid,
+          wa_group_id: isGroup ? jid : null,
           body: reply,
+          command: cmdMatch?.[1] ?? null,
           status: sendRes.ok ? 'sent' : 'error',
-          meta: { auto: true, status: sendRes.status },
+          raw: { auto: true, status: sendRes.status },
         })
       }
     } else if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
@@ -120,7 +123,7 @@ Deno.serve(async (req) => {
         direction: 'system',
         body: `connection: ${payload?.data?.state ?? payload?.state ?? '?'}`,
         status: 'info',
-        meta: payload,
+        raw: payload,
       })
     }
   } catch (e) {
@@ -128,7 +131,7 @@ Deno.serve(async (req) => {
       direction: 'system',
       body: `webhook error: ${String((e as any)?.message ?? e)}`,
       status: 'error',
-      meta: payload,
+      raw: payload,
     }).catch(() => null)
   }
 

@@ -59,11 +59,11 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
-      to_number: to,
+      wa_to: to,
       body: text,
       status: out.ok ? 'sent' : 'error',
-      meta: out.json,
-    }).select().maybeSingle().catch(() => null)
+      raw: out.json,
+    })
 
     return new Response(JSON.stringify({ ok: out.ok, status: out.status, response: out.json }), {
       status: out.ok ? 200 : 502,

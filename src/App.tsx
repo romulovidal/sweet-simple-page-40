@@ -31,6 +31,7 @@ import PlansPage from "@/pages/PlansPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
+import AtisPage from "@/pages/AtisPage";
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
 import HarpaPage from "@/pages/HarpaPage";
@@ -45,10 +46,11 @@ const AppContent = () => {
   const location = useLocation();
    const { features } = useAppFeatures();
   const isAdmin = location.pathname.startsWith("/admin");
+  const isAtis = location.pathname.startsWith("/atis");
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
   const isMobile = useIsMobile();
-  const showChrome = !isAdmin && !isLanding;
+  const showChrome = !isAdmin && !isAtis && !isLanding;
   // Wait for viewport detection so tour data-tour selectors resolve to only ONE nav
   const showSidebar = showChrome && isMobile === false;
   const showBottomNav = showChrome && isMobile !== false;
@@ -62,9 +64,9 @@ const AppContent = () => {
   }, [location.pathname]);
 
   return (
-    <div className={isAdmin || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
+    <div className={isAdmin || isAtis || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
       {showSidebar && <DesktopSidebar />}
-      <div className={isAdmin || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
+      <div className={isAdmin || isAtis || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
         <ScrollToTop />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname + resetKey}>
@@ -80,21 +82,22 @@ const AppContent = () => {
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/atis" element={<AtisPage />} />
             <Route path="/app" element={<AppLanding />} />
             <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
           </Routes>
         </AnimatePresence>
       </div>
       {showChrome && !showSidebar && <ThemeToggleFloat />}
-      {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
+      {isAdmin ? <AdminInstallPrompt /> : !isLanding && !isAtis && <InstallPrompt />}
       <UpdatePrompt />
-      {!isAdmin && !isLanding && <PushPermissionPrompt />}
-       {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
-       {!isAdmin && !isLanding && <AskBibleFloat />}
+      {!isAdmin && !isAtis && !isLanding && <PushPermissionPrompt />}
+       {!isAdmin && !isAtis && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
+       {!isAdmin && !isAtis && !isLanding && <AskBibleFloat />}
        {showBottomNav && <BottomNav />}
-      {!isAdmin && !isLanding && <AppTour />}
+      {!isAdmin && !isAtis && !isLanding && <AppTour />}
       <PushNotificationViewer />
-      {!isAdmin && !isLanding && <Onboarding />}
+      {!isAdmin && !isAtis && !isLanding && <Onboarding />}
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, QrCode } from "lucide-react";
+import AtisConnect from "./AtisConnect";
 
 type Config = {
   id: number;
@@ -32,6 +33,7 @@ const AtisConfig = () => {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showConnect, setShowConnect] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,6 +69,16 @@ const AtisConfig = () => {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] text-white p-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold">Conexão WhatsApp</p>
+          <p className="text-xs opacity-90">Escaneie o QR Code para conectar o número do Atis.</p>
+        </div>
+        <button onClick={() => setShowConnect(true)} className="shrink-0 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5">
+          <QrCode className="w-4 h-4" /> Conectar
+        </button>
+      </div>
+
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <p className="text-sm font-bold">Identidade</p>
         <input className="input" placeholder="Nome do bot" value={cfg.bot_name} onChange={e => set({ bot_name: e.target.value })} />
@@ -108,6 +120,7 @@ const AtisConfig = () => {
         <Save className="w-4 h-4" /> {saving ? "Salvando..." : "Salvar configuração"}
       </button>
       <style>{`.input{width:100%;height:42px;padding:0 12px;border-radius:12px;background:hsl(var(--dark-bg));color:hsl(var(--dark-text));border:1px solid hsl(var(--dark-card-hover));font-size:14px}`}</style>
+      {showConnect && <AtisConnect onClose={() => setShowConnect(false)} />}
     </div>
   );
 };

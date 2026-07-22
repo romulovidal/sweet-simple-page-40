@@ -1,0 +1,111 @@
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
+const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
+const INSTANCE = 'atis'
+
+async function evo(path: string, init: RequestInit = {}) {
+  const res = await fetch(`${EVO_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: EVO_KEY,
+      ...(init.headers ?? {}),
+    },
+  })
+  const text = await res.text()
+  let json: any = null
+  try { json = text ? JSON.parse(text) : null } catch { json = { raw: text } }
+  return { ok: res.ok, status: res.status, json }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  try {
+    // Auth: require logged-in admin
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claims } = await supabase.auth.getClaims(token)
+    if (!claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: claims.claims.sub, _role: 'admin' })
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
+    const action = body.action ?? 'status'
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.functions.supabase.co')}/atis-webhook`
+    const webhookSecret = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
+
+    if (action === 'create') {
+      // Try to create; if exists, ignore
+      const created = await evo(`/instance/create`, {
+        method: 'POST',
+        body: JSON.stringify({
+          instanceName: INSTANCE,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS',
+          webhook: {
+            url: webhookUrl,
+            byEvents: false,
+            base64: false,
+            headers: { 'x-webhook-secret': webhookSecret },
+            events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+          },
+        }),
+      })
+      // Fetch QR
+      const conn = await evo(`/instance/connect/${INSTANCE}`)
+      return new Response(JSON.stringify({
+        created: created.ok,
+        createdStatus: created.status,
+        qr: conn.json?.base64 ?? conn.json?.qrcode?.base64 ?? null,
+        code: conn.json?.code ?? conn.json?.qrcode?.code ?? null,
+        raw: conn.json,
+        webhookUrl,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'qr') {
+      const conn = await evo(`/instance/connect/${INSTANCE}`)
+      return new Response(JSON.stringify({
+        qr: conn.json?.base64 ?? conn.json?.qrcode?.base64 ?? null,
+        code: conn.json?.code ?? conn.json?.qrcode?.code ?? null,
+        raw: conn.json,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'logout') {
+      const out = await evo(`/instance/logout/${INSTANCE}`, { method: 'DELETE' })
+      return new Response(JSON.stringify(out.json ?? { ok: out.ok }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'delete') {
+      const out = await evo(`/instance/delete/${INSTANCE}`, { method: 'DELETE' })
+      return new Response(JSON.stringify(out.json ?? { ok: out.ok }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // default: status
+    const st = await evo(`/instance/connectionState/${INSTANCE}`)
+    return new Response(JSON.stringify({
+      state: st.json?.instance?.state ?? st.json?.state ?? 'unknown',
+      exists: st.ok,
+      raw: st.json,
+      webhookUrl,
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+})

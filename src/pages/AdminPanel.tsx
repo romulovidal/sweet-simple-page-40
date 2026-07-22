@@ -5,7 +5,7 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2
+  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -244,6 +244,20 @@ const AdminPanel = () => {
           <LogOut className="w-4 h-4" /> Sair
         </button>
       </div>
+
+      <button
+        onClick={() => navigate("/atis")}
+        className="w-full flex items-center gap-4 p-4 rounded-2xl text-left bg-gradient-to-br from-[hsl(220,70%,45%)] to-[hsl(260,60%,40%)] text-white hover:brightness-110 transition-all"
+      >
+        <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-white/15 backdrop-blur">
+          <Bot className="w-5 h-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-bold truncate">Painel Atis</p>
+          <p className="text-xs opacity-90 truncate">Bot ministerial do WhatsApp</p>
+        </div>
+        <ChevronRight className="w-5 h-5 opacity-80 shrink-0" />
+      </button>
     </div>
   );
 

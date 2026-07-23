@@ -814,16 +814,25 @@ Deno.serve(async (req) => {
           const recentResolved = await getRecentResolvedCrisis(admin, jid)
           if (crisis.matched.length || recentCrisis) {
             const matched = crisis.matched.length ? crisis.matched : ['continuação de crise recente']
-            // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
-            // Se já existe crise ativa não tratada nas últimas 24h, cada nova mensagem é encaminhada aos pastores.
-            // Se houve crise RESOLVIDA nas últimas 72h e vieram novas palavras de risco,
-            // tratamos como REINCIDÊNCIA e pulamos o filtro de IA (segurança em primeiro lugar).
-            const ctx = recentCrisis
-              ? { risk: true, reason: `active_crisis_follow_up:${recentCrisis.id}`, confidence: 1 }
-              : (recentResolved && crisis.matched.length)
-                ? { risk: true, reason: `recurrence_within_72h:${recentResolved.id}`, confidence: 1 }
-                : await classifyCrisisContext(text)
+            // Só classifica/dispara resposta de crise quando há palavras de risco NESTA mensagem.
+            // Se existe crise ativa recente mas a mensagem atual não tem sinal de risco,
+            // encaminhamos silenciosamente aos pastores (follow-up) e deixamos o fluxo normal responder.
+            const ctx = (recentResolved && crisis.matched.length)
+              ? { risk: true, reason: `recurrence_within_72h:${recentResolved.id}`, confidence: 1 }
+              : crisis.matched.length
+                ? await classifyCrisisContext(text)
+                : { risk: false, reason: `active_crisis_follow_up_no_keywords:${recentCrisis?.id}`, confidence: 0 }
             if (!ctx.risk) {
+              // Follow-up silencioso ao(s) pastor(es) se há crise ativa, sem enviar CVV ao contato
+              if (recentCrisis) {
+                let contactName: string | null = null
+                try {
+                  const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
+                  const { data: c } = await admin.from('atis_contacts').select('name').eq('phone', phoneOnly).maybeSingle()
+                  contactName = c?.name ?? null
+                } catch { /* ignore */ }
+                await handleCrisis(admin, jid, contactName, text, matched, false)
+              }
               await admin.from('atis_messages_log').insert({
                 direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
                 command: 'crisis-skip', status: 'ignored',

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal, FileText, UserX,
+   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal, FileText, UserX, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { triggerAppTour } from "@/hooks/useAppTour";
@@ -44,12 +44,57 @@ const ProfilePage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // WhatsApp preferences (logged-in user)
+  const [waNumber, setWaNumber] = useState("");
+  const [waOptIn, setWaOptIn] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("whatsapp, whatsapp_opt_in")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setWaNumber((data as any).whatsapp ?? "");
+          setWaOptIn(!!(data as any).whatsapp_opt_in);
+        }
+      });
+  }, [user]);
+
+  const saveWhatsappPrefs = async () => {
+    if (!user) return;
+    const digits = waNumber.replace(/\D/g, "");
+    if (waOptIn && digits.length < 10) {
+      toast.error("Informe um WhatsApp válido com DDD.");
+      return;
+    }
+    setWaSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        whatsapp: digits || null,
+        whatsapp_opt_in: digits ? waOptIn : false,
+      })
+      .eq("user_id", user.id);
+    setWaSaving(false);
+    if (error) toast.error("Não foi possível salvar.");
+    else {
+      toast.success(waOptIn && digits ? "Notificações no WhatsApp ativadas!" : "Preferências salvas.");
+      setWaNumber(digits);
+    }
+  };
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
@@ -141,11 +186,21 @@ const ProfilePage = () => {
     setAuthSubmitting(true);
     try {
       if (authMode === "signup") {
+        const digits = whatsapp.replace(/\D/g, "");
+        if (whatsappOptIn && digits.length < 10) {
+          toast.error("Para receber no WhatsApp, informe um número válido com DDD.");
+          setAuthSubmitting(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              whatsapp: digits || null,
+              whatsapp_opt_in: whatsappOptIn && !!digits,
+            },
           },
         });
         if (error) throw error;
@@ -262,6 +317,30 @@ const ProfilePage = () => {
                 placeholder="Senha" className="bg-[hsl(var(--dark-card))] border-none"
                 required minLength={6}
               />
+              {authMode === "signup" && (
+                <>
+                  <Input
+                    type="tel"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="WhatsApp com DDD (opcional) — ex: 85999999999"
+                    className="bg-[hsl(var(--dark-card))] border-none"
+                    inputMode="tel"
+                  />
+                  <label className="flex items-start gap-3 bg-[hsl(var(--dark-card))] rounded-2xl p-3 cursor-pointer">
+                    <Checkbox
+                      id="wa-optin"
+                      checked={whatsappOptIn}
+                      onCheckedChange={(c) => setWhatsappOptIn(c === true)}
+                      className="mt-0.5"
+                    />
+                    <span className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
+                      <MessageCircle className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                      Desejo receber notificações no WhatsApp (versículo do dia, devocional, lembretes de cultos e avisos da comunidade). Você pode desativar a qualquer momento.
+                    </span>
+                  </label>
+                </>
+              )}
               <Button type="submit" className="w-full" disabled={authSubmitting}>
                 {authSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                 {authMode === "login" ? "Entrar com e-mail" : "Criar conta"}
@@ -404,6 +483,37 @@ const ProfilePage = () => {
             </div>
             <p className="text-xs text-dark-muted mb-3">Baixe versões para ler sem internet.</p>
             <BibleDownloadManager />
+          </div>
+          <div className="bg-dark-card rounded-xl p-4 sm:col-span-2">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageCircle className="w-4 h-4 text-primary" />
+              <p className="font-semibold text-sm">Notificações no WhatsApp</p>
+            </div>
+            <p className="text-xs text-dark-muted mb-3">
+              Receba o versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp pelo Atis.
+            </p>
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="WhatsApp com DDD — ex: 85999999999"
+              value={waNumber}
+              onChange={(e) => setWaNumber(e.target.value)}
+              className="bg-dark-bg border-none mb-3"
+            />
+            <label className="flex items-start gap-3 cursor-pointer mb-3">
+              <Checkbox
+                checked={waOptIn}
+                onCheckedChange={(c) => setWaOptIn(c === true)}
+                className="mt-0.5"
+              />
+              <span className="text-xs text-dark-muted leading-relaxed">
+                Autorizo receber mensagens automáticas do Atis no meu WhatsApp. Posso desativar quando quiser.
+              </span>
+            </label>
+            <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">
+              {waSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar preferências
+            </Button>
           </div>
           <button onClick={handleContinueReading} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Continuar leitura</p>

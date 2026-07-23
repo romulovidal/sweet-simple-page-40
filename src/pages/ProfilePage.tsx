@@ -484,6 +484,37 @@ const ProfilePage = () => {
             <p className="text-xs text-dark-muted mb-3">Baixe versões para ler sem internet.</p>
             <BibleDownloadManager />
           </div>
+          <div className="bg-dark-card rounded-xl p-4 sm:col-span-2">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageCircle className="w-4 h-4 text-primary" />
+              <p className="font-semibold text-sm">Notificações no WhatsApp</p>
+            </div>
+            <p className="text-xs text-dark-muted mb-3">
+              Receba o versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp pelo Atis.
+            </p>
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="WhatsApp com DDD — ex: 85999999999"
+              value={waNumber}
+              onChange={(e) => setWaNumber(e.target.value)}
+              className="bg-dark-bg border-none mb-3"
+            />
+            <label className="flex items-start gap-3 cursor-pointer mb-3">
+              <Checkbox
+                checked={waOptIn}
+                onCheckedChange={(c) => setWaOptIn(c === true)}
+                className="mt-0.5"
+              />
+              <span className="text-xs text-dark-muted leading-relaxed">
+                Autorizo receber mensagens automáticas do Atis no meu WhatsApp. Posso desativar quando quiser.
+              </span>
+            </label>
+            <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">
+              {waSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar preferências
+            </Button>
+          </div>
           <button onClick={handleContinueReading} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Continuar leitura</p>
             <p className="text-xs text-dark-muted mt-1">Retomar exatamente de onde você parou.</p>

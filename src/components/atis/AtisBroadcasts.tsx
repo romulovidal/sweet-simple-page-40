@@ -246,6 +246,7 @@ const AtisBroadcasts = () => {
               const meta = STATUS_META[b.status] ?? STATUS_META.pending;
               const StatusIcon = meta.icon;
               const groupName = b.target_type === "group" && b.target_ref ? (groups.find(g => g.wa_group_id === b.target_ref)?.name ?? b.target_ref) : null;
+              const contactName = b.target_type === "contact" && b.target_ref ? (contacts.find(c => c.id === b.target_ref)?.name ?? b.target_ref) : null;
               return (
                 <li key={b.id} className="py-3 flex items-start gap-3">
                   <span className={`w-9 h-9 rounded-full grid place-items-center mt-0.5 ${meta.color}`}><StatusIcon className="w-4 h-4" /></span>
@@ -256,7 +257,7 @@ const AtisBroadcasts = () => {
                     </div>
                     <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-2 mt-0.5">{b.body}</p>
                     <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">
-                      {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" }) : "sem data"} · {b.recurrence ?? "once"} · {groupName ? `grupo: ${groupName}` : b.target_type}{!groupName && b.target_ref ? ` (${b.target_ref})` : ""}
+                      {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" }) : "sem data"} · {b.recurrence ?? "once"} · {groupName ? `grupo: ${groupName}` : contactName ? `contato: ${contactName}` : b.target_type}{!groupName && !contactName && b.target_ref ? ` (${b.target_ref})` : ""}
                     </p>
                   </div>
                   <button onClick={() => remove(b.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>

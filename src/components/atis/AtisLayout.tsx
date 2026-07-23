@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree } from "lucide-react";
+import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree, MessageCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
 const atisAvatar = atisAvatarAsset.url;
 import AtisDashboard from "./AtisDashboard";
 import AtisContacts from "./AtisContacts";
 import AtisGroups from "./AtisGroups";
+import AtisIndividuals from "./AtisIndividuals";
 import AtisBirthdays from "./AtisBirthdays";
 import AtisBroadcasts from "./AtisBroadcasts";
 import AtisStudies from "./AtisStudies";
@@ -14,7 +15,7 @@ import AtisConfig from "./AtisConfig";
 import AtisLogs from "./AtisLogs";
 import { useAtisStatus } from "./useAtisStatus";
 
-type TabId = "dashboard" | "contacts" | "groups" | "birthdays" | "broadcasts" | "studies" | "logs" | "config";
+type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "logs" | "config";
 
 const resolveAtisAvatar = () => {
   const path = atisAvatarAsset.url;
@@ -29,6 +30,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "dashboard", label: "Painel", icon: LayoutDashboard },
   { id: "contacts", label: "Contatos", icon: Users },
   { id: "groups", label: "Grupos", icon: Bot },
+  { id: "individuals", label: "Individuais", icon: MessageCircle },
   { id: "birthdays", label: "Aniversários", icon: Cake },
   { id: "broadcasts", label: "Agenda", icon: CalendarClock },
   { id: "studies", label: "Estudos", icon: BookOpen },
@@ -50,6 +52,7 @@ const AtisLayout = () => {
       case "dashboard": return <AtisDashboard onNavigate={setTab} />;
       case "contacts": return <AtisContacts />;
       case "groups": return <AtisGroups />;
+      case "individuals": return <AtisIndividuals />;
       case "birthdays": return <AtisBirthdays />;
       case "broadcasts": return <AtisBroadcasts />;
       case "studies": return <AtisStudies />;

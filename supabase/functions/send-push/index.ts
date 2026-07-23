@@ -226,7 +226,9 @@ Deno.serve(async (req) => {
           const results = await Promise.all(subscribers.map(async (u: any) => {
             const digits = String(u.whatsapp ?? "").replace(/\D/g, "");
             if (digits.length < 10) return false;
-            const jid = `${digits}@s.whatsapp.net`;
+            // Ensure Brazilian country code (55) prefix
+            const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+            const jid = `${withCountry}@s.whatsapp.net`;
             const firstName = (u.display_name ?? "").split(" ")[0] || "";
             const salute = firstName ? `Olá, *${firstName}*! ` : "";
             const waText = `${salute}📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}\n\n_Para parar de receber, desative em Perfil › Configurações › Notificações no WhatsApp._`;

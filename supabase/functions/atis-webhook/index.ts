@@ -635,6 +635,84 @@ Deno.serve(async (req) => {
         if (!cfg?.active) continue
 
         // ============================================================
+        // Comandos de PASTOR (DM apenas) — resolver / silenciar alertas de crise.
+        // "resolvido" / "resolver" [telefone opcional] → marca crise(s) como tratada(s)
+        // "silenciar" / "parar" <telefone> → este pastor não recebe mais alertas dessa pessoa
+        // ============================================================
+        if (!isGroup) {
+          const senderDigits = jid.replace(/@.*/, '').replace(/\D/g, '')
+          const { data: crisisCfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
+          const crisisCfg = (crisisCfgRow?.value ?? {}) as { pastor_phones?: string[] }
+          const pastorList = (crisisCfg.pastor_phones ?? []).map((p) => String(p).replace(/\D/g, ''))
+          // Também aceita variação sem 9º dígito
+          const senderVariants = new Set<string>([senderDigits])
+          if (senderDigits.length === 13 && senderDigits.startsWith('55')) {
+            const ddd = senderDigits.slice(2, 4); const rest = senderDigits.slice(4)
+            if (rest.length === 9 && rest.startsWith('9')) senderVariants.add(`55${ddd}${rest.slice(1)}`)
+            if (rest.length === 8) senderVariants.add(`55${ddd}9${rest}`)
+          }
+          const isPastor = pastorList.some((p) => senderVariants.has(p))
+          if (isPastor) {
+            const norm = text.trim().toLowerCase().replace(/[.!?]+$/, '')
+            const mResolve = norm.match(/^(resolvido|resolver|encerrar|ok)\s*(.*)$/)
+            const mMute = norm.match(/^(silenciar|silencia|parar|nao avisar|não avisar|mute)\s+(.+)$/)
+            const digitsOnly = (s: string) => s.replace(/\D/g, '')
+            if (mResolve) {
+              const targetDigits = digitsOnly(mResolve[2])
+              const q = admin.from('atis_crisis_alerts').update({ handled: true, handled_at: new Date().toISOString(), handled_by: senderDigits }).eq('handled', false)
+              const { data: updated, error } = targetDigits
+                ? await q.eq('contact_phone', targetDigits).select('id')
+                : await q.select('id')
+              const count = updated?.length ?? 0
+              const reply = error
+                ? `⚠️ Não consegui marcar como resolvido: ${error.message}`
+                : count > 0
+                  ? `✅ ${count} alerta(s)${targetDigits ? ` de +${targetDigits}` : ''} marcado(s) como *resolvido(s)*. Novas mensagens desta pessoa deixarão de ser tratadas como continuação de crise.`
+                  : `ℹ️ Não havia alertas ativos${targetDigits ? ` para +${targetDigits}` : ''}.`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({
+                direction: 'outbound', wa_to: jid, body: reply,
+                command: 'pastor-resolve', status: r.ok ? 'sent' : 'error',
+                raw: { auto: true, target: targetDigits, updated: count },
+              })
+              continue
+            }
+            if (mMute) {
+              const targetDigits = digitsOnly(mMute[2])
+              if (!targetDigits) {
+                const reply = `ℹ️ Use: *silenciar <telefone>* (ex.: silenciar 5585999999999).`
+                const r = await sendText(jid, reply)
+                await admin.from('atis_messages_log').insert({ direction: 'outbound', wa_to: jid, body: reply, command: 'pastor-mute-help', status: r.ok ? 'sent' : 'error', raw: { auto: true } })
+                continue
+              }
+              const { error } = await admin.from('atis_crisis_mutes').upsert(
+                { contact_phone: targetDigits, pastor_phone: senderDigits },
+                { onConflict: 'contact_phone,pastor_phone' }
+              )
+              const reply = error
+                ? `⚠️ Não consegui silenciar: ${error.message}`
+                : `🔕 Pronto. Você *não receberá mais alertas* sobre +${targetDigits}. Os outros pastores cadastrados continuam recebendo normalmente.\n\nPara reativar: envie *reativar ${targetDigits}*`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({
+                direction: 'outbound', wa_to: jid, body: reply,
+                command: 'pastor-mute', status: r.ok ? 'sent' : 'error',
+                raw: { auto: true, target: targetDigits, pastor: senderDigits },
+              })
+              continue
+            }
+            const mUnmute = norm.match(/^(reativar|desmutar|voltar)\s+(.+)$/)
+            if (mUnmute) {
+              const targetDigits = digitsOnly(mUnmute[2])
+              await admin.from('atis_crisis_mutes').delete().eq('pastor_phone', senderDigits).eq('contact_phone', targetDigits)
+              const reply = `🔔 Alertas de +${targetDigits} *reativados* para você.`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({ direction: 'outbound', wa_to: jid, body: reply, command: 'pastor-unmute', status: r.ok ? 'sent' : 'error', raw: { auto: true, target: targetDigits } })
+              continue
+            }
+          }
+        }
+
+        // ============================================================
         // Opt-out ("sair") — apenas em DM. Cancela todos os envios automáticos.
         // ============================================================
         if (!isGroup) {

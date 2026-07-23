@@ -32,28 +32,40 @@ async function generateGreeting(names: string[], template: string | null, period
       .replaceAll('{saudacao}', greeting)
   }
   if (!key) {
-    return `🎂 ${greeting}, família!\n\nHoje é dia de festa! Parabéns a:\n${list}\n\nQue o Senhor abençoe grandemente sua vida com saúde, paz e muitas alegrias. 🙏✨\n— Igreja Atalaias de Betel`
+    return `🎉✨ ${greeting}, amada família Atalaias de Betel! ✨🎉\n\nHoje o céu se alegra e a nossa igreja também, porque Deus, em Seu infinito amor, nos presenteou com mais um ano de vida de pessoas muito especiais:\n\n${list}\n\n"O Senhor te abençoe e te guarde; o Senhor faça resplandecer o Seu rosto sobre ti e tenha misericórdia de ti; o Senhor sobre ti levante o Seu rosto e te dê a paz." (Números 6:24-26)\n\nQue este novo ciclo seja marcado por saúde, propósito, sonhos realizados e uma intimidade cada vez maior com o Senhor Jesus. Nós te amamos e celebramos com você! 🎂🙏🕊️\n\n— Com carinho, Igreja Atalaias de Betel`
   }
   const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash',
-      temperature: 1.0,
+      temperature: 1.1,
       messages: [
         {
           role: 'system',
           content:
-            'Você é Atis, assistente da Igreja Atalaias de Betel. Gere UMA mensagem de aniversário calorosa, cristã e curta para ser enviada em um GRUPO de WhatsApp parabenizando o(s) aniversariante(s) do dia. Estrutura:\n' +
-            `1) Saudação começando por "${greeting}, família!" com emoji de festa (🎉🎂).\n` +
-            '2) Cite o(s) nome(s) claramente em uma lista.\n' +
-            '3) UM versículo bíblico REAL (referência exata) sobre vida, bênção ou gratidão, entre aspas (ARA).\n' +
-            '4) Bênção pastoral em 2 frases.\n' +
-            'Máx. 700 caracteres. Emojis discretos. Sem markdown pesado. Varie a cada dia.',
+            'Você é Atis, o assistente da Igreja Atalaias de Betel. Sua missão agora é escrever UMA mensagem de aniversário CAPRICHADA, calorosa, poética e profundamente cristã, para ser enviada em um GRUPO de WhatsApp da igreja, parabenizando o(s) aniversariante(s) do dia. Nada de mensagens genéricas, chulas ou copiadas — cada mensagem precisa parecer feita à mão, com sentimento pastoral verdadeiro.\n\n' +
+            'ESTRUTURA OBRIGATÓRIA (em parágrafos separados por uma linha em branco, sem títulos, sem markdown, sem asteriscos):\n' +
+            `1) Abertura festiva começando com "${greeting}, amada família Atalaias de Betel!" acompanhada de 2 a 3 emojis (🎉🎂✨🕊️🙌). Depois, uma frase bonita reconhecendo que hoje é um dia especial, que o céu se alegra junto com a igreja.\n` +
+            '2) Homenagem nominal: cite cada aniversariante em uma lista com "• Nome", e faça uma frase carinhosa antes ou depois da lista mencionando o valor de cada vida para o Corpo de Cristo.\n' +
+            '3) UM versículo bíblico REAL, com referência EXATA (livro, capítulo e versículo), preferencialmente ARA ou ARC, escrito entre aspas, sobre vida, bênção, propósito, gratidão, alegria ou fidelidade de Deus. NUNCA invente referências. Varie o versículo a cada mensagem.\n' +
+            '4) Bênção pastoral personalizada em 3 a 4 frases: fale de saúde, longevidade, propósito, sonhos, família, chamado, comunhão com Jesus e derramar do Espírito Santo. Use uma linguagem quente, próxima, como um pastor abraçando um irmão.\n' +
+            '5) Encerramento em uma linha só, começando com "— Com carinho," seguido de "Igreja Atalaias de Betel" e 1 emoji discreto.\n\n' +
+            'DIRETRIZES DE ESTILO:\n' +
+            '- Tom: acolhedor, digno, cheio de fé, celebrativo, jamais infantil.\n' +
+            '- Português do Brasil, natural e fluído. Sem clichês de cartão como "tudo de bom".\n' +
+            '- Emojis usados com bom gosto (máximo 6 na mensagem inteira, bem distribuídos).\n' +
+            '- NADA de markdown (nada de **negrito**, #, ou listas com "-"). Use apenas "•" para a lista de nomes.\n' +
+            '- Entre 900 e 1400 caracteres.\n' +
+            '- VARIE bastante a cada execução: mude o versículo, as imagens, as palavras, a ordem interna dos parágrafos 3 e 4 se quiser, mantendo a estrutura.\n' +
+            '- Retorne SOMENTE o texto final da mensagem, sem comentários, sem aspas envolvendo tudo.',
         },
         {
           role: 'user',
-          content: `Aniversariante(s) de hoje: ${names.join(', ')}. Gere a mensagem agora.`,
+          content:
+            `Aniversariante(s) de hoje (${names.length === 1 ? '1 pessoa' : `${names.length} pessoas`}): ${names.join(', ')}.\n` +
+            `Período do dia: ${period} (use isso para dar naturalidade à saudação, mas mantenha "${greeting}, amada família Atalaias de Betel!" como abertura).\n` +
+            'Escreva agora a mensagem de aniversário completa, caprichada e única, seguindo todas as diretrizes.',
         },
       ],
     }),

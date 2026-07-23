@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookmarkCheck, BookOpenText, ChevronRight, Clock3, Compass,
-   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal, FileText, UserX,
+   Flame, RotateCcw, Settings, Trash2, Sparkles, LogOut, Loader2, Mail, Shield, Download, Bell, BellOff, GraduationCap, Medal, FileText, UserX, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { triggerAppTour } from "@/hooks/useAppTour";
@@ -44,12 +44,57 @@ const ProfilePage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // WhatsApp preferences (logged-in user)
+  const [waNumber, setWaNumber] = useState("");
+  const [waOptIn, setWaOptIn] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("whatsapp, whatsapp_opt_in")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setWaNumber((data as any).whatsapp ?? "");
+          setWaOptIn(!!(data as any).whatsapp_opt_in);
+        }
+      });
+  }, [user]);
+
+  const saveWhatsappPrefs = async () => {
+    if (!user) return;
+    const digits = waNumber.replace(/\D/g, "");
+    if (waOptIn && digits.length < 10) {
+      toast.error("Informe um WhatsApp válido com DDD.");
+      return;
+    }
+    setWaSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        whatsapp: digits || null,
+        whatsapp_opt_in: digits ? waOptIn : false,
+      })
+      .eq("user_id", user.id);
+    setWaSaving(false);
+    if (error) toast.error("Não foi possível salvar.");
+    else {
+      toast.success(waOptIn && digits ? "Notificações no WhatsApp ativadas!" : "Preferências salvas.");
+      setWaNumber(digits);
+    }
+  };
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
@@ -141,11 +186,21 @@ const ProfilePage = () => {
     setAuthSubmitting(true);
     try {
       if (authMode === "signup") {
+        const digits = whatsapp.replace(/\D/g, "");
+        if (whatsappOptIn && digits.length < 10) {
+          toast.error("Para receber no WhatsApp, informe um número válido com DDD.");
+          setAuthSubmitting(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              whatsapp: digits || null,
+              whatsapp_opt_in: whatsappOptIn && !!digits,
+            },
           },
         });
         if (error) throw error;

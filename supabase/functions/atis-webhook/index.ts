@@ -169,14 +169,34 @@ async function buildMinistryContext(admin: any): Promise<string> {
   return parts.length ? parts.join('\n\n') : '(Nenhuma informação institucional cadastrada ainda.)'
 }
 
-async function generateReply(persona: string, userText: string, ministryCtx: string, botName: string): Promise<string> {
+async function loadHistory(admin: any, jid: string, limit = 12): Promise<Array<{role:string,content:string}>> {
+  try {
+    const { data } = await admin
+      .from('atis_messages_log')
+      .select('direction,body,created_at')
+      .or(`wa_from.eq.${jid},wa_to.eq.${jid}`)
+      .in('direction', ['inbound', 'outbound'])
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (!data?.length) return []
+    return data.reverse()
+      .filter((m: any) => m.body && m.body.trim())
+      .map((m: any) => ({
+        role: m.direction === 'inbound' ? 'user' : 'assistant',
+        content: String(m.body),
+      }))
+  } catch { return [] }
+}
+
+async function generateReply(persona: string, userText: string, ministryCtx: string, botName: string, history: Array<{role:string,content:string}>): Promise<string> {
   const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })
-  const system = `${persona}\n\n---\nCONTEXTO OFICIAL DO APP E DO MINISTÉRIO (dados atuais do sistema — use SEMPRE como fonte primária para qualquer pergunta sobre o app, funções, planos, hinos, cultos, aniversariantes, versículo do dia, posts, pedidos de oração, estudos etc. Nunca diga que "não tem essa função" sem antes checar aqui):\n${ministryCtx}\n\nData/hora atual (America/Fortaleza): ${now}\nSeu nome é ${botName || 'Atis'}. Quando o usuário perguntar sobre alguma função do app, responda com base neste contexto e indique o link ${'https://biblia.atalaias.online'} quando útil.`
+  const system = `${persona}\n\n---\nCONTEXTO OFICIAL DO APP E DO MINISTÉRIO (dados atuais do sistema — use SEMPRE como fonte primária para qualquer pergunta sobre o app, funções, planos, hinos, cultos, aniversariantes, versículo do dia, posts, pedidos de oração, estudos etc. Nunca diga que "não tem essa função" sem antes checar aqui):\n${ministryCtx}\n\nData/hora atual (America/Fortaleza): ${now}\nSeu nome é ${botName || 'Atis'}. Quando o usuário perguntar sobre alguma função do app, responda com base neste contexto e indique o link ${'https://biblia.atalaias.online'} quando útil.\n\nMEMÓRIA DA CONVERSA: mensagens anteriores desta conversa foram fornecidas abaixo — mantenha continuidade e NÃO se apresente novamente a cada resposta. Só se apresente na primeira interação ou se o usuário pedir.`
   const res = await aiChatFetch({
     model: 'google/gemini-2.5-flash',
     temperature: 0.6,
     messages: [
       { role: 'system', content: system },
+      ...history,
       { role: 'user', content: userText },
     ],
   })
@@ -249,7 +269,8 @@ Deno.serve(async (req) => {
         // Conversa natural com IA — usa persona configurada + contexto do ministério
         const persona: string = (cfg.persona ?? '').trim() || 'Você é Atis, assistente do Ministério Atalaias de Betel.'
         const ministryCtx = await buildMinistryContext(admin)
-        const reply = await generateReply(persona, text, ministryCtx, cfg.bot_name ?? 'Atis')
+        const history = await loadHistory(admin, jid, 12)
+        const reply = await generateReply(persona, text, ministryCtx, cfg.bot_name ?? 'Atis', history)
 
         const sendRes = await sendText(jid, reply)
         await admin.from('atis_messages_log').insert({

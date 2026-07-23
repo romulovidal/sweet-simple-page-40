@@ -65,7 +65,7 @@ export async function evolutionSendText(to: string, text: string): Promise<SendR
 export type ReplyButton = { id: string; displayText: string };
 
 // Envia mensagem com botões de resposta rápida via Evolution API.
-// Faz fallback automático para texto simples se o provedor rejeitar o formato de botões.
+// Mantém o formato nativo aceito pelo provedor para aparecer com botões no WhatsApp.
 export async function evolutionSendButtons(
   to: string,
   body: string,
@@ -81,13 +81,8 @@ export async function evolutionSendButtons(
     const raw = await res.text().catch(() => '');
     try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
   };
-  const isStuckPending = (parsed: any): boolean => {
-    const providerStatus = String(parsed?.status ?? parsed?.message?.status ?? '').toUpperCase();
-    const messageType = String(parsed?.messageType ?? parsed?.message?.messageType ?? '');
-    return providerStatus === 'PENDING' && messageType.includes('viewOnceMessage');
-  };
   const asResult = (res: Response, parsed: any, number: string): SendResult => ({
-    ok: res.ok && !isStuckPending(parsed),
+    ok: res.ok,
     status: res.status,
     body: parsed,
     jid: number,
@@ -111,30 +106,6 @@ export async function evolutionSendButtons(
       last = asResult(modernRes, modernParsed, number);
       if (last.ok) return last;
       const notExists = JSON.stringify(modernParsed ?? '').includes('"exists":false');
-      if (!notExists) {
-        // Fallback de compatibilidade: algumas instalações Evolution aceitam o
-        // formato legado e entregam como buttonsMessage, enquanto o formato novo
-        // fica preso como viewOnce/PENDING.
-        const legacyPayload = {
-          number,
-          text: body,
-          footerText: opts?.footer ?? '',
-          buttons: buttons.map((b, index) => ({
-            buttonId: b.id,
-            buttonText: { displayText: b.displayText },
-            type: index + 1,
-          })),
-          headerType: 1,
-        };
-        const legacyRes = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-          body: JSON.stringify(legacyPayload),
-        });
-        const legacyParsed = await parseBody(legacyRes);
-        last = asResult(legacyRes, legacyParsed, number);
-        if (last.ok) return last;
-      }
       if (!notExists) break; // erro de formato — não adianta tentar outra variação de número
     } catch (e) {
       last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid: number };

@@ -7,7 +7,9 @@ const INSTANCE = 'atis'
 
 function normalizeJid(to: string): string {
   if (to.includes('@')) return to
-  return `${to.replace(/\D/g, '')}@s.whatsapp.net`
+  const digits = to.replace(/\D/g, '')
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
+  return `${withCountry}@s.whatsapp.net`
 }
 
 export async function sendText(to: string, text: string) {

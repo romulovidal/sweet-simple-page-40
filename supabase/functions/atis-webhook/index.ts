@@ -84,6 +84,18 @@ async function buildMinistryContext(admin: any): Promise<string> {
 
   // Info institucional a partir de admin_settings
   try {
+    const todayStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth()+1).padStart(2,'0')}-${String(today.getUTCDate()).padStart(2,'0')}`
+    const { data: dv } = await admin
+      .from('daily_verse_queue')
+      .select('verse_ref,verse_text')
+      .eq('scheduled_date', todayStr)
+      .maybeSingle()
+    if (dv?.verse_ref) {
+      parts.push(`### Versículo de hoje\n${dv.verse_ref}\n${(dv.verse_text ?? '').trim()}`)
+    }
+  } catch { /* ignore */ }
+
+  try {
     const { data: settings } = await admin
       .from('admin_settings').select('key,value')
       .in('key', ['church_info','ministry_info','contact_info'])

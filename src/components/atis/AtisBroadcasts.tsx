@@ -103,7 +103,7 @@ const AtisBroadcasts = () => {
       scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
       recurrence: form.recurrence,
       content_type: form.content_type,
-      status: form.scheduled_at ? "scheduled" : "pending",
+      status: "pending",
     };
     const { error } = await atisDb.from("atis_broadcasts").insert(payload);
     if (error) toast.error(error.message);

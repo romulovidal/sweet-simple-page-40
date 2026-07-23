@@ -441,6 +441,27 @@ export type Database = {
         }
         Relationships: []
       }
+      atis_crisis_mutes: {
+        Row: {
+          contact_phone: string
+          created_at: string
+          id: string
+          pastor_phone: string
+        }
+        Insert: {
+          contact_phone: string
+          created_at?: string
+          id?: string
+          pastor_phone: string
+        }
+        Update: {
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          pastor_phone?: string
+        }
+        Relationships: []
+      }
       atis_groups: {
         Row: {
           active: boolean

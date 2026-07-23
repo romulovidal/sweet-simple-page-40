@@ -45,16 +45,39 @@ const DEFAULT_CRISIS_KEYWORDS = [
   'crise de panico', 'crise de pânico', 'crise suicida',
 ]
 
-const CRISIS_REPLY = `🕊️ Ouvi você. Você não está sozinho(a) — o que sente importa.
+// Rodapé com CVV/188 — anexado à resposta empática gerada pela IA.
+const CRISIS_FOOTER = `\n\n━━━━━━━━━━━━━━\n📞 *CVV — 188* (24h, gratuito, sigiloso)\n💬 https://www.cvv.org.br (chat online)\n\n"Perto está o Senhor dos que têm o coração quebrantado, e salva os contritos de espírito." (Salmos 34:18)`
 
-Se você está em risco imediato ou pensando em se machucar, por favor procure ajuda agora:
+const CRISIS_FALLBACK_REPLY = `🕊️ Ouvi você. Você não está sozinho(a) — o que sente importa e Deus se importa profundamente com sua dor.\n\nRespire fundo. Sua vida tem valor imenso. Se você está em risco imediato, procure ajuda agora mesmo:${CRISIS_FOOTER}`
 
-📞 *CVV — 188* (24 horas, gratuito)
-💬 https://www.cvv.org.br (chat online)
+async function generateCrisisReply(userText: string): Promise<string> {
+  try {
+    const system = `Você é um assistente pastoral cristão respondendo a alguém que acabou de expressar sofrimento emocional intenso, ideação suicida ou dor profunda. Seu papel:
 
-Estou avisando um pastor da Atalaias de Betel para caminhar com você — em breve alguém vai te procurar. Enquanto isso, respire fundo. Deus vê você e te ama profundamente.
+1. ACOLHER com empatia genuína e sem julgamento (2-4 frases curtas).
+2. VALIDAR o sentimento — nunca minimize ("vai passar", "poderia ser pior" são PROIBIDOS).
+3. TRAZER esperança suave em Cristo, sem sermão longo nem culpa espiritual.
+4. NÃO diga "estou avisando um pastor" nem revele qualquer ação de bastidor. NÃO peça dados.
+5. NÃO cite CVV/188 no corpo (será anexado automaticamente).
 
-"Perto está o Senhor dos que têm o coração quebrantado, e salva os contritos de espírito." (Salmos 34:18)`
+Tom: pastor amigo, calmo, próximo. Português brasileiro. Use *negrito* com asteriscos. Máximo 6 linhas curtas. Pode incluir 1 versículo pequeno se couber naturalmente.`
+    const res = await aiChatFetch({
+      model: 'google/gemini-2.5-flash',
+      temperature: 0.6,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userText.slice(0, 800) },
+      ],
+    })
+    if (!res.ok) return CRISIS_FALLBACK_REPLY
+    const json = await res.json().catch(() => null) as any
+    const body = json?.choices?.[0]?.message?.content?.trim()
+    if (!body) return CRISIS_FALLBACK_REPLY
+    return `${body}${CRISIS_FOOTER}`
+  } catch {
+    return CRISIS_FALLBACK_REPLY
+  }
+}
 
 async function detectCrisis(admin: any, text: string): Promise<{ matched: string[]; extras: string[] }> {
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -124,7 +147,19 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
   const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
   const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
   const enabled = cfg.enabled !== false
-  const pastors = Array.isArray(cfg.pastor_phones) ? cfg.pastor_phones.filter(Boolean) : []
+  const allPastors = Array.isArray(cfg.pastor_phones) ? cfg.pastor_phones.filter(Boolean) : []
+
+  // Remove pastores que silenciaram esta pessoa
+  const contactDigits = String(phone).split('@')[0].replace(/\D/g, '')
+  let mutedPastors: string[] = []
+  try {
+    const { data: mutes } = await admin
+      .from('atis_crisis_mutes')
+      .select('pastor_phone')
+      .eq('contact_phone', contactDigits)
+    mutedPastors = (mutes ?? []).map((m: any) => String(m.pastor_phone).replace(/\D/g, ''))
+  } catch { /* ignore */ }
+  const pastors = allPastors.filter((p) => !mutedPastors.includes(String(p).replace(/\D/g, '')))
 
   const snippet = text.slice(0, 220)
   const nameStr = name ?? '(sem nome)'
@@ -135,6 +170,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     dateStyle: 'short',
     timeStyle: 'medium',
   }).format(new Date())
+  const helpLine = `\n\n_Comandos: "resolvido ${phonePretty}" (encerra alerta p/ todos) · "silenciar ${phonePretty}" (para só de te avisar sobre esta pessoa)_`
   const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
     ? cfg.alert_template
         .replaceAll('{nome}', nameStr)
@@ -144,7 +180,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
         .replaceAll('{horario}', nowStr)
     : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
   // Inclui horário para auditoria e para evitar bloqueio/deduplicação de mensagens idênticas pelo provedor.
-  const alertMsg = `${renderedAlert.trim()}\n\n🕒 ${nowStr}`
+  const alertMsg = `${renderedAlert.trim()}\n\n🕒 ${nowStr}${helpLine}`
 
   let notified = false
   if (enabled && pastors.length) {
@@ -599,6 +635,84 @@ Deno.serve(async (req) => {
         if (!cfg?.active) continue
 
         // ============================================================
+        // Comandos de PASTOR (DM apenas) — resolver / silenciar alertas de crise.
+        // "resolvido" / "resolver" [telefone opcional] → marca crise(s) como tratada(s)
+        // "silenciar" / "parar" <telefone> → este pastor não recebe mais alertas dessa pessoa
+        // ============================================================
+        if (!isGroup) {
+          const senderDigits = jid.replace(/@.*/, '').replace(/\D/g, '')
+          const { data: crisisCfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
+          const crisisCfg = (crisisCfgRow?.value ?? {}) as { pastor_phones?: string[] }
+          const pastorList = (crisisCfg.pastor_phones ?? []).map((p) => String(p).replace(/\D/g, ''))
+          // Também aceita variação sem 9º dígito
+          const senderVariants = new Set<string>([senderDigits])
+          if (senderDigits.length === 13 && senderDigits.startsWith('55')) {
+            const ddd = senderDigits.slice(2, 4); const rest = senderDigits.slice(4)
+            if (rest.length === 9 && rest.startsWith('9')) senderVariants.add(`55${ddd}${rest.slice(1)}`)
+            if (rest.length === 8) senderVariants.add(`55${ddd}9${rest}`)
+          }
+          const isPastor = pastorList.some((p) => senderVariants.has(p))
+          if (isPastor) {
+            const norm = text.trim().toLowerCase().replace(/[.!?]+$/, '')
+            const mResolve = norm.match(/^(resolvido|resolver|encerrar|ok)\s*(.*)$/)
+            const mMute = norm.match(/^(silenciar|silencia|parar|nao avisar|não avisar|mute)\s+(.+)$/)
+            const digitsOnly = (s: string) => s.replace(/\D/g, '')
+            if (mResolve) {
+              const targetDigits = digitsOnly(mResolve[2])
+              const q = admin.from('atis_crisis_alerts').update({ handled: true, handled_at: new Date().toISOString(), handled_by: senderDigits }).eq('handled', false)
+              const { data: updated, error } = targetDigits
+                ? await q.eq('contact_phone', targetDigits).select('id')
+                : await q.select('id')
+              const count = updated?.length ?? 0
+              const reply = error
+                ? `⚠️ Não consegui marcar como resolvido: ${error.message}`
+                : count > 0
+                  ? `✅ ${count} alerta(s)${targetDigits ? ` de +${targetDigits}` : ''} marcado(s) como *resolvido(s)*. Novas mensagens desta pessoa deixarão de ser tratadas como continuação de crise.`
+                  : `ℹ️ Não havia alertas ativos${targetDigits ? ` para +${targetDigits}` : ''}.`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({
+                direction: 'outbound', wa_to: jid, body: reply,
+                command: 'pastor-resolve', status: r.ok ? 'sent' : 'error',
+                raw: { auto: true, target: targetDigits, updated: count },
+              })
+              continue
+            }
+            if (mMute) {
+              const targetDigits = digitsOnly(mMute[2])
+              if (!targetDigits) {
+                const reply = `ℹ️ Use: *silenciar <telefone>* (ex.: silenciar 5585999999999).`
+                const r = await sendText(jid, reply)
+                await admin.from('atis_messages_log').insert({ direction: 'outbound', wa_to: jid, body: reply, command: 'pastor-mute-help', status: r.ok ? 'sent' : 'error', raw: { auto: true } })
+                continue
+              }
+              const { error } = await admin.from('atis_crisis_mutes').upsert(
+                { contact_phone: targetDigits, pastor_phone: senderDigits },
+                { onConflict: 'contact_phone,pastor_phone' }
+              )
+              const reply = error
+                ? `⚠️ Não consegui silenciar: ${error.message}`
+                : `🔕 Pronto. Você *não receberá mais alertas* sobre +${targetDigits}. Os outros pastores cadastrados continuam recebendo normalmente.\n\nPara reativar: envie *reativar ${targetDigits}*`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({
+                direction: 'outbound', wa_to: jid, body: reply,
+                command: 'pastor-mute', status: r.ok ? 'sent' : 'error',
+                raw: { auto: true, target: targetDigits, pastor: senderDigits },
+              })
+              continue
+            }
+            const mUnmute = norm.match(/^(reativar|desmutar|voltar)\s+(.+)$/)
+            if (mUnmute) {
+              const targetDigits = digitsOnly(mUnmute[2])
+              await admin.from('atis_crisis_mutes').delete().eq('pastor_phone', senderDigits).eq('contact_phone', targetDigits)
+              const reply = `🔔 Alertas de +${targetDigits} *reativados* para você.`
+              const r = await sendText(jid, reply)
+              await admin.from('atis_messages_log').insert({ direction: 'outbound', wa_to: jid, body: reply, command: 'pastor-unmute', status: r.ok ? 'sent' : 'error', raw: { auto: true, target: targetDigits } })
+              continue
+            }
+          }
+        }
+
+        // ============================================================
         // Opt-out ("sair") — apenas em DM. Cancela todos os envios automáticos.
         // ============================================================
         if (!isGroup) {
@@ -664,9 +778,10 @@ Deno.serve(async (req) => {
               }
             } catch { /* ignore */ }
             await handleCrisis(admin, jid, contactName, text, matched)
-            const r = await sendText(jid, CRISIS_REPLY)
+            const crisisReply = await generateCrisisReply(text)
+            const r = await sendText(jid, crisisReply)
             await admin.from('atis_messages_log').insert({
-              direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
+              direction: 'outbound', wa_to: jid, body: crisisReply,
               command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
               raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
             })

@@ -253,6 +253,21 @@ async function sendText(jid: string, text: string) {
   })
 }
 
+async function sendMediaImage(jid: string, imageUrl: string, caption: string) {
+  return fetch(`${EVO_URL}/message/sendMedia/${INSTANCE}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+    body: JSON.stringify({
+      number: jid,
+      mediatype: 'image',
+      mimetype: 'image/jpeg',
+      media: imageUrl,
+      caption,
+      linkPreview: true,
+    }),
+  })
+}
+
 function extractText(msg: any): string {
   // Voto em enquete (poll) — Evolution v2 pode emitir em vários shapes.
   const pollOpt =
@@ -686,6 +701,12 @@ async function fetchYoutubeLink(numero: number, titulo: string): Promise<string 
 }
 
 type HarpaReply = { text: string; youtubeUrl: string | null }
+
+function youtubeVideoId(url: string | null): string | null {
+  if (!url) return null
+  const match = url.match(/[?&]v=([A-Za-z0-9_-]{6,})/) ?? url.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)
+  return match?.[1] ?? null
+}
 
 async function formatHino(h: HarpaHino): Promise<HarpaReply> {
   const chunks: string[] = [`🎵 *Hino ${h.numero} — ${h.titulo}*`]
@@ -1202,9 +1223,15 @@ Deno.serve(async (req) => {
             const r = await sendText(jid, harpaReply.text)
             let previewStatus: { ok: boolean; status: number } | null = null
             if (harpaReply.youtubeUrl) {
-              // O preview do WhatsApp é mais confiável quando o link vem sozinho,
-              // sem a letra longa na mesma mensagem.
-              const previewRes = await sendText(jid, harpaReply.youtubeUrl)
+              // Força uma prévia visual: envia a miniatura do YouTube como imagem
+              // com o link na legenda. Se a mídia falhar, cai para link puro.
+              const videoId = youtubeVideoId(harpaReply.youtubeUrl)
+              const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+              const caption = `▶️ Ouvir no YouTube:\n${harpaReply.youtubeUrl}`
+              const previewRes = thumbUrl
+                ? await sendMediaImage(jid, thumbUrl, caption)
+                : await sendText(jid, harpaReply.youtubeUrl)
+              if (!previewRes.ok && thumbUrl) await sendText(jid, harpaReply.youtubeUrl)
               previewStatus = { ok: previewRes.ok, status: previewRes.status }
             }
             await admin.from('atis_messages_log').insert({

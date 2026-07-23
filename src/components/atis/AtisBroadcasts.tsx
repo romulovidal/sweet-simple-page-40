@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, CalendarClock, Sparkles, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Loader2, CalendarClock, Sparkles, CheckCircle2, XCircle, Clock, AlertCircle, Pencil, X } from "lucide-react";
 import AtisDailyDevotional from "./AtisDailyDevotional";
 
 type BC = { id: string; title: string; body: string; target_type: string; target_ref: string | null; scheduled_at: string | null; recurrence: string | null; status: string; content_type: string; created_at?: string };
@@ -86,6 +86,7 @@ const AtisBroadcasts = () => {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [filter, setFilter] = useState<string>("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -153,15 +154,44 @@ const AtisBroadcasts = () => {
       content_type: form.content_type,
       status: "pending",
     };
-    const { error } = await atisDb.from("atis_broadcasts").insert(payload);
-    if (error) toast.error(error.message);
-    else { toast.success(form.scheduled_at ? "Envio agendado" : "Envio criado"); setForm(EMPTY); load(); }
+    if (editingId) {
+      const { error } = await atisDb.from("atis_broadcasts").update(payload).eq("id", editingId);
+      if (error) toast.error(error.message);
+      else { toast.success("Agendamento atualizado"); setForm(EMPTY); setEditingId(null); load(); }
+    } else {
+      const { error } = await atisDb.from("atis_broadcasts").insert(payload);
+      if (error) toast.error(error.message);
+      else { toast.success(form.scheduled_at ? "Envio agendado" : "Envio criado"); setForm(EMPTY); load(); }
+    }
   };
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     setForm({ ...EMPTY, ...p.apply("") } as FormState);
+    setEditingId(null);
     toast.success(`Modelo "${p.label}" carregado — ajuste e salve`);
   };
+
+  const startEdit = (b: BC) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    let localDt = "";
+    if (b.scheduled_at) {
+      const d = new Date(b.scheduled_at);
+      localDt = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    setForm({
+      title: b.title ?? "",
+      body: b.body ?? "",
+      target_type: b.target_type ?? "all",
+      target_ref: b.target_ref ?? "",
+      scheduled_at: localDt,
+      recurrence: b.recurrence ?? "once",
+      content_type: b.content_type ?? "text",
+    });
+    setEditingId(b.id);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => { setEditingId(null); setForm(EMPTY); };
 
   const remove = async (id: string) => {
     if (!confirm("Cancelar/remover envio?")) return;
@@ -188,7 +218,16 @@ const AtisBroadcasts = () => {
       </div>
 
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
-        <p className="text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4" /> Novo envio</p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold flex items-center gap-2">
+            {editingId ? <><Pencil className="w-4 h-4" /> Editar envio</> : <><Plus className="w-4 h-4" /> Novo envio</>}
+          </p>
+          {editingId && (
+            <button onClick={cancelEdit} className="text-[11px] font-semibold text-[hsl(var(--dark-muted))] flex items-center gap-1 hover:text-[hsl(var(--dark-text))]">
+              <X className="w-3 h-3" /> Cancelar edição
+            </button>
+          )}
+        </div>
         <input className="input" placeholder="Título interno" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
         <textarea className="input" style={{ height: 100, padding: 10 }} placeholder="Mensagem (use {nome}, {versiculo_do_dia}, {aniversariantes_hoje}, {devocional_ia})" value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} />
 
@@ -265,7 +304,7 @@ const AtisBroadcasts = () => {
         </div>
 
         <button onClick={add} className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">
-          {form.scheduled_at ? "Agendar envio" : "Salvar envio"}
+          {editingId ? "Salvar alterações" : form.scheduled_at ? "Agendar envio" : "Salvar envio"}
         </button>
       </div>
 
@@ -305,7 +344,10 @@ const AtisBroadcasts = () => {
                       {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" }) : "sem data"} · {b.recurrence ?? "once"} · {groupName ? `grupo: ${groupName}` : contactName ? `contato: ${contactName}` : b.target_type}{!groupName && !contactName && b.target_ref ? ` (${b.target_ref})` : ""}
                     </p>
                   </div>
-                  <button onClick={() => remove(b.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => startEdit(b)} className="p-1.5 text-primary hover:bg-primary/10 rounded-lg" title="Editar"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => remove(b.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </li>
               );
             })}

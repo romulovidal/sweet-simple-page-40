@@ -517,6 +517,42 @@ Deno.serve(async (req) => {
         const { data: cfg } = await admin.from('atis_config').select('*').eq('id', 1).maybeSingle()
         if (!cfg?.active) continue
 
+        // ============================================================
+        // Opt-out ("sair") — apenas em DM. Cancela todos os envios automáticos.
+        // ============================================================
+        if (!isGroup) {
+          const norm = text.trim().toLowerCase().replace(/[.!?]+$/, '')
+          const OPT_OUT = ['sair', 'cancelar', 'parar', 'stop', 'descadastrar', 'unsubscribe', 'nao quero mais', 'não quero mais', 'remover me', 'remover-me']
+          if (OPT_OUT.includes(norm)) {
+            const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
+            // Variações do 9º dígito para casar com todos os registros
+            const variants = new Set<string>([phoneOnly])
+            if (phoneOnly.length === 13 && phoneOnly.startsWith('55')) {
+              const ddd = phoneOnly.slice(2, 4); const rest = phoneOnly.slice(4)
+              if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
+              if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
+            }
+            const list = Array.from(variants)
+
+            const results = await Promise.allSettled([
+              admin.from('atis_contacts').update({ opt_in: false }).in('phone', list),
+              admin.from('profiles').update({ whatsapp_opt_in: false }).in('whatsapp', list),
+              admin.from('atis_series_subscribers').update({ active: false }).in('phone', list),
+              admin.from('atis_plan_subscribers').update({ active: false }).in('phone', list),
+            ])
+            const okCount = results.filter(r => r.status === 'fulfilled').length
+
+            const reply = `✅ Pronto! Você foi removido(a) da lista de envios automáticos do Atis.\n\nVocê não receberá mais versículos diários, devocionais, séries ou lembretes.\n\nSe mudar de ideia, é só reativar o WhatsApp no seu perfil dentro do app, ou pedir para um administrador te adicionar de novo. 💜\n\n— Bíblia Atalaia`
+            const r = await sendText(jid, reply)
+            await admin.from('atis_messages_log').insert({
+              direction: 'outbound', wa_to: jid, body: reply,
+              command: 'opt-out', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, variants: list, updates_ok: okCount, http: r.status },
+            })
+            continue
+          }
+        }
+
         // Detecção de crise (aplica a DMs — em grupo evita alarmar em conversa aberta)
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)

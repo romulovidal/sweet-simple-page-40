@@ -13,17 +13,43 @@ function normalizeJid(to: string): string {
   return `${withCountry}@s.whatsapp.net`
 }
 
+function phoneVariants(to: string): string[] {
+  if (to.includes('@')) return [to]
+  const digits = to.replace(/\D/g, '')
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
+  // BR mobile: after DDD (2 digits) may or may not have leading 9
+  // withCountry format: 55 + DD + rest
+  const ddd = withCountry.slice(2, 4)
+  const rest = withCountry.slice(4)
+  const variants = new Set<string>()
+  variants.add(withCountry)
+  if (rest.length === 9 && rest.startsWith('9')) {
+    variants.add(`55${ddd}${rest.slice(1)}`) // drop leading 9
+  } else if (rest.length === 8) {
+    variants.add(`55${ddd}9${rest}`) // add leading 9
+  }
+  return [...variants].map((n) => `${n}@s.whatsapp.net`)
+}
+
 async function sendText(to: string, text: string) {
-  const jid = normalizeJid(to)
-  const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text }),
-  })
-  const raw = await res.text()
-  let json: any = null
-  try { json = raw ? JSON.parse(raw) : null } catch { json = { raw } }
-  return { ok: res.ok, status: res.status, json }
+  const attempts = phoneVariants(to)
+  let last: { ok: boolean; status: number; json: any } = { ok: false, status: 0, json: null }
+  for (const jid of attempts) {
+    const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ number: jid, text }),
+    })
+    const raw = await res.text()
+    let json: any = null
+    try { json = raw ? JSON.parse(raw) : null } catch { json = { raw } }
+    last = { ok: res.ok, status: res.status, json }
+    if (res.ok) return last
+    // if Evolution says the number doesn't exist, try next variant
+    const notExists = JSON.stringify(json ?? '').includes('"exists":false')
+    if (!notExists) return last
+  }
+  return last
 }
 
 function todayBR(): string {

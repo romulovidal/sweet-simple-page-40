@@ -298,6 +298,9 @@ const APP_FEATURES = `### Funções do app Bíblia Atalaia (${APP_URL})
 - Agenda de cultos com lembretes push
 - Notificações push (VAPID) para versículo do dia, cultos, planos e avisos
 - Painel Atis (bot WhatsApp) integrando aniversariantes, grupos, estudos, broadcasts e comandos
+
+### REGRA CRÍTICA — Hinos da Harpa Cristã
+NUNCA invente letra, título ou número de hino. Se o usuário pedir um hino específico (por número ou por título), o sistema tem um handler dedicado que responde ANTES da IA lendo o JSON oficial (${APP_URL}/harpa/harpa-crista.json) — você NÃO deve responder pedidos de hino. Se por algum motivo chegar até você um pedido de hino, apenas oriente: "Abra a Harpa Cristã no app: ${APP_URL}/harpa (ou ${APP_URL}/harpa/NÚMERO)". Nunca escreva estrofes ou títulos que você não tenha certeza — não temos os hinos como texto no seu contexto.
 - Página pública de privacidade (/privacidade) e termos (/termos); conta pode ser excluída pelo próprio usuário
 - Funciona offline (Service Worker) — Bíblia e Harpa acessíveis sem internet; áudio e busca IA exigem conexão
 

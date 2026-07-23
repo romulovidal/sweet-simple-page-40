@@ -342,6 +342,24 @@ function detectToolIntent(userText: string, history: Array<{role:string,content:
   return { tool: 'nenhum', reference: null }
 }
 
+// Mapeia cada ferramenta ao toggle correspondente em cfg.commands.
+// Ferramentas ligadas a referência bíblica caem sob "versiculo".
+const TOOL_TO_COMMAND: Record<keyof typeof TOOL_PROMPTS, string> = {
+  exegese: 'versiculo',
+  conexoes: 'versiculo',
+  palavra: 'versiculo',
+  linha_tempo: 'versiculo',
+  resumo: 'versiculo',
+  devocional: 'devocional',
+}
+
+function isCommandEnabled(cfg: any, cmd: string): boolean {
+  const c = cfg?.commands
+  // Se o objeto de comandos não existir/estiver vazio, considera tudo habilitado (compat retroativa).
+  if (!c || typeof c !== 'object' || Object.keys(c).length === 0) return true
+  return c[cmd] !== false && !!c[cmd]
+}
+
 async function runTool(tool: keyof typeof TOOL_PROMPTS, reference: string): Promise<string> {
   const system = TOOL_PROMPTS[tool]
   const res = await aiChatFetch({
@@ -448,7 +466,8 @@ Deno.serve(async (req) => {
         const intent = detectToolIntent(text, history)
         let reply: string
         let usedTool: string | null = null
-        if (intent.tool !== 'nenhum' && intent.reference) {
+        const cmdKey = intent.tool !== 'nenhum' ? TOOL_TO_COMMAND[intent.tool as keyof typeof TOOL_PROMPTS] : null
+        if (intent.tool !== 'nenhum' && intent.reference && cmdKey && isCommandEnabled(cfg, cmdKey)) {
           reply = await runTool(intent.tool as keyof typeof TOOL_PROMPTS, intent.reference)
           usedTool = intent.tool
         } else {

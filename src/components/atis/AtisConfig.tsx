@@ -164,10 +164,10 @@ const AtisConfig = () => {
       </div>
 
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
-        <p className="text-sm font-bold">Evolution API</p>
-        <p className="text-xs text-[hsl(var(--dark-muted))]">A chave (API key) é armazenada como secret no backend. Aqui só o endereço e a instância.</p>
-        <input className="input" placeholder="URL da Evolution (https://…)" value={cfg.evolution_url ?? ""} onChange={e => set({ evolution_url: e.target.value })} />
-        <input className="input" placeholder="Nome da instância" value={cfg.evolution_instance ?? ""} onChange={e => set({ evolution_instance: e.target.value })} />
+        <p className="text-sm font-bold">Número do bot</p>
+        <p className="text-xs text-[hsl(var(--dark-muted))]">
+          Número do WhatsApp conectado (usado para detectar menções em grupos). A URL, a chave (API key) e a instância da Evolution API ficam armazenadas como secrets no backend.
+        </p>
         <input className="input" placeholder="Número do bot (ex: 5585999999999)" value={cfg.bot_number ?? ""} onChange={e => set({ bot_number: e.target.value })} />
       </div>
 

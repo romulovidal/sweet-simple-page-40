@@ -90,6 +90,65 @@ async function sendToGroup(jid: string, text: string) {
   return { ok: res.ok, status: res.status, body }
 }
 
+function phoneVariants(to: string): string[] {
+  if (to.includes('@')) return [to]
+  const digits = to.replace(/\D/g, '')
+  if (!digits) return []
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
+  const ddd = withCountry.slice(2, 4)
+  const rest = withCountry.slice(4)
+  const variants = new Set<string>()
+  variants.add(withCountry)
+  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
+  else if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
+  return [...variants].map((n) => `${n}@s.whatsapp.net`)
+}
+
+async function sendDirect(phone: string, text: string) {
+  if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution not configured' }
+  const attempts = phoneVariants(phone)
+  let last = { ok: false, status: 0, body: '' as any }
+  for (const jid of attempts) {
+    const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ number: jid, text }),
+    })
+    const body = await res.text().catch(() => '')
+    last = { ok: res.ok, status: res.status, body }
+    if (res.ok) return last
+    if (!String(body).includes('"exists":false')) return last
+  }
+  return last
+}
+
+async function generatePersonalGreeting(name: string, period: string): Promise<string> {
+  const key = Deno.env.get('GEMINI_API_KEY')
+  const saud = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
+  const fallback = `🎂 ${saud}, ${name}! Hoje é o seu dia, e toda a família Atalaias de Betel celebra com você. 🎉\n\n"O Senhor te abençoe e te guarde." (Números 6:24)\n\nQue este novo ano de vida seja repleto de saúde, propósito e uma comunhão cada vez mais profunda com Jesus. Nós te amamos! 🙏🕊️\n\n— Igreja Atalaias de Betel`
+  if (!key) return fallback
+  const system =
+    'Você é Atis, assistente da Igreja Atalaias de Betel. Escreva uma mensagem PESSOAL de aniversário para ser enviada por WhatsApp DIRETAMENTE ao aniversariante (não em grupo). ' +
+    'Estrutura: 1) saudação carinhosa começando com o nome; 2) reconhecimento pastoral do valor da vida do irmão(ã); 3) UM versículo bíblico REAL com referência exata (nunca invente), sobre vida/bênção/propósito, entre aspas; 4) bênção pessoal em 2-3 frases falando de saúde, sonhos e comunhão com Jesus; 5) assinatura em uma linha só: "— Igreja Atalaias de Betel" com 1 emoji discreto. ' +
+    'Tom acolhedor, digno, português do Brasil, sem markdown, sem asteriscos, sem títulos. Até 6 emojis bem distribuídos. Entre 500 e 900 caracteres. Retorne SOMENTE a mensagem final.'
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: `Aniversariante: ${name}. Período: ${period}. Escreva a mensagem pessoal agora.` }] }],
+        generationConfig: { temperature: 1.1, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+      }),
+    },
+  )
+  if (!res.ok) return fallback
+  const j = await res.json().catch(() => null) as any
+  const text = (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? '').join('').trim().replace(/^"|"$/g, '')
+  return text || fallback
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -113,7 +172,7 @@ Deno.serve(async (req) => {
   const groupIds = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
   if (!groupIds.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
 
-  const { data: bdays } = await admin.from('atis_birthdays').select('name,birth_date,active')
+  const { data: bdays } = await admin.from('atis_birthdays').select('name,birth_date,active,phone')
   const todays = (bdays ?? []).filter((b: any) => b.active !== false && String(b.birth_date ?? '').slice(5, 10) === mmdd)
   if (!todays.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-birthdays-today', mmdd }), { headers: corsHeaders })
 
@@ -137,6 +196,24 @@ Deno.serve(async (req) => {
     })
   }
 
+  // DM pessoal ao(s) aniversariante(s) que têm telefone cadastrado
+  const dms: any[] = []
+  for (const b of todays) {
+    const phone = String((b as any).phone ?? '').trim()
+    if (!phone) continue
+    const personal = await generatePersonalGreeting(b.name, period)
+    const r = await sendDirect(phone, personal)
+    dms.push({ name: b.name, phone, ok: r.ok, status: r.status })
+    await admin.from('atis_messages_log').insert({
+      direction: 'outbound',
+      wa_to: phone,
+      body: personal,
+      command: 'birthday-greeting-dm',
+      status: r.ok ? 'sent' : 'error',
+      raw: { auto: !force, ai: true, name: b.name, http: r.status, body: r.body?.slice?.(0, 300) },
+    })
+  }
+
   if (!force) {
     await admin.from('admin_settings').upsert(
       { key: 'atis_birthday_greeting', value: { ...cfg, last_sent_date: dateKey } },
@@ -144,7 +221,7 @@ Deno.serve(async (req) => {
     )
   }
 
-  return new Response(JSON.stringify({ ok: true, sent: results.length, names, results, preview: text.slice(0, 200) }), {
+  return new Response(JSON.stringify({ ok: true, sent: results.length, dms_sent: dms.length, names, results, dms, preview: text.slice(0, 200) }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })

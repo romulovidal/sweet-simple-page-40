@@ -644,14 +644,18 @@ Deno.serve(async (req) => {
           const { data: crisisCfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
           const crisisCfg = (crisisCfgRow?.value ?? {}) as { pastor_phones?: string[] }
           const pastorList = (crisisCfg.pastor_phones ?? []).map((p) => String(p).replace(/\D/g, ''))
-          // Também aceita variação sem 9º dígito
-          const senderVariants = new Set<string>([senderDigits])
-          if (senderDigits.length === 13 && senderDigits.startsWith('55')) {
-            const ddd = senderDigits.slice(2, 4); const rest = senderDigits.slice(4)
-            if (rest.length === 9 && rest.startsWith('9')) senderVariants.add(`55${ddd}${rest.slice(1)}`)
-            if (rest.length === 8) senderVariants.add(`55${ddd}9${rest}`)
+          // Aceita variação com/sem 9º dígito em AMBAS direções (12↔13)
+          const brVariants = (d: string): string[] => {
+            const out = new Set<string>([d])
+            if (d.startsWith('55')) {
+              const ddd = d.slice(2, 4); const rest = d.slice(4)
+              if (rest.length === 9 && rest.startsWith('9')) out.add(`55${ddd}${rest.slice(1)}`)
+              if (rest.length === 8) out.add(`55${ddd}9${rest}`)
+            }
+            return [...out]
           }
-          const isPastor = pastorList.some((p) => senderVariants.has(p))
+          const senderVariants = new Set<string>(brVariants(senderDigits))
+          const isPastor = pastorList.some((p) => brVariants(p).some((v) => senderVariants.has(v)))
           if (isPastor) {
             const norm = text.trim().toLowerCase().replace(/[.!?]+$/, '')
             const mResolve = norm.match(/^(resolvido|resolver|encerrar|ok)\s*(.*)$/)

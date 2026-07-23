@@ -1,0 +1,2 @@
+ALTER TABLE public.atis_broadcasts DROP CONSTRAINT IF EXISTS atis_broadcasts_recurrence_check;
+ALTER TABLE public.atis_broadcasts ADD CONSTRAINT atis_broadcasts_recurrence_check CHECK (recurrence IS NULL OR recurrence = ANY (ARRAY['once','daily','weekly','monthly']));

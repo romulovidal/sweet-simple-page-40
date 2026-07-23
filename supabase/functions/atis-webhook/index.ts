@@ -380,14 +380,18 @@ async function buildMinistryContext(admin: any): Promise<string> {
       const matchDia = (day: number, month: number) => parsed.filter((p) => p.day === day && p.month === month)
       const fmtLista = (arr: {name:string}[]) => arr.length ? arr.map((b) => `- ${b.name}`).join('\n') : '(nenhum)'
 
-      const ontem = inDays(-1); const hojeD = inDays(0); const amanha = inDays(1)
+      const anteontem = inDays(-2); const ontem = inDays(-1); const hojeD = inDays(0); const amanha = inDays(1); const depoisAmanha = inDays(2)
       parts.push(`### Atalhos de datas relativas (${DIAS_SEM[hojeD.dow]}, ${pad(hojeD.day)}/${pad(hojeD.month)})
+- *Anteontem* (${pad(anteontem.day)}/${pad(anteontem.month)}):
+${fmtLista(matchDia(anteontem.day, anteontem.month))}
 - *Ontem* (${pad(ontem.day)}/${pad(ontem.month)}):
 ${fmtLista(matchDia(ontem.day, ontem.month))}
 - *Hoje* (${pad(hojeD.day)}/${pad(hojeD.month)}):
 ${fmtLista(matchDia(hojeD.day, hojeD.month))}
 - *Amanhã* (${pad(amanha.day)}/${pad(amanha.month)}):
-${fmtLista(matchDia(amanha.day, amanha.month))}`)
+${fmtLista(matchDia(amanha.day, amanha.month))}
+- *Depois de amanhã* (${pad(depoisAmanha.day)}/${pad(depoisAmanha.month)}):
+${fmtLista(matchDia(depoisAmanha.day, depoisAmanha.month))}`)
 
       // Próximos 30 dias (esta semana, semana que vem, mês que vem, etc.)
       const prox30: string[] = []
@@ -400,7 +404,15 @@ ${fmtLista(matchDia(amanha.day, amanha.month))}`)
       }
       if (prox30.length) parts.push(`### Próximos 30 dias\n${prox30.join('\n')}`)
 
-      parts.push('### REGRA IMPORTANTE sobre aniversariantes\nSempre que perguntarem quem aniversaria/aniversariou em qualquer dia, semana ou mês (ontem, hoje, amanhã, semana passada, semana que vem, mês que vem, data específica, etc.), responda usando EXCLUSIVAMENTE a "Lista COMPLETA de aniversariantes" acima. Não diga que "não tem acesso" — a lista está aqui. Se ninguém aniversariar na data pedida, diga claramente "Ninguém aniversaria em <data>" de forma acolhedora.')
+      parts.push(`### REGRAS RÍGIDAS sobre aniversariantes (NÃO VIOLAR)
+1. Use EXCLUSIVAMENTE os dados acima. Nunca invente, deduza ou "arredonde" datas.
+2. Cada pergunta refere-se a UM único dia (ou intervalo explícito). NUNCA misture pessoas de dias diferentes na mesma resposta.
+   - "ontem" = APENAS a data ${pad(ontem.day)}/${pad(ontem.month)}. Não inclua ${pad(anteontem.day)}/${pad(anteontem.month)} nem ${pad(hojeD.day)}/${pad(hojeD.month)}.
+   - "hoje" = APENAS ${pad(hojeD.day)}/${pad(hojeD.month)}.
+   - "amanhã" = APENAS ${pad(amanha.day)}/${pad(amanha.month)}.
+   - "anteontem" = APENAS ${pad(anteontem.day)}/${pad(anteontem.month)}.
+3. Antes de responder, cite mentalmente a data exata (dd/mm) que a pergunta cobre e liste APENAS os nomes que estão na linha daquela data nos "Atalhos de datas relativas" acima. Se a linha estiver vazia ou "(nenhum)", responda: "Ninguém aniversaria em <data>" de forma acolhedora.
+4. Se a pergunta for por semana/mês/intervalo, use a "Lista COMPLETA" e liste TODOS que caem no intervalo — sem misturar com datas fora dele.`)
     }
   } catch { /* ignore */ }
 

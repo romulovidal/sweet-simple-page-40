@@ -27,8 +27,24 @@ function extractText(msg: any): string {
 
 const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
 
+const APP_URL = 'https://biblia.atalaias.online'
+const APP_FEATURES = `### Funções do app Bíblia Atalaia (${APP_URL})
+- Bíblia completa (Almeida) com busca inteligente e busca por IA (semântica)
+- Áudio da Bíblia (TTS) com destaque do versículo em reprodução
+- Versículo do dia (rotativo, agendado em daily_verse_queue)
+- Planos de leitura (admin_plans) — inscrição, progresso e sequência (streak)
+- Harpa Cristã 640 hinos com letra, busca por número/tema, favoritos, histórico, modo apresentação, áudio (YouTube) e compartilhamento por link direto (/harpa/:numero)
+- Descubra: posts/devocionais (admin_posts), história bíblica, quizzes
+- Você: perfil, anotações, versículos salvos, sequência (streak), metas de leitura, pedidos de oração (públicos e privados)
+- Agenda de cultos com lembretes push
+- Notificações push (VAPID) para versículo do dia, cultos, planos e avisos
+- Painel Atis (bot WhatsApp) integrando aniversariantes, grupos, estudos, broadcasts e comandos
+- Página pública de privacidade (/privacidade) e termos (/termos); conta pode ser excluída pelo próprio usuário
+- Funciona offline (Service Worker) — Bíblia e Harpa acessíveis sem internet; áudio e busca IA exigem conexão`
+
 async function buildMinistryContext(admin: any): Promise<string> {
   const parts: string[] = []
+  parts.push(APP_FEATURES)
   // Use America/Fortaleza (UTC-3, no DST) to compute "hoje"
   const nowFort = new Date(Date.now() - 3 * 60 * 60 * 1000)
   const today = new Date(Date.UTC(nowFort.getUTCFullYear(), nowFort.getUTCMonth(), nowFort.getUTCDate()))
@@ -79,6 +95,47 @@ async function buildMinistryContext(admin: any): Promise<string> {
       .order('updated_at', { ascending: false }).limit(5)
     if (studies?.length) {
       parts.push(`### Estudos disponíveis\n${studies.map((s: any) => `- ${s.title}${s.theme ? ` (${s.theme})` : ''}${s.base_text ? ` — base: ${s.base_text}` : ''}`).join('\n')}`)
+    }
+  } catch { /* ignore */ }
+
+  // Planos de leitura ativos
+  try {
+    const { data: plans } = await admin
+      .from('admin_plans').select('title,description,days,is_active')
+      .eq('is_active', true).order('created_at', { ascending: false }).limit(10)
+    if (plans?.length) {
+      parts.push(`### Planos de leitura ativos\n${plans.map((p: any) => `- ${p.title}${p.days ? ` (${p.days} dias)` : ''}${p.description ? ` — ${String(p.description).slice(0,120)}` : ''}`).join('\n')}`)
+    }
+  } catch { /* ignore */ }
+
+  // Posts/devocionais recentes
+  try {
+    const { data: posts } = await admin
+      .from('admin_posts').select('title,summary,category,published_at,is_published')
+      .eq('is_published', true).order('published_at', { ascending: false }).limit(5)
+    if (posts?.length) {
+      parts.push(`### Posts/devocionais recentes\n${posts.map((p: any) => `- ${p.title}${p.category ? ` [${p.category}]` : ''}${p.summary ? ` — ${String(p.summary).slice(0,140)}` : ''}`).join('\n')}`)
+    }
+  } catch { /* ignore */ }
+
+  // Pedidos de oração públicos recentes (só título/resumo, respeitando privacidade)
+  try {
+    const { data: prayers } = await admin
+      .from('prayer_requests').select('content,created_at')
+      .eq('is_public', true).order('created_at', { ascending: false }).limit(5)
+    if (prayers?.length) {
+      parts.push(`### Pedidos de oração públicos recentes\n${prayers.map((p: any) => `- ${String(p.content).slice(0,120)}`).join('\n')}`)
+    }
+  } catch { /* ignore */ }
+
+  // Próximos lembretes de culto
+  try {
+    const todayStr2 = today.toISOString().slice(0,10)
+    const { data: reminders } = await admin
+      .from('culto_reminders').select('title,body,scheduled_for,is_sent')
+      .gte('scheduled_for', todayStr2).order('scheduled_for').limit(5)
+    if (reminders?.length) {
+      parts.push(`### Próximos lembretes de culto\n${reminders.map((r: any) => `- ${r.title} — ${new Date(r.scheduled_for).toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })}`).join('\n')}`)
     }
   } catch { /* ignore */ }
 

@@ -1019,6 +1019,21 @@ Deno.serve(async (req) => {
         const persona: string = (cfg.persona ?? '').trim() || 'Você é Atis, assistente do Ministério Atalaias de Betel.'
         const history = await loadHistory(admin, jid, 12)
 
+        // 0) Pedido de HINO da Harpa Cristã — resposta 100% baseada no JSON oficial (sem IA).
+        const harpaIntent = detectHarpaIntent(text)
+        if (harpaIntent) {
+          const harpaReply = await runHarpa(harpaIntent)
+          if (harpaReply) {
+            const r = await sendText(jid, harpaReply)
+            await admin.from('atis_messages_log').insert({
+              direction: 'outbound', wa_to: jid, wa_group_id: isGroup ? jid : null,
+              body: harpaReply, command: 'harpa', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, intent: harpaIntent, http: r.status },
+            })
+            continue
+          }
+        }
+
         // Primeiro tenta detectar se o usuário pediu uma ferramenta da Bíblia Atalaia
         // (exegese, conexões, palavra original, linha do tempo, devocional, resumo).
         // Detecção 100% local — sem custo de IA.

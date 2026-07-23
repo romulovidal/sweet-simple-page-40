@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
             const jid = `${withCountry}@s.whatsapp.net`;
             const firstName = (u.display_name ?? "").split(" ")[0] || "";
             const salute = firstName ? `Olá, *${firstName}*! ` : "";
-            const waText = `${salute}📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}\n\n_Para parar de receber, desative em Perfil › Configurações › Notificações no WhatsApp._`;
+            const waText = `${salute}📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}`;
             try {
               const res = await fetch(`${evoUrl}/message/sendText/atis`, {
                 method: "POST",

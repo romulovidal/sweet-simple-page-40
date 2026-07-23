@@ -964,7 +964,17 @@ async function runBibleVerse(intent: { ref: string; version: BibleVersion }): Pr
   const footer = truncated
     ? `\n\n_(exibindo ${MAX_VERSES} versículos — peça um trecho menor para ver o restante)_`
     : ''
-  return `${header}\n\n${lines.join('\n')}${footer}`
+  const snippet = lines.join(' ').replace(/\*/g, '').slice(0, 500)
+  const shareLink = await createVerseShareLink({
+    bookIdx: parsed.bookIdx,
+    chapter: parsed.chapter,
+    verses,
+    bookName: parsed.bookName,
+    version: intent.version,
+    snippet,
+  })
+  const linkLine = shareLink ? `\n\n🔗 ${shareLink}` : ''
+  return `${header}\n\n${lines.join('\n')}${footer}${linkLine}`
 }
 
 function extractReference(text: string, history: Array<{role:string,content:string}>): string | null {

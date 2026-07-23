@@ -1212,6 +1212,23 @@ Deno.serve(async (req) => {
         // (exegese, conexões, palavra original, linha do tempo, devocional, resumo).
         // Detecção 100% local — sem custo de IA.
         const intent = detectToolIntent(text, history)
+
+        // 0.5) Pedido de TEXTO bíblico — responde 100% pelo JSON oficial (zero token de IA).
+        //     Só entra quando NÃO houver ferramenta de análise pedida.
+        const bibleIntent = detectBibleTextIntent(text, intent.tool !== 'nenhum')
+        if (bibleIntent) {
+          const bibleReply = await runBibleVerse(bibleIntent)
+          if (bibleReply) {
+            const r = await sendText(jid, bibleReply)
+            await admin.from('atis_messages_log').insert({
+              direction: 'outbound', wa_to: jid, wa_group_id: isGroup ? jid : null,
+              body: bibleReply, command: 'biblia', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, intent: bibleIntent, http: r.status },
+            })
+            continue
+          }
+        }
+
         let reply: string
         let usedTool: string | null = null
         const cmdKey = intent.tool !== 'nenhum' ? TOOL_TO_COMMAND[intent.tool as keyof typeof TOOL_PROMPTS] : null

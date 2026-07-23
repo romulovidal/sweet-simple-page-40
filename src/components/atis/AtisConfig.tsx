@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, QrCode } from "lucide-react";
+import { Save, Loader2, QrCode, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
 import AtisConnect from "./AtisConnect";
 
 type Config = {
@@ -19,15 +19,17 @@ type Config = {
   bot_number: string | null;
 };
 
-const COMMANDS: Record<string, string> = {
-  versiculo: "versículo — buscar referência",
-  buscar: "buscar — busca por palavra",
-  hino: "hino — Harpa Cristã",
-  devocional: "devocional — IA do dia",
-  oracao: "oração — registrar pedido",
-  estudo: "estudo — enviar estudo do dia",
-  aniversariantes: "aniversariantes — lista do dia",
-};
+type Cmd = { key: string; label: string; hint: string; example: string; icon: any; tint: string };
+
+const COMMANDS: Cmd[] = [
+  { key: "versiculo", label: "Versículo", hint: "Buscar por referência", example: "Jo 3:16", icon: BookOpen, tint: "from-blue-500/25 to-blue-500/5 text-blue-400" },
+  { key: "buscar", label: "Buscar", hint: "Busca por palavra ou tema", example: "amor", icon: Search, tint: "from-cyan-500/25 to-cyan-500/5 text-cyan-400" },
+  { key: "hino", label: "Hino", hint: "Enviar hino da Harpa Cristã", example: "hino 117", icon: Music2, tint: "from-violet-500/25 to-violet-500/5 text-violet-400" },
+  { key: "devocional", label: "Devocional", hint: "Devocional gerado por IA", example: "devocional de hoje", icon: Sparkles, tint: "from-fuchsia-500/25 to-fuchsia-500/5 text-fuchsia-400" },
+  { key: "oracao", label: "Oração", hint: "Registrar pedido de oração", example: "orem por…", icon: HandHeart, tint: "from-rose-500/25 to-rose-500/5 text-rose-400" },
+  { key: "estudo", label: "Estudo", hint: "Enviar estudo publicado", example: "estudo de hoje", icon: GraduationCap, tint: "from-amber-500/25 to-amber-500/5 text-amber-400" },
+  { key: "aniversariantes", label: "Aniversariantes", hint: "Lista de hoje", example: "aniversariantes", icon: Cake, tint: "from-pink-500/25 to-pink-500/5 text-pink-400" },
+];
 
 const AtisConfig = () => {
   const [cfg, setCfg] = useState<Config | null>(null);
@@ -105,14 +107,60 @@ const AtisConfig = () => {
         <input className="input" placeholder="Palavras-gatilho (vírgula)" value={(cfg.trigger_words ?? []).join(", ")} onChange={e => set({ trigger_words: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} />
       </div>
 
-      <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-2">
-        <p className="text-sm font-bold mb-2">Comandos habilitados</p>
-        {Object.entries(COMMANDS).map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm py-1">
-            <input type="checkbox" checked={!!cfg.commands?.[key]} onChange={e => set({ commands: { ...cfg.commands, [key]: e.target.checked } })} />
-            <span>{label}</span>
-          </label>
-        ))}
+      <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold">Comandos habilitados</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">
+              Toque para ativar. Ativos: {Object.values(cfg.commands ?? {}).filter(Boolean).length}/{COMMANDS.length}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => set({ commands: Object.fromEntries(COMMANDS.map(c => [c.key, true])) })}
+              className="text-[10px] font-semibold text-primary hover:underline"
+            >Todos</button>
+            <span className="text-[hsl(var(--dark-muted))] text-[10px]">·</span>
+            <button
+              onClick={() => set({ commands: {} })}
+              className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] hover:underline"
+            >Nenhum</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {COMMANDS.map((c) => {
+            const on = !!cfg.commands?.[c.key];
+            const Icon = c.icon;
+            return (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => set({ commands: { ...cfg.commands, [c.key]: !on } })}
+                className={`relative text-left rounded-xl p-3 transition-all ${
+                  on
+                    ? `bg-gradient-to-br ${c.tint} ring-1 ring-primary/40`
+                    : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))] hover:ring-[hsl(var(--dark-muted))]"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className={`w-9 h-9 rounded-lg grid place-items-center shrink-0 ${on ? "bg-black/25" : "bg-[hsl(var(--dark-card))]"}`}>
+                    <Icon className={`w-4 h-4 ${on ? "" : "text-[hsl(var(--dark-muted))]"}`} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[13px] font-bold leading-tight ${on ? "" : "text-[hsl(var(--dark-text))]"}`}>{c.label}</p>
+                    <p className={`text-[10px] mt-0.5 leading-snug ${on ? "opacity-90" : "text-[hsl(var(--dark-muted))]"}`}>{c.hint}</p>
+                    <p className={`text-[10px] font-mono mt-1 truncate ${on ? "opacity-70" : "text-[hsl(var(--dark-muted))]/70"}`}>“{c.example}”</p>
+                  </div>
+                </div>
+                {on && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary text-primary-foreground grid place-items-center">
+                    <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">

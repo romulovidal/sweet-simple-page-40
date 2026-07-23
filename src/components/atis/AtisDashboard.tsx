@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { Users, Cake, CalendarClock, BookOpen, MessageCircle, Bot, WifiOff, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useAtisStatus } from "./useAtisStatus";
+import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
+const atisAvatar = atisAvatarAsset.url;
 
 type Stats = { contacts: number; groups: number; birthdaysToday: number; pending: number; studies: number; messages24h: number };
 type UpcomingBroadcast = { id: string; title: string; scheduled_at: string | null; status: string; recurrence: string | null; target_type: string };
@@ -67,6 +69,20 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-3xl bg-gradient-to-br from-[hsl(var(--dark-card))] to-[hsl(var(--dark-card-hover))] p-5 flex items-center gap-4">
+        <img
+          src={atisAvatar}
+          alt="Atis"
+          width={80}
+          height={80}
+          className="w-20 h-20 rounded-2xl shadow-xl ring-2 ring-primary/30 shrink-0"
+        />
+        <div className="min-w-0">
+          <p className="text-lg font-extrabold leading-tight">Atis</p>
+          <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">Assistência Tecnológica de Informação aos Servos</p>
+          <p className="text-[11px] text-[hsl(var(--dark-muted))]/80 mt-1 italic">"Atendendo · Ensinando · Edificando"</p>
+        </div>
+      </div>
       <div className={`rounded-2xl p-5 bg-gradient-to-br ${bannerGrad} text-white flex items-start gap-4`}>
         <span className="w-12 h-12 rounded-2xl bg-white/15 grid place-items-center backdrop-blur">
           <StatusIcon className={`w-6 h-6 ${status.loading ? "animate-spin" : ""}`} />

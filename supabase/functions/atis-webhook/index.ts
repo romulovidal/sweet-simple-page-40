@@ -112,6 +112,28 @@ async function getRecentActiveCrisis(admin: any, phone: string): Promise<{ id: s
   }
 }
 
+// Crise já RESOLVIDA recentemente (últimas 72h). Usado para detectar REINCIDÊNCIA:
+// se a pessoa volta a mostrar sinais logo após um "resolvido", tratamos como risco
+// automaticamente (sem filtro de IA) e sinalizamos aos pastores.
+async function getRecentResolvedCrisis(admin: any, phone: string): Promise<{ id: string; created_at: string; handled_at: string | null } | null> {
+  try {
+    const phoneDigits = String(phone).split('@')[0].replace(/\D/g, '')
+    const candidates = Array.from(new Set([phone, phoneDigits].filter(Boolean)))
+    const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+    const { data } = await admin
+      .from('atis_crisis_alerts')
+      .select('id,created_at,handled_at')
+      .in('contact_phone', candidates)
+      .eq('handled', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    return data?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 // Classificação por IA: só dispara alerta se o CONTEXTO indicar risco real,
 // evitando falsos positivos (ex.: "não me mate de rir", citação bíblica,
 // pergunta teórica, letra de música, terceira pessoa hipotética).
@@ -143,7 +165,7 @@ async function classifyCrisisContext(text: string): Promise<{ risk: boolean; rea
   }
 }
 
-async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[]): Promise<void> {
+async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[], recurrence: boolean = false): Promise<void> {
   const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
   const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
   const enabled = cfg.enabled !== false
@@ -180,6 +202,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     timeStyle: 'medium',
   }).format(new Date())
   const helpLine = `\n\n_Comandos: "resolvido ${phonePretty}" (encerra alerta p/ todos) · "silenciar ${phonePretty}" (para só de te avisar sobre esta pessoa)_`
+  const recurrenceBadge = recurrence ? `⚠️ *REINCIDÊNCIA — crise reaberta em menos de 72h*\n\n` : ''
   const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
     ? cfg.alert_template
         .replaceAll('{nome}', nameStr)
@@ -189,7 +212,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
         .replaceAll('{horario}', nowStr)
     : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
   // Inclui horário para auditoria e para evitar bloqueio/deduplicação de mensagens idênticas pelo provedor.
-  const alertMsg = `${renderedAlert.trim()}\n\n🕒 ${nowStr}${helpLine}`
+  const alertMsg = `${recurrenceBadge}${renderedAlert.trim()}\n\n🕒 ${nowStr}${helpLine}`
 
   let notified = false
   if (enabled && pastors.length) {
@@ -214,7 +237,8 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
 
   await admin.from('atis_crisis_alerts').insert({
     contact_phone: phone, contact_name: name,
-    matched_keywords: matched, severity: matched.some((k) => k.includes('mat') || k.includes('suicid') || k.includes('sumir')) ? 'high' : 'medium',
+    matched_keywords: matched,
+    severity: recurrence ? 'high' : (matched.some((k) => k.includes('mat') || k.includes('suicid') || k.includes('sumir')) ? 'high' : 'medium'),
     snippet, pastor_notified: notified,
   })
 }
@@ -777,13 +801,18 @@ Deno.serve(async (req) => {
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)
           const recentCrisis = crisis.matched.length ? null : await getRecentActiveCrisis(admin, jid)
+          const recentResolved = await getRecentResolvedCrisis(admin, jid)
           if (crisis.matched.length || recentCrisis) {
             const matched = crisis.matched.length ? crisis.matched : ['continuação de crise recente']
             // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
             // Se já existe crise ativa não tratada nas últimas 24h, cada nova mensagem é encaminhada aos pastores.
+            // Se houve crise RESOLVIDA nas últimas 72h e vieram novas palavras de risco,
+            // tratamos como REINCIDÊNCIA e pulamos o filtro de IA (segurança em primeiro lugar).
             const ctx = recentCrisis
               ? { risk: true, reason: `active_crisis_follow_up:${recentCrisis.id}`, confidence: 1 }
-              : await classifyCrisisContext(text)
+              : (recentResolved && crisis.matched.length)
+                ? { risk: true, reason: `recurrence_within_72h:${recentResolved.id}`, confidence: 1 }
+                : await classifyCrisisContext(text)
             if (!ctx.risk) {
               await admin.from('atis_messages_log').insert({
                 direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
@@ -802,13 +831,15 @@ Deno.serve(async (req) => {
                 contactName = p?.display_name ?? null
               }
             } catch { /* ignore */ }
-            await handleCrisis(admin, jid, contactName, text, matched)
+            const isRecurrence = !!recentResolved && !recentCrisis
+            await handleCrisis(admin, jid, contactName, text, matched, isRecurrence)
             const crisisReply = await generateCrisisReply(text)
             const r = await sendText(jid, crisisReply)
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, body: crisisReply,
-              command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
+              command: isRecurrence ? 'crisis-reply-recurrence' : 'crisis-reply',
+              status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason, recurrence: isRecurrence },
             })
             continue
             }

@@ -685,8 +685,9 @@ async function fetchYoutubeLink(numero: number, titulo: string): Promise<string 
   }
 }
 
-async function formatHino(h: HarpaHino): Promise<string> {
-  const link = `${APP_URL}/harpa/${h.numero}`
+type HarpaReply = { text: string; youtubeUrl: string | null }
+
+async function formatHino(h: HarpaHino): Promise<HarpaReply> {
   const chunks: string[] = [`🎵 *Hino ${h.numero} — ${h.titulo}*`]
   // Mostra até 2 estrofes + refrão (ou tudo se for curto) para não estourar mensagem
   const est = h.secoes.filter(s => s.tipo === 'estrofe')
@@ -702,22 +703,22 @@ async function formatHino(h: HarpaHino): Promise<string> {
   if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes)_`)
   const yt = await fetchYoutubeLink(h.numero, h.titulo)
   const tail: string[] = []
-  if (yt) tail.push(`▶️ Ouvir no YouTube: ${yt}`)
+  if (yt) tail.push(`▶️ Enviando a prévia do YouTube abaixo...`)
   tail.push(`_Harpa Cristã — Bíblia Atalaia_`)
   chunks.push(tail.join('\n'))
-  return chunks.join('\n\n')
+  return { text: chunks.join('\n\n'), youtubeUrl: yt }
 }
 
-async function runHarpa(intent: { numero?: number; titulo?: string }): Promise<string | null> {
+async function runHarpa(intent: { numero?: number; titulo?: string }): Promise<HarpaReply | null> {
   const hinos = await loadHarpa()
   if (!hinos.length) return null
   let hino: HarpaHino | undefined | null
   if (intent.numero) {
     hino = hinos.find(h => h.numero === intent.numero)
-    if (!hino) return `🎵 Não encontrei o hino ${intent.numero} na Harpa Cristã. A Harpa Atalaia vai do 1 ao 640.`
+    if (!hino) return { text: `🎵 Não encontrei o hino ${intent.numero} na Harpa Cristã. A Harpa Atalaia vai do 1 ao 640.`, youtubeUrl: null }
   } else if (intent.titulo) {
     hino = findByTitle(hinos, intent.titulo)
-    if (!hino) return `🎵 Não encontrei nenhum hino com título parecido com *"${intent.titulo}"*. Tente pelo número (ex.: "hino 117") ou confira em ${APP_URL}/harpa.`
+    if (!hino) return { text: `🎵 Não encontrei nenhum hino com título parecido com *"${intent.titulo}"*. Tente pelo número (ex.: "hino 117").`, youtubeUrl: null }
   }
   if (!hino) return null
   return await formatHino(hino)
@@ -1198,11 +1199,18 @@ Deno.serve(async (req) => {
         if (harpaIntent) {
           const harpaReply = await runHarpa(harpaIntent)
           if (harpaReply) {
-            const r = await sendText(jid, harpaReply)
+            const r = await sendText(jid, harpaReply.text)
+            let previewStatus: { ok: boolean; status: number } | null = null
+            if (harpaReply.youtubeUrl) {
+              // O preview do WhatsApp é mais confiável quando o link vem sozinho,
+              // sem a letra longa na mesma mensagem.
+              const previewRes = await sendText(jid, harpaReply.youtubeUrl)
+              previewStatus = { ok: previewRes.ok, status: previewRes.status }
+            }
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, wa_group_id: isGroup ? jid : null,
-              body: harpaReply, command: 'harpa', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, intent: harpaIntent, http: r.status },
+              body: harpaReply.text, command: 'harpa', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, intent: harpaIntent, http: r.status, youtube_preview: previewStatus },
             })
             continue
           }

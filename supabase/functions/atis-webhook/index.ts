@@ -41,8 +41,8 @@ async function detectCrisis(admin: any, text: string): Promise<{ matched: string
     const custom = (cfgRow?.value as any)?.custom_keywords
     if (Array.isArray(custom)) extras = custom.filter((k) => typeof k === 'string' && k.trim())
   } catch { /* ignore */ }
-  const all = [...DEFAULT_CRISIS_KEYWORDS, ...extras].map(norm)
-  const matched = all.filter((k) => k && lower.includes(k))
+  const all = Array.from(new Set([...DEFAULT_CRISIS_KEYWORDS, ...extras].map(norm).filter(Boolean)))
+  const matched = Array.from(new Set(all.filter((k) => lower.includes(k))))
   return { matched, extras }
 }
 
@@ -62,9 +62,11 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
 
   const snippet = text.slice(0, 220)
   const nameStr = name ?? '(sem nome)'
+  const phoneDigits = String(phone).split('@')[0].replace(/\D/g, '')
+  const phonePretty = phoneDigits ? `+${phoneDigits}` : phone
   const alertMsg = (cfg.alert_template && cfg.alert_template.trim())
-    ? cfg.alert_template.replaceAll('{nome}', nameStr).replaceAll('{numero}', phone).replaceAll('{mensagem}', snippet).replaceAll('{palavras}', matched.join(', '))
-    : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phone}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
+    ? cfg.alert_template.replaceAll('{nome}', nameStr).replaceAll('{numero}', phonePretty).replaceAll('{mensagem}', snippet).replaceAll('{palavras}', matched.join(', '))
+    : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
 
   let notified = false
   if (enabled && canAlert && pastors.length) {

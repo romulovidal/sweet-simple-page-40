@@ -16,8 +16,9 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
 
   useEffect(() => {
     (async () => {
-      const today = new Date();
-      const mmdd = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      // Data de hoje em America/Fortaleza (UTC-3, sem DST)
+      const fort = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const mmdd = `${String(fort.getUTCMonth() + 1).padStart(2, "0")}-${String(fort.getUTCDate()).padStart(2, "0")}`;
       const [c, g, b, br, st, ml, upc, pl] = await Promise.all([
         atisDb.from("atis_contacts").select("id", { count: "exact", head: true }),
         atisDb.from("atis_groups").select("id", { count: "exact", head: true }),
@@ -29,8 +30,9 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
         atisDb.from("admin_plans").select("id,title,category,total_days,is_active").eq("is_active", true).order("sort_order", { ascending: true }).limit(6),
       ]);
       const birthdaysToday = (b.data ?? []).filter((r: any) => {
-        const d = new Date(r.birth_date);
-        return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` === mmdd;
+        // birth_date vem como "YYYY-MM-DD" — comparar direto pelo mm-dd
+        const s = String(r.birth_date || "");
+        return s.length >= 10 && s.slice(5, 10) === mmdd;
       }).length;
       setStats({
         contacts: c.count ?? 0,

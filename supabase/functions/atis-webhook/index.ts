@@ -70,6 +70,37 @@ async function detectCrisis(admin: any, text: string): Promise<{ matched: string
   return { matched, extras }
 }
 
+// Classificação por IA: só dispara alerta se o CONTEXTO indicar risco real,
+// evitando falsos positivos (ex.: "não me mate de rir", citação bíblica,
+// pergunta teórica, letra de música, terceira pessoa hipotética).
+async function classifyCrisisContext(text: string): Promise<{ risk: boolean; reason: string; confidence: number }> {
+  try {
+    const system = `Você é um classificador clínico-pastoral. Sua tarefa: analisar UMA mensagem de WhatsApp e decidir se ela indica que a PRÓPRIA pessoa está em risco emocional REAL agora (ideação suicida, autolesão, abuso sofrido, violência doméstica sofrida, depressão severa em primeira pessoa, desespero real).\n\nResponda APENAS em JSON: {"risk": boolean, "confidence": 0-1, "reason": "curta"}.\n\nDIGA risk=false quando:\n- Expressão figurativa/humorística ("morri de rir", "tô morta de cansaço", "me mata de rir")\n- Citação bíblica, letra de música, versículo, pregação, comentário teológico\n- Fala sobre TERCEIROS ("meu amigo quer se matar" → risk=true só se pedir ajuda para si; caso genérico → false)\n- Pergunta acadêmica/teórica ("o que a Bíblia diz sobre suicídio?")\n- Frustração leve ("quero sumir dessa reunião")\n- Testes do sistema ("teste", "oi", palavra isolada sem contexto emocional)\n\nDIGA risk=true quando:\n- Primeira pessoa expressando dor real ("eu não aguento mais", "quero morrer", "vou me matar")\n- Relato de abuso ou violência que a pessoa está sofrendo\n- Desespero, desesperança, ausência de sentido em tom pessoal\n- Pedido de ajuda emocional urgente\n- Menção a método/plano de autolesão`
+    const res = await aiChatFetch({
+      model: 'google/gemini-2.5-flash',
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: `Mensagem: """${text.slice(0, 800)}"""` },
+      ],
+    })
+    if (!res.ok) return { risk: true, reason: 'ai_error_fail_safe', confidence: 0 }
+    const json = await res.json().catch(() => null) as any
+    const raw = json?.choices?.[0]?.message?.content?.trim() ?? ''
+    const parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, ''))
+    return {
+      risk: !!parsed.risk,
+      reason: String(parsed.reason ?? '').slice(0, 200),
+      confidence: Number(parsed.confidence ?? 0),
+    }
+  } catch (e) {
+    console.error('[atis-webhook] classifyCrisisContext error', e)
+    // Fail-safe: em caso de erro do classificador, dispara mesmo assim (segurança primeiro).
+    return { risk: true, reason: 'parse_error_fail_safe', confidence: 0 }
+  }
+}
+
 async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[]): Promise<void> {
   const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
   const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
@@ -576,6 +607,16 @@ Deno.serve(async (req) => {
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)
           if (crisis.matched.length) {
+            // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
+            const ctx = await classifyCrisisContext(text)
+            if (!ctx.risk) {
+              await admin.from('atis_messages_log').insert({
+                direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
+                command: 'crisis-skip', status: 'ignored',
+                raw: { reason: ctx.reason, confidence: ctx.confidence, matched: crisis.matched },
+              })
+              // não continua — deixa o fluxo normal (comando/IA) responder
+            } else {
             let contactName: string | null = null
             try {
               const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
@@ -591,9 +632,10 @@ Deno.serve(async (req) => {
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
               command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, matched: crisis.matched, http: r.status },
+              raw: { auto: true, matched: crisis.matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
             })
             continue
+            }
           }
         }
 

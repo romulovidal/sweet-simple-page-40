@@ -83,6 +83,56 @@ async function resolveBirthdaysToday(admin: any): Promise<string> {
   } catch (_) { return '' }
 }
 
+const DEFAULT_DEVOTIONAL_PROMPT =
+  'Você é um pastor e escritor devocional. A partir do versículo bíblico fornecido, escreva uma REFLEXÃO DEVOCIONAL curta (2 parágrafos) que:\n' +
+  '1) Conecte o texto ao cotidiano do leitor\n2) Traga uma aplicação prática e encorajadora\n' +
+  'Seja caloroso e inspirador. Use markdown. Responda em português brasileiro.'
+
+async function resolveDevotional(admin: any): Promise<string> {
+  try {
+    const { data: qv } = await admin
+      .from('daily_verse_queue')
+      .select('verse_text, verse_ref')
+      .eq('scheduled_date', todayBR())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!qv?.verse_ref) return ''
+    const key = Deno.env.get('GEMINI_API_KEY')
+    if (!key) return ''
+    let systemPrompt = DEFAULT_DEVOTIONAL_PROMPT
+    try {
+      const { data: promptsRow } = await admin
+        .from('admin_settings').select('value').eq('key', 'ai_tool_prompts').maybeSingle()
+      const custom = (promptsRow?.value as Record<string, string> | null)?.devotional
+      if (typeof custom === 'string' && custom.trim().length > 0) systemPrompt = custom
+    } catch (_) { /* ignore */ }
+    systemPrompt += '\n\nIMPORTANTE: NÃO repita nem cite o versículo nem a referência no início da resposta. Comece direto pela reflexão.'
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: `**${qv.verse_ref}**\n\n"${qv.verse_text}"` }] }],
+          generationConfig: { temperature: 0.9, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
+        }),
+      },
+    )
+    if (!res.ok) return ''
+    const j = await res.json().catch(() => null) as any
+    let text = (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? '').join('').trim()
+    const refEsc = qv.verse_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    text = text.replace(new RegExp(`^\\s*\\*{1,2}${refEsc}\\*{1,2}\\s*`, 'i'), '')
+    text = text.replace(new RegExp(`^\\s*${refEsc}\\s*`, 'i'), '')
+    text = text.replace(/^\s*["“][\s\S]*?["”]\s*/, '')
+    text = text.replace(/^#{1,6}\s+/gm, '').replace(/\*\*(.+?)\*\*/g, '*$1*').replace(/^\s*[-*]\s+/gm, '• ').trim()
+    if (!text) return ''
+    return `📖 *${qv.verse_ref}*\n"${qv.verse_text}"\n\n💜 *Reflexão Devocional*\n${text}`
+  } catch (_) { return '' }
+}
+
 function firstName(n: string | null | undefined): string {
   if (!n) return 'irmão(ã)'
   return String(n).trim().split(/\s+/)[0] || 'irmão(ã)'
@@ -153,6 +203,13 @@ Deno.serve(async (req) => {
     const results: any[] = []
     const verse = await resolveVerseOfDay(admin)
     const birthdays = await resolveBirthdaysToday(admin)
+    // Lazily resolve devotional only if any broadcast uses the placeholder
+    let devotionalCache: string | null = null
+    const getDevotional = async () => {
+      if (devotionalCache !== null) return devotionalCache
+      devotionalCache = await resolveDevotional(admin)
+      return devotionalCache
+    }
 
     for (const b of due ?? []) {
       try {
@@ -169,7 +226,8 @@ Deno.serve(async (req) => {
         const errors: string[] = []
         for (const r of recipients) {
           const nome = r.kind === 'contact' ? firstName(r.name) : ''
-          const text = applyPlaceholders(b.body, { nome, verse, birthdays })
+          const devotional = (b.body ?? '').includes('{devocional_ia}') ? await getDevotional() : ''
+          const text = applyPlaceholders(b.body, { nome, verse, birthdays, devotional })
           const out = await sendText(r.to, text)
           if (out.ok) okCount++
           else { failCount++; errors.push(`${r.to}: ${out.status}`) }

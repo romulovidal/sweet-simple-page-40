@@ -228,28 +228,44 @@ Deno.serve(async (req) => {
             if (digits.length < 10) return false;
             // Ensure Brazilian country code (55) prefix
             const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-            const jid = `${withCountry}@s.whatsapp.net`;
+            // Try with and without the 9th digit after DDD (BR mobile variance)
+            const ddd = withCountry.slice(2, 4);
+            const rest = withCountry.slice(4);
+            const variants = new Set<string>([withCountry]);
+            if (rest.length === 9 && rest.startsWith("9")) variants.add(`55${ddd}${rest.slice(1)}`);
+            else if (rest.length === 8) variants.add(`55${ddd}9${rest}`);
+            const jids = [...variants].map((n) => `${n}@s.whatsapp.net`);
             const firstName = (u.display_name ?? "").split(" ")[0] || "";
             const salute = firstName ? `Olá, *${firstName}*! ` : "";
             const waText = `${salute}📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}`;
             try {
-              const res = await fetch(`${evoUrl}/message/sendText/atis`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", apikey: evoKey },
-                body: JSON.stringify({ number: jid, text: waText }),
-              });
-              const raw = await res.text().catch(() => "");
+              let ok = false;
+              let lastStatus = 0;
+              let lastRaw = "";
+              let lastJid = jids[0];
+              for (const jid of jids) {
+                lastJid = jid;
+                const res = await fetch(`${evoUrl}/message/sendText/atis`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", apikey: evoKey },
+                  body: JSON.stringify({ number: jid, text: waText }),
+                });
+                lastRaw = await res.text().catch(() => "");
+                lastStatus = res.status;
+                if (res.ok) { ok = true; break; }
+                if (!lastRaw.includes('"exists":false')) break;
+              }
               await supabase.from("atis_messages_log").insert({
                 direction: "outbound",
-                wa_to: jid,
+                wa_to: lastJid,
                 body: waText,
-                status: res.ok ? "sent" : "error",
-                error: res.ok ? null : `${res.status}: ${raw.slice(0, 300)}`,
+                status: ok ? "sent" : "error",
+                error: ok ? null : `${lastStatus}: ${lastRaw.slice(0, 300)}`,
                 raw: { source: "push_forward_individual", type: body.type },
               });
-              return res.ok;
+              return ok;
             } catch (err) {
-              console.error("[send-push] individual forward failed", jid, err);
+              console.error("[send-push] individual forward failed", jids[0], err);
               return false;
             }
           }));

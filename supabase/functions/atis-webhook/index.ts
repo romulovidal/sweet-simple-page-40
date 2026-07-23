@@ -29,18 +29,31 @@ const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-fe
 
 const APP_URL = 'https://biblia.atalaias.online'
 const APP_FEATURES = `### Funções do app Bíblia Atalaia (${APP_URL})
-- Bíblia completa (Almeida) com busca inteligente e busca por IA (semântica)
-- Áudio da Bíblia (TTS) com destaque do versículo em reprodução
+- Bíblia completa em 6 versões (ARA, ARC, ACF, NVI, NTLH, KJA) com troca instantânea, epígrafes e leitura offline após download
+- Busca inteligente (tolerante a acentos) e busca por IA (semântica) para achar versículos por tema ou ideia
+- Áudio da Bíblia (TTS) com destaque do versículo em reprodução e mini-player persistente
+- Comparar versões lado a lado, letras vermelhas (palavras de Jesus), ajuste de fonte e modo escuro/claro/sépia
 - Versículo do dia (rotativo, agendado em daily_verse_queue)
 - Planos de leitura (admin_plans) — inscrição, progresso e sequência (streak)
 - Harpa Cristã 640 hinos com letra, busca por número/tema, favoritos, histórico, modo apresentação, áudio (YouTube) e compartilhamento por link direto (/harpa/:numero)
 - Descubra: posts/devocionais (admin_posts), história bíblica, quizzes
 - Você: perfil, anotações, versículos salvos, sequência (streak), metas de leitura, pedidos de oração (públicos e privados)
+- Ferramentas de IA por capítulo/versículo: Reflexão Devocional, Resumo do Capítulo, Significado da Palavra (original grego/hebraico), Linha do Tempo, Conexões cruzadas e "Pergunte à Bíblia"
+- Compartilhamento de versículo como imagem gerada e link curto com convite ao app
 - Agenda de cultos com lembretes push
 - Notificações push (VAPID) para versículo do dia, cultos, planos e avisos
 - Painel Atis (bot WhatsApp) integrando aniversariantes, grupos, estudos, broadcasts e comandos
 - Página pública de privacidade (/privacidade) e termos (/termos); conta pode ser excluída pelo próprio usuário
-- Funciona offline (Service Worker) — Bíblia e Harpa acessíveis sem internet; áudio e busca IA exigem conexão`
+- Funciona offline (Service Worker) — Bíblia e Harpa acessíveis sem internet; áudio e busca IA exigem conexão
+
+### As 6 versões bíblicas disponíveis (para explicar quando perguntarem)
+- ARA — Almeida Revista e Atualizada: linguagem clássica atualizada, equilíbrio entre fidelidade e leitura fluente. Boa para estudo devocional e pregação.
+- ARC — Almeida Revista e Corrigida: texto tradicional, muito usado em igrejas históricas e evangélicas clássicas; preserva o "vós/tu".
+- ACF — Almeida Corrigida Fiel: baseada no Textus Receptus, preferida por quem busca máxima proximidade com a tradição reformada/protestante clássica.
+- NVI — Nova Versão Internacional: linguagem contemporânea, clara e precisa; ótima para leitura corrida e novos leitores.
+- NTLH — Nova Tradução na Linguagem de Hoje: português simples e coloquial, ideal para crianças, novos convertidos e evangelismo.
+- KJA — King James Atualizada: baseada na tradição da King James em português moderno, com beleza literária e reverência.
+Como ajuda as pessoas: quem quer estudar profundamente compara ARA/ACF/NVI; quem está começando lê NTLH ou NVI; quem prega usa ARA/ARC; quem gosta de linguagem reverente escolhe KJA/ACF. Todas podem ser baixadas para uso offline.`
 
 async function buildMinistryContext(admin: any): Promise<string> {
   const parts: string[] = []

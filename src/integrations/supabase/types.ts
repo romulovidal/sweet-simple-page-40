@@ -371,6 +371,7 @@ export type Database = {
           phone: string
           tags: string[]
           updated_at: string
+          welcomed_at: string | null
         }
         Insert: {
           birthday?: string | null
@@ -382,6 +383,7 @@ export type Database = {
           phone: string
           tags?: string[]
           updated_at?: string
+          welcomed_at?: string | null
         }
         Update: {
           birthday?: string | null
@@ -393,6 +395,49 @@ export type Database = {
           phone?: string
           tags?: string[]
           updated_at?: string
+          welcomed_at?: string | null
+        }
+        Relationships: []
+      }
+      atis_crisis_alerts: {
+        Row: {
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          handled: boolean
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          matched_keywords: string[]
+          pastor_notified: boolean
+          severity: string
+          snippet: string | null
+        }
+        Insert: {
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          handled?: boolean
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          matched_keywords?: string[]
+          pastor_notified?: boolean
+          severity?: string
+          snippet?: string | null
+        }
+        Update: {
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          handled?: boolean
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          matched_keywords?: string[]
+          pastor_notified?: boolean
+          severity?: string
+          snippet?: string | null
         }
         Relationships: []
       }
@@ -473,6 +518,150 @@ export type Database = {
           wa_to?: string | null
         }
         Relationships: []
+      }
+      atis_plan_subscribers: {
+        Row: {
+          active: boolean
+          contact_id: string | null
+          created_at: string
+          current_day: number
+          id: string
+          last_sent_date: string | null
+          name: string | null
+          phone: string
+          plan_id: string
+          send_time: string
+          started_at: string
+        }
+        Insert: {
+          active?: boolean
+          contact_id?: string | null
+          created_at?: string
+          current_day?: number
+          id?: string
+          last_sent_date?: string | null
+          name?: string | null
+          phone: string
+          plan_id: string
+          send_time?: string
+          started_at?: string
+        }
+        Update: {
+          active?: boolean
+          contact_id?: string | null
+          created_at?: string
+          current_day?: number
+          id?: string
+          last_sent_date?: string | null
+          name?: string | null
+          phone?: string
+          plan_id?: string
+          send_time?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_plan_subscribers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "atis_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atis_plan_subscribers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "admin_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atis_series: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          send_time: string
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          items?: Json
+          name: string
+          send_time?: string
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          send_time?: string
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      atis_series_subscribers: {
+        Row: {
+          active: boolean
+          contact_id: string | null
+          created_at: string
+          current_day: number
+          id: string
+          last_sent_date: string | null
+          name: string | null
+          phone: string
+          series_id: string
+          started_at: string
+        }
+        Insert: {
+          active?: boolean
+          contact_id?: string | null
+          created_at?: string
+          current_day?: number
+          id?: string
+          last_sent_date?: string | null
+          name?: string | null
+          phone: string
+          series_id: string
+          started_at?: string
+        }
+        Update: {
+          active?: boolean
+          contact_id?: string | null
+          created_at?: string
+          current_day?: number
+          id?: string
+          last_sent_date?: string | null
+          name?: string | null
+          phone?: string
+          series_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_series_subscribers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "atis_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atis_series_subscribers_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "atis_series"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       atis_studies: {
         Row: {
@@ -858,6 +1047,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          atis_welcomed_at: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -868,6 +1058,7 @@ export type Database = {
           whatsapp_opt_in: boolean
         }
         Insert: {
+          atis_welcomed_at?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -878,6 +1069,7 @@ export type Database = {
           whatsapp_opt_in?: boolean
         }
         Update: {
+          atis_welcomed_at?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null

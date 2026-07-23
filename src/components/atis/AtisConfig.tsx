@@ -3,6 +3,7 @@ import { atisDb } from "./atisDb";
 import { toast } from "sonner";
 import { Save, Loader2, QrCode, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
 import AtisConnect from "./AtisConnect";
+import AtisAdvancedSettings from "./AtisAdvancedSettings";
 
 type Config = {
   id: number;
@@ -174,6 +175,12 @@ const AtisConfig = () => {
       <button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
         <Save className="w-4 h-4" /> {saving ? "Salvando..." : "Salvar configuração"}
       </button>
+
+      <div className="pt-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))] mb-2 px-1">Envios automáticos e pastoral</p>
+        <AtisAdvancedSettings />
+      </div>
+
       <style>{`.input{width:100%;height:42px;padding:0 12px;border-radius:12px;background:hsl(var(--dark-bg));color:hsl(var(--dark-text));border:1px solid hsl(var(--dark-card-hover));font-size:14px}`}</style>
       {showConnect && <AtisConnect onClose={() => setShowConnect(false)} />}
     </div>

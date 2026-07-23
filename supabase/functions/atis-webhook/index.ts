@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiChatFetch } from '../_shared/ai-fetch.ts'
-import { evolutionSendText } from '../_shared/atis-evolution.ts'
+import { evolutionSendText, evolutionSendButtons } from '../_shared/atis-evolution.ts'
 
 const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
@@ -194,7 +194,15 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
   let notified = false
   if (enabled && pastors.length) {
     for (const p of pastors) {
-      const r = await evolutionSendText(p, alertMsg)
+      const r = await evolutionSendButtons(
+        p,
+        alertMsg,
+        [
+          { id: `resolvido ${phoneDigits}`, displayText: '✅ Resolvido' },
+          { id: `silenciar ${phoneDigits}`, displayText: '🔕 Silenciar' },
+        ],
+        { footer: 'Toque um botão ou responda com o comando' },
+      )
       if (r.ok) notified = true
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: p, body: alertMsg,
@@ -225,6 +233,10 @@ function extractText(msg: any): string {
     msg?.message?.extendedTextMessage?.text ??
     msg?.message?.imageMessage?.caption ??
     msg?.message?.videoMessage?.caption ??
+    msg?.message?.buttonsResponseMessage?.selectedButtonId ??
+    msg?.message?.templateButtonReplyMessage?.selectedId ??
+    msg?.message?.listResponseMessage?.singleSelectReply?.selectedRowId ??
+    msg?.message?.interactiveResponseMessage?.body?.text ??
     ''
   )
 }

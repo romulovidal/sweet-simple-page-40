@@ -165,7 +165,7 @@ async function classifyCrisisContext(text: string): Promise<{ risk: boolean; rea
   }
 }
 
-async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[]): Promise<void> {
+async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[], recurrence: boolean = false): Promise<void> {
   const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
   const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
   const enabled = cfg.enabled !== false
@@ -202,6 +202,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     timeStyle: 'medium',
   }).format(new Date())
   const helpLine = `\n\n_Comandos: "resolvido ${phonePretty}" (encerra alerta p/ todos) · "silenciar ${phonePretty}" (para só de te avisar sobre esta pessoa)_`
+  const recurrenceBadge = recurrence ? `⚠️ *REINCIDÊNCIA — crise reaberta em menos de 72h*\n\n` : ''
   const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
     ? cfg.alert_template
         .replaceAll('{nome}', nameStr)
@@ -211,7 +212,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
         .replaceAll('{horario}', nowStr)
     : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
   // Inclui horário para auditoria e para evitar bloqueio/deduplicação de mensagens idênticas pelo provedor.
-  const alertMsg = `${renderedAlert.trim()}\n\n🕒 ${nowStr}${helpLine}`
+  const alertMsg = `${recurrenceBadge}${renderedAlert.trim()}\n\n🕒 ${nowStr}${helpLine}`
 
   let notified = false
   if (enabled && pastors.length) {
@@ -236,7 +237,8 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
 
   await admin.from('atis_crisis_alerts').insert({
     contact_phone: phone, contact_name: name,
-    matched_keywords: matched, severity: matched.some((k) => k.includes('mat') || k.includes('suicid') || k.includes('sumir')) ? 'high' : 'medium',
+    matched_keywords: matched,
+    severity: recurrence ? 'high' : (matched.some((k) => k.includes('mat') || k.includes('suicid') || k.includes('sumir')) ? 'high' : 'medium'),
     snippet, pastor_notified: notified,
   })
 }

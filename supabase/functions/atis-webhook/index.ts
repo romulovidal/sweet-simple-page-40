@@ -254,6 +254,19 @@ async function sendText(jid: string, text: string) {
 }
 
 function extractText(msg: any): string {
+  // Voto em enquete (poll) — Evolution v2 pode emitir em vários shapes.
+  const pollOpt =
+    msg?.message?.pollUpdateMessage?.vote?.selectedOptions?.[0]?.optionName ??
+    msg?.message?.pollUpdateMessage?.vote?.selectedOptions?.[0]?.name ??
+    msg?.pollUpdate?.selectedOptions?.[0]?.optionName ??
+    msg?.pollUpdate?.selectedOptions?.[0]?.name ??
+    msg?.message?.pollVoteMessage?.selectedOptions?.[0]?.optionName ??
+    null;
+  if (pollOpt && typeof pollOpt === 'string') {
+    // As opções seguem o formato "<label> • <comando>". Extrai só o comando.
+    const parts = pollOpt.split('•');
+    return (parts.length > 1 ? parts.slice(1).join('•') : pollOpt).trim();
+  }
   return (
     msg?.message?.conversation ??
     msg?.message?.extendedTextMessage?.text ??

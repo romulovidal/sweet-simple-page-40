@@ -8,6 +8,10 @@ const XAI_URL = "https://api.x.ai/v1/chat/completions";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const LOVABLE_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+function shouldTryFallback(status: number): boolean {
+  return status === 401 || status === 402 || status === 403 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
 // Map any legacy model id (google/*, openai/*) to a supported Grok model.
 // Defaults to grok-4-fast-non-reasoning: fast, cheap, no reasoning overhead —
 // ideal for chat, devotionals, push copy, quick lookups.
@@ -37,10 +41,20 @@ function toGeminiModel(model: string): string {
 }
 
 async function tryLovable(body: Record<string, unknown>, key: string): Promise<Response> {
+  const rawModel = String(body.model ?? "");
+  const lovableBody = {
+    ...body,
+    // The Lovable gateway requires catalog ids with a vendor prefix. If the
+    // upstream call was prepared for direct xAI, switch to the known Gemini
+    // chat fallback instead of sending a bare Grok model id.
+    model: rawModel.startsWith("grok") || rawModel.startsWith("x-ai/") || !rawModel
+      ? "google/gemini-2.5-flash"
+      : rawModel,
+  };
   return await fetch(LOVABLE_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(lovableBody),
   });
 }
 
@@ -67,9 +81,9 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
       body: JSON.stringify(grokBody),
     });
 
-    // Retryable failure → try fallbacks
-    const retryable = res.status === 429 || res.status === 402 || res.status >= 500;
-    if (retryable) {
+    // Provider/key/quota failure → try fallbacks. xAI returns 403 when the
+    // team has no credits, so 403 must not stop the whole app.
+    if (shouldTryFallback(res.status)) {
       try {
         const errText = await res.clone().text();
         console.error(`[ai-fetch] xAI ${res.status}, trying fallback. Body:`, errText.slice(0, 400));
@@ -78,7 +92,11 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
       if (GEMINI_API_KEY) {
         const gRes = await tryGemini(body, GEMINI_API_KEY);
         if (gRes.ok) return gRes;
-        if ((gRes.status === 429 || gRes.status === 402 || gRes.status === 403) && LOVABLE_API_KEY) {
+        if (shouldTryFallback(gRes.status) && LOVABLE_API_KEY) {
+          try {
+            const errText = await gRes.clone().text();
+            console.error(`[ai-fetch] Gemini ${gRes.status}, trying Lovable fallback. Body:`, errText.slice(0, 400));
+          } catch { /* ignore */ }
           return await tryLovable(body, LOVABLE_API_KEY);
         }
         return gRes;
@@ -98,7 +116,7 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
   // No xAI key → Gemini
   if (GEMINI_API_KEY) {
     const res = await tryGemini(body, GEMINI_API_KEY);
-    if ((res.status === 429 || res.status === 402 || res.status === 403) && LOVABLE_API_KEY) {
+    if (shouldTryFallback(res.status) && LOVABLE_API_KEY) {
       try {
         const errText = await res.clone().text();
         console.error(`[ai-fetch] Gemini ${res.status}, falling back to Lovable. Body:`, errText.slice(0, 400));

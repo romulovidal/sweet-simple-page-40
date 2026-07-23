@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { atisDb } from "./atisDb";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, CalendarClock, Sparkles, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import AtisDailyDevotional from "./AtisDailyDevotional";
@@ -85,6 +86,32 @@ const AtisBroadcasts = () => {
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("atis_broadcasts_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "atis_broadcasts" },
+        (payload: any) => {
+          setItems((prev) => {
+            if (payload.eventType === "INSERT") {
+              if (prev.some((i) => i.id === payload.new.id)) return prev;
+              return [payload.new as BC, ...prev];
+            }
+            if (payload.eventType === "UPDATE") {
+              return prev.map((i) => (i.id === payload.new.id ? { ...i, ...(payload.new as BC) } : i));
+            }
+            if (payload.eventType === "DELETE") {
+              return prev.filter((i) => i.id !== payload.old.id);
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;

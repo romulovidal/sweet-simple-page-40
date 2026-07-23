@@ -778,9 +778,10 @@ Deno.serve(async (req) => {
               }
             } catch { /* ignore */ }
             await handleCrisis(admin, jid, contactName, text, matched)
-            const r = await sendText(jid, CRISIS_REPLY)
+            const crisisReply = await generateCrisisReply(text)
+            const r = await sendText(jid, crisisReply)
             await admin.from('atis_messages_log').insert({
-              direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
+              direction: 'outbound', wa_to: jid, body: crisisReply,
               command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
               raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
             })

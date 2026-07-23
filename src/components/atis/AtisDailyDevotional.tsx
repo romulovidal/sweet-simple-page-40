@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, Clock, Users, Send, Save } from "lucide-react";
 
 type Group = { id: string; wa_group_id: string; name: string };
-type Cfg = { enabled: boolean; time: string; group_ids: string[]; theme: string | null; last_sent_date?: string };
+type Cfg = { enabled: boolean; time: string; group_ids: string[]; last_sent_date?: string };
 
-const DEFAULT: Cfg = { enabled: false, time: "06:30", group_ids: [], theme: null };
+const DEFAULT: Cfg = { enabled: false, time: "06:30", group_ids: [] };
 
 const AtisDailyDevotional = () => {
   const [cfg, setCfg] = useState<Cfg>(DEFAULT);
@@ -74,7 +74,7 @@ const AtisDailyDevotional = () => {
           <div>
             <p className="text-sm font-bold">Devocional diário automático (grupos)</p>
             <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">
-              Todo dia, no horário definido (Fortaleza-CE), o Atis gera um devocional com IA (Gemini) e envia para os grupos selecionados.
+              Envia todo dia, no horário definido (Fortaleza-CE), o mesmo versículo do dia da Bíblia Atalaia + a frase motivacional gerada por IA, direto para os grupos escolhidos. Requer versículo agendado no painel admin.
             </p>
           </div>
         </div>
@@ -89,26 +89,14 @@ const AtisDailyDevotional = () => {
         </label>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase flex items-center gap-1 mb-1"><Clock className="w-3 h-3" /> Horário (Fortaleza)</label>
-          <input
-            type="time"
-            value={cfg.time}
-            onChange={(e) => setCfg({ ...cfg, time: e.target.value })}
-            className="w-full h-10 px-3 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase mb-1 block">Tema opcional (guia para a IA)</label>
-          <input
-            type="text"
-            placeholder="ex: fé, perseverança, gratidão…"
-            value={cfg.theme ?? ""}
-            onChange={(e) => setCfg({ ...cfg, theme: e.target.value || null })}
-            className="w-full h-10 px-3 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-sm"
-          />
-        </div>
+      <div>
+        <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase flex items-center gap-1 mb-1"><Clock className="w-3 h-3" /> Horário (Fortaleza)</label>
+        <input
+          type="time"
+          value={cfg.time}
+          onChange={(e) => setCfg({ ...cfg, time: e.target.value })}
+          className="w-full h-10 px-3 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-sm"
+        />
       </div>
 
       <div>

@@ -20,10 +20,9 @@ function brNow() {
   return { dateKey, timeKey, hour, period, dayName }
 }
 
-async function generateDevotional(theme: string | null, period: string, dayName: string, hour: number): Promise<string> {
+async function generateMotivational(period: string, dayName: string, hour: number): Promise<string> {
   const key = Deno.env.get('LOVABLE_API_KEY')
   if (!key) return ''
-  const greeting = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
   const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -34,19 +33,20 @@ async function generateDevotional(theme: string | null, period: string, dayName:
         {
           role: 'system',
           content:
-            'Você é Atis, assistente devocional da Igreja Atalaias de Betel. Gere UM devocional cristão diário, curto e edificante, para ser enviado em um GRUPO de WhatsApp. Estrutura obrigatória:\n' +
-            `1) Saudação natural começando por "${greeting}, família!" (adapte ao período do dia).\n` +
-            '2) UM versículo bíblico real (referência exata — livro, capítulo e versículo) com o texto entre aspas na versão Almeida Revista e Atualizada. NUNCA invente referências.\n' +
-            '3) Reflexão pastoral de 3 a 5 frases, aplicada à vida cotidiana.\n' +
-            '4) Uma frase final de bênção/convite à oração.\n' +
-            'Use quebras de linha simples, emojis discretos (📖 🙏 ✨), sem hashtags, sem markdown pesado (nada de **negrito** ou títulos com #). Máx. 900 caracteres. Varie a cada dia — não repita fórmulas.',
+            'Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.',
         },
         {
           role: 'user',
           content:
-            `Hoje é ${dayName}, período: ${period} (${hour}h em Fortaleza-CE).` +
-            (theme ? ` Tema sugerido: ${theme}.` : ' Escolha um tema bíblico relevante para o dia.') +
-            ' Gere agora o devocional (original, diferente dos anteriores).',
+            `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
+            (period === 'manhã'
+              ? 'Convide a pessoa a começar o dia na Palavra.'
+              : period === 'tarde'
+              ? 'Convide a pessoa a fazer uma pausa e voltar à Palavra.'
+              : period === 'noite'
+              ? 'Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir.'
+              : 'Convide a pessoa a se aquietar com Deus neste momento silencioso.') +
+            ' Gere agora a frase (diferente das anteriores).',
         },
       ],
     }),
@@ -57,6 +57,13 @@ async function generateDevotional(theme: string | null, period: string, dayName:
   }
   const j = await res.json().catch(() => null) as any
   return (j?.choices?.[0]?.message?.content ?? '').trim().replace(/^"|"$/g, '')
+}
+
+function titleByPeriod(period: string): string {
+  if (period === 'manhã') return '☀️ Bom dia! Não deixe de ler hoje'
+  if (period === 'tarde') return '🌤️ Boa tarde! Uma pausa na Palavra'
+  if (period === 'noite') return '🌙 Boa noite! Encerre o dia com Deus'
+  return '✨ Um momento com Deus agora'
 }
 
 async function sendToGroup(jid: string, text: string) {
@@ -79,7 +86,7 @@ Deno.serve(async (req) => {
 
   const { data: settingRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_daily_devotional').maybeSingle()
   const cfg = (settingRow?.value ?? {}) as {
-    enabled?: boolean; time?: string; group_ids?: string[]; theme?: string | null; last_sent_date?: string
+    enabled?: boolean; time?: string; group_ids?: string[]; last_sent_date?: string
   }
 
   const { dateKey, timeKey, hour, period, dayName } = brNow()
@@ -93,8 +100,27 @@ Deno.serve(async (req) => {
   const groupIds = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
   if (!groupIds.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
 
-  const text = await generateDevotional(cfg.theme ?? null, period, dayName, hour)
-  if (!text) return new Response(JSON.stringify({ error: 'ai-failed' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  // Busca o versículo do dia agendado (mesma fonte da Bíblia Atalaia — daily-verse-push)
+  const { data: queueVerse } = await admin
+    .from('daily_verse_queue')
+    .select('verse_text, verse_ref')
+    .eq('scheduled_date', dateKey)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!queueVerse) {
+    return new Response(JSON.stringify({ skipped: true, reason: 'no-verse-scheduled', date: dateKey }), { headers: corsHeaders })
+  }
+
+  const motivational = await generateMotivational(period, dayName, hour)
+  const title = titleByPeriod(period)
+  const text =
+    `📖 *${queueVerse.verse_ref}*\n` +
+    `"${queueVerse.verse_text}"\n\n` +
+    `${title}\n` +
+    (motivational ? `${motivational}\n\n` : '\n') +
+    `— Bíblia Atalaia`
 
   const results: any[] = []
   for (const jid of groupIds) {
@@ -107,7 +133,7 @@ Deno.serve(async (req) => {
       body: text,
       command: 'daily-devotional',
       status: r.ok ? 'sent' : 'error',
-      raw: { auto: !force, ai: true, http: r.status, body: r.body?.slice?.(0, 300) },
+      raw: { auto: !force, verse_ref: queueVerse.verse_ref, ai_motivational: !!motivational, http: r.status, body: r.body?.slice?.(0, 300) },
     })
   }
 

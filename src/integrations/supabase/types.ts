@@ -400,6 +400,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          forward_notifications: boolean
           id: string
           name: string
           respond_mode: string
@@ -410,6 +411,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          forward_notifications?: boolean
           id?: string
           name: string
           respond_mode?: string
@@ -420,6 +422,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          forward_notifications?: boolean
           id?: string
           name?: string
           respond_mode?: string

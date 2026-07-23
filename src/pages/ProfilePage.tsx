@@ -484,37 +484,6 @@ const ProfilePage = () => {
             <p className="text-xs text-dark-muted mb-3">Baixe versões para ler sem internet.</p>
             <BibleDownloadManager />
           </div>
-          <div className="bg-dark-card rounded-xl p-4 sm:col-span-2">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageCircle className="w-4 h-4 text-primary" />
-              <p className="font-semibold text-sm">Notificações no WhatsApp</p>
-            </div>
-            <p className="text-xs text-dark-muted mb-3">
-              Receba o versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp pelo Atis.
-            </p>
-            <Input
-              type="tel"
-              inputMode="tel"
-              placeholder="WhatsApp com DDD — ex: 85999999999"
-              value={waNumber}
-              onChange={(e) => setWaNumber(e.target.value)}
-              className="bg-dark-bg border-none mb-3"
-            />
-            <label className="flex items-start gap-3 cursor-pointer mb-3">
-              <Checkbox
-                checked={waOptIn}
-                onCheckedChange={(c) => setWaOptIn(c === true)}
-                className="mt-0.5"
-              />
-              <span className="text-xs text-dark-muted leading-relaxed">
-                Autorizo receber mensagens automáticas do Atis no meu WhatsApp. Posso desativar quando quiser.
-              </span>
-            </label>
-            <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">
-              {waSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Salvar preferências
-            </Button>
-          </div>
           <button onClick={handleContinueReading} className="w-full bg-dark-card rounded-xl p-4 text-left active:bg-dark-card-hover transition-colors">
             <p className="font-semibold text-sm">Continuar leitura</p>
             <p className="text-xs text-dark-muted mt-1">Retomar exatamente de onde você parou.</p>
@@ -618,6 +587,51 @@ const ProfilePage = () => {
               {savedVerses.length} versículo{savedVerses.length !== 1 ? "s" : ""} salvo{savedVerses.length !== 1 ? "s" : ""}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* WhatsApp notifications — visible on profile */}
+      <div className="px-5 mb-6 max-w-2xl mx-auto">
+        <div className={`rounded-2xl p-5 border transition-colors ${
+          waOptIn && waNumber
+            ? "bg-primary/10 border-primary/30"
+            : "bg-dark-card border-white/5"
+        }`}>
+          <div className="flex items-start gap-3 mb-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              waOptIn && waNumber ? "bg-primary/20" : "bg-white/5"
+            }`}>
+              <MessageCircle className={`w-5 h-5 ${waOptIn && waNumber ? "text-primary" : "text-dark-muted"}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">Notificações no WhatsApp</p>
+              <p className="text-xs text-dark-muted mt-0.5 leading-relaxed">
+                Receba versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp pelo Atis.
+              </p>
+            </div>
+          </div>
+          <Input
+            type="tel"
+            inputMode="tel"
+            placeholder="WhatsApp com DDD — ex: 85999999999"
+            value={waNumber}
+            onChange={(e) => setWaNumber(e.target.value)}
+            className="bg-dark-bg border-none mb-3"
+          />
+          <label className="flex items-start gap-2 cursor-pointer mb-3">
+            <Checkbox
+              checked={waOptIn}
+              onCheckedChange={(c) => setWaOptIn(c === true)}
+              className="mt-0.5"
+            />
+            <span className="text-xs text-dark-muted leading-relaxed">
+              Autorizo receber mensagens automáticas do Atis no meu WhatsApp. Posso desativar quando quiser.
+            </span>
+          </label>
+          <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">
+            {waSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {waOptIn && waNumber ? "Atualizar preferências" : "Salvar preferências"}
+          </Button>
         </div>
       </div>
 

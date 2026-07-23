@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree, MessageCircle, Sparkles, Library, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
 const atisAvatar = atisAvatarAsset.url;
@@ -13,9 +13,12 @@ import AtisBroadcasts from "./AtisBroadcasts";
 import AtisStudies from "./AtisStudies";
 import AtisConfig from "./AtisConfig";
 import AtisLogs from "./AtisLogs";
+import AtisSeries from "./AtisSeries";
+import AtisPlansWA from "./AtisPlansWA";
+import AtisAlerts from "./AtisAlerts";
 import { useAtisStatus } from "./useAtisStatus";
 
-type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "logs" | "config";
+type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "series" | "plans" | "alerts" | "logs" | "config";
 
 const resolveAtisAvatar = () => {
   const path = atisAvatarAsset.url;
@@ -34,11 +37,14 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "birthdays", label: "Aniversários", icon: Cake },
   { id: "broadcasts", label: "Agenda", icon: CalendarClock },
   { id: "studies", label: "Estudos", icon: BookOpen },
+  { id: "series", label: "Séries", icon: Sparkles },
+  { id: "plans", label: "Planos WA", icon: Library },
+  { id: "alerts", label: "Alertas", icon: AlertTriangle },
   { id: "logs", label: "Logs", icon: ListTree },
   { id: "config", label: "Config", icon: Settings },
 ];
 
-const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "logs", "config"];
+const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "series", "plans", "alerts", "logs", "config"];
 
 const AtisLayout = () => {
   const isMobile = useIsMobile();
@@ -56,6 +62,9 @@ const AtisLayout = () => {
       case "birthdays": return <AtisBirthdays />;
       case "broadcasts": return <AtisBroadcasts />;
       case "studies": return <AtisStudies />;
+      case "series": return <AtisSeries />;
+      case "plans": return <AtisPlansWA />;
+      case "alerts": return <AtisAlerts />;
       case "logs": return <AtisLogs />;
       case "config": return <AtisConfig />;
     }

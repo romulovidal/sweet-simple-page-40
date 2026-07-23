@@ -61,6 +61,19 @@ function todayBR(): string {
   return `${g('year')}-${g('month')}-${g('day')}`
 }
 
+function brNow() {
+  const hourStr = new Intl.DateTimeFormat('pt-BR', { timeZone: BRAZIL_TZ, hour: '2-digit', hour12: false }).format(new Date())
+  const hour = parseInt(hourStr, 10)
+  const weekday = new Intl.DateTimeFormat('pt-BR', { timeZone: BRAZIL_TZ, weekday: 'long' }).format(new Date())
+  const period: 'manhã' | 'tarde' | 'noite' | 'madrugada' =
+    hour >= 5 && hour < 12 ? 'manhã' : hour >= 12 && hour < 18 ? 'tarde' : hour >= 18 ? 'noite' : 'madrugada'
+  const saudacao =
+    period === 'manhã' ? '☀️ Bom dia' :
+    period === 'tarde' ? '🌤️ Boa tarde' :
+    period === 'noite' ? '🌙 Boa noite' : '✨ Paz do Senhor'
+  return { hour, weekday, period, saudacao }
+}
+
 async function resolveVerseOfDay(admin: any): Promise<string> {
   try {
     const { data } = await admin
@@ -107,6 +120,8 @@ async function resolveDevotional(admin: any): Promise<string> {
       const custom = (promptsRow?.value as Record<string, string> | null)?.devotional
       if (typeof custom === 'string' && custom.trim().length > 0) systemPrompt = custom
     } catch (_) { /* ignore */ }
+    const nowBR = brNow()
+    systemPrompt += `\n\nCONTEXTO TEMPORAL (Fortaleza-CE): agora é ${nowBR.weekday}, ${nowBR.hour}h, período = ${nowBR.period}. Adapte a saudação/tom ao período (NUNCA diga "bom dia" à tarde/noite, nem "boa noite" pela manhã). Se abrir com saudação, use algo coerente com o período atual.`
     systemPrompt += '\n\nIMPORTANTE: NÃO repita nem cite o versículo nem a referência no início da resposta. Comece direto pela reflexão.'
     let text = await aiGenerateText({
       system: systemPrompt,
@@ -131,11 +146,20 @@ function firstName(n: string | null | undefined): string {
 }
 
 function applyPlaceholders(body: string, ctx: { nome?: string; verse?: string; birthdays?: string; devotional?: string }) {
+  const nowBR = brNow()
   return body
     .replaceAll('{nome}', ctx.nome ?? '')
     .replaceAll('{versiculo_do_dia}', ctx.verse ?? '')
     .replaceAll('{aniversariantes_hoje}', ctx.birthdays ?? '')
     .replaceAll('{devocional_ia}', ctx.devotional ?? '')
+    .replaceAll('{saudacao}', nowBR.saudacao)
+    .replaceAll('{periodo}', nowBR.period)
+    // Corrige saudações fixas escritas manualmente que não batem com o horário
+    .replace(/\b(Bom dia|Boa tarde|Boa noite)\b/gi, (m) => {
+      const target = nowBR.saudacao.replace(/^[^A-Za-zÀ-ÿ]+/, '')
+      // preserva capitalização básica
+      return m[0] === m[0].toUpperCase() ? target : target.toLowerCase()
+    })
 }
 
 async function resolveRecipients(admin: any, target_type: string, target_ref: string | null) {

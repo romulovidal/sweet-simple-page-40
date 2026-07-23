@@ -35,7 +35,7 @@ async function generateInviteMessage(params: {
   minutesUntil: number;
   cultoDay: number;
 }): Promise<string | null> {
-  if (!Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("LOVABLE_API_KEY")) return null;
+  if (!Deno.env.get("XAI_API_KEY") && !Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("LOVABLE_API_KEY")) return null;
   const { cultoName, timeStr, daysUntil, minutesUntil, cultoDay } = params;
 
   const timing = describeWhen(daysUntil, minutesUntil, timeStr, cultoDay);

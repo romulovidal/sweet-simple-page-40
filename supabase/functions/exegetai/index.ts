@@ -36,9 +36,10 @@ serve(async (req) => {
     const rl = await checkRateLimit(admin, identifier, `exegetai:${mode ?? "exegesis"}`, 15, 60);
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
+    const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+    if (!XAI_API_KEY && !LOVABLE_API_KEY && !GEMINI_API_KEY) {
       throw new Error("Nenhuma chave de IA configurada");
     }
 

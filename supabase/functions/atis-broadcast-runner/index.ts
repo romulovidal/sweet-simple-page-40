@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''

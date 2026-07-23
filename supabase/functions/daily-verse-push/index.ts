@@ -217,7 +217,7 @@ serve(async (req) => {
                 body: JSON.stringify({
                   systemInstruction: { parts: [{ text: systemPrompt }] },
                   contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-                  generationConfig: { temperature: 1.0, maxOutputTokens: 200 },
+                  generationConfig: { temperature: 1.0, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
                 }),
               },
             );

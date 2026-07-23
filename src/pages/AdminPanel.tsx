@@ -5,9 +5,10 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot
+  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot, Search, X
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminDailyVerse from "@/components/admin/AdminDailyVerse";
 import AdminPushSender from "@/components/admin/AdminPushSender";
@@ -119,11 +120,13 @@ const writeAdminHistory = (view: View, mode: "push" | "replace") => {
 
 const AdminPanel = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [view, setView] = useState<View>({ kind: "home" });
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -324,6 +327,204 @@ const AdminPanel = () => {
 
   const showToolLoader = loading && view.kind === "tool" && ["posts", "plans", "users"].includes(view.id);
 
+  const filteredTools = search.trim()
+    ? ALL_TOOLS.filter((t) => {
+        const q = search.toLowerCase();
+        return (
+          t.label.toLowerCase().includes(q) ||
+          t.desc.toLowerCase().includes(q) ||
+          t.section.toLowerCase().includes(q)
+        );
+      })
+    : [];
+
+  const DesktopHome = ({ openTool }: { openTool: (id: string) => void }) => (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Bem-vindo</p>
+        <h2 className="text-2xl font-bold text-[hsl(var(--dark-text))]">Administração</h2>
+        <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">
+          Todas as ferramentas do app estão no menu lateral. Escolha por onde começar.
+        </p>
+      </div>
+
+      {ADMIN_SECTIONS.map((section) => {
+        const SIcon = section.sectionIcon;
+        return (
+          <div key={section.id} className="space-y-2">
+            <div className="flex items-center gap-2 px-1">
+              <SIcon className="w-4 h-4 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--dark-text))]">{section.title}</p>
+              <p className="text-[11px] text-[hsl(var(--dark-muted))]">· {section.subtitle}</p>
+            </div>
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+              {section.tabs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => openTool(t.id)}
+                  className="flex items-center gap-3 p-3 rounded-2xl text-left bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                >
+                  <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
+                    <t.icon className="w-5 h-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[hsl(var(--dark-text))] truncate">{t.label}</p>
+                    <p className="text-[11px] text-[hsl(var(--dark-muted))] truncate">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ============ DESKTOP LAYOUT (sidebar + content) ============
+  if (isMobile === false) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+        <aside className="fixed left-0 top-0 bottom-0 w-64 z-40 bg-[hsl(var(--dark-card))] border-r border-[hsl(var(--dark-card-hover))] flex flex-col">
+          <div className="px-5 pt-6 pb-5 flex items-center gap-3 border-b border-[hsl(var(--dark-card-hover))]">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] grid place-items-center shadow-lg shadow-primary/25 shrink-0">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-tight">Bíblia do Atalaia</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))]">Administração</p>
+            </div>
+          </div>
+
+          <div className="px-3 pt-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--dark-muted))]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar ferramenta…"
+                className="w-full h-9 pl-9 pr-8 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-xs text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:border-primary/50"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))]"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <nav className="flex-1 px-3 py-3 flex flex-col gap-4 overflow-y-auto">
+            {search.trim() ? (
+              <div className="flex flex-col gap-1">
+                <p className="px-3 text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] mb-1">
+                  {filteredTools.length} resultado{filteredTools.length === 1 ? "" : "s"}
+                </p>
+                {filteredTools.map((t) => {
+                  const active = view.kind === "tool" && view.id === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => { openTool(t.id); setSearch(""); }}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-left transition-colors ${
+                        active
+                          ? "bg-primary/15 text-primary"
+                          : "text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card-hover))]/60 hover:text-[hsl(var(--dark-text))]"
+                      }`}
+                    >
+                      <t.icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{t.label}</span>
+                      <span className="ml-auto text-[10px] text-[hsl(var(--dark-muted))] truncate">{t.section}</span>
+                    </button>
+                  );
+                })}
+                {filteredTools.length === 0 && (
+                  <p className="px-3 text-xs text-[hsl(var(--dark-muted))]">Nada encontrado.</p>
+                )}
+              </div>
+            ) : (
+              ADMIN_SECTIONS.map((section) => (
+                <div key={section.id} className="flex flex-col gap-0.5">
+                  <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] flex items-center gap-1.5">
+                    <section.sectionIcon className="w-3 h-3" />
+                    {section.title}
+                  </p>
+                  {section.tabs.map((t) => {
+                    const active = view.kind === "tool" && view.id === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => openTool(t.id)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-left transition-colors ${
+                          active
+                            ? "bg-primary/15 text-primary"
+                            : "text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card-hover))]/60 hover:text-[hsl(var(--dark-text))]"
+                        }`}
+                      >
+                        <t.icon className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </nav>
+
+          <div className="p-3 border-t border-[hsl(var(--dark-card-hover))] flex flex-col gap-1">
+            <button
+              onClick={() => navigate("/atis")}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold bg-gradient-to-br from-[hsl(220,70%,45%)] to-[hsl(260,60%,40%)] text-white hover:brightness-110 transition-all"
+            >
+              <Bot className="w-4 h-4" /> Painel Atis
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card-hover))]/60 hover:text-[hsl(var(--dark-text))]"
+            >
+              <Home className="w-4 h-4" /> Ir para a Bíblia
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        </aside>
+
+        <div className="lg:pl-64">
+          <header className="sticky top-0 z-30 bg-[hsl(var(--dark-bg))]/90 backdrop-blur border-b border-[hsl(var(--dark-card-hover))]">
+            <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] truncate">
+                  {headerCrumb}
+                </p>
+                <h1 className="text-sm font-bold truncate leading-tight">{headerTitle}</h1>
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-5xl mx-auto px-6 py-6">
+            {showToolLoader ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : view.kind === "home" ? (
+              <DesktopHome openTool={openTool} />
+            ) : view.kind === "category" ? (
+              <CategoryView sectionId={view.id} />
+            ) : (
+              <ToolContent id={view.id} />
+            )}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ MOBILE LAYOUT ============
   return (
     <div className="min-h-screen bg-[hsl(var(--dark-bg))]">
       {/* Header */}

@@ -204,7 +204,7 @@ const ProfilePage = () => {
           },
         });
         if (error) throw error;
-        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+        toast.success("Conta criada com sucesso! 🎉");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -568,11 +568,11 @@ const ProfilePage = () => {
         path="/perfil"
         noindex
       />
-      <header className="px-5 pt-12 pb-6 max-w-2xl mx-auto lg:pt-8 lg:mx-0">
+      <header className="px-5 pt-12 pb-4 max-w-2xl mx-auto lg:pt-8 lg:mx-0">
         <h1 className="text-2xl font-bold">Você</h1>
       </header>
 
-      <div className="px-5 mb-6 max-w-2xl mx-auto">
+      <div className="px-5 mb-5 max-w-2xl mx-auto">
         <div className="bg-dark-card rounded-2xl p-5 flex items-center gap-4">
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover" />
@@ -581,11 +581,9 @@ const ProfilePage = () => {
               🙏
             </div>
           )}
-          <div>
-            <p className="font-bold text-lg">{displayName}</p>
-            <p className="text-sm text-dark-muted">
-              {savedVerses.length} versículo{savedVerses.length !== 1 ? "s" : ""} salvo{savedVerses.length !== 1 ? "s" : ""}
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-lg truncate">{displayName}</p>
+            <p className="text-xs text-dark-muted truncate">{user?.email}</p>
           </div>
         </div>
       </div>
@@ -635,7 +633,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="px-5 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8" data-tour="profile-stats">
+      <div className="px-5 grid grid-cols-2 gap-3 mb-6 max-w-2xl mx-auto" data-tour="profile-stats">
         <div className="bg-dark-card rounded-2xl p-4">
           <div className="flex items-center gap-2 text-primary mb-2">
             <Flame className="w-4 h-4" />
@@ -647,94 +645,40 @@ const ProfilePage = () => {
 
         <div className="bg-dark-card rounded-2xl p-4">
           <div className="flex items-center gap-2 text-primary mb-2">
-            <BookOpenText className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Última leitura</span>
-          </div>
-          <p className="text-sm font-bold line-clamp-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Nenhuma"}</p>
-          <p className="text-xs text-dark-muted mt-1">{progress ? "Pronto para continuar" : "Comece hoje"}</p>
-        </div>
-
-        <div className="bg-dark-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-primary mb-2">
             <BookmarkCheck className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Salvos</span>
           </div>
           <p className="text-2xl font-bold">{savedVerses.length}</p>
           <p className="text-xs text-dark-muted mt-1">versículos guardados</p>
         </div>
-
-        <div className="bg-dark-card rounded-2xl p-4">
-          <div className="flex items-center gap-2 text-primary mb-2">
-            <Compass className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Planos</span>
-          </div>
-          <p className="text-2xl font-bold">{activePlansCount}</p>
-          <p className="text-xs text-dark-muted mt-1">em andamento</p>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-5 mb-8">
-        {/* Reading Goals */}
-        <div data-tour="profile-goals">
-          <ReadingGoals enabled={appFeatures.reading_goals} />
-        </div>
-
-        <div>
-          <button onClick={handleContinueReading}
-            className="w-full bg-primary text-primary-foreground rounded-2xl p-4 h-full text-left active:opacity-90 transition-opacity flex flex-col justify-center">
-            <p className="font-semibold text-sm">Continuar leitura</p>
-            <p className="text-xs opacity-90 mt-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Abrir Gênesis 1 agora"}</p>
-          </button>
-        </div>
+      <div className="px-5 mb-6 max-w-2xl mx-auto">
+        <button onClick={handleContinueReading}
+          className="w-full bg-primary text-primary-foreground rounded-2xl p-4 text-left active:opacity-90 transition-opacity">
+          <p className="font-semibold text-sm">Continuar leitura</p>
+          <p className="text-xs opacity-90 mt-1">{progress ? `${progress.bookName} ${progress.chapter}` : "Abrir Gênesis 1 agora"}</p>
+        </button>
       </div>
 
-
-
-
-      {recentSavedVerses.length > 0 && (
-        <div className="px-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Recentes</h2>
-            <button onClick={() => setView("saved")} className="text-xs text-primary font-semibold">Ver todos</button>
-          </div>
-          <div className="space-y-2">
-            {recentSavedVerses.map((verse) => (
-              <div key={verse.savedAt} className="bg-dark-card rounded-xl p-4">
-                <p className="text-xs font-semibold text-primary mb-1">{verse.reference}</p>
-                <p className="text-sm text-dark-muted line-clamp-2">"{verse.text}"</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="px-5 space-y-1 grid grid-cols-1 md:grid-cols-2 gap-x-6" data-tour="profile-menu">
+      <div className="px-5 space-y-1 max-w-2xl mx-auto" data-tour="profile-menu">
         {[
           { key: "saved", label: "Versículos salvos", icon: BookmarkCheck, value: String(savedVerses.length) },
-          { key: "verse-history", label: "Versículos do dia", icon: Sparkles, value: verseHistory.length ? `${verseHistory.length} dias` : "Vazio" },
-          { key: "history", label: "Histórico de leitura", icon: Clock3, value: readingHistory.length ? formatDate(readingHistory[0]) : "Vazio" },
           { key: "manual", label: "Manual do Usuário", icon: graduationCapIcon, value: "Aprender" },
           { key: "settings", label: "Configurações", icon: Settings, value: "Gerenciar" },
         ].map((item) => (
           <button key={item.key} onClick={() => handleMenuClick(item.key)}
-            className="w-full flex items-center gap-4 py-4 px-4 rounded-xl active:bg-dark-card transition-colors text-left">
-            <item.icon className="w-5 h-5 text-dark-muted" />
+            className="w-full flex items-center gap-4 py-4 px-4 rounded-xl bg-dark-card active:bg-dark-card-hover transition-colors text-left">
+            <item.icon className="w-5 h-5 text-primary" />
             <span className="flex-1 text-sm font-medium">{item.label}</span>
             <span className="text-xs text-dark-muted">{item.value}</span>
             <ChevronRight className="w-4 h-4 text-dark-muted" />
           </button>
         ))}
-        <button onClick={() => navigate("/descubra")}
-          className="w-full flex items-center gap-4 py-4 px-4 rounded-xl active:bg-dark-card transition-colors text-left">
-          <Compass className="w-5 h-5 text-dark-muted" />
-          <span className="flex-1 text-sm font-medium">Descobrir versículos</span>
-          <ChevronRight className="w-4 h-4 text-dark-muted" />
-        </button>
-      </div>
-
-      <div className="px-5 mt-6 text-center">
-        <button onClick={resetReadingData} className="inline-flex items-center gap-2 text-xs text-dark-muted font-semibold">
-          <RotateCcw className="w-3 h-3" /> Reiniciar meus dados locais
+        <button onClick={handleSignOut}
+          className="w-full flex items-center gap-4 py-4 px-4 rounded-xl bg-dark-card active:bg-dark-card-hover transition-colors text-left mt-2">
+          <LogOut className="w-5 h-5 text-destructive" />
+          <span className="flex-1 text-sm font-medium text-destructive">Sair da conta</span>
         </button>
       </div>
 

@@ -665,7 +665,27 @@ function findByTitle(hinos: HarpaHino[], titulo: string): HarpaHino | null {
   return best?.h ?? null
 }
 
-function formatHino(h: HarpaHino): string {
+async function fetchYoutubeLink(numero: number, titulo: string): Promise<string | null> {
+  try {
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')
+    if (!SUPABASE_URL || !SERVICE_KEY) return null
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/youtube-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+      body: JSON.stringify({ number: numero, title: titulo }),
+    })
+    if (!r.ok) return null
+    const j = await r.json().catch(() => null) as any
+    if (!j?.videoId) return null
+    return `https://www.youtube.com/watch?v=${j.videoId}`
+  } catch (e) {
+    console.error('[harpa] youtube lookup failed:', (e as Error)?.message)
+    return null
+  }
+}
+
+async function formatHino(h: HarpaHino): Promise<string> {
   const link = `${APP_URL}/harpa/${h.numero}`
   const chunks: string[] = [`🎵 *Hino ${h.numero} — ${h.titulo}*`]
   // Mostra até 2 estrofes + refrão (ou tudo se for curto) para não estourar mensagem
@@ -680,7 +700,11 @@ function formatHino(h: HarpaHino): string {
   }
   const totalEst = est.length
   if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes — abra o link para ler tudo, ouvir e apresentar)_`)
-  chunks.push(`🔗 ${link}\n_Harpa Cristã — Bíblia Atalaia_`)
+  const yt = await fetchYoutubeLink(h.numero, h.titulo)
+  const tail: string[] = [`🔗 Letra completa: ${link}`]
+  if (yt) tail.push(`▶️ Ouvir no YouTube: ${yt}`)
+  tail.push(`_Harpa Cristã — Bíblia Atalaia_`)
+  chunks.push(tail.join('\n'))
   return chunks.join('\n\n')
 }
 
@@ -696,7 +720,7 @@ async function runHarpa(intent: { numero?: number; titulo?: string }): Promise<s
     if (!hino) return `🎵 Não encontrei nenhum hino com título parecido com *"${intent.titulo}"*. Tente pelo número (ex.: "hino 117") ou confira em ${APP_URL}/harpa.`
   }
   if (!hino) return null
-  return formatHino(hino)
+  return await formatHino(hino)
 }
 
 function extractReference(text: string, history: Array<{role:string,content:string}>): string | null {

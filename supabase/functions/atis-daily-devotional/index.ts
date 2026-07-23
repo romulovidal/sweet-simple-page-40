@@ -20,21 +20,34 @@ function brNow() {
   return { dateKey, timeKey, hour, period, dayName }
 }
 
-async function generateMotivational(period: string, dayName: string, hour: number): Promise<string> {
+const DEFAULT_DEVOTIONAL_PROMPT =
+  'Você é um pastor e escritor devocional. A partir do versículo bíblico fornecido, escreva uma REFLEXÃO DEVOCIONAL curta (2 parágrafos) que:\n' +
+  '1) Conecte o texto ao cotidiano do leitor\n2) Traga uma aplicação prática e encorajadora\n' +
+  'Seja caloroso e inspirador. Use markdown. Responda em português brasileiro.'
+
+async function generateDevotional(
+  admin: any,
+  verseRef: string,
+  verseText: string,
+): Promise<string> {
   const key = Deno.env.get('GEMINI_API_KEY')
   if (!key) return ''
-  const systemPrompt =
-    'Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.'
-  const userPrompt =
-    `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
-    (period === 'manhã'
-      ? 'Convide a pessoa a começar o dia na Palavra.'
-      : period === 'tarde'
-      ? 'Convide a pessoa a fazer uma pausa e voltar à Palavra.'
-      : period === 'noite'
-      ? 'Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir.'
-      : 'Convide a pessoa a se aquietar com Deus neste momento silencioso.') +
-    ' Gere agora a frase (diferente das anteriores).'
+
+  // Use the same custom prompt override as the in-app "Reflexão Devocional" (ai-tools)
+  let systemPrompt = DEFAULT_DEVOTIONAL_PROMPT
+  try {
+    const { data: promptsRow } = await admin
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'ai_tool_prompts')
+      .maybeSingle()
+    const prompts = (promptsRow?.value as Record<string, string>) || {}
+    const custom = prompts?.devotional
+    if (typeof custom === 'string' && custom.trim().length > 0) systemPrompt = custom
+  } catch (_) { /* ignore */ }
+
+  const userContent = `**${verseRef}**\n\n"${verseText}"`
+
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
     {
@@ -42,8 +55,8 @@ async function generateMotivational(period: string, dayName: string, hour: numbe
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 1.0, maxOutputTokens: 200 },
+        contents: [{ role: 'user', parts: [{ text: userContent }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
       }),
     },
   )
@@ -56,15 +69,19 @@ async function generateMotivational(period: string, dayName: string, hour: numbe
     .map((p: any) => p?.text ?? '')
     .join('')
     .trim()
-    .replace(/^"|"$/g, '')
+  // Strip markdown for WhatsApp readability (keep bold via *...*)
   return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '*$1*')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .trim()
 }
 
 function titleByPeriod(period: string): string {
-  if (period === 'manhã') return '☀️ Bom dia! Não deixe de ler hoje'
-  if (period === 'tarde') return '🌤️ Boa tarde! Uma pausa na Palavra'
-  if (period === 'noite') return '🌙 Boa noite! Encerre o dia com Deus'
-  return '✨ Um momento com Deus agora'
+  if (period === 'manhã') return '☀️ Bom dia! Devocional de hoje'
+  if (period === 'tarde') return '🌤️ Boa tarde! Devocional de hoje'
+  if (period === 'noite') return '🌙 Boa noite! Devocional de hoje'
+  return '✨ Devocional de hoje'
 }
 
 async function sendToGroup(jid: string, text: string) {
@@ -90,7 +107,7 @@ Deno.serve(async (req) => {
     enabled?: boolean; time?: string; group_ids?: string[]; last_sent_date?: string
   }
 
-  const { dateKey, timeKey, hour, period, dayName } = brNow()
+  const { dateKey, timeKey, period } = brNow()
 
   if (!force) {
     if (!cfg.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
@@ -114,13 +131,14 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ skipped: true, reason: 'no-verse-scheduled', date: dateKey }), { headers: corsHeaders })
   }
 
-  const motivational = await generateMotivational(period, dayName, hour)
+  const devotional = await generateDevotional(admin, queueVerse.verse_ref, queueVerse.verse_text)
   const title = titleByPeriod(period)
   const text =
+    `${title}\n\n` +
     `📖 *${queueVerse.verse_ref}*\n` +
     `"${queueVerse.verse_text}"\n\n` +
-    `${title}\n` +
-    (motivational ? `${motivational}\n\n` : '\n') +
+    `💜 *Reflexão Devocional*\n` +
+    (devotional ? `${devotional}\n\n` : '_Reflita hoje sobre este versículo e permita que Deus fale ao seu coração._\n\n') +
     `— Bíblia Atalaia`
 
   const results: any[] = []
@@ -134,7 +152,7 @@ Deno.serve(async (req) => {
       body: text,
       command: 'daily-devotional',
       status: r.ok ? 'sent' : 'error',
-      raw: { auto: !force, verse_ref: queueVerse.verse_ref, ai_motivational: !!motivational, http: r.status, body: r.body?.slice?.(0, 300) },
+      raw: { auto: !force, verse_ref: queueVerse.verse_ref, ai_devotional: !!devotional, http: r.status, body: r.body?.slice?.(0, 300) },
     })
   }
 

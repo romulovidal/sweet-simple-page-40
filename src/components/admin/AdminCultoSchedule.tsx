@@ -267,15 +267,39 @@ const AdminCultoSchedule = () => {
               </div>
 
               <div>
-                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block">
-                  Data e hora do envio
+                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
+                  <Repeat className="w-3 h-3" /> Quando enviar (toda semana, antes do culto)
                 </label>
-                <Input
-                  type="datetime-local"
-                  value={toLocalInput(reminder.scheduled_at)}
-                  onChange={(e) => updateReminder(index, { scheduled_at: fromLocalInput(e.target.value) || undefined })}
-                  className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
-                />
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {REMINDER_PRESETS.map((p) => (
+                    <button
+                      key={p.minutes}
+                      type="button"
+                      onClick={() => updateReminder(index, { minutes_before: p.minutes, scheduled_at: null })}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                        reminder.minutes_before === p.minutes
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10080}
+                    value={reminder.minutes_before ?? ""}
+                    onChange={(e) => updateReminder(index, { minutes_before: e.target.value ? Number(e.target.value) : undefined, scheduled_at: null })}
+                    placeholder="ou minutos"
+                    className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs w-28"
+                  />
+                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">
+                    {formatMinutesBefore(reminder.minutes_before ?? null)}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -332,7 +356,7 @@ const AdminCultoSchedule = () => {
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">
-                    {r.scheduled_at ? formatScheduled(r.scheduled_at) : `${r.minutes_before ?? 0}min antes`}
+                    {formatMinutesBefore(r.minutes_before)} <span className="text-[10px] font-normal text-[hsl(var(--dark-muted))]">(semanal)</span>
                   </span>
                 </div>
                 {r.message ? (

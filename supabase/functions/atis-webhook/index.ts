@@ -217,21 +217,18 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
   let notified = false
   if (enabled && pastors.length) {
     for (const p of pastors) {
-      // Segurança primeiro: alerta crítico vai como texto puro, que é o formato
-      // mais estável no WhatsApp. Botões são enviados depois apenas como atalho.
-      const r = await evolutionSendText(p, alertMsg)
-      if (r.ok) {
-        notified = true
-        await evolutionSendButtons(
-          p,
-          `Ações rápidas para o alerta de ${phonePretty}:`,
-          [
-            { id: `resolvido ${phoneDigits}`, displayText: '✅ Resolvido' },
-            { id: `silenciar ${phoneDigits}`, displayText: '🔕 Silenciar' },
-          ],
-          { footer: 'Se os botões não aparecerem, responda com o comando do alerta.' },
-        )
-      }
+      // Envia alerta já com os botões de ação. O helper faz fallback para texto
+      // puro automaticamente se o provedor rejeitar o formato de botões.
+      const r = await evolutionSendButtons(
+        p,
+        alertMsg,
+        [
+          { id: `resolvido ${phoneDigits}`, displayText: '✅ Resolvido' },
+          { id: `silenciar ${phoneDigits}`, displayText: '🔕 Silenciar' },
+        ],
+        { footer: 'Toque em um botão para agir sobre este alerta.' },
+      )
+      if (r.ok) notified = true
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: p, body: alertMsg,
         command: 'crisis-alert', status: r.ok ? 'sent' : 'error',

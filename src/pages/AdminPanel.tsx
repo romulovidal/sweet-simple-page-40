@@ -338,6 +338,48 @@ const AdminPanel = () => {
       })
     : [];
 
+  const DesktopHome = ({ openTool }: { openTool: (id: string) => void }) => (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Bem-vindo</p>
+        <h2 className="text-2xl font-bold text-[hsl(var(--dark-text))]">Administração</h2>
+        <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">
+          Todas as ferramentas do app estão no menu lateral. Escolha por onde começar.
+        </p>
+      </div>
+
+      {ADMIN_SECTIONS.map((section) => {
+        const SIcon = section.sectionIcon;
+        return (
+          <div key={section.id} className="space-y-2">
+            <div className="flex items-center gap-2 px-1">
+              <SIcon className="w-4 h-4 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--dark-text))]">{section.title}</p>
+              <p className="text-[11px] text-[hsl(var(--dark-muted))]">· {section.subtitle}</p>
+            </div>
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+              {section.tabs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => openTool(t.id)}
+                  className="flex items-center gap-3 p-3 rounded-2xl text-left bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors"
+                >
+                  <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
+                    <t.icon className="w-5 h-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[hsl(var(--dark-text))] truncate">{t.label}</p>
+                    <p className="text-[11px] text-[hsl(var(--dark-muted))] truncate">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   // ============ DESKTOP LAYOUT (sidebar + content) ============
   if (isMobile === false) {
     return (

@@ -21,7 +21,7 @@ function brNow() {
 }
 
 async function generateGreeting(names: string[], template: string | null, period: string): Promise<string> {
-  const key = Deno.env.get('LOVABLE_API_KEY')
+  const key = Deno.env.get('GEMINI_API_KEY')
   const greeting = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
   const list = names.map((n) => `• ${n}`).join('\n')
 
@@ -34,16 +34,7 @@ async function generateGreeting(names: string[], template: string | null, period
   if (!key) {
     return `🎉✨ ${greeting}, amada família Atalaias de Betel! ✨🎉\n\nHoje o céu se alegra e a nossa igreja também, porque Deus, em Seu infinito amor, nos presenteou com mais um ano de vida de pessoas muito especiais:\n\n${list}\n\n"O Senhor te abençoe e te guarde; o Senhor faça resplandecer o Seu rosto sobre ti e tenha misericórdia de ti; o Senhor sobre ti levante o Seu rosto e te dê a paz." (Números 6:24-26)\n\nQue este novo ciclo seja marcado por saúde, propósito, sonhos realizados e uma intimidade cada vez maior com o Senhor Jesus. Nós te amamos e celebramos com você! 🎂🙏🕊️\n\n— Com carinho, Igreja Atalaias de Betel`
   }
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      temperature: 1.1,
-      messages: [
-        {
-          role: 'system',
-          content:
+  const systemPrompt =
             'Você é Atis, o assistente da Igreja Atalaias de Betel. Sua missão agora é escrever UMA mensagem de aniversário CAPRICHADA, calorosa, poética e profundamente cristã, para ser enviada em um GRUPO de WhatsApp da igreja, parabenizando o(s) aniversariante(s) do dia. Nada de mensagens genéricas, chulas ou copiadas — cada mensagem precisa parecer feita à mão, com sentimento pastoral verdadeiro.\n\n' +
             'ESTRUTURA OBRIGATÓRIA (em parágrafos separados por uma linha em branco, sem títulos, sem markdown, sem asteriscos):\n' +
             `1) Abertura festiva começando com "${greeting}, amada família Atalaias de Betel!" acompanhada de 2 a 3 emojis (🎉🎂✨🕊️🙌). Depois, uma frase bonita reconhecendo que hoje é um dia especial, que o céu se alegra junto com a igreja.\n` +
@@ -58,24 +49,34 @@ async function generateGreeting(names: string[], template: string | null, period
             '- NADA de markdown (nada de **negrito**, #, ou listas com "-"). Use apenas "•" para a lista de nomes.\n' +
             '- Entre 900 e 1400 caracteres.\n' +
             '- VARIE bastante a cada execução: mude o versículo, as imagens, as palavras, a ordem interna dos parágrafos 3 e 4 se quiser, mantendo a estrutura.\n' +
-            '- Retorne SOMENTE o texto final da mensagem, sem comentários, sem aspas envolvendo tudo.',
-        },
-        {
-          role: 'user',
-          content:
-            `Aniversariante(s) de hoje (${names.length === 1 ? '1 pessoa' : `${names.length} pessoas`}): ${names.join(', ')}.\n` +
-            `Período do dia: ${period} (use isso para dar naturalidade à saudação, mas mantenha "${greeting}, amada família Atalaias de Betel!" como abertura).\n` +
-            'Escreva agora a mensagem de aniversário completa, caprichada e única, seguindo todas as diretrizes.',
-        },
-      ],
-    }),
-  })
+            '- Retorne SOMENTE o texto final da mensagem, sem comentários, sem aspas envolvendo tudo.'
+  const userPrompt =
+    `Aniversariante(s) de hoje (${names.length === 1 ? '1 pessoa' : `${names.length} pessoas`}): ${names.join(', ')}.\n` +
+    `Período do dia: ${period} (use isso para dar naturalidade à saudação, mas mantenha "${greeting}, amada família Atalaias de Betel!" como abertura).\n` +
+    'Escreva agora a mensagem de aniversário completa, caprichada e única, seguindo todas as diretrizes.'
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 1.1, maxOutputTokens: 1200 },
+      }),
+    },
+  )
   if (!res.ok) {
-    console.error('[atis-birthday-greeting] AI error', res.status, await res.text().catch(() => ''))
+    console.error('[atis-birthday-greeting] Gemini error', res.status, await res.text().catch(() => ''))
     return `🎂 ${greeting}, família!\n\nHoje é aniversário de:\n${list}\n\nParabéns! Que Deus abençoe grandemente. 🙏`
   }
   const j = await res.json().catch(() => null) as any
-  return (j?.choices?.[0]?.message?.content ?? '').trim().replace(/^"|"$/g, '')
+  const text = (j?.candidates?.[0]?.content?.parts ?? [])
+    .map((p: any) => p?.text ?? '')
+    .join('')
+    .trim()
+    .replace(/^"|"$/g, '')
+  return text
 }
 
 async function sendToGroup(jid: string, text: string) {

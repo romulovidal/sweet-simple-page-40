@@ -385,7 +385,7 @@ const AdminCultoSchedule = () => {
         <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Horários de Culto</span>
       </div>
       <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
-        Configure os dias e horários dos cultos com múltiplos lembretes push personalizados.
+        Configure os cultos semanais com lembretes recorrentes. Cada lembrete é enviado automaticamente toda semana, no tempo definido antes do culto — sem precisar reagendar.
       </p>
 
       <Button onClick={() => startEditing()} className="w-full">

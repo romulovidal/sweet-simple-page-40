@@ -171,7 +171,7 @@ async function buildMinistryContext(admin: any): Promise<string> {
 
 async function generateReply(persona: string, userText: string, ministryCtx: string, botName: string): Promise<string> {
   const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })
-  const system = `${persona}\n\n---\nCONTEXTO DO MINISTÉRIO (dados oficiais atuais do sistema — use como fonte primária, cite apenas o que está aqui):\n${ministryCtx}\n\nData/hora atual (America/Fortaleza): ${now}\nSeu nome é ${botName || 'Atis'}.`
+  const system = `${persona}\n\n---\nCONTEXTO OFICIAL DO APP E DO MINISTÉRIO (dados atuais do sistema — use SEMPRE como fonte primária para qualquer pergunta sobre o app, funções, planos, hinos, cultos, aniversariantes, versículo do dia, posts, pedidos de oração, estudos etc. Nunca diga que "não tem essa função" sem antes checar aqui):\n${ministryCtx}\n\nData/hora atual (America/Fortaleza): ${now}\nSeu nome é ${botName || 'Atis'}. Quando o usuário perguntar sobre alguma função do app, responda com base neste contexto e indique o link ${'https://biblia.atalaias.online'} quando útil.`
   const res = await aiChatFetch({
     model: 'google/gemini-2.5-flash',
     temperature: 0.6,

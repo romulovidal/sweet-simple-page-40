@@ -49,6 +49,9 @@ async function buildMinistryContext(admin: any): Promise<string> {
   const nowFort = new Date(Date.now() - 3 * 60 * 60 * 1000)
   const today = new Date(Date.UTC(nowFort.getUTCFullYear(), nowFort.getUTCMonth(), nowFort.getUTCDate()))
   const dow = today.getUTCDay()
+  const nowMinutes = nowFort.getUTCHours() * 60 + nowFort.getUTCMinutes()
+  const nowHHMM = `${String(nowFort.getUTCHours()).padStart(2,'0')}:${String(nowFort.getUTCMinutes()).padStart(2,'0')}`
+  parts.push(`### Agora (America/Fortaleza)\n- Data: ${DIAS[dow]}, ${String(today.getUTCDate()).padStart(2,'0')}/${String(today.getUTCMonth()+1).padStart(2,'0')}/${today.getUTCFullYear()}\n- Hora: ${nowHHMM}`)
 
   // Cultos
   try {
@@ -59,7 +62,20 @@ async function buildMinistryContext(admin: any): Promise<string> {
       const linhas = cultos.map((c: any) => `- ${DIAS[c.day_of_week]} às ${String(c.time).slice(0,5)}: ${c.name}`).join('\n')
       parts.push(`### Cultos regulares\n${linhas}`)
       const hoje = cultos.filter((c: any) => c.day_of_week === dow)
-      if (hoje.length) parts.push(`### Culto de hoje\n${hoje.map((c: any) => `- ${c.name} às ${String(c.time).slice(0,5)}`).join('\n')}`)
+      if (hoje.length) {
+        const linhasHoje = hoje.map((c: any) => {
+          const hhmm = String(c.time).slice(0,5)
+          const [h, m] = hhmm.split(':').map(Number)
+          const start = h * 60 + m
+          const end = start + 120 // considera ~2h de duração
+          let estado: string
+          if (nowMinutes < start) estado = `AINDA VAI ACONTECER (futuro — faltam ${start - nowMinutes} min)`
+          else if (nowMinutes <= end) estado = `ACONTECENDO AGORA (presente — começou há ${nowMinutes - start} min)`
+          else estado = `JÁ ACONTECEU (passado — terminou há ${nowMinutes - end} min)`
+          return `- ${c.name} às ${hhmm} — ${estado}`
+        }).join('\n')
+        parts.push(`### Culto de hoje (com estado em relação a agora ${nowHHMM})\n${linhasHoje}\n\nREGRA DE TEMPO VERBAL: ao falar de cada culto acima, use o tempo verbal indicado (passado / presente / futuro) conforme o estado. Ex.: "o culto foi às 19:30", "o culto está acontecendo agora", "o culto será às 19:30".`)
+      }
     }
   } catch { /* ignore */ }
 

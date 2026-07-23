@@ -249,7 +249,7 @@ async function sendText(jid: string, text: string) {
   return fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text }),
+    body: JSON.stringify({ number: jid, text, linkPreview: true }),
   })
 }
 

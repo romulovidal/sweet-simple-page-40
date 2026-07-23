@@ -119,3 +119,48 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
 
   return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
 }
+
+// Convenience: single-shot text generation. Returns generated text or '' on failure.
+// Use this in place of native Gemini `generateContent` calls so everything routes
+// through the same xAI Grok → Gemini → Lovable chain.
+export async function aiGenerateText(opts: {
+  system?: string;
+  user: string;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<string> {
+  const messages: Array<{ role: string; content: string }> = [];
+  if (opts.system) messages.push({ role: "system", content: opts.system });
+  messages.push({ role: "user", content: opts.user });
+  try {
+    const res = await aiChatFetch({
+      model: opts.model ?? "grok-4-fast-non-reasoning",
+      messages,
+      temperature: opts.temperature ?? 0.9,
+      max_tokens: opts.maxTokens ?? 2048,
+    });
+    if (!res.ok) {
+      try {
+        const errText = await res.clone().text();
+        console.error(`[ai-generate] ${res.status}:`, errText.slice(0, 300));
+      } catch { /* ignore */ }
+      return "";
+    }
+    const j = await res.json().catch(() => null) as any;
+    const text = j?.choices?.[0]?.message?.content ?? "";
+    return typeof text === "string" ? text.trim().replace(/^"|"$/g, "") : "";
+  } catch (e) {
+    console.error("[ai-generate] threw:", (e as Error)?.message);
+    return "";
+  }
+}
+
+// Returns true if ANY AI provider is configured (xAI, Gemini, or Lovable).
+export function hasAnyAiKey(): boolean {
+  return !!(
+    Deno.env.get("XAI_API_KEY") ||
+    Deno.env.get("GEMINI_API_KEY") ||
+    Deno.env.get("LOVABLE_API_KEY")
+  );
+}

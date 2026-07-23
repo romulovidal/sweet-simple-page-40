@@ -699,7 +699,7 @@ async function formatHino(h: HarpaHino): Promise<string> {
     chunks.push(`${label}\n${s.linhas.join('\n')}`)
   }
   const totalEst = est.length
-  if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes — abra o link para ler tudo, ouvir e apresentar)_`)
+  if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes)_`)
   const yt = await fetchYoutubeLink(h.numero, h.titulo)
   const tail: string[] = []
   if (yt) tail.push(`▶️ Ouvir no YouTube: ${yt}`)

@@ -9,7 +9,7 @@ const INSTANCE = 'atis'
 const WEBHOOK_SECRET = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 
 // ============================================================
-// Detecção de crise — palavras-chave locais + rate-limit por contato
+// Detecção de crise — palavras-chave locais + acompanhamento de crise ativa
 // ============================================================
 const DEFAULT_CRISIS_KEYWORDS = [
   // Ideação suicida — verbos "matar/morrer"
@@ -70,6 +70,25 @@ async function detectCrisis(admin: any, text: string): Promise<{ matched: string
   return { matched, extras }
 }
 
+async function getRecentActiveCrisis(admin: any, phone: string): Promise<{ id: string; created_at: string } | null> {
+  try {
+    const phoneDigits = String(phone).split('@')[0].replace(/\D/g, '')
+    const candidates = Array.from(new Set([phone, phoneDigits].filter(Boolean)))
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data } = await admin
+      .from('atis_crisis_alerts')
+      .select('id,created_at')
+      .in('contact_phone', candidates)
+      .eq('handled', false)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    return data?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 // Classificação por IA: só dispara alerta se o CONTEXTO indicar risco real,
 // evitando falsos positivos (ex.: "não me mate de rir", citação bíblica,
 // pergunta teórica, letra de música, terceira pessoa hipotética).
@@ -111,9 +130,21 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
   const nameStr = name ?? '(sem nome)'
   const phoneDigits = String(phone).split('@')[0].replace(/\D/g, '')
   const phonePretty = phoneDigits ? `+${phoneDigits}` : phone
-  const alertMsg = (cfg.alert_template && cfg.alert_template.trim())
-    ? cfg.alert_template.replaceAll('{nome}', nameStr).replaceAll('{numero}', phonePretty).replaceAll('{mensagem}', snippet).replaceAll('{palavras}', matched.join(', '))
+  const nowStr = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Fortaleza',
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date())
+  const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
+    ? cfg.alert_template
+        .replaceAll('{nome}', nameStr)
+        .replaceAll('{numero}', phonePretty)
+        .replaceAll('{mensagem}', snippet)
+        .replaceAll('{palavras}', matched.join(', '))
+        .replaceAll('{horario}', nowStr)
     : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
+  // Inclui horário para auditoria e para evitar bloqueio/deduplicação de mensagens idênticas pelo provedor.
+  const alertMsg = `${renderedAlert.trim()}\n\n🕒 ${nowStr}`
 
   let notified = false
   if (enabled && pastors.length) {
@@ -123,7 +154,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: p, body: alertMsg,
         command: 'crisis-alert', status: r.ok ? 'sent' : 'error',
-        raw: { auto: true, contact: phone, http: r.status },
+        raw: { auto: true, contact: phone, http: r.status, jid: r.jid, provider_body: r.body },
       })
     }
   }
@@ -606,14 +637,19 @@ Deno.serve(async (req) => {
         // Detecção de crise (aplica a DMs — em grupo evita alarmar em conversa aberta)
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)
-          if (crisis.matched.length) {
+          const recentCrisis = crisis.matched.length ? null : await getRecentActiveCrisis(admin, jid)
+          if (crisis.matched.length || recentCrisis) {
+            const matched = crisis.matched.length ? crisis.matched : ['continuação de crise recente']
             // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
-            const ctx = await classifyCrisisContext(text)
+            // Se já existe crise ativa não tratada nas últimas 24h, cada nova mensagem é encaminhada aos pastores.
+            const ctx = recentCrisis
+              ? { risk: true, reason: `active_crisis_follow_up:${recentCrisis.id}`, confidence: 1 }
+              : await classifyCrisisContext(text)
             if (!ctx.risk) {
               await admin.from('atis_messages_log').insert({
                 direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
                 command: 'crisis-skip', status: 'ignored',
-                raw: { reason: ctx.reason, confidence: ctx.confidence, matched: crisis.matched },
+                raw: { reason: ctx.reason, confidence: ctx.confidence, matched },
               })
               // não continua — deixa o fluxo normal (comando/IA) responder
             } else {
@@ -627,12 +663,12 @@ Deno.serve(async (req) => {
                 contactName = p?.display_name ?? null
               }
             } catch { /* ignore */ }
-            await handleCrisis(admin, jid, contactName, text, crisis.matched)
+            await handleCrisis(admin, jid, contactName, text, matched)
             const r = await sendText(jid, CRISIS_REPLY)
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
               command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, matched: crisis.matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
+              raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
             })
             continue
             }

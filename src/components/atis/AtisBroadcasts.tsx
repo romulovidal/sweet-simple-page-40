@@ -6,6 +6,7 @@ import AtisDailyDevotional from "./AtisDailyDevotional";
 
 type BC = { id: string; title: string; body: string; target_type: string; target_ref: string | null; scheduled_at: string | null; recurrence: string | null; status: string; content_type: string; created_at?: string };
 type Group = { id: string; wa_group_id: string; name: string };
+type Contact = { id: string; name: string; phone: string; opt_in: boolean };
 
 const PRESETS: { key: string; label: string; icon: string; apply: (base: string) => Partial<FormState> }[] = [
   {
@@ -66,18 +67,21 @@ const STATUS_META: Record<string, { label: string; color: string; icon: any }> =
 const AtisBroadcasts = () => {
   const [items, setItems] = useState<BC[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [filter, setFilter] = useState<string>("all");
 
   const load = async () => {
     setLoading(true);
-    const [b, g] = await Promise.all([
+    const [b, g, c] = await Promise.all([
       atisDb.from("atis_broadcasts").select("*").order("scheduled_at", { ascending: true, nullsFirst: false }),
       atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
+      atisDb.from("atis_contacts").select("id,name,phone,opt_in").order("name"),
     ]);
     setItems((b.data ?? []) as BC[]);
     setGroups((g.data ?? []) as Group[]);
+    setContacts((c.data ?? []) as Contact[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -164,6 +168,19 @@ const AtisBroadcasts = () => {
                 ))}
               </select>
             </div>
+          ) : form.target_type === "contact" ? (
+            <div>
+              <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase">Contato</label>
+              <select className="input" value={form.target_ref} onChange={e => setForm({ ...form, target_ref: e.target.value })}>
+                <option value="">— selecione um contato —</option>
+                {contacts.filter(c => c.opt_in).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} · {c.phone}</option>
+                ))}
+                {contacts.filter(c => c.opt_in).length === 0 && (
+                  <option value="" disabled>Nenhum contato ativo — cadastre em "Contatos"</option>
+                )}
+              </select>
+            </div>
           ) : showRef ? (
             <div>
               <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase">Referência</label>
@@ -229,6 +246,7 @@ const AtisBroadcasts = () => {
               const meta = STATUS_META[b.status] ?? STATUS_META.pending;
               const StatusIcon = meta.icon;
               const groupName = b.target_type === "group" && b.target_ref ? (groups.find(g => g.wa_group_id === b.target_ref)?.name ?? b.target_ref) : null;
+              const contactName = b.target_type === "contact" && b.target_ref ? (contacts.find(c => c.id === b.target_ref)?.name ?? b.target_ref) : null;
               return (
                 <li key={b.id} className="py-3 flex items-start gap-3">
                   <span className={`w-9 h-9 rounded-full grid place-items-center mt-0.5 ${meta.color}`}><StatusIcon className="w-4 h-4" /></span>
@@ -239,7 +257,7 @@ const AtisBroadcasts = () => {
                     </div>
                     <p className="text-xs text-[hsl(var(--dark-muted))] line-clamp-2 mt-0.5">{b.body}</p>
                     <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">
-                      {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" }) : "sem data"} · {b.recurrence ?? "once"} · {groupName ? `grupo: ${groupName}` : b.target_type}{!groupName && b.target_ref ? ` (${b.target_ref})` : ""}
+                      {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" }) : "sem data"} · {b.recurrence ?? "once"} · {groupName ? `grupo: ${groupName}` : contactName ? `contato: ${contactName}` : b.target_type}{!groupName && !contactName && b.target_ref ? ` (${b.target_ref})` : ""}
                     </p>
                   </div>
                   <button onClick={() => remove(b.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>

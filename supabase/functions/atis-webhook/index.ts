@@ -517,6 +517,31 @@ Deno.serve(async (req) => {
         const { data: cfg } = await admin.from('atis_config').select('*').eq('id', 1).maybeSingle()
         if (!cfg?.active) continue
 
+        // Detecção de crise (aplica a DMs — em grupo evita alarmar em conversa aberta)
+        if (!isGroup) {
+          const crisis = await detectCrisis(admin, text)
+          if (crisis.matched.length) {
+            let contactName: string | null = null
+            try {
+              const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
+              const { data: c } = await admin.from('atis_contacts').select('name').eq('phone', phoneOnly).maybeSingle()
+              contactName = c?.name ?? null
+              if (!contactName) {
+                const { data: p } = await admin.from('profiles').select('display_name').eq('whatsapp', phoneOnly).maybeSingle()
+                contactName = p?.display_name ?? null
+              }
+            } catch { /* ignore */ }
+            await handleCrisis(admin, jid, contactName, text, crisis.matched)
+            const r = await sendText(jid, CRISIS_REPLY)
+            await admin.from('atis_messages_log').insert({
+              direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
+              command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, matched: crisis.matched, http: r.status },
+            })
+            continue
+          }
+        }
+
         // Group behavior
         if (isGroup) {
           const { data: group } = await admin.from('atis_groups').select('*').eq('wa_group_id', jid).maybeSingle()

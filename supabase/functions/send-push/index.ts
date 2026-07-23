@@ -167,6 +167,8 @@ Deno.serve(async (req) => {
     // Forward the notification to WhatsApp groups that opted in.
     let waSent = 0;
     let waFailed = 0;
+    let waIndividualSent = 0;
+    let waIndividualFailed = 0;
     try {
       const evoUrl = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
       const evoKey = Deno.env.get("EVOLUTION_API_KEY") ?? "";
@@ -209,13 +211,56 @@ Deno.serve(async (req) => {
           waSent = results.filter(Boolean).length;
           waFailed = results.length - waSent;
         }
+
+        // Forward to individual users who opted in via profile.
+        const { data: subscribers } = await supabase
+          .from("profiles")
+          .select("whatsapp, display_name")
+          .eq("whatsapp_opt_in", true)
+          .not("whatsapp", "is", null);
+
+        if (subscribers?.length) {
+          const link = body.url && body.url !== "/"
+            ? `https://biblia.atalaias.online${body.url}`
+            : "https://biblia.atalaias.online";
+          const results = await Promise.all(subscribers.map(async (u: any) => {
+            const digits = String(u.whatsapp ?? "").replace(/\D/g, "");
+            if (digits.length < 10) return false;
+            const jid = `${digits}@s.whatsapp.net`;
+            const firstName = (u.display_name ?? "").split(" ")[0] || "";
+            const salute = firstName ? `Olá, *${firstName}*! ` : "";
+            const waText = `${salute}📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}\n\n_Para parar de receber, desative em Perfil › Configurações › Notificações no WhatsApp._`;
+            try {
+              const res = await fetch(`${evoUrl}/message/sendText/atis`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: evoKey },
+                body: JSON.stringify({ number: jid, text: waText }),
+              });
+              const raw = await res.text().catch(() => "");
+              await supabase.from("atis_messages_log").insert({
+                direction: "outbound",
+                wa_to: jid,
+                body: waText,
+                status: res.ok ? "sent" : "error",
+                error: res.ok ? null : `${res.status}: ${raw.slice(0, 300)}`,
+                raw: { source: "push_forward_individual", type: body.type },
+              });
+              return res.ok;
+            } catch (err) {
+              console.error("[send-push] individual forward failed", jid, err);
+              return false;
+            }
+          }));
+          waIndividualSent = results.filter(Boolean).length;
+          waIndividualFailed = results.length - waIndividualSent;
+        }
       }
     } catch (err) {
       console.error("[send-push] group forward top-level error", err);
     }
 
     return new Response(
-      JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency, waSent, waFailed }),
+      JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency, waSent, waFailed, waIndividualSent, waIndividualFailed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit2, Save, X, Church, Bell, Loader2, MessageSquare, Send } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Church, Bell, Loader2, MessageSquare, Send, Repeat } from "lucide-react";
 
 const DAYS_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -32,60 +32,33 @@ interface CultoReminder {
 
 const MAX_REMINDERS = 4;
 
-// All datetime-local inputs are interpreted in America/Fortaleza (UTC-3, sem horário de verão)
-// regardless of the admin's device timezone.
-const FORTALEZA_OFFSET_MIN = -180; // UTC-3
+// Recurring reminders — each lembrete dispara automaticamente toda semana,
+// X minutos antes do horário do culto (mesmo dia da semana).
+const REMINDER_PRESETS: { label: string; minutes: number }[] = [
+  { label: "15 min antes", minutes: 15 },
+  { label: "30 min antes", minutes: 30 },
+  { label: "1 hora antes", minutes: 60 },
+  { label: "2 horas antes", minutes: 120 },
+  { label: "3 horas antes", minutes: 180 },
+  { label: "6 horas antes", minutes: 360 },
+  { label: "1 dia antes", minutes: 1440 },
+  { label: "2 dias antes", minutes: 2880 },
+];
 
-const toLocalInput = (iso: string | null | undefined): string => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Fortaleza",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(d);
-  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
-  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
-};
-
-const fromLocalInput = (val: string): string | null => {
-  if (!val) return null;
-  // val looks like "YYYY-MM-DDTHH:mm" — treat it as Fortaleza wall time.
-  const m = val.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (!m) return null;
-  const [, y, mo, d, h, mi] = m;
-  // UTC ms = wall-time-as-UTC minus TZ offset. Fortaleza offset = -180 min → subtract (-180) = +180 min.
-  const asUtc = Date.UTC(+y, +mo - 1, +d, +h, +mi, 0);
-  const iso = new Date(asUtc - FORTALEZA_OFFSET_MIN * 60000).toISOString();
-  return iso;
-};
-
-const formatScheduled = (iso: string | null | undefined) => {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString("pt-BR", {
-    timeZone: "America/Fortaleza",
-    weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-  });
-};
-
-// Build a default scheduled_at for a new reminder on an existing schedule:
-// next occurrence of that weekday+time, minus 1h.
-const defaultScheduledFor = (schedule: CultoSchedule): string => {
-  const [h, m] = schedule.time.split(":").map(Number);
-  // Compute in Fortaleza local time to be device-agnostic.
-  const nowFortaleza = new Date(Date.now() + (new Date().getTimezoneOffset() - FORTALEZA_OFFSET_MIN) * 60000);
-  const currentDow = nowFortaleza.getUTCDay();
-  const delta = (schedule.day_of_week - currentDow + 7) % 7;
-  const target = new Date(nowFortaleza);
-  target.setUTCDate(nowFortaleza.getUTCDate() + delta);
-  target.setUTCHours(h, m, 0, 0);
-  if (delta === 0 && target.getTime() < nowFortaleza.getTime()) {
-    target.setUTCDate(target.getUTCDate() + 7);
+const formatMinutesBefore = (min: number | null | undefined): string => {
+  if (min == null) return "";
+  const preset = REMINDER_PRESETS.find((p) => p.minutes === min);
+  if (preset) return preset.label;
+  if (min < 60) return `${min} min antes`;
+  if (min % 1440 === 0) {
+    const d = min / 1440;
+    return `${d} dia${d > 1 ? "s" : ""} antes`;
   }
-  target.setTime(target.getTime() - 60 * 60 * 1000);
-  // target now holds Fortaleza wall time in UTC fields; convert to real UTC.
-  return new Date(target.getTime() - FORTALEZA_OFFSET_MIN * 60000).toISOString();
+  if (min % 60 === 0) {
+    const h = min / 60;
+    return `${h}h antes`;
+  }
+  return `${min} min antes`;
 };
 
 const AdminCultoSchedule = () => {
@@ -134,10 +107,10 @@ const AdminCultoSchedule = () => {
 
     // Save reminders
     if (scheduleId) {
-      // Validate: every reminder must have a scheduled_at
+      // Validate: every reminder must have a minutes_before
       for (const r of editingReminders) {
-        if (!r.scheduled_at) {
-          toast.error("Defina data e hora para cada lembrete");
+        if (r.minutes_before == null || r.minutes_before < 0) {
+          toast.error("Defina o tempo antes do culto para cada lembrete");
           return;
         }
       }
@@ -153,8 +126,8 @@ const AdminCultoSchedule = () => {
       if (editingReminders.length > 0) {
         const reminderPayloads = editingReminders.map((r, i) => ({
           schedule_id: scheduleId!,
-          minutes_before: null,
-          scheduled_at: r.scheduled_at!,
+          minutes_before: r.minutes_before!,
+          scheduled_at: null,
           message: r.message?.trim() || "",
           sort_order: i,
         }));
@@ -209,11 +182,11 @@ const AdminCultoSchedule = () => {
       setEditingReminders(
         schedReminders.length > 0
           ? schedReminders
-          : [{ scheduled_at: defaultScheduledFor(schedule), message: "" }]
+          : [{ minutes_before: 60, message: "" }]
       );
     } else {
       setEditing({ day_of_week: 0, reminder_minutes_before: 180, is_active: true });
-      setEditingReminders([{ scheduled_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), message: "" }]);
+      setEditingReminders([{ minutes_before: 60, message: "" }]);
     }
   };
 
@@ -222,14 +195,10 @@ const AdminCultoSchedule = () => {
       toast.error(`Máximo de ${MAX_REMINDERS} lembretes`);
       return;
     }
-    // Default: 1 hour from now, but based on last reminder if any
-    const base = editingReminders.length
-      ? new Date(editingReminders[editingReminders.length - 1].scheduled_at || Date.now()).getTime()
-      : Date.now();
-    setEditingReminders([
-      ...editingReminders,
-      { scheduled_at: new Date(base + 60 * 60 * 1000).toISOString(), message: "" },
-    ]);
+    // Sugere um novo lembrete com o dobro do tempo do último (ex: 60 → 120 → 180 min)
+    const last = editingReminders[editingReminders.length - 1]?.minutes_before ?? 60;
+    const next = Math.min(2880, last + 60);
+    setEditingReminders([...editingReminders, { minutes_before: next, message: "" }]);
   };
 
   const removeReminder = (index: number) => {
@@ -298,15 +267,39 @@ const AdminCultoSchedule = () => {
               </div>
 
               <div>
-                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block">
-                  Data e hora do envio
+                <label className="text-[10px] text-[hsl(var(--dark-muted))] mb-1 block flex items-center gap-1">
+                  <Repeat className="w-3 h-3" /> Quando enviar (toda semana, antes do culto)
                 </label>
-                <Input
-                  type="datetime-local"
-                  value={toLocalInput(reminder.scheduled_at)}
-                  onChange={(e) => updateReminder(index, { scheduled_at: fromLocalInput(e.target.value) || undefined })}
-                  className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs"
-                />
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {REMINDER_PRESETS.map((p) => (
+                    <button
+                      key={p.minutes}
+                      type="button"
+                      onClick={() => updateReminder(index, { minutes_before: p.minutes, scheduled_at: null })}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                        reminder.minutes_before === p.minutes
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10080}
+                    value={reminder.minutes_before ?? ""}
+                    onChange={(e) => updateReminder(index, { minutes_before: e.target.value ? Number(e.target.value) : undefined, scheduled_at: null })}
+                    placeholder="ou minutos"
+                    className="bg-[hsl(var(--dark-bg))] border-none h-9 text-xs w-28"
+                  />
+                  <span className="text-[10px] text-[hsl(var(--dark-muted))]">
+                    {formatMinutesBefore(reminder.minutes_before ?? null)}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -363,7 +356,7 @@ const AdminCultoSchedule = () => {
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
                   <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">
-                    {r.scheduled_at ? formatScheduled(r.scheduled_at) : `${r.minutes_before ?? 0}min antes`}
+                    {formatMinutesBefore(r.minutes_before)} <span className="text-[10px] font-normal text-[hsl(var(--dark-muted))]">(semanal)</span>
                   </span>
                 </div>
                 {r.message ? (
@@ -392,7 +385,7 @@ const AdminCultoSchedule = () => {
         <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Horários de Culto</span>
       </div>
       <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
-        Configure os dias e horários dos cultos com múltiplos lembretes push personalizados.
+        Configure os cultos semanais com lembretes recorrentes. Cada lembrete é enviado automaticamente toda semana, no tempo definido antes do culto — sem precisar reagendar.
       </p>
 
       <Button onClick={() => startEditing()} className="w-full">

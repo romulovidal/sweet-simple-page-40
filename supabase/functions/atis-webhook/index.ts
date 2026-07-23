@@ -604,7 +604,7 @@ const BOOK_ALTS = [
   'tiago|tg','1\\s*pedro|1pe','2\\s*pedro|2pe','1\\s*jo[aã]o|1jo','2\\s*jo[aã]o|2jo',
   '3\\s*jo[aã]o|3jo','judas|jd','apocalipse|ap',
 ].join('|')
-const REF_REGEX = new RegExp(`\\b(?:${BOOK_ALTS})\\s+\\d+(?::\\d+(?:\\s*[-–]\\s*\\d+)?)?`, 'i')
+const REF_REGEX = new RegExp(`\\b(?:${BOOK_ALTS})\\s+\\d+(?::\\d+(?:\\s*[-–]\\s*\\d+)?(?:\\s*,\\s*\\d+(?:\\s*[-–]\\s*\\d+)?)*)?`, 'i')
 
 // ============================================================
 // Harpa Cristã — busca REAL no JSON oficial (sem invenção da IA)
@@ -830,18 +830,29 @@ function detectBibleVersion(text: string): BibleVersion {
   return DEFAULT_BIBLE
 }
 
-type ParsedRef = { bookIdx: number; bookName: string; chapter: number; vFrom?: number; vTo?: number }
+type ParsedRef = { bookIdx: number; bookName: string; chapter: number; verses?: number[] }
 
 function parseReference(ref: string): ParsedRef | null {
-  // Ex.: "João 3:16", "1 Coríntios 13:4-8", "Salmo 23", "Jo 3"
-  const m = ref.match(/^([1-3]?\s*[A-Za-zÀ-ÿ]+)\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?$/i)
+  // Ex.: "João 3:16", "1 Coríntios 13:4-8", "Salmo 23", "Jo 3", "João 8:31,32", "Sl 1:1-3,6"
+  const m = ref.match(/^([1-3]?\s*[A-Za-zÀ-ÿ]+)\s+(\d+)(?::(\d+(?:\s*[-–]\s*\d+)?(?:\s*,\s*\d+(?:\s*[-–]\s*\d+)?)*))?$/i)
   if (!m) return null
   const bookIdx = findBookIndex(m[1].trim())
   if (bookIdx == null) return null
   const chapter = parseInt(m[2],10)
-  const vFrom = m[3] ? parseInt(m[3],10) : undefined
-  const vTo = m[4] ? parseInt(m[4],10) : (vFrom ? vFrom : undefined)
-  return { bookIdx, bookName: BOOK_INDEX[bookIdx].name, chapter, vFrom, vTo }
+  let verses: number[] | undefined
+  if (m[3]) {
+    const set = new Set<number>()
+    for (const part of m[3].split(',')) {
+      const range = part.trim().match(/^(\d+)(?:\s*[-–]\s*(\d+))?$/)
+      if (!range) continue
+      const a = parseInt(range[1],10)
+      const b = range[2] ? parseInt(range[2],10) : a
+      const lo = Math.min(a,b), hi = Math.max(a,b)
+      for (let i = lo; i <= hi; i++) set.add(i)
+    }
+    verses = [...set].sort((x,y) => x - y)
+  }
+  return { bookIdx, bookName: BOOK_INDEX[bookIdx].name, chapter, verses }
 }
 
 // Só intercepta quando o usuário quer o TEXTO — não quando pede análise/ferramenta.
@@ -859,6 +870,19 @@ function detectBibleTextIntent(text: string, toolDetected: boolean): { ref: stri
 
 const MAX_VERSES = 25
 
+function formatVerseList(nums: number[]): string {
+  // Compacta [31,32,33,36] em "31-33,36"
+  const parts: string[] = []
+  let i = 0
+  while (i < nums.length) {
+    let j = i
+    while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++
+    parts.push(i === j ? `${nums[i]}` : `${nums[i]}-${nums[j]}`)
+    i = j + 1
+  }
+  return parts.join(',')
+}
+
 async function runBibleVerse(intent: { ref: string; version: BibleVersion }): Promise<string | null> {
   const parsed = parseReference(intent.ref)
   if (!parsed) return null
@@ -869,25 +893,24 @@ async function runBibleVerse(intent: { ref: string; version: BibleVersion }): Pr
   const chapterArr = book.chapters?.[parsed.chapter - 1]
   if (!chapterArr) return `📖 Não encontrei ${parsed.bookName} ${parsed.chapter} na versão ${intent.version}.`
   const total = chapterArr.length
-  let from = parsed.vFrom ?? 1
-  let to = parsed.vTo ?? total
-  if (from < 1) from = 1
-  if (to > total) to = total
-  if (from > total) return `📖 ${parsed.bookName} ${parsed.chapter} tem ${total} versículos na versão ${intent.version}.`
+  let verses = parsed.verses ?? Array.from({ length: total }, (_, i) => i + 1)
+  verses = verses.filter((n) => n >= 1 && n <= total)
+  if (!verses.length) return `📖 ${parsed.bookName} ${parsed.chapter} tem ${total} versículos na versão ${intent.version}.`
   let truncated = false
-  if (to - from + 1 > MAX_VERSES) { to = from + MAX_VERSES - 1; truncated = true }
+  if (verses.length > MAX_VERSES) { verses = verses.slice(0, MAX_VERSES); truncated = true }
+  const single = verses.length === 1
   const lines: string[] = []
-  for (let i = from; i <= to; i++) {
-    const txt = chapterArr[i - 1]
+  for (const n of verses) {
+    const txt = chapterArr[n - 1]
     if (!txt) continue
-    lines.push(from === to ? txt : `*${i}* ${txt}`)
+    lines.push(single ? txt : `*${n}* ${txt}`)
   }
-  const refLabel = from === to
-    ? `${parsed.bookName} ${parsed.chapter}:${from}`
-    : (parsed.vFrom ? `${parsed.bookName} ${parsed.chapter}:${from}-${to}` : `${parsed.bookName} ${parsed.chapter}`)
+  const refLabel = single
+    ? `${parsed.bookName} ${parsed.chapter}:${verses[0]}`
+    : (parsed.verses ? `${parsed.bookName} ${parsed.chapter}:${formatVerseList(verses)}` : `${parsed.bookName} ${parsed.chapter}`)
   const header = `📖 *${refLabel}* _(${intent.version})_`
   const footer = truncated
-    ? `\n\n_(exibindo ${MAX_VERSES} versículos — capítulo tem ${total}. Peça um trecho específico, ex.: ${parsed.bookName} ${parsed.chapter}:${to+1}-${Math.min(to+MAX_VERSES,total)})_`
+    ? `\n\n_(exibindo ${MAX_VERSES} versículos — peça um trecho menor para ver o restante)_`
     : ''
   return `${header}\n\n${lines.join('\n')}${footer}`
 }

@@ -115,7 +115,7 @@ const AtisAdvancedSettings = () => {
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-red-500/20 text-red-400"><Shield className="w-4 h-4" /></span>
           <div className="flex-1">
             <p className="text-sm font-bold">Detecção de crise + alerta pastoral</p>
-            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Detecta sinais de risco em DMs, responde com acolhimento e avisa pastores. Rate-limit: 1 alerta / 6h por pessoa.</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Detecta sinais de risco em DMs, responde com acolhimento e avisa até 4 pastores simultaneamente. Sem rate-limit — toda mensagem de risco dispara alerta.</p>
           </div>
           <label className="inline-flex items-center gap-2 text-xs">
             <input type="checkbox" checked={cr.enabled !== false} onChange={(e) => setCr({ ...cr, enabled: e.target.checked })} /> Ativo
@@ -131,21 +131,32 @@ const AtisAdvancedSettings = () => {
                 <button onClick={() => setCr({ ...cr, pastor_phones: (cr.pastor_phones ?? []).filter((x) => x !== p) })} className="text-red-400"><X className="w-3 h-3" /></button>
               </span>
             ))}
-            {!cr.pastor_phones?.length && <span className="text-[11px] text-[hsl(var(--dark-muted))]">Nenhum — adicione ao menos 1.</span>}
+            {!cr.pastor_phones?.length && <span className="text-[11px] text-[hsl(var(--dark-muted))]">Nenhum — adicione até 4 números para intervenção rápida.</span>}
           </div>
           <div className="flex gap-2">
-            <input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="55859..." inputMode="tel" className="input flex-1" />
+            <input
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              placeholder="55859..."
+              inputMode="tel"
+              disabled={(cr.pastor_phones?.length ?? 0) >= 4}
+              className="input flex-1 disabled:opacity-50" />
             <button
               onClick={() => {
                 const ph = newPhone.replace(/\D/g, "");
                 if (ph.length < 10) return toast.error("Número inválido");
-                setCr({ ...cr, pastor_phones: Array.from(new Set([...(cr.pastor_phones ?? []), ph])) });
+                const current = cr.pastor_phones ?? [];
+                if (current.includes(ph)) { setNewPhone(""); return toast.error("Este número já foi adicionado"); }
+                if (current.length >= 4) return toast.error("Máximo de 4 pastores");
+                setCr({ ...cr, pastor_phones: [...current, ph] });
                 setNewPhone("");
               }}
-              className="h-10 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold inline-flex items-center gap-1">
+              disabled={(cr.pastor_phones?.length ?? 0) >= 4}
+              className="h-10 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50">
               <Plus className="w-3.5 h-3.5" /> Adicionar
             </button>
           </div>
+          <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">{(cr.pastor_phones?.length ?? 0)}/4 pastores cadastrados</p>
         </div>
 
         <div>

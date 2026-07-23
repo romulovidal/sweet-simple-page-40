@@ -317,6 +317,30 @@ const ProfilePage = () => {
                 placeholder="Senha" className="bg-[hsl(var(--dark-card))] border-none"
                 required minLength={6}
               />
+              {authMode === "signup" && (
+                <>
+                  <Input
+                    type="tel"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="WhatsApp com DDD (opcional) — ex: 85999999999"
+                    className="bg-[hsl(var(--dark-card))] border-none"
+                    inputMode="tel"
+                  />
+                  <label className="flex items-start gap-3 bg-[hsl(var(--dark-card))] rounded-2xl p-3 cursor-pointer">
+                    <Checkbox
+                      id="wa-optin"
+                      checked={whatsappOptIn}
+                      onCheckedChange={(c) => setWhatsappOptIn(c === true)}
+                      className="mt-0.5"
+                    />
+                    <span className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
+                      <MessageCircle className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                      Desejo receber notificações no WhatsApp (versículo do dia, devocional, lembretes de cultos e avisos da comunidade). Você pode desativar a qualquer momento.
+                    </span>
+                  </label>
+                </>
+              )}
               <Button type="submit" className="w-full" disabled={authSubmitting}>
                 {authSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                 {authMode === "login" ? "Entrar com e-mail" : "Criar conta"}

@@ -458,11 +458,11 @@ const AdminDailyVerse = () => {
           <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Reenviar Versículo do Dia</span>
         </div>
         <p className="text-xs text-[hsl(var(--dark-muted))] mb-3 leading-relaxed">
-          Dispara agora o push com o mesmo versículo exibido hoje no app.
+          Envia APENAS o push do versículo do dia (não dispara o "Não deixe de ler").
         </p>
         <Button onClick={resendDailyVerse} disabled={resending} className="w-full" size="sm">
           {resending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-          {resending ? "Enviando..." : "Reenviar push agora"}
+          {resending ? "Enviando..." : "Reenviar versículo do dia"}
         </Button>
       </div>
 
@@ -559,6 +559,18 @@ const AdminDailyVerse = () => {
             <span className="text-[10px] text-[hsl(var(--dark-muted))] italic bg-white/5 px-2 py-1 rounded">
               Brasília
             </span>
+          </div>
+        )}
+
+        {motivationalEnabled && (
+          <div className="pt-3 border-t border-[hsl(var(--dark-card-hover))]">
+            <p className="text-xs text-[hsl(var(--dark-muted))] mb-2">
+              Envia APENAS o "Não deixe de ler" com mensagem gerada por IA (Gemini), adaptada ao período atual (manhã / tarde / noite).
+            </p>
+            <Button onClick={resendMotivational} disabled={resendingMotivational} className="w-full" size="sm" variant="secondary">
+              {resendingMotivational ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {resendingMotivational ? "Gerando e enviando..." : "Enviar \"Não deixe de ler\" agora"}
+            </Button>
           </div>
         )}
       </div>

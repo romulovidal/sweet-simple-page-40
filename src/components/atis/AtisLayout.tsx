@@ -12,6 +12,7 @@ import AtisBroadcasts from "./AtisBroadcasts";
 import AtisStudies from "./AtisStudies";
 import AtisConfig from "./AtisConfig";
 import AtisLogs from "./AtisLogs";
+import { useAtisStatus } from "./useAtisStatus";
 
 type TabId = "dashboard" | "contacts" | "groups" | "birthdays" | "broadcasts" | "studies" | "logs" | "config";
 
@@ -32,6 +33,7 @@ const AtisLayout = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("dashboard");
+  const status = useAtisStatus();
 
   const renderTab = () => {
     switch (tab) {
@@ -105,9 +107,30 @@ const AtisLayout = () => {
                 <p className="text-[10px] text-[hsl(var(--dark-muted))]">Painel Atis</p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--dark-muted))] px-2 py-1 rounded-full bg-[hsl(var(--dark-card))]">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Evolution offline
-            </span>
+            <button
+              onClick={() => setTab("config")}
+              title={status.lastCheckedAt ? `Última checagem: ${status.lastCheckedAt.toLocaleTimeString("pt-BR")}` : ""}
+              className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--dark-muted))] px-2 py-1 rounded-full bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))]"
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  status.loading
+                    ? "bg-yellow-500 animate-pulse"
+                    : status.connected
+                    ? "bg-green-500"
+                    : status.state === "connecting"
+                    ? "bg-yellow-500 animate-pulse"
+                    : "bg-red-500"
+                }`}
+              />
+              {status.loading
+                ? "Checando…"
+                : status.connected
+                ? "Evolution online"
+                : status.state === "connecting"
+                ? "Conectando…"
+                : "Evolution offline"}
+            </button>
           </div>
         </header>
 

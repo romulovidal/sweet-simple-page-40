@@ -29,8 +29,10 @@ const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-fe
 
 async function buildMinistryContext(admin: any): Promise<string> {
   const parts: string[] = []
-  const today = new Date()
-  const dow = today.getDay()
+  // Use America/Fortaleza (UTC-3, no DST) to compute "hoje"
+  const nowFort = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const today = new Date(Date.UTC(nowFort.getUTCFullYear(), nowFort.getUTCMonth(), nowFort.getUTCDate()))
+  const dow = today.getUTCDay()
 
   // Cultos
   try {
@@ -50,8 +52,8 @@ async function buildMinistryContext(admin: any): Promise<string> {
     const { data: birthdays } = await admin
       .from('atis_birthdays').select('name,birth_date').eq('active', true)
     if (birthdays?.length) {
-      const mm = today.getMonth() + 1
-      const dd = today.getDate()
+      const mm = today.getUTCMonth() + 1
+      const dd = today.getUTCDate()
       const hoje = birthdays.filter((b: any) => {
         const d = new Date(b.birth_date + 'T00:00:00')
         return d.getMonth() + 1 === mm && d.getDate() === dd
@@ -59,7 +61,7 @@ async function buildMinistryContext(admin: any): Promise<string> {
       const proximos = birthdays.filter((b: any) => {
         const d = new Date(b.birth_date + 'T00:00:00')
         const daqui = new Date(today); daqui.setDate(dd + 7)
-        const thisYear = new Date(today.getFullYear(), d.getMonth(), d.getDate())
+        const thisYear = new Date(today.getUTCFullYear(), d.getMonth(), d.getDate())
         return thisYear > today && thisYear <= daqui
       }).slice(0, 10)
       if (hoje.length) parts.push(`### Aniversariantes de hoje 🎂\n${hoje.map((b: any) => `- ${b.name}`).join('\n')}`)

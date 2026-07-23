@@ -20,6 +20,21 @@ export function phoneVariants(to: string): string[] {
   return [...variants].map((n) => `${n}@s.whatsapp.net`);
 }
 
+export function phoneNumberVariants(to: string): string[] {
+  if (!to) return [];
+  const base = to.includes('@') ? to.split('@')[0] : to;
+  const digits = base.replace(/\D/g, '');
+  if (!digits) return [];
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`;
+  const ddd = withCountry.slice(2, 4);
+  const rest = withCountry.slice(4);
+  const variants = new Set<string>();
+  variants.add(withCountry);
+  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`);
+  else if (rest.length === 8) variants.add(`55${ddd}9${rest}`);
+  return [...variants];
+}
+
 export type SendResult = { ok: boolean; status: number; body: any; jid: string | null };
 
 export async function evolutionSendText(to: string, text: string): Promise<SendResult> {
@@ -58,13 +73,15 @@ export async function evolutionSendButtons(
   opts?: { title?: string; footer?: string },
 ): Promise<SendResult> {
   if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution-not-configured', jid: null };
-  const attempts = phoneVariants(to);
+  // O endpoint sendButtons da Evolution é mais estável com número puro
+  // (ex.: 5585999999999), não com JID @s.whatsapp.net.
+  const attempts = phoneNumberVariants(to);
   let last: SendResult = { ok: false, status: 0, body: 'no-attempts', jid: null };
-  for (const jid of attempts) {
+  for (const number of attempts) {
     try {
       const payload = {
-        number: jid,
-        title: opts?.title ?? '',
+        number,
+        title: opts?.title ?? 'Atis',
         description: body,
         footer: opts?.footer ?? '',
         buttons: buttons.map((b) => ({ type: 'reply', displayText: b.displayText, id: b.id })),
@@ -77,17 +94,18 @@ export async function evolutionSendButtons(
       const raw = await res.text().catch(() => '');
       let parsed: any = raw;
       try { parsed = raw ? JSON.parse(raw) : null; } catch { /* keep raw */ }
-      last = { ok: res.ok, status: res.status, body: parsed, jid };
-      if (res.ok) return last;
+      const providerStatus = String(parsed?.status ?? parsed?.message?.status ?? '').toUpperCase();
+      const messageType = String(parsed?.messageType ?? parsed?.message?.messageType ?? '');
+      const stuckPending = providerStatus === 'PENDING' && messageType.includes('viewOnceMessage');
+      last = { ok: res.ok && !stuckPending, status: res.status, body: parsed, jid: number };
+      if (last.ok) return last;
       const notExists = JSON.stringify(parsed ?? '').includes('"exists":false');
-      if (!notExists) break; // erro de formato — não adianta tentar outra variação de número
+      if (!notExists && !stuckPending) break; // erro de formato — não adianta tentar outra variação de número
     } catch (e) {
-      last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid };
+      last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid: number };
     }
   }
-  // Fallback: envia como texto para nunca perder o alerta.
-  const fallback = await evolutionSendText(to, body);
-  return { ...fallback, body: { fallback_from_buttons: last.body, text_result: fallback.body } };
+  return last;
 }
 
 export function firstName(n: string | null | undefined): string {

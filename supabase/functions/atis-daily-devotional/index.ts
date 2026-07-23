@@ -69,8 +69,16 @@ async function generateDevotional(
     .map((p: any) => p?.text ?? '')
     .join('')
     .trim()
+  // Remove repetição do versículo/ref no início (o cabeçalho já mostra)
+  let cleaned = text
+  const refEsc = verseRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // remove **Ref** ou *Ref* ou Ref no começo
+  cleaned = cleaned.replace(new RegExp(`^\\s*\\*{1,2}${refEsc}\\*{1,2}\\s*`, 'i'), '')
+  cleaned = cleaned.replace(new RegExp(`^\\s*${refEsc}\\s*`, 'i'), '')
+  // remove citação entre aspas no começo (o texto do versículo)
+  cleaned = cleaned.replace(/^\s*["“][\s\S]*?["”]\s*/, '')
   // Strip markdown for WhatsApp readability (keep bold via *...*)
-  return text
+  return cleaned
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/\*\*(.+?)\*\*/g, '*$1*')
     .replace(/^\s*[-*]\s+/gm, '• ')

@@ -46,7 +46,7 @@ export async function evolutionSendText(to: string, text: string): Promise<SendR
       const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-        body: JSON.stringify({ number: jid, text }),
+        body: JSON.stringify({ number: jid, text, linkPreview: true }),
       });
       const raw = await res.text().catch(() => '');
       let body: any = raw;

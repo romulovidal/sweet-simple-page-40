@@ -588,6 +588,114 @@ const BOOK_ALTS = [
 ].join('|')
 const REF_REGEX = new RegExp(`\\b(?:${BOOK_ALTS})\\s+\\d+(?::\\d+(?:\\s*[-–]\\s*\\d+)?)?`, 'i')
 
+// ============================================================
+// Harpa Cristã — busca REAL no JSON oficial (sem invenção da IA)
+// ============================================================
+type HarpaSecao = { tipo: string; numero?: number; linhas: string[] }
+type HarpaHino = { numero: number; titulo: string; secoes: HarpaSecao[] }
+let HARPA_CACHE: HarpaHino[] | null = null
+
+async function loadHarpa(): Promise<HarpaHino[]> {
+  if (HARPA_CACHE) return HARPA_CACHE
+  try {
+    const res = await fetch(`${APP_URL}/harpa/harpa-crista.json`)
+    if (!res.ok) return []
+    const j = await res.json() as any
+    HARPA_CACHE = Array.isArray(j?.hinos) ? j.hinos : []
+    return HARPA_CACHE ?? []
+  } catch (e) {
+    console.error('[harpa] load failed:', (e as Error)?.message)
+    return []
+  }
+}
+
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
+// Detecta pedido de hino. Retorna { numero } ou { titulo } ou null.
+function detectHarpaIntent(text: string): { numero?: number; titulo?: string } | null {
+  const t = text.trim()
+  const low = normalize(t)
+  // Precisa mencionar hino/harpa/cântico OU vir de um pedido curto explícito
+  const hasKeyword = /\b(hino|harpa|c[aâ]ntico|cantico|harpa\s+crist[ãa])\b/i.test(t)
+  if (!hasKeyword) return null
+  // Ignora se for pergunta sobre a Harpa como funcionalidade (contém "funciona", "como usar" etc.)
+  if (/\b(como\s+funciona|o\s+que\s+e|como\s+usar|quantos\s+hinos|quantos\s+t[eê]m)\b/i.test(low)) return null
+
+  // 1) Número explícito
+  const mNum = t.match(/\b(?:hino|harpa|c[aâ]ntico|cantico|n[uú]mero|nº|no\.?)\s*(?:de\s+)?n?[°º]?\s*(\d{1,3})\b/i)
+    ?? t.match(/\b(\d{1,3})\s*(?:da\s+harpa|hino)\b/i)
+  if (mNum) {
+    const n = parseInt(mNum[1], 10)
+    if (n >= 1 && n <= 640) return { numero: n }
+  }
+  // 2) Título após "hino"/"harpa": ex. "quero o hino Chuvas de Graça"
+  const mTit = t.match(/\b(?:hino|harpa|c[aâ]ntico|cantico)\s+(?:chamado\s+|intitulado\s+|de\s+t[ií]tulo\s+)?["“']?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9\s'’\-]{2,60}?)["”']?\s*(?:[?!.]|$)/i)
+  if (mTit) {
+    const titulo = mTit[1].trim()
+    // Descarta se for palavra muito genérica
+    if (!/^(de|da|do|para|pra|com|em|é|e|o|a|os|as|um|uma|isso|aqui|ai|ali|ele|ela|voce|você|q|que|quer|quero|hoje|amanha|amanhã|ontem|agora)$/i.test(titulo)) {
+      return { titulo }
+    }
+  }
+  return null
+}
+
+function similarity(a: string, b: string): number {
+  const A = normalize(a); const B = normalize(b)
+  if (A === B) return 1
+  if (B.includes(A) || A.includes(B)) return 0.85
+  const wa = new Set(A.split(/\s+/).filter(Boolean))
+  const wb = new Set(B.split(/\s+/).filter(Boolean))
+  let hit = 0
+  for (const w of wa) if (wb.has(w)) hit++
+  return hit / Math.max(wa.size, 1)
+}
+
+function findByTitle(hinos: HarpaHino[], titulo: string): HarpaHino | null {
+  let best: { h: HarpaHino; score: number } | null = null
+  for (const h of hinos) {
+    const score = similarity(titulo, h.titulo)
+    if (score >= 0.6 && (!best || score > best.score)) best = { h, score }
+  }
+  return best?.h ?? null
+}
+
+function formatHino(h: HarpaHino): string {
+  const link = `${APP_URL}/harpa/${h.numero}`
+  const chunks: string[] = [`🎵 *Hino ${h.numero} — ${h.titulo}*`]
+  // Mostra até 2 estrofes + refrão (ou tudo se for curto) para não estourar mensagem
+  const est = h.secoes.filter(s => s.tipo === 'estrofe')
+  const ref = h.secoes.find(s => s.tipo === 'refrao' || s.tipo === 'coro')
+  const partes: HarpaSecao[] = []
+  for (let i = 0; i < Math.min(est.length, 2); i++) partes.push(est[i])
+  if (ref) partes.push(ref)
+  for (const s of partes) {
+    const label = s.tipo === 'estrofe' ? `*${s.numero ?? ''}ª estrofe*`.trim() : `*Coro*`
+    chunks.push(`${label}\n${s.linhas.join('\n')}`)
+  }
+  const totalEst = est.length
+  if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes — abra o link para ler tudo, ouvir e apresentar)_`)
+  chunks.push(`🔗 ${link}\n_Harpa Cristã — Bíblia Atalaia_`)
+  return chunks.join('\n\n')
+}
+
+async function runHarpa(intent: { numero?: number; titulo?: string }): Promise<string | null> {
+  const hinos = await loadHarpa()
+  if (!hinos.length) return null
+  let hino: HarpaHino | undefined | null
+  if (intent.numero) {
+    hino = hinos.find(h => h.numero === intent.numero)
+    if (!hino) return `🎵 Não encontrei o hino ${intent.numero} na Harpa Cristã. A Harpa Atalaia vai do 1 ao 640.`
+  } else if (intent.titulo) {
+    hino = findByTitle(hinos, intent.titulo)
+    if (!hino) return `🎵 Não encontrei nenhum hino com título parecido com *"${intent.titulo}"*. Tente pelo número (ex.: "hino 117") ou confira em ${APP_URL}/harpa.`
+  }
+  if (!hino) return null
+  return formatHino(hino)
+}
+
 function extractReference(text: string, history: Array<{role:string,content:string}>): string | null {
   const m = text.match(REF_REGEX)
   if (m) return m[0].replace(/\s+/g, ' ').trim()

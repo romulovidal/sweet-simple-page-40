@@ -217,6 +217,106 @@ async function loadHistory(admin: any, jid: string, limit = 12): Promise<Array<{
   } catch { return [] }
 }
 
+// ============================================================
+// Ferramentas de IA da Bíblia Atalaia acessíveis pelo WhatsApp
+// (mesma mecânica do app: exegese, conexões, palavra original,
+//  linha do tempo, devocional, resumo)
+// ============================================================
+const TOOL_PROMPTS: Record<string, string> = {
+  exegese:
+    'Você é um exegeta bíblico acadêmico respondendo por WhatsApp. Sobre a referência fornecida, faça uma exegese COMPLETA e organizada com:\n' +
+    '1) *Contexto histórico e cultural*\n2) *Palavras-chave no original* (hebraico/grego com transliteração)\n3) *Gênero literário e estrutura*\n4) *Significado teológico e aplicação*\n5) *Referências cruzadas*\n\n' +
+    'Use formatação amigável ao WhatsApp: *negrito* com asteriscos simples, quebras de linha claras, sem markdown de header (#). Português brasileiro. Seja profundo mas acessível (800-1400 caracteres).',
+  conexoes:
+    'Você é estudioso bíblico especialista em intertextualidade, respondendo por WhatsApp. Sobre a referência fornecida:\n' +
+    '1) Liste 4-6 *referências cruzadas* relevantes com a citação exata\n2) Para cada uma, explique em 1-2 frases a conexão\n3) Agrupe por tipo: paralelo direto, profecia/cumprimento, tema recorrente\n\n' +
+    'Use *negrito* com asteriscos e quebras de linha. Português brasileiro.',
+  palavra:
+    'Você é linguista bíblico especialista em hebraico e grego, respondendo por WhatsApp. Sobre a referência fornecida:\n' +
+    '1) Identifique 3-5 *palavras-chave* teologicamente significativas\n2) Para cada uma: palavra original (hebraico/grego), transliteração, significado literal e uso no contexto\n3) Explique nuances que se perdem na tradução\n\n' +
+    'Formate como mini-dicionário usando *negrito* com asteriscos simples e quebras de linha. Português brasileiro.',
+  linha_tempo:
+    'Você é historiador bíblico respondendo por WhatsApp. Sobre a referência fornecida:\n' +
+    '1) Situe no *período histórico* (data aproximada, império dominante, contexto social)\n2) Liste 4-6 eventos históricos relevantes em ordem cronológica\n3) Para cada evento: data, o que aconteceu, e como se relaciona ao texto\n\n' +
+    'Formate como linha do tempo com emojis de época. Use *negrito* com asteriscos e quebras de linha. Português brasileiro.',
+  devocional:
+    'Você é pastor e escritor devocional respondendo por WhatsApp. A partir da referência fornecida, escreva uma *reflexão devocional* (2 parágrafos) que:\n' +
+    '1) Conecte o texto ao cotidiano do leitor\n2) Traga uma aplicação prática e encorajadora\n\n' +
+    'Seja caloroso. NÃO repita a citação do versículo no início — comece direto pela reflexão. Use *negrito* com asteriscos e quebras de linha. Português brasileiro.',
+  resumo:
+    'Você é teólogo acadêmico respondendo por WhatsApp. Sobre o capítulo/passagem fornecido, produza um *resumo conciso* (3-4 frases) destacando:\n' +
+    '1) Tema principal\n2) Contexto narrativo/teológico\n3) Mensagem central\n\n' +
+    'Direto e acessível. Use *negrito* com asteriscos. Português brasileiro.',
+}
+
+const TOOL_LABELS: Record<string, string> = {
+  exegese: '📖 Exegese',
+  conexoes: '🔗 Conexões bíblicas',
+  palavra: '🔤 Significado original',
+  linha_tempo: '🕰️ Linha do tempo',
+  devocional: '💛 Reflexão devocional',
+  resumo: '📝 Resumo do capítulo',
+}
+
+type ToolIntent = { tool: keyof typeof TOOL_PROMPTS | 'nenhum'; reference: string | null }
+
+async function detectToolIntent(userText: string, history: Array<{role:string,content:string}>): Promise<ToolIntent> {
+  const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content?.slice(0, 400) ?? ''
+  const sys = `Você é um classificador. Analise a mensagem do usuário no WhatsApp e detecte se ele está pedindo uma das ferramentas da Bíblia Atalaia sobre uma passagem bíblica.
+
+Ferramentas disponíveis:
+- "exegese" → exegese completa, estudo profundo, "explica em profundidade", "ExegetAI"
+- "conexoes" → referências cruzadas, versículos relacionados, paralelos bíblicos
+- "palavra" → significado no original, hebraico, grego, transliteração, etimologia
+- "linha_tempo" → contexto histórico, época, quando aconteceu, cronologia
+- "devocional" → reflexão devocional, meditação, aplicação prática
+- "resumo" → resumo do capítulo, do que trata
+- "nenhum" → conversa normal, saudação, dúvida geral, pergunta sobre o app/ministério
+
+A referência pode ser explícita ("João 3:16", "Salmo 23", "Gn 1") ou implícita ("desse versículo", "esse capítulo") — nesse caso pegue do contexto da última resposta do assistente:\n${lastAssistant || '(sem contexto)'}
+
+Responda APENAS com um JSON válido no formato exato: {"tool":"exegese|conexoes|palavra|linha_tempo|devocional|resumo|nenhum","reference":"Livro cap:vers ou null"}`
+  try {
+    const res = await aiChatFetch({
+      model: 'google/gemini-2.5-flash',
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: sys },
+        { role: 'user', content: userText },
+      ],
+    })
+    if (!res.ok) return { tool: 'nenhum', reference: null }
+    const json = await res.json().catch(() => null) as any
+    const raw = json?.choices?.[0]?.message?.content ?? '{}'
+    const parsed = JSON.parse(raw)
+    const tool = String(parsed?.tool ?? 'nenhum') as ToolIntent['tool']
+    const reference = parsed?.reference && parsed.reference !== 'null' ? String(parsed.reference) : null
+    if (!TOOL_PROMPTS[tool] || !reference) return { tool: 'nenhum', reference: null }
+    return { tool, reference }
+  } catch {
+    return { tool: 'nenhum', reference: null }
+  }
+}
+
+async function runTool(tool: keyof typeof TOOL_PROMPTS, reference: string): Promise<string> {
+  const system = TOOL_PROMPTS[tool]
+  const res = await aiChatFetch({
+    model: 'google/gemini-2.5-flash',
+    temperature: 0.5,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: `Referência: *${reference}*\n\nUse seu conhecimento do texto bíblico (versões brasileiras — ARA/ARC/NVI) para responder sobre essa passagem.` },
+    ],
+  })
+  if (!res.ok) return '🙏 Não consegui gerar essa análise agora. Tente novamente em instantes.'
+  const json = await res.json().catch(() => null) as any
+  const body = json?.choices?.[0]?.message?.content?.trim()
+  if (!body) return '🙏 Não consegui gerar essa análise agora.'
+  const label = TOOL_LABELS[tool]
+  return `${label} — *${reference}*\n\n${body}\n\n_Ferramenta da Bíblia Atalaia — ${APP_URL}_`
+}
+
 async function generateReply(persona: string, userText: string, ministryCtx: string, botName: string, history: Array<{role:string,content:string}>): Promise<string> {
   const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Fortaleza' })
   const system = `${persona}\n\n---\nCONTEXTO OFICIAL DO APP E DO MINISTÉRIO (dados atuais do sistema — use SEMPRE como fonte primária para qualquer pergunta sobre o app, funções, planos, hinos, cultos, aniversariantes, versículo do dia, posts, pedidos de oração, estudos etc. Nunca diga que "não tem essa função" sem antes checar aqui):\n${ministryCtx}\n\nData/hora atual (America/Fortaleza): ${now}\nSeu nome é ${botName || 'Atis'}. Quando o usuário perguntar sobre alguma função do app, responda com base neste contexto e indique o link ${'https://biblia.atalaias.online'} quando útil.\n\nMEMÓRIA DA CONVERSA: mensagens anteriores desta conversa foram fornecidas abaixo — mantenha continuidade e NÃO se apresente novamente a cada resposta. Só se apresente na primeira interação ou se o usuário pedir.`
@@ -297,9 +397,20 @@ Deno.serve(async (req) => {
 
         // Conversa natural com IA — usa persona configurada + contexto do ministério
         const persona: string = (cfg.persona ?? '').trim() || 'Você é Atis, assistente do Ministério Atalaias de Betel.'
-        const ministryCtx = await buildMinistryContext(admin)
         const history = await loadHistory(admin, jid, 12)
-        const reply = await generateReply(persona, text, ministryCtx, cfg.bot_name ?? 'Atis', history)
+
+        // Primeiro tenta detectar se o usuário pediu uma ferramenta da Bíblia Atalaia
+        // (exegese, conexões, palavra original, linha do tempo, devocional, resumo).
+        const intent = await detectToolIntent(text, history)
+        let reply: string
+        let usedTool: string | null = null
+        if (intent.tool !== 'nenhum' && intent.reference) {
+          reply = await runTool(intent.tool as keyof typeof TOOL_PROMPTS, intent.reference)
+          usedTool = intent.tool
+        } else {
+          const ministryCtx = await buildMinistryContext(admin)
+          reply = await generateReply(persona, text, ministryCtx, cfg.bot_name ?? 'Atis', history)
+        }
 
         const sendRes = await sendText(jid, reply)
         await admin.from('atis_messages_log').insert({
@@ -307,9 +418,9 @@ Deno.serve(async (req) => {
           wa_to: jid,
           wa_group_id: isGroup ? jid : null,
           body: reply,
-          command: null,
+          command: usedTool,
           status: sendRes.ok ? 'sent' : 'error',
-          raw: { ai: true, status: sendRes.status },
+          raw: { ai: true, status: sendRes.status, tool: usedTool, reference: intent.reference },
         })
       }
     } else if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {

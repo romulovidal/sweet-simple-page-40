@@ -38,7 +38,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "config", label: "Config", icon: Settings },
 ];
 
-const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "broadcasts", "studies", "config"];
+const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "logs", "config"];
 
 const AtisLayout = () => {
   const isMobile = useIsMobile();
@@ -153,7 +153,7 @@ const AtisLayout = () => {
       {/* Mobile bottom nav */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[hsl(var(--dark-card))] border-t border-[hsl(var(--dark-card-hover))]">
-          <div className="flex items-center justify-around h-16">
+          <div className="flex items-center gap-1 h-16 overflow-x-auto px-2 no-scrollbar">
             {MOBILE_BOTTOM.map((id) => {
               const meta = TABS.find((t) => t.id === id)!;
               const Icon = meta.icon;
@@ -162,7 +162,7 @@ const AtisLayout = () => {
                 <button
                   key={id}
                   onClick={() => setTab(id)}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors ${
+                  className={`shrink-0 flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-[64px] transition-colors ${
                     active ? "text-[hsl(var(--dark-text))]" : "text-[hsl(var(--dark-muted))]"
                   }`}
                 >

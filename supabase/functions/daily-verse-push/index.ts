@@ -183,7 +183,7 @@ serve(async (req) => {
         ? onlyType === "motivational"
         : (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR)));
       if (runMotivational) {
-       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
        let aiMessage = "";
         const { period, hour } = getBrazilPeriod();
         const dayName = new Intl.DateTimeFormat("pt-BR", { timeZone: BRAZIL_TZ, weekday: "long" }).format(new Date());
@@ -195,46 +195,43 @@ serve(async (req) => {
         };
         const pushTitle = titleByPeriod[period];
  
-       if (LOVABLE_API_KEY) {
+        if (GEMINI_API_KEY) {
          try {
-           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-             method: "POST",
-             headers: {
-               Authorization: `Bearer ${LOVABLE_API_KEY}`,
-               "Content-Type": "application/json",
-             },
-             body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-               messages: [
-                  {
-                    role: "system",
-                    content:
-                      "Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.",
-                  },
-                  {
-                    role: "user",
-                    content:
-                      `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
-                      (period === "manhã"
-                        ? "Convide a pessoa a começar o dia na Palavra."
-                        : period === "tarde"
-                        ? "Convide a pessoa a fazer uma pausa e voltar à Palavra."
-                        : period === "noite"
-                        ? "Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir."
-                        : "Convide a pessoa a se aquietar com Deus neste momento silencioso.") +
-                      " Gere agora a frase (diferente das anteriores).",
-                  },
-               ],
-                temperature: 1.0,
-             }),
-           });
- 
-           if (aiResponse.ok) {
-             const aiData = await aiResponse.json();
-             aiMessage = aiData.choices[0].message.content.trim().replace(/^"|"$/g, "");
-           }
+            const systemPrompt =
+              "Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.";
+            const userPrompt =
+              `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
+              (period === "manhã"
+                ? "Convide a pessoa a começar o dia na Palavra."
+                : period === "tarde"
+                ? "Convide a pessoa a fazer uma pausa e voltar à Palavra."
+                : period === "noite"
+                ? "Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir."
+                : "Convide a pessoa a se aquietar com Deus neste momento silencioso.") +
+              " Gere agora a frase (diferente das anteriores).";
+            const aiResponse = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  systemInstruction: { parts: [{ text: systemPrompt }] },
+                  contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+                  generationConfig: { temperature: 1.0, maxOutputTokens: 200 },
+                }),
+              },
+            );
+
+            if (aiResponse.ok) {
+              const aiData = await aiResponse.json();
+              aiMessage = (aiData?.candidates?.[0]?.content?.parts ?? [])
+                .map((p: any) => p?.text ?? "")
+                .join("")
+                .trim()
+                .replace(/^"|"$/g, "");
+            }
          } catch (e) {
-           console.error("AI generation failed:", e);
+            console.error("Gemini generation failed:", e);
          }
        }
  

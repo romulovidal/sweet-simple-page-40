@@ -21,42 +21,43 @@ function brNow() {
 }
 
 async function generateMotivational(period: string, dayName: string, hour: number): Promise<string> {
-  const key = Deno.env.get('LOVABLE_API_KEY')
+  const key = Deno.env.get('GEMINI_API_KEY')
   if (!key) return ''
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      temperature: 1.0,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.',
-        },
-        {
-          role: 'user',
-          content:
-            `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
-            (period === 'manhã'
-              ? 'Convide a pessoa a começar o dia na Palavra.'
-              : period === 'tarde'
-              ? 'Convide a pessoa a fazer uma pausa e voltar à Palavra.'
-              : period === 'noite'
-              ? 'Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir.'
-              : 'Convide a pessoa a se aquietar com Deus neste momento silencioso.') +
-            ' Gere agora a frase (diferente das anteriores).',
-        },
-      ],
-    }),
-  })
+  const systemPrompt =
+    'Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.'
+  const userPrompt =
+    `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
+    (period === 'manhã'
+      ? 'Convide a pessoa a começar o dia na Palavra.'
+      : period === 'tarde'
+      ? 'Convide a pessoa a fazer uma pausa e voltar à Palavra.'
+      : period === 'noite'
+      ? 'Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir.'
+      : 'Convide a pessoa a se aquietar com Deus neste momento silencioso.') +
+    ' Gere agora a frase (diferente das anteriores).'
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 1.0, maxOutputTokens: 200 },
+      }),
+    },
+  )
   if (!res.ok) {
-    console.error('[atis-daily-devotional] AI error', res.status, await res.text().catch(() => ''))
+    console.error('[atis-daily-devotional] Gemini error', res.status, await res.text().catch(() => ''))
     return ''
   }
   const j = await res.json().catch(() => null) as any
-  return (j?.choices?.[0]?.message?.content ?? '').trim().replace(/^"|"$/g, '')
+  const text = (j?.candidates?.[0]?.content?.parts ?? [])
+    .map((p: any) => p?.text ?? '')
+    .join('')
+    .trim()
+    .replace(/^"|"$/g, '')
+  return text
 }
 
 function titleByPeriod(period: string): string {

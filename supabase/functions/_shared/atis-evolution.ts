@@ -77,30 +77,65 @@ export async function evolutionSendButtons(
   // (ex.: 5585999999999), não com JID @s.whatsapp.net.
   const attempts = phoneNumberVariants(to);
   let last: SendResult = { ok: false, status: 0, body: 'no-attempts', jid: null };
+  const parseBody = async (res: Response): Promise<any> => {
+    const raw = await res.text().catch(() => '');
+    try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
+  };
+  const isStuckPending = (parsed: any): boolean => {
+    const providerStatus = String(parsed?.status ?? parsed?.message?.status ?? '').toUpperCase();
+    const messageType = String(parsed?.messageType ?? parsed?.message?.messageType ?? '');
+    return providerStatus === 'PENDING' && messageType.includes('viewOnceMessage');
+  };
+  const asResult = (res: Response, parsed: any, number: string): SendResult => ({
+    ok: res.ok && !isStuckPending(parsed),
+    status: res.status,
+    body: parsed,
+    jid: number,
+  });
+
   for (const number of attempts) {
     try {
-      const payload = {
+      const modernPayload = {
         number,
         title: opts?.title ?? 'Atis',
         description: body,
         footer: opts?.footer ?? '',
         buttons: buttons.map((b) => ({ type: 'reply', displayText: b.displayText, id: b.id })),
       };
-      const res = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
+      const modernRes = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(modernPayload),
       });
-      const raw = await res.text().catch(() => '');
-      let parsed: any = raw;
-      try { parsed = raw ? JSON.parse(raw) : null; } catch { /* keep raw */ }
-      const providerStatus = String(parsed?.status ?? parsed?.message?.status ?? '').toUpperCase();
-      const messageType = String(parsed?.messageType ?? parsed?.message?.messageType ?? '');
-      const stuckPending = providerStatus === 'PENDING' && messageType.includes('viewOnceMessage');
-      last = { ok: res.ok && !stuckPending, status: res.status, body: parsed, jid: number };
+      const modernParsed = await parseBody(modernRes);
+      last = asResult(modernRes, modernParsed, number);
       if (last.ok) return last;
-      const notExists = JSON.stringify(parsed ?? '').includes('"exists":false');
-      if (!notExists && !stuckPending) break; // erro de formato — não adianta tentar outra variação de número
+      const notExists = JSON.stringify(modernParsed ?? '').includes('"exists":false');
+      if (!notExists) {
+        // Fallback de compatibilidade: algumas instalações Evolution aceitam o
+        // formato legado e entregam como buttonsMessage, enquanto o formato novo
+        // fica preso como viewOnce/PENDING.
+        const legacyPayload = {
+          number,
+          text: body,
+          footerText: opts?.footer ?? '',
+          buttons: buttons.map((b, index) => ({
+            buttonId: b.id,
+            buttonText: { displayText: b.displayText },
+            type: index + 1,
+          })),
+          headerType: 1,
+        };
+        const legacyRes = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+          body: JSON.stringify(legacyPayload),
+        });
+        const legacyParsed = await parseBody(legacyRes);
+        last = asResult(legacyRes, legacyParsed, number);
+        if (last.ok) return last;
+      }
+      if (!notExists) break; // erro de formato — não adianta tentar outra variação de número
     } catch (e) {
       last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid: number };
     }

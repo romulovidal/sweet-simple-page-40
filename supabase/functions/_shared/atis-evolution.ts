@@ -47,6 +47,49 @@ export async function evolutionSendText(to: string, text: string): Promise<SendR
   return last;
 }
 
+export type ReplyButton = { id: string; displayText: string };
+
+// Envia mensagem com botões de resposta rápida via Evolution API.
+// Faz fallback automático para texto simples se o provedor rejeitar o formato de botões.
+export async function evolutionSendButtons(
+  to: string,
+  body: string,
+  buttons: ReplyButton[],
+  opts?: { title?: string; footer?: string },
+): Promise<SendResult> {
+  if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution-not-configured', jid: null };
+  const attempts = phoneVariants(to);
+  let last: SendResult = { ok: false, status: 0, body: 'no-attempts', jid: null };
+  for (const jid of attempts) {
+    try {
+      const payload = {
+        number: jid,
+        title: opts?.title ?? '',
+        description: body,
+        footer: opts?.footer ?? '',
+        buttons: buttons.map((b) => ({ type: 'reply', displayText: b.displayText, id: b.id })),
+      };
+      const res = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+        body: JSON.stringify(payload),
+      });
+      const raw = await res.text().catch(() => '');
+      let parsed: any = raw;
+      try { parsed = raw ? JSON.parse(raw) : null; } catch { /* keep raw */ }
+      last = { ok: res.ok, status: res.status, body: parsed, jid };
+      if (res.ok) return last;
+      const notExists = JSON.stringify(parsed ?? '').includes('"exists":false');
+      if (!notExists) break; // erro de formato — não adianta tentar outra variação de número
+    } catch (e) {
+      last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid };
+    }
+  }
+  // Fallback: envia como texto para nunca perder o alerta.
+  const fallback = await evolutionSendText(to, body);
+  return { ...fallback, body: { fallback_from_buttons: last.body, text_result: fallback.body } };
+}
+
 export function firstName(n: string | null | undefined): string {
   if (!n) return 'irmão(ã)';
   return String(n).trim().split(/\s+/)[0] || 'irmão(ã)';

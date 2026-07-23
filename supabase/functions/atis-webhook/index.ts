@@ -217,16 +217,21 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
   let notified = false
   if (enabled && pastors.length) {
     for (const p of pastors) {
-      const r = await evolutionSendButtons(
-        p,
-        alertMsg,
-        [
-          { id: `resolvido ${phoneDigits}`, displayText: '✅ Resolvido' },
-          { id: `silenciar ${phoneDigits}`, displayText: '🔕 Silenciar' },
-        ],
-        { footer: 'Toque um botão ou responda com o comando' },
-      )
-      if (r.ok) notified = true
+      // Segurança primeiro: alerta crítico vai como texto puro, que é o formato
+      // mais estável no WhatsApp. Botões são enviados depois apenas como atalho.
+      const r = await evolutionSendText(p, alertMsg)
+      if (r.ok) {
+        notified = true
+        await evolutionSendButtons(
+          p,
+          `Ações rápidas para o alerta de ${phonePretty}:`,
+          [
+            { id: `resolvido ${phoneDigits}`, displayText: '✅ Resolvido' },
+            { id: `silenciar ${phoneDigits}`, displayText: '🔕 Silenciar' },
+          ],
+          { footer: 'Se os botões não aparecerem, responda com o comando do alerta.' },
+        )
+      }
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: p, body: alertMsg,
         command: 'crisis-alert', status: r.ok ? 'sent' : 'error',
@@ -706,11 +711,19 @@ Deno.serve(async (req) => {
             const mResolve = norm.match(/^(resolvido|resolver|encerrar|ok)\s*(.*)$/)
             const mMute = norm.match(/^(silenciar|silencia|parar|nao avisar|não avisar|mute)\s+(.+)$/)
             const digitsOnly = (s: string) => s.replace(/\D/g, '')
+            const contactCandidates = (digits: string): string[] => {
+              const out = new Set<string>()
+              for (const d of brVariants(digits)) {
+                out.add(d)
+                out.add(`${d}@s.whatsapp.net`)
+              }
+              return [...out]
+            }
             if (mResolve) {
               const targetDigits = digitsOnly(mResolve[2])
-              const q = admin.from('atis_crisis_alerts').update({ handled: true, handled_at: new Date().toISOString(), handled_by: senderDigits }).eq('handled', false)
+              const q = admin.from('atis_crisis_alerts').update({ handled: true, handled_at: new Date().toISOString() }).eq('handled', false)
               const { data: updated, error } = targetDigits
-                ? await q.eq('contact_phone', targetDigits).select('id')
+                ? await q.in('contact_phone', contactCandidates(targetDigits)).select('id')
                 : await q.select('id')
               const count = updated?.length ?? 0
               const reply = error
@@ -752,7 +765,7 @@ Deno.serve(async (req) => {
             const mUnmute = norm.match(/^(reativar|desmutar|voltar)\s+(.+)$/)
             if (mUnmute) {
               const targetDigits = digitsOnly(mUnmute[2])
-              await admin.from('atis_crisis_mutes').delete().eq('pastor_phone', senderDigits).eq('contact_phone', targetDigits)
+              await admin.from('atis_crisis_mutes').delete().in('pastor_phone', brVariants(senderDigits)).in('contact_phone', contactCandidates(targetDigits))
               const reply = `🔔 Alertas de +${targetDigits} *reativados* para você.`
               const r = await sendText(jid, reply)
               await admin.from('atis_messages_log').insert({ direction: 'outbound', wa_to: jid, body: reply, command: 'pastor-unmute', status: r.ok ? 'sent' : 'error', raw: { auto: true, target: targetDigits } })

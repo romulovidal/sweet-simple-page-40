@@ -6,6 +6,7 @@ import { Plus, Trash2, Loader2, CalendarClock, Sparkles, CheckCircle2, XCircle, 
 import AtisDailyDevotional from "./AtisDailyDevotional";
 
 type BC = { id: string; title: string; body: string; target_type: string; target_ref: string | null; scheduled_at: string | null; recurrence: string | null; status: string; content_type: string; created_at?: string };
+type BCWithSent = BC & { sent_at?: string | null; error?: string | null };
 type Group = { id: string; wa_group_id: string; name: string };
 type Contact = { id: string; name: string; phone: string; opt_in: boolean };
 
@@ -61,9 +62,22 @@ const STATUS_META: Record<string, { label: string; color: string; icon: any }> =
   pending: { label: "Pendente", color: "text-yellow-500 bg-yellow-500/10", icon: Clock },
   scheduled: { label: "Agendado", color: "text-blue-400 bg-blue-500/10", icon: CalendarClock },
   sent: { label: "Enviado", color: "text-green-500 bg-green-500/10", icon: CheckCircle2 },
+  sent_today: { label: "Enviado hoje", color: "text-green-500 bg-green-500/10", icon: CheckCircle2 },
   failed: { label: "Falhou", color: "text-red-500 bg-red-500/10", icon: XCircle },
   cancelled: { label: "Cancelado", color: "text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-card-hover))]", icon: AlertCircle },
 };
+
+function isSameDayFortaleza(iso: string): boolean {
+  const fmt = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  return fmt(new Date(iso)) === fmt(new Date());
+}
+
+function effectiveStatus(b: BCWithSent): string {
+  if (b.status === "pending" && b.sent_at && b.recurrence && b.recurrence !== "once" && isSameDayFortaleza(b.sent_at)) {
+    return "sent_today";
+  }
+  return b.status;
+}
 
 const AtisBroadcasts = () => {
   const [items, setItems] = useState<BC[]>([]);
@@ -115,12 +129,15 @@ const AtisBroadcasts = () => {
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
-    return items.filter((i) => i.status === filter);
+    return items.filter((i) => effectiveStatus(i as BCWithSent) === filter);
   }, [items, filter]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: items.length };
-    for (const i of items) c[i.status] = (c[i.status] ?? 0) + 1;
+    for (const i of items) {
+      const s = effectiveStatus(i as BCWithSent);
+      c[s] = (c[s] ?? 0) + 1;
+    }
     return c;
   }, [items]);
 
@@ -254,7 +271,7 @@ const AtisBroadcasts = () => {
 
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
-          {["all", "pending", "scheduled", "sent", "failed", "cancelled"].map((k) => {
+          {["all", "pending", "sent_today", "sent", "failed", "cancelled"].map((k) => {
             const meta = k === "all" ? { label: "Todos", color: "text-[hsl(var(--dark-text))] bg-[hsl(var(--dark-card-hover))]" } : STATUS_META[k];
             return (
               <button key={k} onClick={() => setFilter(k)}
@@ -270,7 +287,8 @@ const AtisBroadcasts = () => {
         ) : (
           <ul className="divide-y divide-[hsl(var(--dark-card-hover))]">
             {filtered.map(b => {
-              const meta = STATUS_META[b.status] ?? STATUS_META.pending;
+              const eff = effectiveStatus(b as BCWithSent);
+              const meta = STATUS_META[eff] ?? STATUS_META.pending;
               const StatusIcon = meta.icon;
               const groupName = b.target_type === "group" && b.target_ref ? (groups.find(g => g.wa_group_id === b.target_ref)?.name ?? b.target_ref) : null;
               const contactName = b.target_type === "contact" && b.target_ref ? (contacts.find(c => c.id === b.target_ref)?.name ?? b.target_ref) : null;

@@ -36,23 +36,45 @@ const AdminDailyVerse = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
   const [resending, setResending] = useState(false);
+  const [resendingMotivational, setResendingMotivational] = useState(false);
 
   const resendDailyVerse = async () => {
     setResending(true);
     try {
       const { data, error } = await supabase.functions.invoke("daily-verse-push", {
         method: "POST",
-        body: {},
+        body: { only: "verse" },
       });
       if (error) throw error;
-      toast.success(
-        `Push reenviado! ${data?.sent || 0} entregues${data?.failed ? `, ${data.failed} falhas` : ""} • ${data?.verse || ""}`
-      );
+      const v = (data as any)?.verse;
+      if (v?.skipped) {
+        toast.warning(v.reason || "Nenhum versículo agendado para hoje");
+      } else {
+        toast.success(`Versículo do dia reenviado! ${v?.sent ?? 0} entregues${v?.failed ? `, ${v.failed} falhas` : ""}`);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Erro ao reenviar versículo do dia");
     } finally {
       setResending(false);
+    }
+  };
+
+  const resendMotivational = async () => {
+    setResendingMotivational(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-verse-push", {
+        method: "POST",
+        body: { only: "motivational" },
+      });
+      if (error) throw error;
+      const m = (data as any)?.motivational;
+      toast.success(`"Não deixe de ler" enviado! ${m?.sent ?? 0} entregues${m?.failed ? `, ${m.failed} falhas` : ""}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao enviar lembrete motivacional");
+    } finally {
+      setResendingMotivational(false);
     }
   };
 
@@ -436,11 +458,11 @@ const AdminDailyVerse = () => {
           <span className="text-sm font-semibold text-[hsl(var(--dark-text))]">Reenviar Versículo do Dia</span>
         </div>
         <p className="text-xs text-[hsl(var(--dark-muted))] mb-3 leading-relaxed">
-          Dispara agora o push com o mesmo versículo exibido hoje no app.
+          Envia APENAS o push do versículo do dia (não dispara o "Não deixe de ler").
         </p>
         <Button onClick={resendDailyVerse} disabled={resending} className="w-full" size="sm">
           {resending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-          {resending ? "Enviando..." : "Reenviar push agora"}
+          {resending ? "Enviando..." : "Reenviar versículo do dia"}
         </Button>
       </div>
 
@@ -537,6 +559,18 @@ const AdminDailyVerse = () => {
             <span className="text-[10px] text-[hsl(var(--dark-muted))] italic bg-white/5 px-2 py-1 rounded">
               Brasília
             </span>
+          </div>
+        )}
+
+        {motivationalEnabled && (
+          <div className="pt-3 border-t border-[hsl(var(--dark-card-hover))]">
+            <p className="text-xs text-[hsl(var(--dark-muted))] mb-2">
+              Envia APENAS o "Não deixe de ler" com mensagem gerada por IA (Gemini), adaptada ao período atual (manhã / tarde / noite).
+            </p>
+            <Button onClick={resendMotivational} disabled={resendingMotivational} className="w-full" size="sm" variant="secondary">
+              {resendingMotivational ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {resendingMotivational ? "Gerando e enviando..." : "Enviar \"Não deixe de ler\" agora"}
+            </Button>
           </div>
         )}
       </div>

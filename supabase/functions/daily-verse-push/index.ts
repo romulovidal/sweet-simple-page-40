@@ -37,6 +37,17 @@ function getBrazilTimeKey(date = new Date()) {
   }).format(date);
 }
 
+function getBrazilPeriod(date = new Date()): { period: "manhã" | "tarde" | "noite" | "madrugada"; hour: number } {
+  const hourStr = new Intl.DateTimeFormat("pt-BR", { timeZone: BRAZIL_TZ, hour: "2-digit", hour12: false }).format(date);
+  const hour = parseInt(hourStr, 10);
+  let period: "manhã" | "tarde" | "noite" | "madrugada";
+  if (hour >= 5 && hour < 12) period = "manhã";
+  else if (hour >= 12 && hour < 18) period = "tarde";
+  else if (hour >= 18 && hour < 24) period = "noite";
+  else period = "madrugada";
+  return { period, hour };
+}
+
 async function isAuthorizedTrigger(
   req: Request,
   supabaseUrl: string,
@@ -104,13 +115,28 @@ serve(async (req) => {
      }
      const isManual = auth.manual;
  
+      // Optional filter to send only one of the two pushes (manual triggers).
+      // Accepts { only: 'verse' | 'motivational' } in body or ?only= query param.
+      let onlyType: "verse" | "motivational" | null = null;
+      try {
+        const url = new URL(req.url);
+        const q = url.searchParams.get("only");
+        if (q === "verse" || q === "motivational") onlyType = q;
+        if (!onlyType && req.method === "POST") {
+          const body = await req.clone().json().catch(() => null) as any;
+          const b = body?.only;
+          if (b === "verse" || b === "motivational") onlyType = b;
+        }
+      } catch { /* ignore */ }
+
       const brTimeStr = getBrazilTimeKey();
       const todayBR = getBrazilDateKey();
  
      const results: any = { brTime: brTimeStr, date: todayBR };
  
      // 1. Check Daily Verse Push
-     if (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR)) {
+      const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR));
+      if (runVerse) {
        let baseVerse: { text: string; ref: string } | null = null;
         const { data: queueVerse } = await supabase
           .from("daily_verse_queue")
@@ -153,9 +179,21 @@ serve(async (req) => {
      }
  
      // 2. Check Motivational Push (AI Generated)
-     if (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR))) {
+      const runMotivational = onlyType
+        ? onlyType === "motivational"
+        : (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR)));
+      if (runMotivational) {
        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
        let aiMessage = "";
+        const { period, hour } = getBrazilPeriod();
+        const dayName = new Intl.DateTimeFormat("pt-BR", { timeZone: BRAZIL_TZ, weekday: "long" }).format(new Date());
+        const titleByPeriod: Record<string, string> = {
+          "manhã": "☀️ Bom dia! Não deixe de ler hoje",
+          "tarde": "🌤️ Boa tarde! Uma pausa na Palavra",
+          "noite": "🌙 Boa noite! Encerre o dia com Deus",
+          "madrugada": "✨ Um momento com Deus agora",
+        };
+        const pushTitle = titleByPeriod[period];
  
        if (LOVABLE_API_KEY) {
          try {
@@ -166,14 +204,28 @@ serve(async (req) => {
                "Content-Type": "application/json",
              },
              body: JSON.stringify({
-               model: "google/gemini-2.0-flash",
+                model: "google/gemini-2.5-flash",
                messages: [
-                 { 
-                   role: "system", 
-                   content: "Você é um mentor espiritual cristão encorajador. Gere uma frase curta e profunda (máximo 120 caracteres) para edificar o dia de uma pessoa. Use uma linguagem atual, acolhedora e inspiradora. Não use hashtags. Foque em esperança, fé, amor de Deus ou perseverança. Retorne APENAS a frase." 
-                 }
+                  {
+                    role: "system",
+                    content:
+                      "Você é um mentor espiritual cristão, acolhedor e criativo. Gere UMA frase curta (máx. 130 caracteres), original e inspiradora, para lembrar a pessoa de ler a Bíblia agora. Nunca repita fórmulas prontas. Use linguagem natural e adapte o tom ao período do dia. Sem hashtags, sem aspas, sem emojis no início. Retorne APENAS a frase.",
+                  },
+                  {
+                    role: "user",
+                    content:
+                      `Contexto: hoje é ${dayName}, período do dia = ${period} (hora local ${hour}h em Fortaleza-CE). ` +
+                      (period === "manhã"
+                        ? "Convide a pessoa a começar o dia na Palavra."
+                        : period === "tarde"
+                        ? "Convide a pessoa a fazer uma pausa e voltar à Palavra."
+                        : period === "noite"
+                        ? "Convide a pessoa a encerrar o dia meditando na Palavra antes de dormir."
+                        : "Convide a pessoa a se aquietar com Deus neste momento silencioso.") +
+                      " Gere agora a frase (diferente das anteriores).",
+                  },
                ],
-               temperature: 0.8,
+                temperature: 1.0,
              }),
            });
  
@@ -200,7 +252,7 @@ serve(async (req) => {
          method: "POST",
          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
          body: JSON.stringify({
-           title: "Não deixe de ler Hoje!",
+            title: pushTitle,
            body: aiMessage,
            url: "/",
            type: "motivational",

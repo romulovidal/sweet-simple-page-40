@@ -12,13 +12,37 @@ const WEBHOOK_SECRET = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 // Detecção de crise — palavras-chave locais + rate-limit por contato
 // ============================================================
 const DEFAULT_CRISIS_KEYWORDS = [
-  'me matar', 'me matando', 'suicid', 'acabar comigo', 'acabar com tudo',
-  'não aguento mais', 'nao aguento mais', 'quero sumir', 'quero morrer',
-  'sem saída', 'sem saida', 'sem esperança', 'sem esperanca',
+  // Ideação suicida — verbos "matar/morrer"
+  'me matar', 'me matando', 'me mato', 'vou me matar', 'quero me matar', 'pensando em me matar',
+  'quero morrer', 'queria morrer', 'quero estar morto', 'quero estar morta',
+  'preferia estar morto', 'preferia estar morta', 'melhor morrer', 'melhor estar morto', 'melhor estar morta',
+  'tirar minha vida', 'tirar a minha vida', 'dar fim a minha vida', 'dar fim na minha vida', 'dar fim a vida',
+  'acabar com minha vida', 'acabar com a minha vida', 'acabar comigo', 'acabar com tudo', 'por fim a tudo', 'pôr fim a tudo',
+  'suicid', 'me suicidar', 'cometer suicidio', 'cometer suicídio', 'tentativa de suicidio', 'tentativa de suicídio',
+  // Desaparecer / desistir
+  'quero sumir', 'sumir do mundo', 'sumir daqui', 'quero desaparecer', 'desaparecer do mundo',
+  'não quero mais viver', 'nao quero mais viver', 'não quero viver', 'nao quero viver',
+  'cansei de viver', 'cansada de viver', 'cansado de viver',
+  'não vejo saída', 'nao vejo saida', 'sem saída', 'sem saida', 'não tem saída', 'nao tem saida',
+  'sem esperança', 'sem esperanca', 'perdi a esperança', 'perdi a esperanca', 'sem futuro',
+  'não aguento mais', 'nao aguento mais', 'não aguento mais viver', 'nao aguento mais viver',
+  'não vale a pena', 'nao vale a pena', 'ninguém vai sentir minha falta', 'ninguem vai sentir minha falta',
+  'seria melhor sem mim', 'todos ficariam melhor sem mim', 'sou um peso',
+  // Planejamento
+  'como me matar', 'jeito de me matar', 'me jogar', 'me enforcar', 'enforcamento',
+  'tomar veneno', 'tomar remedio pra morrer', 'tomar remédio pra morrer',
+  'overdose', 'engolir remedios', 'engolir remédios', 'cortar os pulsos',
+  'carta de despedida', 'ultima mensagem', 'última mensagem',
+  // Autolesão
+  'me machucar', 'me machuco', 'me cortar', 'me corto', 'me ferir', 'me ferindo',
+  'me bater', 'me punir', 'me queimar',
+  // Abuso / violência
   'sofri abuso', 'fui abusad', 'fui estuprad', 'estupro',
-  'me machucar', 'me machuco', 'me cortar', 'me corto',
-  'apanhei', 'estão me batendo', 'estao me batendo', 'sofro violência', 'sofro violencia',
-  'depressão profunda', 'depressao profunda',
+  'apanhei', 'estão me batendo', 'estao me batendo',
+  'sofro violência', 'sofro violencia', 'violência doméstica', 'violencia domestica',
+  // Depressão severa
+  'depressão profunda', 'depressao profunda', 'depressão severa', 'depressao severa',
+  'crise de panico', 'crise de pânico', 'crise suicida',
 ]
 
 const CRISIS_REPLY = `🕊️ Ouvi você. Você não está sozinho(a) — o que sente importa.
@@ -46,15 +70,7 @@ async function detectCrisis(admin: any, text: string): Promise<{ matched: string
   return { matched, extras }
 }
 
-async function shouldAlertNow(admin: any, phone: string): Promise<boolean> {
-  const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-  const { data } = await admin.from('atis_crisis_alerts')
-    .select('id').eq('contact_phone', phone).gte('created_at', since).limit(1)
-  return !(data && data.length > 0)
-}
-
 async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[]): Promise<void> {
-  const canAlert = await shouldAlertNow(admin, phone)
   const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
   const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
   const enabled = cfg.enabled !== false
@@ -69,7 +85,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phonePretty}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
 
   let notified = false
-  if (enabled && canAlert && pastors.length) {
+  if (enabled && pastors.length) {
     for (const p of pastors) {
       const r = await evolutionSendText(p, alertMsg)
       if (r.ok) notified = true

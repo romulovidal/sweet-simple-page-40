@@ -50,7 +50,8 @@ const AtisConfig = () => {
 
   const save = async () => {
     setSaving(true);
-    const { error } = await atisDb.from("atis_config").update({
+    const { error } = await atisDb.from("atis_config").upsert({
+      id: 1,
       bot_name: cfg.bot_name,
       avatar_url: cfg.avatar_url,
       persona: cfg.persona,
@@ -62,9 +63,15 @@ const AtisConfig = () => {
       evolution_url: cfg.evolution_url,
       evolution_instance: cfg.evolution_instance,
       bot_number: cfg.bot_number,
-    }).eq("id", 1);
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
     setSaving(false);
-    if (error) toast.error(error.message); else toast.success("Configuração salva");
+    if (error) {
+      console.error("[AtisConfig] save error", error);
+      toast.error(`Erro ao salvar: ${error.message}`);
+    } else {
+      toast.success("Configuração salva");
+    }
   };
 
   return (

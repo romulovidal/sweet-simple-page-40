@@ -201,7 +201,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     dateStyle: 'short',
     timeStyle: 'medium',
   }).format(new Date())
-  const helpLine = `\n\n_Comandos: "resolvido ${phonePretty}" (encerra alerta p/ todos) · "silenciar ${phonePretty}" (para só de te avisar sobre esta pessoa)_`
+  const helpLine = `\n\n_Vote na enquete abaixo ou responda por texto: "resolvido ${phonePretty}" (encerra p/ todos) · "silenciar ${phonePretty}" (para só de te avisar)._`
   const recurrenceBadge = recurrence ? `⚠️ *REINCIDÊNCIA — crise reaberta em menos de 72h*\n\n` : ''
   const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
     ? cfg.alert_template

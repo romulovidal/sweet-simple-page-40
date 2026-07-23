@@ -38,20 +38,21 @@ async function resolveVerseOfDay(admin: any): Promise<string> {
   try {
     const { data } = await admin
       .from('daily_verse_queue')
-      .select('reference, text')
+      .select('verse_ref, verse_text')
       .eq('scheduled_date', todayBR())
       .maybeSingle()
-    if (data?.reference) return `*${data.reference}*\n_"${data.text}"_`
+    if (data?.verse_ref) return `*${data.verse_ref}*\n_"${data.verse_text}"_`
   } catch (_) { /* ignore */ }
   return ''
 }
 
 async function resolveBirthdaysToday(admin: any): Promise<string> {
   try {
-    const d = todayBR().slice(5) // MM-DD
-    const { data } = await admin.from('atis_birthdays').select('name, day, month').eq('active', true)
-    const [mm, dd] = d.split('-').map((s: string) => parseInt(s, 10))
-    const list = (data ?? []).filter((b: any) => b.month === mm && b.day === dd).map((b: any) => `• ${b.name}`)
+    const mmdd = todayBR().slice(5) // MM-DD
+    const { data } = await admin.from('atis_birthdays').select('name, birth_date').eq('active', true)
+    const list = (data ?? [])
+      .filter((b: any) => typeof b.birth_date === 'string' && b.birth_date.slice(5) === mmdd)
+      .map((b: any) => `• ${b.name}`)
     return list.length ? list.join('\n') : '(nenhum aniversariante hoje)'
   } catch (_) { return '' }
 }

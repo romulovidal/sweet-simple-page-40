@@ -201,7 +201,7 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
     dateStyle: 'short',
     timeStyle: 'medium',
   }).format(new Date())
-  const helpLine = `\n\n_Comandos: "resolvido ${phonePretty}" (encerra alerta p/ todos) · "silenciar ${phonePretty}" (para só de te avisar sobre esta pessoa)_`
+  const helpLine = `\n\n_Vote na enquete abaixo ou responda por texto: "resolvido ${phonePretty}" (encerra p/ todos) · "silenciar ${phonePretty}" (para só de te avisar)._`
   const recurrenceBadge = recurrence ? `⚠️ *REINCIDÊNCIA — crise reaberta em menos de 72h*\n\n` : ''
   const renderedAlert = (cfg.alert_template && cfg.alert_template.trim())
     ? cfg.alert_template
@@ -254,6 +254,19 @@ async function sendText(jid: string, text: string) {
 }
 
 function extractText(msg: any): string {
+  // Voto em enquete (poll) — Evolution v2 pode emitir em vários shapes.
+  const pollOpt =
+    msg?.message?.pollUpdateMessage?.vote?.selectedOptions?.[0]?.optionName ??
+    msg?.message?.pollUpdateMessage?.vote?.selectedOptions?.[0]?.name ??
+    msg?.pollUpdate?.selectedOptions?.[0]?.optionName ??
+    msg?.pollUpdate?.selectedOptions?.[0]?.name ??
+    msg?.message?.pollVoteMessage?.selectedOptions?.[0]?.optionName ??
+    null;
+  if (pollOpt && typeof pollOpt === 'string') {
+    // As opções seguem o formato "<label> • <comando>". Extrai só o comando.
+    const parts = pollOpt.split('•');
+    return (parts.length > 1 ? parts.slice(1).join('•') : pollOpt).trim();
+  }
   return (
     msg?.message?.conversation ??
     msg?.message?.extendedTextMessage?.text ??

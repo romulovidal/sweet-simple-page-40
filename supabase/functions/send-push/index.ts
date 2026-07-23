@@ -164,8 +164,58 @@ Deno.serve(async (req) => {
       failed += res.failed;
     });
 
+    // Forward the notification to WhatsApp groups that opted in.
+    let waSent = 0;
+    let waFailed = 0;
+    try {
+      const evoUrl = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
+      const evoKey = Deno.env.get("EVOLUTION_API_KEY") ?? "";
+      if (evoUrl && evoKey) {
+        const { data: groups } = await supabase
+          .from("atis_groups")
+          .select("wa_group_id, name")
+          .eq("forward_notifications", true)
+          .eq("active", true)
+          .not("wa_group_id", "is", null);
+
+        if (groups?.length) {
+          const link = body.url && body.url !== "/"
+            ? `https://biblia.atalaias.online${body.url}`
+            : "https://biblia.atalaias.online";
+          const waText = `📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}`;
+          const results = await Promise.all(groups.map(async (g: any) => {
+            try {
+              const res = await fetch(`${evoUrl}/message/sendText/atis`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: evoKey },
+                body: JSON.stringify({ number: g.wa_group_id, text: waText }),
+              });
+              const raw = await res.text().catch(() => "");
+              await supabase.from("atis_messages_log").insert({
+                direction: "outbound",
+                wa_to: g.wa_group_id,
+                wa_group_id: g.wa_group_id,
+                body: waText,
+                status: res.ok ? "sent" : "error",
+                error: res.ok ? null : `${res.status}: ${raw.slice(0, 300)}`,
+                raw: { source: "push_forward", type: body.type },
+              });
+              return res.ok;
+            } catch (err) {
+              console.error("[send-push] group forward failed", g.wa_group_id, err);
+              return false;
+            }
+          }));
+          waSent = results.filter(Boolean).length;
+          waFailed = results.length - waSent;
+        }
+      }
+    } catch (err) {
+      console.error("[send-push] group forward top-level error", err);
+    }
+
     return new Response(
-      JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency }),
+      JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency, waSent, waFailed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

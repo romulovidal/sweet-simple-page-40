@@ -260,43 +260,54 @@ const TOOL_LABELS: Record<string, string> = {
 
 type ToolIntent = { tool: keyof typeof TOOL_PROMPTS | 'nenhum'; reference: string | null }
 
-async function detectToolIntent(userText: string, history: Array<{role:string,content:string}>): Promise<ToolIntent> {
-  const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content?.slice(0, 400) ?? ''
-  const sys = `Você é um classificador. Analise a mensagem do usuário no WhatsApp e detecte se ele está pedindo uma das ferramentas da Bíblia Atalaia sobre uma passagem bíblica.
+// Detecção 100% local (sem custo de IA) — palavras-chave + regex de referência bíblica.
+const TOOL_KEYWORDS: Array<{ tool: keyof typeof TOOL_PROMPTS; patterns: RegExp[] }> = [
+  { tool: 'exegese',     patterns: [/\bexeges[ei]/i, /exegeta[ií]/i, /estud[oa]\s+profund/i, /explica[çc][aã]o\s+profunda/i, /an[aá]lise\s+te[oó]l[oó]gica/i] },
+  { tool: 'conexoes',    patterns: [/conex[oõ]es?\s+b[ií]blic/i, /refer[eê]ncias?\s+cruzad/i, /vers[ií]culos?\s+relacionad/i, /paralel[oa]s?\s+b[ií]blic/i, /outros?\s+vers[ií]culos/i] },
+  { tool: 'palavra',     patterns: [/significad[oa]\s+(da\s+palavra|no\s+original|em\s+hebra|em\s+greg)/i, /\bhebrai[cç]/i, /\bgreg[oa]\b/i, /transliter/i, /etimolog/i, /palavra\s+original/i, /no\s+original/i] },
+  { tool: 'linha_tempo', patterns: [/linha\s+do\s+tempo/i, /contexto\s+hist[oó]ric/i, /contexto\s+cultural/i, /[eé]poca/i, /cronolog/i, /quando\s+(aconteceu|foi\s+escrit)/i] },
+  { tool: 'devocional',  patterns: [/devociona/i, /reflex[aã]o/i, /medita[çc][aã]o/i, /aplica[çc][aã]o\s+pr[aá]tic/i] },
+  { tool: 'resumo',      patterns: [/\bresum[oai]/i, /sintetiz/i, /do\s+que\s+(fala|trata)/i, /sobre\s+o\s+que\s+[eé]/i] },
+]
 
-Ferramentas disponíveis:
-- "exegese" → exegese completa, estudo profundo, "explica em profundidade", "ExegetAI"
-- "conexoes" → referências cruzadas, versículos relacionados, paralelos bíblicos
-- "palavra" → significado no original, hebraico, grego, transliteração, etimologia
-- "linha_tempo" → contexto histórico, época, quando aconteceu, cronologia
-- "devocional" → reflexão devocional, meditação, aplicação prática
-- "resumo" → resumo do capítulo, do que trata
-- "nenhum" → conversa normal, saudação, dúvida geral, pergunta sobre o app/ministério
+// Livros da Bíblia (nome + abreviações). Suporta "João 3:16", "Jo 3", "1 Coríntios 13:4-8", "Salmo 23".
+const BOOK_ALTS = [
+  'g[eê]nesis|gn','[eê]xodo|ex','lev[ií]tico|lv','n[uú]meros|nm','deuteron[oô]mio|dt',
+  'josu[eé]|js','ju[ií]zes|jz','rute|rt','1\\s*samuel|1sm','2\\s*samuel|2sm',
+  '1\\s*reis|1rs','2\\s*reis|2rs','1\\s*cr[oô]nicas|1cr','2\\s*cr[oô]nicas|2cr',
+  'esdras|ed','neemias|ne','ester|et','j[oó]|j[oó]b','salm[oa]s?|sl',
+  'prov[eé]rbios|pv','eclesiastes|ec','c[aâ]nticos?|ct','isa[ií]as|is','jeremias|jr',
+  'lamenta[çc][oõ]es|lm','ezequiel|ez','daniel|dn','os[eé]ias|os','joel|jl',
+  'am[oó]s|am','obadias|ob','jonas|jn','miqu[eé]ias|mq','naum|na','habacuque|hc',
+  'sofonias|sf','ageu|ag','zacarias|zc','malaquias|ml',
+  'mateus|mt','marcos|mc','lucas|lc','jo[aã]o|jo','atos|at','romanos|rm',
+  '1\\s*cor[ií]ntios|1co','2\\s*cor[ií]ntios|2co','g[aá]latas|gl','ef[eé]sios|ef',
+  'filipenses|fp','colossenses|cl','1\\s*tessalonicenses|1ts','2\\s*tessalonicenses|2ts',
+  '1\\s*tim[oó]teo|1tm','2\\s*tim[oó]teo|2tm','tito|tt','filemom|fm','hebreus|hb',
+  'tiago|tg','1\\s*pedro|1pe','2\\s*pedro|2pe','1\\s*jo[aã]o|1jo','2\\s*jo[aã]o|2jo',
+  '3\\s*jo[aã]o|3jo','judas|jd','apocalipse|ap',
+].join('|')
+const REF_REGEX = new RegExp(`\\b(?:${BOOK_ALTS})\\s+\\d+(?::\\d+(?:\\s*[-–]\\s*\\d+)?)?`, 'i')
 
-A referência pode ser explícita ("João 3:16", "Salmo 23", "Gn 1") ou implícita ("desse versículo", "esse capítulo") — nesse caso pegue do contexto da última resposta do assistente:\n${lastAssistant || '(sem contexto)'}
-
-Responda APENAS com um JSON válido no formato exato: {"tool":"exegese|conexoes|palavra|linha_tempo|devocional|resumo|nenhum","reference":"Livro cap:vers ou null"}`
-  try {
-    const res = await aiChatFetch({
-      model: 'google/gemini-2.5-flash',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: userText },
-      ],
-    })
-    if (!res.ok) return { tool: 'nenhum', reference: null }
-    const json = await res.json().catch(() => null) as any
-    const raw = json?.choices?.[0]?.message?.content ?? '{}'
-    const parsed = JSON.parse(raw)
-    const tool = String(parsed?.tool ?? 'nenhum') as ToolIntent['tool']
-    const reference = parsed?.reference && parsed.reference !== 'null' ? String(parsed.reference) : null
-    if (!TOOL_PROMPTS[tool] || !reference) return { tool: 'nenhum', reference: null }
-    return { tool, reference }
-  } catch {
-    return { tool: 'nenhum', reference: null }
+function extractReference(text: string, history: Array<{role:string,content:string}>): string | null {
+  const m = text.match(REF_REGEX)
+  if (m) return m[0].replace(/\s+/g, ' ').trim()
+  // fallback: se o usuário usar "desse versículo/capítulo", pega da última resposta do assistente
+  if (/\b(desse|desta|esse|essa|nesse|nessa|nesta|deste|neste)\s+(vers[ií]culo|cap[ií]tulo|passagem|texto)/i.test(text)) {
+    const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant')?.content ?? ''
+    const m2 = lastAssistant.match(REF_REGEX)
+    if (m2) return m2[0].replace(/\s+/g, ' ').trim()
   }
+  return null
+}
+
+function detectToolIntent(userText: string, history: Array<{role:string,content:string}>): ToolIntent {
+  const reference = extractReference(userText, history)
+  if (!reference) return { tool: 'nenhum', reference: null }
+  for (const { tool, patterns } of TOOL_KEYWORDS) {
+    if (patterns.some((p) => p.test(userText))) return { tool, reference }
+  }
+  return { tool: 'nenhum', reference: null }
 }
 
 async function runTool(tool: keyof typeof TOOL_PROMPTS, reference: string): Promise<string> {
@@ -401,7 +412,8 @@ Deno.serve(async (req) => {
 
         // Primeiro tenta detectar se o usuário pediu uma ferramenta da Bíblia Atalaia
         // (exegese, conexões, palavra original, linha do tempo, devocional, resumo).
-        const intent = await detectToolIntent(text, history)
+        // Detecção 100% local — sem custo de IA.
+        const intent = detectToolIntent(text, history)
         let reply: string
         let usedTool: string | null = null
         if (intent.tool !== 'nenhum' && intent.reference) {

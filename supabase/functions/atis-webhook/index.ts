@@ -723,6 +723,153 @@ async function runHarpa(intent: { numero?: number; titulo?: string }): Promise<s
   return await formatHino(hino)
 }
 
+// ============================================================
+// Bíblia — leitura REAL do JSON oficial por versão (sem IA)
+// ============================================================
+type BibleBook = { abbrev: string; name: string; chapters: string[][] }
+const BIBLE_CACHE = new Map<string, BibleBook[]>()
+const BIBLE_VERSIONS = ['ARC', 'ARA', 'ACF', 'NVI', 'NTLH', 'KJA'] as const
+type BibleVersion = typeof BIBLE_VERSIONS[number]
+const DEFAULT_BIBLE: BibleVersion = 'ARC'
+
+async function loadBible(v: BibleVersion): Promise<BibleBook[]> {
+  const c = BIBLE_CACHE.get(v)
+  if (c) return c
+  try {
+    const r = await fetch(`${APP_URL}/biblias/${v}.json`)
+    if (!r.ok) return []
+    const j = await r.json() as BibleBook[]
+    BIBLE_CACHE.set(v, j)
+    return j
+  } catch (e) {
+    console.error('[bible] load failed', v, (e as Error)?.message)
+    return []
+  }
+}
+
+// Ordem canônica dos 66 livros — casa com posição no JSON
+const BOOK_INDEX: Array<{ i: number; name: string; keys: string[] }> = [
+  { i:0, name:'Gênesis', keys:['genesis','gn'] },{ i:1, name:'Êxodo', keys:['exodo','ex'] },
+  { i:2, name:'Levítico', keys:['levitico','lv'] },{ i:3, name:'Números', keys:['numeros','nm'] },
+  { i:4, name:'Deuteronômio', keys:['deuteronomio','dt'] },{ i:5, name:'Josué', keys:['josue','js'] },
+  { i:6, name:'Juízes', keys:['juizes','jz'] },{ i:7, name:'Rute', keys:['rute','rt'] },
+  { i:8, name:'1 Samuel', keys:['1 samuel','1samuel','1sm'] },{ i:9, name:'2 Samuel', keys:['2 samuel','2samuel','2sm'] },
+  { i:10, name:'1 Reis', keys:['1 reis','1reis','1rs'] },{ i:11, name:'2 Reis', keys:['2 reis','2reis','2rs'] },
+  { i:12, name:'1 Crônicas', keys:['1 cronicas','1cronicas','1cr'] },{ i:13, name:'2 Crônicas', keys:['2 cronicas','2cronicas','2cr'] },
+  { i:14, name:'Esdras', keys:['esdras','ed'] },{ i:15, name:'Neemias', keys:['neemias','ne'] },
+  { i:16, name:'Ester', keys:['ester','et'] },{ i:17, name:'Jó', keys:['jo','job'] },
+  { i:18, name:'Salmos', keys:['salmos','salmo','sl'] },{ i:19, name:'Provérbios', keys:['proverbios','pv'] },
+  { i:20, name:'Eclesiastes', keys:['eclesiastes','ec'] },{ i:21, name:'Cânticos', keys:['canticos','cantico','ct'] },
+  { i:22, name:'Isaías', keys:['isaias','is'] },{ i:23, name:'Jeremias', keys:['jeremias','jr'] },
+  { i:24, name:'Lamentações', keys:['lamentacoes','lm'] },{ i:25, name:'Ezequiel', keys:['ezequiel','ez'] },
+  { i:26, name:'Daniel', keys:['daniel','dn'] },{ i:27, name:'Oséias', keys:['oseias','os'] },
+  { i:28, name:'Joel', keys:['joel','jl'] },{ i:29, name:'Amós', keys:['amos','am'] },
+  { i:30, name:'Obadias', keys:['obadias','ob'] },{ i:31, name:'Jonas', keys:['jonas','jn'] },
+  { i:32, name:'Miquéias', keys:['miqueias','mq'] },{ i:33, name:'Naum', keys:['naum','na'] },
+  { i:34, name:'Habacuque', keys:['habacuque','hc'] },{ i:35, name:'Sofonias', keys:['sofonias','sf'] },
+  { i:36, name:'Ageu', keys:['ageu','ag'] },{ i:37, name:'Zacarias', keys:['zacarias','zc'] },
+  { i:38, name:'Malaquias', keys:['malaquias','ml'] },
+  { i:39, name:'Mateus', keys:['mateus','mt'] },{ i:40, name:'Marcos', keys:['marcos','mc'] },
+  { i:41, name:'Lucas', keys:['lucas','lc'] },{ i:42, name:'João', keys:['joao'] },
+  { i:43, name:'Atos', keys:['atos','at'] },{ i:44, name:'Romanos', keys:['romanos','rm'] },
+  { i:45, name:'1 Coríntios', keys:['1 corintios','1corintios','1co'] },{ i:46, name:'2 Coríntios', keys:['2 corintios','2corintios','2co'] },
+  { i:47, name:'Gálatas', keys:['galatas','gl'] },{ i:48, name:'Efésios', keys:['efesios','ef'] },
+  { i:49, name:'Filipenses', keys:['filipenses','fp'] },{ i:50, name:'Colossenses', keys:['colossenses','cl'] },
+  { i:51, name:'1 Tessalonicenses', keys:['1 tessalonicenses','1tessalonicenses','1ts'] },
+  { i:52, name:'2 Tessalonicenses', keys:['2 tessalonicenses','2tessalonicenses','2ts'] },
+  { i:53, name:'1 Timóteo', keys:['1 timoteo','1timoteo','1tm'] },{ i:54, name:'2 Timóteo', keys:['2 timoteo','2timoteo','2tm'] },
+  { i:55, name:'Tito', keys:['tito','tt'] },{ i:56, name:'Filemom', keys:['filemom','fm'] },
+  { i:57, name:'Hebreus', keys:['hebreus','hb'] },{ i:58, name:'Tiago', keys:['tiago','tg'] },
+  { i:59, name:'1 Pedro', keys:['1 pedro','1pedro','1pe'] },{ i:60, name:'2 Pedro', keys:['2 pedro','2pedro','2pe'] },
+  { i:61, name:'1 João', keys:['1 joao','1joao','1jo'] },{ i:62, name:'2 João', keys:['2 joao','2joao','2jo'] },
+  { i:63, name:'3 João', keys:['3 joao','3joao','3jo'] },{ i:64, name:'Judas', keys:['judas','jd'] },
+  { i:65, name:'Apocalipse', keys:['apocalipse','ap'] },
+]
+
+function findBookIndex(bookRaw: string): number | null {
+  const k = normalize(bookRaw).replace(/\s+/g,' ').trim()
+  for (const b of BOOK_INDEX) {
+    if (b.keys.includes(k)) return b.i
+  }
+  // tenta sem espaço (ex.: "1joao")
+  const k2 = k.replace(/\s+/g,'')
+  for (const b of BOOK_INDEX) {
+    if (b.keys.map(x=>x.replace(/\s+/g,'')).includes(k2)) return b.i
+  }
+  return null
+}
+
+// Detecta versão pedida no texto (padrão ARC)
+function detectBibleVersion(text: string): BibleVersion {
+  const t = text.toUpperCase()
+  for (const v of BIBLE_VERSIONS) {
+    if (new RegExp(`\\b${v}\\b`).test(t)) return v
+  }
+  return DEFAULT_BIBLE
+}
+
+type ParsedRef = { bookIdx: number; bookName: string; chapter: number; vFrom?: number; vTo?: number }
+
+function parseReference(ref: string): ParsedRef | null {
+  // Ex.: "João 3:16", "1 Coríntios 13:4-8", "Salmo 23", "Jo 3"
+  const m = ref.match(/^([1-3]?\s*[A-Za-zÀ-ÿ]+)\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?$/i)
+  if (!m) return null
+  const bookIdx = findBookIndex(m[1].trim())
+  if (bookIdx == null) return null
+  const chapter = parseInt(m[2],10)
+  const vFrom = m[3] ? parseInt(m[3],10) : undefined
+  const vTo = m[4] ? parseInt(m[4],10) : (vFrom ? vFrom : undefined)
+  return { bookIdx, bookName: BOOK_INDEX[bookIdx].name, chapter, vFrom, vTo }
+}
+
+// Só intercepta quando o usuário quer o TEXTO — não quando pede análise/ferramenta.
+function detectBibleTextIntent(text: string, toolDetected: boolean): { ref: string; version: BibleVersion } | null {
+  if (toolDetected) return null
+  const ref = text.match(REF_REGEX)?.[0]
+  if (!ref) return null
+  // gatilhos para envio do texto literal
+  const wantsText = /\b(me\s+manda|manda|envia|envie|mande|leia|le|lê|quero\s+ler|texto\s+de|vers[ií]culo|versiculos|passagem|capitulo|cap[ií]tulo|escreva|escreve|copia|copie|qual\s+[eé]\s+o\s+texto|como\s+diz|o\s+que\s+diz)\b/i
+  // se a mensagem for só a referência ("João 3:16"), também considera pedido de texto
+  const isBareRef = new RegExp(`^\\s*${REF_REGEX.source}\\s*[?.!]?\\s*$`, 'i').test(text)
+  if (!wantsText.test(text) && !isBareRef) return null
+  return { ref: ref.replace(/\s+/g,' ').trim(), version: detectBibleVersion(text) }
+}
+
+const MAX_VERSES = 25
+
+async function runBibleVerse(intent: { ref: string; version: BibleVersion }): Promise<string | null> {
+  const parsed = parseReference(intent.ref)
+  if (!parsed) return null
+  const books = await loadBible(intent.version)
+  if (!books.length) return null
+  const book = books[parsed.bookIdx]
+  if (!book) return null
+  const chapterArr = book.chapters?.[parsed.chapter - 1]
+  if (!chapterArr) return `📖 Não encontrei ${parsed.bookName} ${parsed.chapter} na versão ${intent.version}.`
+  const total = chapterArr.length
+  let from = parsed.vFrom ?? 1
+  let to = parsed.vTo ?? total
+  if (from < 1) from = 1
+  if (to > total) to = total
+  if (from > total) return `📖 ${parsed.bookName} ${parsed.chapter} tem ${total} versículos na versão ${intent.version}.`
+  let truncated = false
+  if (to - from + 1 > MAX_VERSES) { to = from + MAX_VERSES - 1; truncated = true }
+  const lines: string[] = []
+  for (let i = from; i <= to; i++) {
+    const txt = chapterArr[i - 1]
+    if (!txt) continue
+    lines.push(from === to ? txt : `*${i}* ${txt}`)
+  }
+  const refLabel = from === to
+    ? `${parsed.bookName} ${parsed.chapter}:${from}`
+    : (parsed.vFrom ? `${parsed.bookName} ${parsed.chapter}:${from}-${to}` : `${parsed.bookName} ${parsed.chapter}`)
+  const header = `📖 *${refLabel}* _(${intent.version})_`
+  const footer = truncated
+    ? `\n\n_(exibindo ${MAX_VERSES} versículos — capítulo tem ${total}. Peça um trecho específico, ex.: ${parsed.bookName} ${parsed.chapter}:${to+1}-${Math.min(to+MAX_VERSES,total)})_`
+    : ''
+  return `${header}\n\n${lines.join('\n')}${footer}`
+}
+
 function extractReference(text: string, history: Array<{role:string,content:string}>): string | null {
   const m = text.match(REF_REGEX)
   if (m) return m[0].replace(/\s+/g, ' ').trim()

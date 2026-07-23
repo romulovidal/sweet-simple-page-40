@@ -1223,16 +1223,10 @@ Deno.serve(async (req) => {
             const r = await sendText(jid, harpaReply.text)
             let previewStatus: { ok: boolean; status: number } | null = null
             if (harpaReply.youtubeUrl) {
-              // Força uma prévia visual: envia a miniatura do YouTube como imagem
-              // com o link na legenda. Se a mídia falhar, cai para link puro.
-              const videoId = youtubeVideoId(harpaReply.youtubeUrl)
-              const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
-              const caption = `▶️ Ouvir no YouTube:\n${harpaReply.youtubeUrl}`
-              const previewRes = thumbUrl
-                ? await sendMediaImage(jid, thumbUrl, caption)
-                : await sendText(jid, harpaReply.youtubeUrl)
-              if (!previewRes.ok && thumbUrl) await sendText(jid, harpaReply.youtubeUrl)
-              previewStatus = { ok: previewRes.ok, status: previewRes.status }
+              // Envia o link em mensagem separada (sem miniatura de imagem).
+              // O WhatsApp gera o preview nativo do YouTube automaticamente.
+              const linkRes = await sendText(jid, harpaReply.youtubeUrl)
+              previewStatus = { ok: linkRes.ok, status: linkRes.status }
             }
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, wa_group_id: isGroup ? jid : null,

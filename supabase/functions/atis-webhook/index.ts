@@ -112,6 +112,28 @@ async function getRecentActiveCrisis(admin: any, phone: string): Promise<{ id: s
   }
 }
 
+// Crise já RESOLVIDA recentemente (últimas 72h). Usado para detectar REINCIDÊNCIA:
+// se a pessoa volta a mostrar sinais logo após um "resolvido", tratamos como risco
+// automaticamente (sem filtro de IA) e sinalizamos aos pastores.
+async function getRecentResolvedCrisis(admin: any, phone: string): Promise<{ id: string; created_at: string; handled_at: string | null } | null> {
+  try {
+    const phoneDigits = String(phone).split('@')[0].replace(/\D/g, '')
+    const candidates = Array.from(new Set([phone, phoneDigits].filter(Boolean)))
+    const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+    const { data } = await admin
+      .from('atis_crisis_alerts')
+      .select('id,created_at,handled_at')
+      .in('contact_phone', candidates)
+      .eq('handled', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    return data?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 // Classificação por IA: só dispara alerta se o CONTEXTO indicar risco real,
 // evitando falsos positivos (ex.: "não me mate de rir", citação bíblica,
 // pergunta teórica, letra de música, terceira pessoa hipotética).

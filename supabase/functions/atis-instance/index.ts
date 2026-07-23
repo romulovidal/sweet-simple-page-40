@@ -97,6 +97,47 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(out.json ?? { ok: out.ok }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    if (action === 'listGroups') {
+      // Evolution API: GET /group/fetchAllGroups/{instance}?getParticipants=false
+      const out = await evo(`/group/fetchAllGroups/${INSTANCE}?getParticipants=false`)
+      const raw = out.json
+      const arr: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.groups) ? raw.groups : [])
+      const groups = arr.map((g: any) => ({
+        wa_group_id: g?.id ?? g?.remoteJid ?? g?.groupJid ?? null,
+        name: g?.subject ?? g?.name ?? g?.groupMetadata?.subject ?? '(sem nome)',
+        size: g?.size ?? g?.participantsCount ?? g?.groupMetadata?.size ?? null,
+        owner: g?.owner ?? null,
+      })).filter((g: any) => g.wa_group_id && String(g.wa_group_id).endsWith('@g.us'))
+      return new Response(JSON.stringify({ ok: out.ok, groups, count: groups.length, raw: groups.length ? undefined : raw }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (action === 'importGroups') {
+      const selected: Array<{ wa_group_id: string; name: string; forward_notifications?: boolean; respond_mode?: 'mention_only' | 'always' | 'off' }> =
+        Array.isArray(body.groups) ? body.groups : []
+      if (!selected.length) {
+        return new Response(JSON.stringify({ error: 'groups required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      const rows = selected
+        .filter((g) => g.wa_group_id && g.wa_group_id.endsWith('@g.us'))
+        .map((g) => ({
+          wa_group_id: g.wa_group_id,
+          name: (g.name ?? '').trim() || g.wa_group_id,
+          respond_mode: g.respond_mode ?? 'mention_only',
+          active: true,
+          forward_notifications: !!g.forward_notifications,
+        }))
+      const { error, data } = await admin.from('atis_groups').upsert(rows, { onConflict: 'wa_group_id' }).select('id')
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ ok: true, imported: data?.length ?? rows.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // default: status
     const st = await evo(`/instance/connectionState/${INSTANCE}`)
     return new Response(JSON.stringify({

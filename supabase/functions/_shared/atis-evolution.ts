@@ -90,13 +90,17 @@ export async function evolutionSendButtons(
 
   for (const number of attempts) {
     try {
-      const modernPayload = {
+      // Payload principal — sem título e sem viewOnce, para renderizar como
+      // botões nativos (quick_reply) diretamente, sem virar "enquete/lista"
+      // dentro do WhatsApp em alguns clientes.
+      const modernPayload: Record<string, unknown> = {
         number,
-        title: opts?.title ?? 'Atis',
         description: body,
         footer: opts?.footer ?? '',
         buttons: buttons.map((b) => ({ type: 'reply', displayText: b.displayText, id: b.id })),
+        options: { viewOnce: false, delay: 0, presence: 'composing' },
       };
+      if (opts?.title) modernPayload.title = opts.title;
       const modernRes = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },

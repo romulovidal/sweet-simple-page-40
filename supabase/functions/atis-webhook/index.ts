@@ -33,15 +33,16 @@ Estou avisando um pastor da Atalaias de Betel para caminhar com você — em bre
 "Perto está o Senhor dos que têm o coração quebrantado, e salva os contritos de espírito." (Salmos 34:18)`
 
 async function detectCrisis(admin: any, text: string): Promise<{ matched: string[]; extras: string[] }> {
-  const lower = text.toLowerCase()
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const lower = norm(text)
   let extras: string[] = []
   try {
     const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
     const custom = (cfgRow?.value as any)?.custom_keywords
     if (Array.isArray(custom)) extras = custom.filter((k) => typeof k === 'string' && k.trim())
   } catch { /* ignore */ }
-  const all = [...DEFAULT_CRISIS_KEYWORDS, ...extras.map((k) => k.toLowerCase())]
-  const matched = all.filter((k) => lower.includes(k))
+  const all = [...DEFAULT_CRISIS_KEYWORDS, ...extras].map(norm)
+  const matched = all.filter((k) => k && lower.includes(k))
   return { matched, extras }
 }
 

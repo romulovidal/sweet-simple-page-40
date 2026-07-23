@@ -801,13 +801,18 @@ Deno.serve(async (req) => {
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)
           const recentCrisis = crisis.matched.length ? null : await getRecentActiveCrisis(admin, jid)
+          const recentResolved = await getRecentResolvedCrisis(admin, jid)
           if (crisis.matched.length || recentCrisis) {
             const matched = crisis.matched.length ? crisis.matched : ['continuação de crise recente']
             // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
             // Se já existe crise ativa não tratada nas últimas 24h, cada nova mensagem é encaminhada aos pastores.
+            // Se houve crise RESOLVIDA nas últimas 72h e vieram novas palavras de risco,
+            // tratamos como REINCIDÊNCIA e pulamos o filtro de IA (segurança em primeiro lugar).
             const ctx = recentCrisis
               ? { risk: true, reason: `active_crisis_follow_up:${recentCrisis.id}`, confidence: 1 }
-              : await classifyCrisisContext(text)
+              : (recentResolved && crisis.matched.length)
+                ? { risk: true, reason: `recurrence_within_72h:${recentResolved.id}`, confidence: 1 }
+                : await classifyCrisisContext(text)
             if (!ctx.risk) {
               await admin.from('atis_messages_log').insert({
                 direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
@@ -826,13 +831,15 @@ Deno.serve(async (req) => {
                 contactName = p?.display_name ?? null
               }
             } catch { /* ignore */ }
-            await handleCrisis(admin, jid, contactName, text, matched)
+            const isRecurrence = !!recentResolved && !recentCrisis
+            await handleCrisis(admin, jid, contactName, text, matched, isRecurrence)
             const crisisReply = await generateCrisisReply(text)
             const r = await sendText(jid, crisisReply)
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, body: crisisReply,
-              command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
+              command: isRecurrence ? 'crisis-reply-recurrence' : 'crisis-reply',
+              status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason, recurrence: isRecurrence },
             })
             continue
             }

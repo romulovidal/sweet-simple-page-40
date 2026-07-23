@@ -46,6 +46,9 @@ async function generateDevotional(
     if (typeof custom === 'string' && custom.trim().length > 0) systemPrompt = custom
   } catch (_) { /* ignore */ }
 
+  // Reforço: não repetir o versículo (o cabeçalho da mensagem já o exibe)
+  systemPrompt += '\n\nIMPORTANTE: NÃO repita nem cite o versículo nem a referência no início da resposta. Comece direto pela reflexão.'
+
   const userContent = `**${verseRef}**\n\n"${verseText}"`
 
   const res = await fetch(

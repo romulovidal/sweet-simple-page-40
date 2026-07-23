@@ -607,6 +607,16 @@ Deno.serve(async (req) => {
         if (!isGroup) {
           const crisis = await detectCrisis(admin, text)
           if (crisis.matched.length) {
+            // Filtro por IA: só dispara se o contexto realmente indicar risco pessoal.
+            const ctx = await classifyCrisisContext(text)
+            if (!ctx.risk) {
+              await admin.from('atis_messages_log').insert({
+                direction: 'inbound', wa_from: jid, body: text.slice(0, 500),
+                command: 'crisis-skip', status: 'ignored',
+                raw: { reason: ctx.reason, confidence: ctx.confidence, matched: crisis.matched },
+              })
+              // não continua — deixa o fluxo normal (comando/IA) responder
+            } else {
             let contactName: string | null = null
             try {
               const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
@@ -622,9 +632,10 @@ Deno.serve(async (req) => {
             await admin.from('atis_messages_log').insert({
               direction: 'outbound', wa_to: jid, body: CRISIS_REPLY,
               command: 'crisis-reply', status: r.ok ? 'sent' : 'error',
-              raw: { auto: true, matched: crisis.matched, http: r.status },
+              raw: { auto: true, matched: crisis.matched, http: r.status, ai_confidence: ctx.confidence, ai_reason: ctx.reason },
             })
             continue
+            }
           }
         }
 

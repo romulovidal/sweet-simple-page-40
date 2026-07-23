@@ -466,7 +466,8 @@ Deno.serve(async (req) => {
         const intent = detectToolIntent(text, history)
         let reply: string
         let usedTool: string | null = null
-        if (intent.tool !== 'nenhum' && intent.reference) {
+        const cmdKey = intent.tool !== 'nenhum' ? TOOL_TO_COMMAND[intent.tool as keyof typeof TOOL_PROMPTS] : null
+        if (intent.tool !== 'nenhum' && intent.reference && cmdKey && isCommandEnabled(cfg, cmdKey)) {
           reply = await runTool(intent.tool as keyof typeof TOOL_PROMPTS, intent.reference)
           usedTool = intent.tool
         } else {

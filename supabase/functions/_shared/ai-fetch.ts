@@ -1,81 +1,121 @@
-// Shared AI chat completions fetch with fallback to Google Gemini API (user-provided key)
-// when Lovable AI Gateway returns 402 (credits exhausted) or 429 (rate limited).
+// Shared AI chat completions fetch.
+// Primary: xAI (Grok) via OpenAI-compatible endpoint.
+// Fallback 1: Google Gemini (user-provided key) when xAI returns 429/402/5xx.
+// Fallback 2: Lovable AI Gateway when both above are unavailable.
+// TTS (audio) is NOT handled here — see tts-verse function.
 
-const LOVABLE_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const XAI_URL = "https://api.x.ai/v1/chat/completions";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const LOVABLE_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+// Map any legacy model id (google/*, openai/*) to a supported Grok model.
+// Defaults to grok-4-fast-non-reasoning: fast, cheap, no reasoning overhead —
+// ideal for chat, devotionals, push copy, quick lookups.
+// For heavier Bible study tools (exegese, contexto histórico) use grok-4-fast-reasoning.
+function toGrokModel(model: string): string {
+  const m = String(model || "").toLowerCase();
+  if (m.startsWith("x-ai/") || m.startsWith("grok")) {
+    return m.startsWith("x-ai/") ? m.slice("x-ai/".length) : m;
+  }
+  // Heavier reasoning tasks — map "pro" / "gpt-5" / "gpt-5.5" / "gemini-*-pro" to reasoning variant.
+  if (m.includes("pro") || m.includes("gpt-5.5") || m.includes("gpt-5.4") || m.includes("gpt-5.2") || m.includes("o1") || m.includes("thinking")) {
+    return "grok-4-fast-reasoning";
+  }
+  // Default: fast non-reasoning for everything else.
+  return "grok-4-fast-non-reasoning";
+}
 
 function toGeminiModel(model: string): string {
-  // Lovable ids look like "google/gemini-2.5-flash" or "openai/gpt-5".
-  // Gemini OpenAI-compat endpoint accepts bare Gemini names like "gemini-2.5-flash".
   if (model.startsWith("google/")) {
     const name = model.slice("google/".length);
-    // Preview/experimental Lovable ids may not exist on Google direct — map to stable.
-    if (name.includes("preview") || name.includes("3-flash") || name.includes("3.1") || name.includes("3.5")) {
+    if (name.includes("preview") || name.includes("3-flash") || name.includes("3.1") || name.includes("3.5") || name.includes("3.6")) {
       return "gemini-2.5-flash";
     }
     return name;
   }
-  // Non-Gemini model requested — best-effort fallback to Gemini flash.
   return "gemini-2.5-flash";
 }
 
-export async function aiChatFetch(body: Record<string, unknown>): Promise<Response> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+async function tryLovable(body: Record<string, unknown>, key: string): Promise<Response> {
+  return await fetch(LOVABLE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
-  // Prefer Gemini directly when the user provided their own key.
-  if (GEMINI_API_KEY) {
-    const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
-    const res = await fetch(GEMINI_URL, {
+async function tryGemini(body: Record<string, unknown>, key: string): Promise<Response> {
+  const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
+  return await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify(geminiBody),
+  });
+}
+
+export async function aiChatFetch(body: Record<string, unknown>): Promise<Response> {
+  const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+  // Primary: xAI Grok
+  if (XAI_API_KEY) {
+    const grokBody = { ...body, model: toGrokModel(String(body.model ?? "grok-4-fast-non-reasoning")) };
+    const res = await fetch(XAI_URL, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(geminiBody),
+      headers: { Authorization: `Bearer ${XAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(grokBody),
     });
 
-    // If Gemini rate-limits, exhausts quota, or rejects the key (403 leaked/permission),
-    // log the real reason and try Lovable AI as a fallback when available.
-    if ((res.status === 429 || res.status === 402 || res.status === 403) && LOVABLE_API_KEY) {
+    // Retryable failure → try fallbacks
+    const retryable = res.status === 429 || res.status === 402 || res.status >= 500;
+    if (retryable) {
       try {
-        const cloned = res.clone();
-        const errText = await cloned.text();
-        console.error(`[ai-fetch] Gemini ${res.status}, falling back to Lovable. Body:`, errText.slice(0, 500));
+        const errText = await res.clone().text();
+        console.error(`[ai-fetch] xAI ${res.status}, trying fallback. Body:`, errText.slice(0, 400));
       } catch { /* ignore */ }
-      return await fetch(LOVABLE_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+
+      if (GEMINI_API_KEY) {
+        const gRes = await tryGemini(body, GEMINI_API_KEY);
+        if (gRes.ok) return gRes;
+        if ((gRes.status === 429 || gRes.status === 402 || gRes.status === 403) && LOVABLE_API_KEY) {
+          return await tryLovable(body, LOVABLE_API_KEY);
+        }
+        return gRes;
+      }
+      if (LOVABLE_API_KEY) return await tryLovable(body, LOVABLE_API_KEY);
     }
 
     if (!res.ok) {
       try {
-        const cloned = res.clone();
-        const errText = await cloned.text();
-        console.error(`[ai-fetch] Gemini ${res.status}:`, errText.slice(0, 500));
+        const errText = await res.clone().text();
+        console.error(`[ai-fetch] xAI ${res.status}:`, errText.slice(0, 400));
       } catch { /* ignore */ }
     }
-
     return res;
   }
 
-  // Fallback to Lovable if no Gemini key.
-  if (LOVABLE_API_KEY) {
-    const res = await fetch(LOVABLE_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+  // No xAI key → Gemini
+  if (GEMINI_API_KEY) {
+    const res = await tryGemini(body, GEMINI_API_KEY);
+    if ((res.status === 429 || res.status === 402 || res.status === 403) && LOVABLE_API_KEY) {
+      try {
+        const errText = await res.clone().text();
+        console.error(`[ai-fetch] Gemini ${res.status}, falling back to Lovable. Body:`, errText.slice(0, 400));
+      } catch { /* ignore */ }
+      return await tryLovable(body, LOVABLE_API_KEY);
+    }
+    if (!res.ok) {
+      try {
+        const errText = await res.clone().text();
+        console.error(`[ai-fetch] Gemini ${res.status}:`, errText.slice(0, 400));
+      } catch { /* ignore */ }
+    }
     return res;
   }
+
+  // Last resort: Lovable
+  if (LOVABLE_API_KEY) return await tryLovable(body, LOVABLE_API_KEY);
 
   return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
 }

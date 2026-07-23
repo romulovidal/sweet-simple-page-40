@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, CalendarClock, Sparkles, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import AtisDailyDevotional from "./AtisDailyDevotional";
 
 type BC = { id: string; title: string; body: string; target_type: string; target_ref: string | null; scheduled_at: string | null; recurrence: string | null; status: string; content_type: string; created_at?: string };
 type Group = { id: string; wa_group_id: string; name: string };
@@ -124,6 +125,8 @@ const AtisBroadcasts = () => {
 
   return (
     <div className="space-y-4">
+      <AtisDailyDevotional />
+
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <p className="text-sm font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Modelos rápidos</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

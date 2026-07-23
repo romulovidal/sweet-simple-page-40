@@ -1,11 +1,89 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiChatFetch } from '../_shared/ai-fetch.ts'
+import { evolutionSendText } from '../_shared/atis-evolution.ts'
 
 const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
 const INSTANCE = 'atis'
 const WEBHOOK_SECRET = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
+
+// ============================================================
+// Detecção de crise — palavras-chave locais + rate-limit por contato
+// ============================================================
+const DEFAULT_CRISIS_KEYWORDS = [
+  'me matar', 'me matando', 'suicid', 'acabar comigo', 'acabar com tudo',
+  'não aguento mais', 'nao aguento mais', 'quero sumir', 'quero morrer',
+  'sem saída', 'sem saida', 'sem esperança', 'sem esperanca',
+  'sofri abuso', 'fui abusad', 'fui estuprad', 'estupro',
+  'me machucar', 'me machuco', 'me cortar', 'me corto',
+  'apanhei', 'estão me batendo', 'estao me batendo', 'sofro violência', 'sofro violencia',
+  'depressão profunda', 'depressao profunda',
+]
+
+const CRISIS_REPLY = `🕊️ Ouvi você. Você não está sozinho(a) — o que sente importa.
+
+Se você está em risco imediato ou pensando em se machucar, por favor procure ajuda agora:
+
+📞 *CVV — 188* (24 horas, gratuito)
+💬 https://www.cvv.org.br (chat online)
+
+Estou avisando um pastor da Atalaias de Betel para caminhar com você — em breve alguém vai te procurar. Enquanto isso, respire fundo. Deus vê você e te ama profundamente.
+
+"Perto está o Senhor dos que têm o coração quebrantado, e salva os contritos de espírito." (Salmos 34:18)`
+
+async function detectCrisis(admin: any, text: string): Promise<{ matched: string[]; extras: string[] }> {
+  const lower = text.toLowerCase()
+  let extras: string[] = []
+  try {
+    const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
+    const custom = (cfgRow?.value as any)?.custom_keywords
+    if (Array.isArray(custom)) extras = custom.filter((k) => typeof k === 'string' && k.trim())
+  } catch { /* ignore */ }
+  const all = [...DEFAULT_CRISIS_KEYWORDS, ...extras.map((k) => k.toLowerCase())]
+  const matched = all.filter((k) => lower.includes(k))
+  return { matched, extras }
+}
+
+async function shouldAlertNow(admin: any, phone: string): Promise<boolean> {
+  const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  const { data } = await admin.from('atis_crisis_alerts')
+    .select('id').eq('contact_phone', phone).gte('created_at', since).limit(1)
+  return !(data && data.length > 0)
+}
+
+async function handleCrisis(admin: any, phone: string, name: string | null, text: string, matched: string[]): Promise<void> {
+  const canAlert = await shouldAlertNow(admin, phone)
+  const { data: cfgRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_crisis_alert').maybeSingle()
+  const cfg = (cfgRow?.value ?? {}) as { enabled?: boolean; pastor_phones?: string[]; alert_template?: string }
+  const enabled = cfg.enabled !== false
+  const pastors = Array.isArray(cfg.pastor_phones) ? cfg.pastor_phones.filter(Boolean) : []
+
+  const snippet = text.slice(0, 220)
+  const nameStr = name ?? '(sem nome)'
+  const alertMsg = (cfg.alert_template && cfg.alert_template.trim())
+    ? cfg.alert_template.replaceAll('{nome}', nameStr).replaceAll('{numero}', phone).replaceAll('{mensagem}', snippet).replaceAll('{palavras}', matched.join(', '))
+    : `🚨 *ALERTA PASTORAL — Atis*\n\nUma pessoa enviou uma mensagem que pode indicar crise ou risco:\n\n👤 *${nameStr}*\n📱 ${phone}\n🔑 Palavras detectadas: _${matched.join(', ')}_\n\n💬 Mensagem:\n"${snippet}"\n\nRecomenda-se contato pastoral o quanto antes. 🙏`
+
+  let notified = false
+  if (enabled && canAlert && pastors.length) {
+    for (const p of pastors) {
+      const r = await evolutionSendText(p, alertMsg)
+      if (r.ok) notified = true
+      await admin.from('atis_messages_log').insert({
+        direction: 'outbound', wa_to: p, body: alertMsg,
+        command: 'crisis-alert', status: r.ok ? 'sent' : 'error',
+        raw: { auto: true, contact: phone, http: r.status },
+      })
+    }
+  }
+
+  await admin.from('atis_crisis_alerts').insert({
+    contact_phone: phone, contact_name: name,
+    matched_keywords: matched, severity: matched.some((k) => k.includes('mat') || k.includes('suicid') || k.includes('sumir')) ? 'high' : 'medium',
+    snippet, pastor_notified: notified,
+  })
+}
 
 async function sendText(jid: string, text: string) {
   return fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {

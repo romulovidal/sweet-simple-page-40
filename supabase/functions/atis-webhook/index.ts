@@ -99,21 +99,53 @@ async function buildMinistryContext(admin: any): Promise<string> {
     if (birthdays?.length) {
       const mm = today.getUTCMonth() + 1
       const dd = today.getUTCDate()
-      const hoje = birthdays.filter((b: any) => {
+      const parsed = birthdays.map((b: any) => {
         const d = new Date(b.birth_date + 'T00:00:00')
-        return d.getMonth() + 1 === mm && d.getDate() === dd
+        return { name: b.name, day: d.getDate(), month: d.getMonth() + 1 }
       })
-      const proximos = birthdays.filter((b: any) => {
-        const d = new Date(b.birth_date + 'T00:00:00')
-        const daqui = new Date(today); daqui.setDate(dd + 7)
-        const thisYear = new Date(today.getUTCFullYear(), d.getMonth(), d.getDate())
-        return thisYear > today && thisYear <= daqui
-      }).slice(0, 10)
-      if (hoje.length) parts.push(`### Aniversariantes de hoje 🎂\n${hoje.map((b: any) => `- ${b.name}`).join('\n')}`)
-      if (proximos.length) parts.push(`### Próximos aniversariantes (7 dias)\n${proximos.map((b: any) => {
-        const d = new Date(b.birth_date + 'T00:00:00')
-        return `- ${b.name} — ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`
-      }).join('\n')}`)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+      const DIAS_SEM = ['domingo','segunda','terça','quarta','quinta','sexta','sábado']
+
+      // Lista completa agrupada por mês (fonte de verdade para qualquer data)
+      const porMes: Record<number, {name:string,day:number}[]> = {}
+      for (const p of parsed) (porMes[p.month] ||= []).push({ name: p.name, day: p.day })
+      for (const k of Object.keys(porMes)) porMes[+k].sort((a,b) => a.day - b.day)
+      const listaCompleta = Object.keys(porMes).map(Number).sort((a,b) => a - b).map((m) => {
+        const linhas = porMes[m].map((b) => `  • ${pad(b.day)}/${pad(m)} — ${b.name}`).join('\n')
+        return `*${MESES[m-1]}*\n${linhas}`
+      }).join('\n')
+      parts.push(`### Lista COMPLETA de aniversariantes (fonte oficial — use SEMPRE esta lista para responder sobre qualquer dia, mês, semana, ontem, hoje, amanhã, próximo mês, etc.)\n${listaCompleta}`)
+
+      // Resumos rápidos para janelas de tempo comuns
+      const inDays = (n: number) => {
+        const d = new Date(today); d.setUTCDate(d.getUTCDate() + n)
+        return { day: d.getUTCDate(), month: d.getUTCMonth() + 1, dow: d.getUTCDay() }
+      }
+      const matchDia = (day: number, month: number) => parsed.filter((p) => p.day === day && p.month === month)
+      const fmtLista = (arr: {name:string}[]) => arr.length ? arr.map((b) => `- ${b.name}`).join('\n') : '(nenhum)'
+
+      const ontem = inDays(-1); const hojeD = inDays(0); const amanha = inDays(1)
+      parts.push(`### Atalhos de datas relativas (${DIAS_SEM[hojeD.dow]}, ${pad(hojeD.day)}/${pad(hojeD.month)})
+- *Ontem* (${pad(ontem.day)}/${pad(ontem.month)}):
+${fmtLista(matchDia(ontem.day, ontem.month))}
+- *Hoje* (${pad(hojeD.day)}/${pad(hojeD.month)}):
+${fmtLista(matchDia(hojeD.day, hojeD.month))}
+- *Amanhã* (${pad(amanha.day)}/${pad(amanha.month)}):
+${fmtLista(matchDia(amanha.day, amanha.month))}`)
+
+      // Próximos 30 dias (esta semana, semana que vem, mês que vem, etc.)
+      const prox30: string[] = []
+      for (let i = 0; i <= 30; i++) {
+        const dt = inDays(i)
+        const ms = matchDia(dt.day, dt.month)
+        if (!ms.length) continue
+        const rotulo = i === 0 ? 'hoje' : i === 1 ? 'amanhã' : i <= 7 ? `daqui a ${i} dias (${DIAS_SEM[dt.dow]})` : `em ${pad(dt.day)}/${pad(dt.month)} (${DIAS_SEM[dt.dow]})`
+        prox30.push(`- ${pad(dt.day)}/${pad(dt.month)} — ${rotulo}: ${ms.map((m) => m.name).join(', ')}`)
+      }
+      if (prox30.length) parts.push(`### Próximos 30 dias\n${prox30.join('\n')}`)
+
+      parts.push('### REGRA IMPORTANTE sobre aniversariantes\nSempre que perguntarem quem aniversaria/aniversariou em qualquer dia, semana ou mês (ontem, hoje, amanhã, semana passada, semana que vem, mês que vem, data específica, etc.), responda usando EXCLUSIVAMENTE a "Lista COMPLETA de aniversariantes" acima. Não diga que "não tem acesso" — a lista está aqui. Se ninguém aniversariar na data pedida, diga claramente "Ninguém aniversaria em <data>" de forma acolhedora.')
     }
   } catch { /* ignore */ }
 

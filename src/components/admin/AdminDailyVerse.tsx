@@ -36,23 +36,45 @@ const AdminDailyVerse = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<VerseQueueItem> | null>(null);
   const [resending, setResending] = useState(false);
+  const [resendingMotivational, setResendingMotivational] = useState(false);
 
   const resendDailyVerse = async () => {
     setResending(true);
     try {
       const { data, error } = await supabase.functions.invoke("daily-verse-push", {
         method: "POST",
-        body: {},
+        body: { only: "verse" },
       });
       if (error) throw error;
-      toast.success(
-        `Push reenviado! ${data?.sent || 0} entregues${data?.failed ? `, ${data.failed} falhas` : ""} • ${data?.verse || ""}`
-      );
+      const v = (data as any)?.verse;
+      if (v?.skipped) {
+        toast.warning(v.reason || "Nenhum versículo agendado para hoje");
+      } else {
+        toast.success(`Versículo do dia reenviado! ${v?.sent ?? 0} entregues${v?.failed ? `, ${v.failed} falhas` : ""}`);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Erro ao reenviar versículo do dia");
     } finally {
       setResending(false);
+    }
+  };
+
+  const resendMotivational = async () => {
+    setResendingMotivational(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-verse-push", {
+        method: "POST",
+        body: { only: "motivational" },
+      });
+      if (error) throw error;
+      const m = (data as any)?.motivational;
+      toast.success(`"Não deixe de ler" enviado! ${m?.sent ?? 0} entregues${m?.failed ? `, ${m.failed} falhas` : ""}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao enviar lembrete motivacional");
+    } finally {
+      setResendingMotivational(false);
     }
   };
 

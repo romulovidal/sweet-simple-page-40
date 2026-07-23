@@ -62,7 +62,7 @@ async function generateGreeting(names: string[], template: string | null, period
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 1.1, maxOutputTokens: 1200 },
+        generationConfig: { temperature: 1.1, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
       }),
     },
   )

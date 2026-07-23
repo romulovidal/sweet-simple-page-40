@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -21,7 +22,6 @@ function brNow() {
 }
 
 async function generateGreeting(names: string[], template: string | null, period: string): Promise<string> {
-  const key = Deno.env.get('GEMINI_API_KEY')
   const greeting = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
   const list = names.map((n) => `• ${n}`).join('\n')
 
@@ -31,7 +31,7 @@ async function generateGreeting(names: string[], template: string | null, period
       .replaceAll('{lista}', list)
       .replaceAll('{saudacao}', greeting)
   }
-  if (!key) {
+  if (!hasAnyAiKey()) {
     return `🎉✨ ${greeting}, amada família Atalaias de Betel! ✨🎉\n\nHoje o céu se alegra e a nossa igreja também, porque Deus, em Seu infinito amor, nos presenteou com mais um ano de vida de pessoas muito especiais:\n\n${list}\n\n"O Senhor te abençoe e te guarde; o Senhor faça resplandecer o Seu rosto sobre ti e tenha misericórdia de ti; o Senhor sobre ti levante o Seu rosto e te dê a paz." (Números 6:24-26)\n\nQue este novo ciclo seja marcado por saúde, propósito, sonhos realizados e uma intimidade cada vez maior com o Senhor Jesus. Nós te amamos e celebramos com você! 🎂🙏🕊️\n\n— Com carinho, Igreja Atalaias de Betel`
   }
   const systemPrompt =
@@ -54,28 +54,15 @@ async function generateGreeting(names: string[], template: string | null, period
     `Aniversariante(s) de hoje (${names.length === 1 ? '1 pessoa' : `${names.length} pessoas`}): ${names.join(', ')}.\n` +
     `Período do dia: ${period} (use isso para dar naturalidade à saudação, mas mantenha "${greeting}, amada família Atalaias de Betel!" como abertura).\n` +
     'Escreva agora a mensagem de aniversário completa, caprichada e única, seguindo todas as diretrizes.'
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 1.1, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    },
-  )
-  if (!res.ok) {
-    console.error('[atis-birthday-greeting] Gemini error', res.status, await res.text().catch(() => ''))
+  const text = await aiGenerateText({
+    system: systemPrompt,
+    user: userPrompt,
+    temperature: 1.1,
+    maxTokens: 4096,
+  })
+  if (!text) {
     return `🎂 ${greeting}, família!\n\nHoje é aniversário de:\n${list}\n\nParabéns! Que Deus abençoe grandemente. 🙏`
   }
-  const j = await res.json().catch(() => null) as any
-  const text = (j?.candidates?.[0]?.content?.parts ?? [])
-    .map((p: any) => p?.text ?? '')
-    .join('')
-    .trim()
-    .replace(/^"|"$/g, '')
   return text
 }
 
@@ -123,29 +110,19 @@ async function sendDirect(phone: string, text: string) {
 }
 
 async function generatePersonalGreeting(name: string, period: string): Promise<string> {
-  const key = Deno.env.get('GEMINI_API_KEY')
   const saud = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
   const fallback = `🎂 ${saud}, ${name}! Hoje é o seu dia, e toda a família Atalaias de Betel celebra com você. 🎉\n\n"O Senhor te abençoe e te guarde." (Números 6:24)\n\nQue este novo ano de vida seja repleto de saúde, propósito e uma comunhão cada vez mais profunda com Jesus. Nós te amamos! 🙏🕊️\n\n— Igreja Atalaias de Betel`
-  if (!key) return fallback
+  if (!hasAnyAiKey()) return fallback
   const system =
     'Você é Atis, assistente da Igreja Atalaias de Betel. Escreva uma mensagem PESSOAL de aniversário para ser enviada por WhatsApp DIRETAMENTE ao aniversariante (não em grupo). ' +
     'Estrutura: 1) saudação carinhosa começando com o nome; 2) reconhecimento pastoral do valor da vida do irmão(ã); 3) UM versículo bíblico REAL com referência exata (nunca invente), sobre vida/bênção/propósito, entre aspas; 4) bênção pessoal em 2-3 frases falando de saúde, sonhos e comunhão com Jesus; 5) assinatura em uma linha só: "— Igreja Atalaias de Betel" com 1 emoji discreto. ' +
     'Tom acolhedor, digno, português do Brasil, sem markdown, sem asteriscos, sem títulos. Até 6 emojis bem distribuídos. Entre 500 e 900 caracteres. Retorne SOMENTE a mensagem final.'
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: `Aniversariante: ${name}. Período: ${period}. Escreva a mensagem pessoal agora.` }] }],
-        generationConfig: { temperature: 1.1, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    },
-  )
-  if (!res.ok) return fallback
-  const j = await res.json().catch(() => null) as any
-  const text = (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? '').join('').trim().replace(/^"|"$/g, '')
+  const text = await aiGenerateText({
+    system,
+    user: `Aniversariante: ${name}. Período: ${period}. Escreva a mensagem pessoal agora.`,
+    temperature: 1.1,
+    maxTokens: 2048,
+  })
   return text || fallback
 }
 

@@ -3,7 +3,15 @@ import { atisDb } from "./atisDb";
 import { Users, Cake, CalendarClock, BookOpen, MessageCircle, Bot, WifiOff, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useAtisStatus } from "./useAtisStatus";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
-const atisAvatar = atisAvatarAsset.url;
+
+const resolveAtisAvatar = () => {
+  const path = atisAvatarAsset.url;
+  if (typeof window === "undefined") return path;
+  if (window.location.hostname === "biblia.atalaias.online") {
+    return `https://biblia-atalaia.lovable.app${path}`;
+  }
+  return path;
+};
 
 type Stats = { contacts: number; groups: number; birthdaysToday: number; pending: number; studies: number; messages24h: number };
 type UpcomingBroadcast = { id: string; title: string; scheduled_at: string | null; status: string; recurrence: string | null; target_type: string };
@@ -15,6 +23,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
   const [upcoming, setUpcoming] = useState<UpcomingBroadcast[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const status = useAtisStatus();
+  const atisAvatar = resolveAtisAvatar();
 
   useEffect(() => {
     (async () => {
@@ -75,7 +84,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
           alt="Atis"
           width={80}
           height={80}
-          className="w-20 h-20 rounded-2xl shadow-xl ring-2 ring-primary/30 shrink-0"
+          className="w-20 h-20 rounded-2xl object-cover shadow-xl ring-2 ring-primary/30 shrink-0"
         />
         <div className="min-w-0">
           <p className="text-lg font-extrabold leading-tight">Atis</p>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Cake, Pencil, X, Check, Power } from "lucide-react";
+import AtisBirthdayAuto from "./AtisBirthdayAuto";
 
 type Bday = { id: string; name: string; birth_date: string; phone: string | null; active: boolean };
 
@@ -72,6 +73,8 @@ const AtisBirthdays = () => {
 
   return (
     <div className="space-y-4">
+      <AtisBirthdayAuto />
+
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <p className="text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4" /> Novo aniversariante</p>
         <div className="grid md:grid-cols-3 gap-2">

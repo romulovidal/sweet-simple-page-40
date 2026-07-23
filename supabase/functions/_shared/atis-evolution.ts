@@ -64,8 +64,12 @@ export async function evolutionSendText(to: string, text: string): Promise<SendR
 
 export type ReplyButton = { id: string; displayText: string };
 
-// Envia mensagem com botões de resposta rápida via Evolution API.
-// Mantém o formato nativo aceito pelo provedor para aparecer com botões no WhatsApp.
+// Envia uma ENQUETE (poll nativo do WhatsApp) via Evolution API.
+// Botões interativos do Baileys viram texto no WhatsApp atual, então usamos
+// poll — que é 100% suportado pelo Baileys/Evolution e renderiza como votação
+// nativa em todos os aparelhos.
+// Assinatura mantida como `evolutionSendButtons` para compatibilidade com os
+// chamadores existentes (crise pastoral etc.).
 export async function evolutionSendButtons(
   to: string,
   body: string,
@@ -73,46 +77,35 @@ export async function evolutionSendButtons(
   opts?: { title?: string; footer?: string },
 ): Promise<SendResult> {
   if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution-not-configured', jid: null };
-  // O endpoint sendButtons da Evolution é mais estável com número puro
-  // (ex.: 5585999999999), não com JID @s.whatsapp.net.
+  // 1) Envia o corpo do alerta como texto (poll `name` tem limite curto e não
+  //    suporta formatação rica).
+  const textRes = await evolutionSendText(to, body);
+  // 2) Envia a enquete com opções curtas. As opções DEVEM conter o comando
+  //    completo (ex.: "✅ Resolvido 5585...") porque o webhook trata o voto
+  //    exatamente como se fosse uma mensagem de texto com esse comando.
   const attempts = phoneNumberVariants(to);
-  let last: SendResult = { ok: false, status: 0, body: 'no-attempts', jid: null };
-  const parseBody = async (res: Response): Promise<any> => {
-    const raw = await res.text().catch(() => '');
-    try { return raw ? JSON.parse(raw) : null; } catch { return raw; }
-  };
-  const asResult = (res: Response, parsed: any, number: string): SendResult => ({
-    ok: res.ok,
-    status: res.status,
-    body: parsed,
-    jid: number,
-  });
-
+  const pollName = opts?.title?.trim() || '👉 Toque para agir sobre este alerta:';
+  let last: SendResult = textRes;
   for (const number of attempts) {
     try {
-      // Payload principal — sem título e sem viewOnce, para renderizar como
-      // botões nativos (quick_reply) diretamente, sem virar "enquete/lista"
-      // dentro do WhatsApp em alguns clientes.
-      // Nota: o Evolution renderiza como "*<title>*\n\n<description>". Se o título
-      // não for enviado, ele imprime literalmente "*undefined*". Por isso sempre
-      // enviamos um título (pode ser vazio para não aparecer nada acima do corpo).
-      const modernPayload: Record<string, unknown> = {
+      const payload = {
         number,
-        title: opts?.title ?? '',
-        description: body,
-        footer: opts?.footer ?? '',
-        buttons: buttons.map((b) => ({ type: 'reply', displayText: b.displayText, id: b.id })),
+        name: pollName,
+        selectableCount: 1,
+        values: buttons.map((b) => `${b.displayText} • ${b.id}`),
       };
-      const modernRes = await fetch(`${EVO_URL}/message/sendButtons/${INSTANCE}`, {
+      const res = await fetch(`${EVO_URL}/message/sendPoll/${INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-        body: JSON.stringify(modernPayload),
+        body: JSON.stringify(payload),
       });
-      const modernParsed = await parseBody(modernRes);
-      last = asResult(modernRes, modernParsed, number);
-      if (last.ok) return last;
-      const notExists = JSON.stringify(modernParsed ?? '').includes('"exists":false');
-      if (!notExists) break; // erro de formato — não adianta tentar outra variação de número
+      const raw = await res.text().catch(() => '');
+      let parsed: any = raw;
+      try { parsed = raw ? JSON.parse(raw) : null; } catch { /* keep raw */ }
+      last = { ok: res.ok, status: res.status, body: parsed, jid: number };
+      if (res.ok) return last;
+      const notExists = JSON.stringify(parsed ?? '').includes('"exists":false');
+      if (!notExists) break;
     } catch (e) {
       last = { ok: false, status: 0, body: String((e as Error).message ?? e), jid: number };
     }

@@ -701,7 +701,7 @@ async function formatHino(h: HarpaHino): Promise<string> {
   const totalEst = est.length
   if (totalEst > 2) chunks.push(`_(hino completo com ${totalEst} estrofes — abra o link para ler tudo, ouvir e apresentar)_`)
   const yt = await fetchYoutubeLink(h.numero, h.titulo)
-  const tail: string[] = [`🔗 Letra completa: ${link}`]
+  const tail: string[] = []
   if (yt) tail.push(`▶️ Ouvir no YouTube: ${yt}`)
   tail.push(`_Harpa Cristã — Bíblia Atalaia_`)
   chunks.push(tail.join('\n'))

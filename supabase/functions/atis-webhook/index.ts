@@ -832,6 +832,58 @@ function detectBibleVersion(text: string): BibleVersion {
 
 type ParsedRef = { bookIdx: number; bookName: string; chapter: number; verses?: number[] }
 
+// Mapa bookIdx → apiAbbrev usado no verse_shares/rota /v e /bible
+const BOOK_API_ABBREV: string[] = [
+  'gn','ex','lv','nm','dt','js','jz','rt','1sm','2sm',
+  '1rs','2rs','1cr','2cr','ed','ne','et','job','sl','pv',
+  'ec','ct','is','jr','lm','ez','dn','os','jl','am',
+  'ob','jn','mq','na','hc','sf','ag','zc','ml',
+  'mt','mc','lc','jo','at','rm','1co','2co','gl','ef',
+  'fp','cl','1ts','2ts','1tm','2tm','tt','fm','hb','tg',
+  '1pe','2pe','1jo','2jo','3jo','jd','ap',
+]
+
+const APP_ORIGIN = Deno.env.get('APP_PUBLIC_URL') || 'https://biblia.atalaias.online'
+
+async function createVerseShareLink(params: {
+  bookIdx: number
+  chapter: number
+  verses: number[]
+  bookName: string
+  version: string
+  snippet?: string
+}): Promise<string | null> {
+  try {
+    const bookAbbrev = BOOK_API_ABBREV[params.bookIdx]
+    if (!bookAbbrev) return null
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const resp = await fetch(`${supabaseUrl}/functions/v1/create-verse-share`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+      },
+      body: JSON.stringify({
+        book_abbrev: bookAbbrev,
+        chapter: params.chapter,
+        verses: params.verses.slice(0, 50),
+        text_snippet: params.snippet?.slice(0, 600),
+        book_name: params.bookName,
+        version: params.version,
+      }),
+    })
+    if (!resp.ok) return null
+    const data = await resp.json().catch(() => null) as { slug?: string } | null
+    if (!data?.slug) return null
+    return `${APP_ORIGIN}/v/${data.slug}`
+  } catch (e) {
+    console.error('createVerseShareLink error:', e)
+    return null
+  }
+}
+
 function parseReference(ref: string): ParsedRef | null {
   // Ex.: "João 3:16", "1 Coríntios 13:4-8", "Salmo 23", "Jo 3", "João 8:31,32", "Sl 1:1-3,6"
   const m = ref.match(/^([1-3]?\s*[A-Za-zÀ-ÿ]+)\s+(\d+)(?::(\d+(?:\s*[-–]\s*\d+)?(?:\s*,\s*\d+(?:\s*[-–]\s*\d+)?)*))?$/i)

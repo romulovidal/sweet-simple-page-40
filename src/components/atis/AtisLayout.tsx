@@ -16,6 +16,15 @@ import { useAtisStatus } from "./useAtisStatus";
 
 type TabId = "dashboard" | "contacts" | "groups" | "birthdays" | "broadcasts" | "studies" | "logs" | "config";
 
+const resolveAtisAvatar = () => {
+  const path = atisAvatarAsset.url;
+  if (typeof window === "undefined") return path;
+  if (window.location.hostname === "biblia.atalaias.online") {
+    return `https://biblia-atalaia.lovable.app${path}`;
+  }
+  return path;
+};
+
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "dashboard", label: "Painel", icon: LayoutDashboard },
   { id: "contacts", label: "Contatos", icon: Users },
@@ -34,6 +43,7 @@ const AtisLayout = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("dashboard");
   const status = useAtisStatus();
+  const atisAvatarUrl = resolveAtisAvatar();
 
   const renderTab = () => {
     switch (tab) {
@@ -56,7 +66,7 @@ const AtisLayout = () => {
       {!isMobile && (
         <aside className="fixed left-0 top-0 bottom-0 w-64 z-40 bg-[hsl(var(--dark-card))] border-r border-[hsl(var(--dark-card-hover))] flex flex-col">
           <div className="px-5 pt-6 pb-5 flex items-center gap-3 border-b border-[hsl(var(--dark-card-hover))]">
-            <img src={atisAvatar} alt="Atis" width={40} height={40} className="w-10 h-10 rounded-2xl shadow-lg" />
+            <img src={atisAvatarUrl} alt="Atis" width={40} height={40} className="w-10 h-10 rounded-2xl shadow-lg object-cover" />
             <div className="min-w-0">
               <p className="text-sm font-bold leading-tight">Atis</p>
               <p className="text-xs text-[hsl(var(--dark-muted))]">Bot ministerial</p>
@@ -100,7 +110,7 @@ const AtisLayout = () => {
                 </button>
               )}
               {isMobile && (
-                <img src={atisAvatar} alt="Atis" width={32} height={32} className="w-8 h-8 rounded-xl" />
+                <img src={atisAvatarUrl} alt="Atis" width={32} height={32} className="w-8 h-8 rounded-xl object-cover" />
               )}
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate">{activeMeta.label}</p>

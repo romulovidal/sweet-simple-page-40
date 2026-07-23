@@ -1,13 +1,13 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName, brDateParts } from '../_shared/atis-evolution.ts';
+import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts';
 
 const DEFAULT_REFLECTION_PROMPT =
   'Você é um pastor devocional escrevendo por WhatsApp. A partir do versículo dado, escreva 1 parágrafo curto (2-3 frases, máximo 350 caracteres) de reflexão calorosa e prática — sem repetir o versículo. Português brasileiro, tom acolhedor.';
 
 async function generateShortReflection(admin: any, verseRef: string, verseText: string): Promise<string> {
-  const key = Deno.env.get('GEMINI_API_KEY');
-  if (!key) return '';
+  if (!hasAnyAiKey()) return '';
   try {
     let systemPrompt = DEFAULT_REFLECTION_PROMPT;
     const { data: promptsRow } = await admin
@@ -16,21 +16,13 @@ async function generateShortReflection(admin: any, verseRef: string, verseText: 
     if (typeof custom === 'string' && custom.trim().length > 0) {
       systemPrompt = custom + '\n\nAdapte para máximo 350 caracteres, 1 parágrafo, sem repetir o versículo.';
     }
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: `**${verseRef}**\n\n"${verseText}"` }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 512, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      },
-    );
-    if (!res.ok) return '';
-    const j = await res.json().catch(() => null) as any;
-    let text = (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? '').join('').trim();
+    let text = await aiGenerateText({
+      system: systemPrompt,
+      user: `**${verseRef}**\n\n"${verseText}"`,
+      temperature: 0.9,
+      maxTokens: 512,
+    });
+    if (!text) return '';
     text = text.replace(/^#{1,6}\s+/gm, '').replace(/\*\*(.+?)\*\*/g, '*$1*').trim();
     return text.slice(0, 500);
   } catch { return ''; }

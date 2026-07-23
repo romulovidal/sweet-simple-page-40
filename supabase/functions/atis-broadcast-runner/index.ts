@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -98,8 +99,7 @@ async function resolveDevotional(admin: any): Promise<string> {
       .limit(1)
       .maybeSingle()
     if (!qv?.verse_ref) return ''
-    const key = Deno.env.get('GEMINI_API_KEY')
-    if (!key) return ''
+    if (!hasAnyAiKey()) return ''
     let systemPrompt = DEFAULT_DEVOTIONAL_PROMPT
     try {
       const { data: promptsRow } = await admin
@@ -108,21 +108,13 @@ async function resolveDevotional(admin: any): Promise<string> {
       if (typeof custom === 'string' && custom.trim().length > 0) systemPrompt = custom
     } catch (_) { /* ignore */ }
     systemPrompt += '\n\nIMPORTANTE: NÃO repita nem cite o versículo nem a referência no início da resposta. Comece direto pela reflexão.'
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: `**${qv.verse_ref}**\n\n"${qv.verse_text}"` }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      },
-    )
-    if (!res.ok) return ''
-    const j = await res.json().catch(() => null) as any
-    let text = (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p?.text ?? '').join('').trim()
+    let text = await aiGenerateText({
+      system: systemPrompt,
+      user: `**${qv.verse_ref}**\n\n"${qv.verse_text}"`,
+      temperature: 0.9,
+      maxTokens: 4096,
+    })
+    if (!text) return ''
     const refEsc = qv.verse_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     text = text.replace(new RegExp(`^\\s*\\*{1,2}${refEsc}\\*{1,2}\\s*`, 'i'), '')
     text = text.replace(new RegExp(`^\\s*${refEsc}\\s*`, 'i'), '')

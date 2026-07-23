@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -30,8 +31,7 @@ async function generateDevotional(
   verseRef: string,
   verseText: string,
 ): Promise<string> {
-  const key = Deno.env.get('GEMINI_API_KEY')
-  if (!key) return ''
+  if (!hasAnyAiKey()) return ''
 
   // Use the same custom prompt override as the in-app "Reflexão Devocional" (ai-tools)
   let systemPrompt = DEFAULT_DEVOTIONAL_PROMPT
@@ -51,27 +51,13 @@ async function generateDevotional(
 
   const userContent = `**${verseRef}**\n\n"${verseText}"`
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userContent }] }],
-        generationConfig: { temperature: 0.9, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    },
-  )
-  if (!res.ok) {
-    console.error('[atis-daily-devotional] Gemini error', res.status, await res.text().catch(() => ''))
-    return ''
-  }
-  const j = await res.json().catch(() => null) as any
-  const text = (j?.candidates?.[0]?.content?.parts ?? [])
-    .map((p: any) => p?.text ?? '')
-    .join('')
-    .trim()
+  const text = await aiGenerateText({
+    system: systemPrompt,
+    user: userContent,
+    temperature: 0.9,
+    maxTokens: 4096,
+  })
+  if (!text) return ''
   // Remove repetição do versículo/ref no início (o cabeçalho já mostra)
   let cleaned = text
   const refEsc = verseRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

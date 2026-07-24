@@ -175,17 +175,25 @@ Deno.serve(async (req) => {
       if (evoUrl && evoKey) {
         const { data: groups } = await supabase
           .from("atis_groups")
-          .select("wa_group_id, name")
+          .select("wa_group_id, name, notification_types")
           .eq("forward_notifications", true)
           .eq("active", true)
           .not("wa_group_id", "is", null);
 
-        if (groups?.length) {
+        const notifType = body.type || "general";
+        const filteredGroups = (groups ?? []).filter((g: any) => {
+          const types = Array.isArray(g.notification_types) ? g.notification_types : null;
+          // null/empty = accepts all (backward compatible)
+          if (!types || types.length === 0) return true;
+          return types.includes(notifType);
+        });
+
+        if (filteredGroups.length) {
           const link = body.url && body.url !== "/"
             ? `https://biblia.atalaias.online${body.url}`
             : "https://biblia.atalaias.online";
           const waText = `📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}`;
-          const results = await Promise.all(groups.map(async (g: any) => {
+          const results = await Promise.all(filteredGroups.map(async (g: any) => {
             try {
               const res = await fetch(`${evoUrl}/message/sendText/atis`, {
                 method: "POST",

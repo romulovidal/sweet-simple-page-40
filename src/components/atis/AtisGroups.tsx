@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check, SlidersHorizontal, BookOpen, Sparkles, CalendarClock, Megaphone, FileText } from "lucide-react";
 
 type Group = {
   id: string;
@@ -12,11 +12,21 @@ type Group = {
   active: boolean;
   welcome_message: string | null;
   forward_notifications: boolean;
+  notification_types: string[] | null;
 };
 
 type WAGroup = { wa_group_id: string; name: string; size: number | null };
 
 const modes: Record<string, string> = { mention_only: "Só quando mencionado", always: "Sempre", off: "Desligado" };
+
+const NOTIF_TYPES: { key: string; label: string; hint: string; icon: any }[] = [
+  { key: "daily-verse", label: "Versículo do dia", hint: "Push diário do versículo", icon: BookOpen },
+  { key: "motivational", label: "Motivacional", hint: "Mensagens motivacionais", icon: Sparkles },
+  { key: "culto-reminder", label: "Lembrete de culto", hint: "Antes de cada culto", icon: CalendarClock },
+  { key: "post", label: "Novo post", hint: "Devocional/estudo publicado", icon: FileText },
+  { key: "general", label: "Avisos gerais", hint: "Pushes manuais do admin", icon: Megaphone },
+];
+const ALL_TYPES = NOTIF_TYPES.map((t) => t.key);
 
 const AtisGroups = () => {
   const [items, setItems] = useState<Group[]>([]);
@@ -30,6 +40,7 @@ const AtisGroups = () => {
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +60,14 @@ const AtisGroups = () => {
   const update = async (id: string, patch: Partial<Group>) => {
     const { error } = await atisDb.from("atis_groups").update(patch).eq("id", id);
     if (error) toast.error(error.message); else load();
+  };
+
+  const toggleType = async (g: Group, key: string) => {
+    const current = Array.isArray(g.notification_types) && g.notification_types.length
+      ? g.notification_types
+      : ALL_TYPES;
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    await update(g.id, { notification_types: next });
   };
 
   const remove = async (id: string) => {
@@ -205,6 +224,76 @@ const AtisGroups = () => {
                       {g.forward_notifications ? "Notifica" : "Silenciado"}
                     </button>
                   </div>
+                  {g.forward_notifications && g.wa_group_id && (() => {
+                    const active = Array.isArray(g.notification_types) && g.notification_types.length
+                      ? g.notification_types
+                      : ALL_TYPES;
+                    const isOpen = !!expanded[g.id];
+                    const activeCount = active.length;
+                    return (
+                      <div className="rounded-lg bg-[hsl(var(--dark-card))]/50 ring-1 ring-[hsl(var(--dark-card-hover))]">
+                        <button
+                          onClick={() => setExpanded((s) => ({ ...s, [g.id]: !s[g.id] }))}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-left"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold leading-tight">Tipos de notificação</p>
+                            <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                              {activeCount === ALL_TYPES.length ? "Todos os tipos" : `${activeCount} de ${ALL_TYPES.length} ativos`}
+                            </p>
+                          </div>
+                          <ChevronDown className={`w-3.5 h-3.5 text-[hsl(var(--dark-muted))] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isOpen && (
+                          <div className="px-2.5 pb-2.5 space-y-1.5">
+                            <div className="flex items-center gap-2 pb-1">
+                              <button
+                                onClick={() => update(g.id, { notification_types: ALL_TYPES })}
+                                className="text-[10px] font-semibold text-primary hover:underline"
+                              >Todos</button>
+                              <span className="text-[hsl(var(--dark-muted))] text-[10px]">·</span>
+                              <button
+                                onClick={() => update(g.id, { notification_types: [] as any })}
+                                className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] hover:underline"
+                              >Nenhum</button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5">
+                              {NOTIF_TYPES.map((t) => {
+                                const on = active.includes(t.key);
+                                const Icon = t.icon;
+                                return (
+                                  <button
+                                    key={t.key}
+                                    onClick={() => toggleType(g, t.key)}
+                                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
+                                      on ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"
+                                    }`}
+                                  >
+                                    <span className={`w-7 h-7 rounded-md grid place-items-center shrink-0 ${on ? "bg-primary/20 text-primary" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+                                      <Icon className="w-3.5 h-3.5" />
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[11px] font-bold leading-tight">{t.label}</p>
+                                      <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug">{t.hint}</p>
+                                    </div>
+                                    {on ? (
+                                      <Check className="w-3.5 h-3.5 text-primary" strokeWidth={3} />
+                                    ) : (
+                                      <span className="w-3.5 h-3.5 rounded-full ring-1 ring-[hsl(var(--dark-card-hover))]" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug pt-1">
+                              Desmarque os tipos que não devem ser postados neste grupo.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}

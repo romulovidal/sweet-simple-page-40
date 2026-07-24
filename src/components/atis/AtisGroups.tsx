@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check, SlidersHorizontal, BookOpen, Sparkles, CalendarClock, Megaphone, FileText } from "lucide-react";
 
 type Group = {
   id: string;
@@ -12,11 +12,21 @@ type Group = {
   active: boolean;
   welcome_message: string | null;
   forward_notifications: boolean;
+  notification_types: string[] | null;
 };
 
 type WAGroup = { wa_group_id: string; name: string; size: number | null };
 
 const modes: Record<string, string> = { mention_only: "Só quando mencionado", always: "Sempre", off: "Desligado" };
+
+const NOTIF_TYPES: { key: string; label: string; hint: string; icon: any }[] = [
+  { key: "daily-verse", label: "Versículo do dia", hint: "Push diário do versículo", icon: BookOpen },
+  { key: "motivational", label: "Motivacional", hint: "Mensagens motivacionais", icon: Sparkles },
+  { key: "culto-reminder", label: "Lembrete de culto", hint: "Antes de cada culto", icon: CalendarClock },
+  { key: "post", label: "Novo post", hint: "Devocional/estudo publicado", icon: FileText },
+  { key: "general", label: "Avisos gerais", hint: "Pushes manuais do admin", icon: Megaphone },
+];
+const ALL_TYPES = NOTIF_TYPES.map((t) => t.key);
 
 const AtisGroups = () => {
   const [items, setItems] = useState<Group[]>([]);
@@ -30,6 +40,7 @@ const AtisGroups = () => {
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +60,14 @@ const AtisGroups = () => {
   const update = async (id: string, patch: Partial<Group>) => {
     const { error } = await atisDb.from("atis_groups").update(patch).eq("id", id);
     if (error) toast.error(error.message); else load();
+  };
+
+  const toggleType = async (g: Group, key: string) => {
+    const current = Array.isArray(g.notification_types) && g.notification_types.length
+      ? g.notification_types
+      : ALL_TYPES;
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    await update(g.id, { notification_types: next });
   };
 
   const remove = async (id: string) => {

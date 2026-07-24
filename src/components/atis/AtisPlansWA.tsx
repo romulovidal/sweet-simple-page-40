@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, X, UserPlus, Trash2, BookOpen } from "lucide-react";
+import { Loader2, Users, X, UserPlus, Trash2, BookOpen, Send, RefreshCw } from "lucide-react";
 
 type Plan = { id: string; title: string; description: string | null; total_days: number | null; is_active: boolean };
 type Sub = { id: string; plan_id: string; phone: string; name: string | null; current_day: number; send_time: string; active: boolean; last_sent_date: string | null };
@@ -71,6 +72,8 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
   const [manualPhone, setManualPhone] = useState("");
   const [manualName, setManualName] = useState("");
   const [time, setTime] = useState("07:00");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const totalDays = plan.total_days ?? null;
 
   const load = async () => {
     setLoading(true);
@@ -102,6 +105,42 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
   const toggle = async (s: Sub) => {
     await atisDb.from("atis_plan_subscribers").update({ active: !s.active }).eq("id", s.id);
     load();
+  };
+
+  const patchSub = async (id: string, patch: Partial<Sub>) => {
+    const prev = subs;
+    setSubs((cur) => cur.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    const { error } = await atisDb.from("atis_plan_subscribers").update(patch).eq("id", id);
+    if (error) { setSubs(prev); toast.error(error.message); }
+  };
+
+  const sendNow = async (s: Sub) => {
+    setBusyId(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("atis-plans-runner", {
+        method: "POST",
+        // encode sub id in URL via body-less GET-style path
+      } as any);
+      // fallback: call via fetch to preserve query params
+      const url = `https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/atis-plans-runner?sub=${s.id}`;
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const res = await fetch(url, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error || `HTTP ${res.status}`);
+      const r = (j?.results ?? [])[0];
+      if (r?.ok) toast.success(`Dia ${r.day} enviado (${r.parts} msg)`);
+      else toast.error("Falha ao enviar");
+      load();
+      void data; void error;
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? e));
+    } finally { setBusyId(null); }
+  };
+
+  const resendToday = async (s: Sub) => {
+    await patchSub(s.id, { last_sent_date: null } as any);
+    await sendNow(s);
   };
 
   return (
@@ -144,17 +183,74 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
             <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))] mb-2">Inscritos</p>
             {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> :
               !subs.length ? <p className="text-xs text-[hsl(var(--dark-muted))] text-center py-4">Ninguém inscrito.</p> :
-              <div className="space-y-1.5">
-                {subs.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 bg-[hsl(var(--dark-bg))] rounded-lg p-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate">{s.name ?? s.phone}</p>
-                      <p className="text-[10px] text-[hsl(var(--dark-muted))]">Dia {s.current_day} · {s.send_time} · {s.phone}</p>
+              <div className="space-y-2">
+                {subs.map((s) => {
+                  const pct = totalDays ? Math.min(100, Math.round(((s.current_day - 1) / totalDays) * 100)) : 0;
+                  return (
+                    <div key={s.id} className="bg-[hsl(var(--dark-bg))] rounded-lg p-2.5 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold truncate">{s.name ?? s.phone}</p>
+                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                            {s.phone} {s.last_sent_date ? `· último: ${s.last_sent_date}` : "· nunca enviado"}
+                          </p>
+                        </div>
+                        <button onClick={() => toggle(s)} className={`text-[10px] px-2 py-1 rounded ${s.active ? "bg-green-500/20 text-green-400" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>{s.active ? "ativo" : "pausado"}</button>
+                        <button onClick={() => remove(s.id)} className="text-red-400 p-1" title="Remover"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+
+                      {totalDays && (
+                        <div className="h-1.5 rounded-full bg-[hsl(var(--dark-card))] overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="flex flex-col gap-0.5">
+                          <span className="text-[9px] uppercase tracking-wide text-[hsl(var(--dark-muted))]">Dia atual{totalDays ? ` / ${totalDays}` : ""}</span>
+                          <input
+                            type="number" min={1} max={totalDays ?? undefined}
+                            value={s.current_day}
+                            onChange={(e) => {
+                              const v = Math.max(1, parseInt(e.target.value || "1", 10));
+                              patchSub(s.id, { current_day: v });
+                            }}
+                            className="h-8 rounded bg-[hsl(var(--dark-card))] px-2 text-xs"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-0.5">
+                          <span className="text-[9px] uppercase tracking-wide text-[hsl(var(--dark-muted))]">Horário (Fortaleza)</span>
+                          <input
+                            type="time"
+                            value={s.send_time}
+                            onChange={(e) => patchSub(s.id, { send_time: e.target.value })}
+                            className="h-8 rounded bg-[hsl(var(--dark-card))] px-2 text-xs"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => sendNow(s)}
+                          disabled={busyId === s.id}
+                          className="flex-1 h-8 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold inline-flex items-center justify-center gap-1 disabled:opacity-60"
+                        >
+                          {busyId === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Enviar dia {s.current_day}
+                        </button>
+                        {s.last_sent_date && (
+                          <button
+                            onClick={() => resendToday(s)}
+                            disabled={busyId === s.id}
+                            className="h-8 px-2 rounded-lg bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))] text-[11px] font-semibold inline-flex items-center gap-1"
+                            title="Reenviar (limpa último envio)"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Reenviar
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <button onClick={() => toggle(s)} className={`text-[10px] px-2 py-1 rounded ${s.active ? "bg-green-500/20 text-green-400" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>{s.active ? "ativo" : "pausado"}</button>
-                    <button onClick={() => remove(s.id)} className="text-red-400 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>}
           </div>
         </div>

@@ -224,6 +224,76 @@ const AtisGroups = () => {
                       {g.forward_notifications ? "Notifica" : "Silenciado"}
                     </button>
                   </div>
+                  {g.forward_notifications && g.wa_group_id && (() => {
+                    const active = Array.isArray(g.notification_types) && g.notification_types.length
+                      ? g.notification_types
+                      : ALL_TYPES;
+                    const isOpen = !!expanded[g.id];
+                    const activeCount = active.length;
+                    return (
+                      <div className="rounded-lg bg-[hsl(var(--dark-card))]/50 ring-1 ring-[hsl(var(--dark-card-hover))]">
+                        <button
+                          onClick={() => setExpanded((s) => ({ ...s, [g.id]: !s[g.id] }))}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-left"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold leading-tight">Tipos de notificação</p>
+                            <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                              {activeCount === ALL_TYPES.length ? "Todos os tipos" : `${activeCount} de ${ALL_TYPES.length} ativos`}
+                            </p>
+                          </div>
+                          <ChevronDown className={`w-3.5 h-3.5 text-[hsl(var(--dark-muted))] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isOpen && (
+                          <div className="px-2.5 pb-2.5 space-y-1.5">
+                            <div className="flex items-center gap-2 pb-1">
+                              <button
+                                onClick={() => update(g.id, { notification_types: ALL_TYPES })}
+                                className="text-[10px] font-semibold text-primary hover:underline"
+                              >Todos</button>
+                              <span className="text-[hsl(var(--dark-muted))] text-[10px]">·</span>
+                              <button
+                                onClick={() => update(g.id, { notification_types: [] as any })}
+                                className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] hover:underline"
+                              >Nenhum</button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5">
+                              {NOTIF_TYPES.map((t) => {
+                                const on = active.includes(t.key);
+                                const Icon = t.icon;
+                                return (
+                                  <button
+                                    key={t.key}
+                                    onClick={() => toggleType(g, t.key)}
+                                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
+                                      on ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"
+                                    }`}
+                                  >
+                                    <span className={`w-7 h-7 rounded-md grid place-items-center shrink-0 ${on ? "bg-primary/20 text-primary" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+                                      <Icon className="w-3.5 h-3.5" />
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[11px] font-bold leading-tight">{t.label}</p>
+                                      <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug">{t.hint}</p>
+                                    </div>
+                                    {on ? (
+                                      <Check className="w-3.5 h-3.5 text-primary" strokeWidth={3} />
+                                    ) : (
+                                      <span className="w-3.5 h-3.5 rounded-full ring-1 ring-[hsl(var(--dark-card-hover))]" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug pt-1">
+                              Desmarque os tipos que não devem ser postados neste grupo.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}

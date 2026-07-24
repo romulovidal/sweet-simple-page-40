@@ -1,0 +1,1 @@
+ALTER TABLE public.atis_groups ADD COLUMN IF NOT EXISTS notification_types text[] NOT NULL DEFAULT ARRAY['daily-verse','motivational','culto-reminder','post','general']::text[];

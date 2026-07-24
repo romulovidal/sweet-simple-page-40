@@ -105,8 +105,8 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:pb-3">
+      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="sticky top-0 bg-[hsl(var(--dark-card))] p-4 border-b border-[hsl(var(--dark-bg))] flex items-center justify-between">
           <div>
             <p className="font-bold truncate">{plan.title}</p>

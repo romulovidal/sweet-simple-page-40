@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X } from "lucide-react";
+import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X, Lock } from "lucide-react";
 
 type DailyVerseDM = { enabled?: boolean; time?: string; include_reflection?: boolean; target?: "profiles" | "contacts" | "both"; last_sent_date?: string };
 type Welcome = { enabled?: boolean; template?: string | null };
 type Crisis = { enabled?: boolean; pastor_phones?: string[]; custom_keywords?: string[]; alert_template?: string | null };
+type Access = { dm_restrict?: boolean; allow_group_members?: boolean; deny_reply?: string | null };
 
 const DEFAULTS = {
   daily_verse_dm: { enabled: false, time: "07:00", include_reflection: true, target: "both" } as DailyVerseDM,
   welcome: { enabled: true, template: null } as Welcome,
   crisis: { enabled: true, pastor_phones: [], custom_keywords: [], alert_template: null } as Crisis,
+  access: { dm_restrict: false, allow_group_members: true, deny_reply: null } as Access,
 };
 
 async function loadSetting<T>(key: string, fallback: T): Promise<T> {
@@ -26,6 +28,7 @@ const AtisAdvancedSettings = () => {
   const [dv, setDv] = useState<DailyVerseDM>(DEFAULTS.daily_verse_dm);
   const [wc, setWc] = useState<Welcome>(DEFAULTS.welcome);
   const [cr, setCr] = useState<Crisis>(DEFAULTS.crisis);
+  const [ac, setAc] = useState<Access>(DEFAULTS.access);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [newPhone, setNewPhone] = useState("");
@@ -33,12 +36,13 @@ const AtisAdvancedSettings = () => {
 
   useEffect(() => {
     (async () => {
-      const [a, b, c] = await Promise.all([
+      const [a, b, c, d] = await Promise.all([
         loadSetting("atis_daily_verse_dm", DEFAULTS.daily_verse_dm),
         loadSetting("atis_welcome", DEFAULTS.welcome),
         loadSetting("atis_crisis_alert", DEFAULTS.crisis),
+        loadSetting("atis_access_control", DEFAULTS.access),
       ]);
-      setDv(a); setWc(b); setCr(c); setLoading(false);
+      setDv(a); setWc(b); setCr(c); setAc(d); setLoading(false);
     })();
   }, []);
 
@@ -53,6 +57,34 @@ const AtisAdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
+      {/* Controle de acesso — DM restrita */}
+      <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-9 rounded-lg grid place-items-center bg-amber-500/20 text-amber-400"><Lock className="w-4 h-4" /></span>
+          <div className="flex-1">
+            <p className="text-sm font-bold">Controle de acesso (DM)</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Só responde em conversa privada a contatos/usuários cadastrados ou pessoas de grupos onde o Atis participa. Nos grupos, o comportamento continua definido em cada grupo.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!ac.dm_restrict} onChange={(e) => setAc({ ...ac, dm_restrict: e.target.checked })} /> Ativo
+          </label>
+        </div>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={ac.allow_group_members !== false} onChange={(e) => setAc({ ...ac, allow_group_members: e.target.checked })} />
+          Permitir também quem já esteve em algum grupo com o Atis
+        </label>
+        <div className="space-y-1">
+          <span className="text-[11px] text-[hsl(var(--dark-muted))]">Mensagem de recusa (opcional — em branco = ignora em silêncio)</span>
+          <textarea
+            value={ac.deny_reply ?? ""} onChange={(e) => setAc({ ...ac, deny_reply: e.target.value })}
+            placeholder="Ex.: Olá! Este canal é reservado a membros cadastrados. Fale com um administrador para ser incluído."
+            className="input" style={{ height: 80, padding: 12 }} />
+        </div>
+        <button onClick={() => save("atis_access_control", ac)} disabled={saving === "atis_access_control"} className="btn-save">
+          <Save className="w-3.5 h-3.5" /> {saving === "atis_access_control" ? "Salvando…" : "Salvar"}
+        </button>
+      </div>
+
       {/* DM diária do versículo */}
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <div className="flex items-center gap-2">

@@ -1296,6 +1296,64 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ============================================================
+        // Controle de acesso em DM — só responde a contatos/usuários
+        // cadastrados ou pessoas que estão em grupos junto com o bot.
+        // ============================================================
+        if (!isGroup) {
+          const { data: acRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_access_control').maybeSingle()
+          const ac = (acRow?.value ?? {}) as { dm_restrict?: boolean; allow_group_members?: boolean; deny_reply?: string | null }
+          if (ac.dm_restrict) {
+            const senderDigits = jid.replace(/@.*/, '').replace(/\D/g, '')
+            const brVariants = (d: string): string[] => {
+              const out = new Set<string>([d])
+              if (d.startsWith('55')) {
+                const ddd = d.slice(2, 4); const rest = d.slice(4)
+                if (rest.length === 9 && rest.startsWith('9')) out.add(`55${ddd}${rest.slice(1)}`)
+                if (rest.length === 8) out.add(`55${ddd}9${rest}`)
+              }
+              return [...out]
+            }
+            const variants = brVariants(senderDigits)
+            let allowed = false
+            const { data: c } = await admin.from('atis_contacts').select('id').in('phone', variants).limit(1).maybeSingle()
+            if (c) allowed = true
+            if (!allowed) {
+              const { data: p } = await admin.from('profiles').select('user_id').in('whatsapp', variants).limit(1).maybeSingle()
+              if (p) allowed = true
+            }
+            if (!allowed && ac.allow_group_members !== false) {
+              // Já vimos essa pessoa em algum grupo onde o bot está?
+              const orFilter = variants.map((v) => `wa_from.ilike.${v}%`).join(',')
+              const { data: seen } = await admin
+                .from('atis_messages_log')
+                .select('id')
+                .not('wa_group_id', 'is', null)
+                .or(orFilter)
+                .limit(1)
+              if (seen && seen.length) allowed = true
+            }
+            if (!allowed) {
+              const reply = (ac.deny_reply ?? '').trim()
+              if (reply) {
+                const r = await sendText(jid, reply)
+                await admin.from('atis_messages_log').insert({
+                  direction: 'outbound', wa_to: jid, body: reply,
+                  command: 'access-denied', status: r.ok ? 'sent' : 'error',
+                  raw: { auto: true, reason: 'dm_restrict' },
+                })
+              } else {
+                await admin.from('atis_messages_log').insert({
+                  direction: 'inbound', wa_from: jid, body: text.slice(0, 200),
+                  command: 'access-denied', status: 'ignored',
+                  raw: { reason: 'dm_restrict' },
+                })
+              }
+              continue
+            }
+          }
+        }
+
         // Conversa natural com IA — usa persona configurada + contexto do ministério
         const persona: string = (cfg.persona ?? '').trim() || 'Você é Atis, assistente do Ministério Atalaias de Betel.'
         const history = await loadHistory(admin, jid, 12)

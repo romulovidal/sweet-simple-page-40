@@ -293,7 +293,7 @@ const AtisGroups = () => {
                                       <p className="text-[11px] font-bold leading-tight">{t.label}</p>
                                       <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug">{t.hint}</p>
                                     </button>
-                                    {on && (
+                                    {on && !["culto-reminder", "general"].includes(t.key) && (
                                       <input
                                         type="time"
                                         value={time}
@@ -301,6 +301,11 @@ const AtisGroups = () => {
                                         title="Horário deste tipo neste grupo (Fortaleza-CE). Vazio = usa o horário global."
                                         className="w-[86px] h-7 px-1.5 rounded-md bg-[hsl(var(--dark-card))] text-[10px] font-mono ring-1 ring-[hsl(var(--dark-card-hover))] focus:ring-primary/40 outline-none"
                                       />
+                                    )}
+                                    {on && ["culto-reminder", "general"].includes(t.key) && (
+                                      <span className="text-[9px] text-[hsl(var(--dark-muted))] font-medium px-1.5" title="Segue o disparo nativo do app">
+                                        push do app
+                                      </span>
                                     )}
                                     {on ? (
                                       <Check className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={3} />

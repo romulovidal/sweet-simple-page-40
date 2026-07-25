@@ -469,6 +469,7 @@ export type Database = {
           forward_notifications: boolean
           id: string
           name: string
+          notification_times: Json
           notification_types: string[]
           respond_mode: string
           updated_at: string
@@ -481,6 +482,7 @@ export type Database = {
           forward_notifications?: boolean
           id?: string
           name: string
+          notification_times?: Json
           notification_types?: string[]
           respond_mode?: string
           updated_at?: string
@@ -493,6 +495,7 @@ export type Database = {
           forward_notifications?: boolean
           id?: string
           name?: string
+          notification_times?: Json
           notification_types?: string[]
           respond_mode?: string
           updated_at?: string

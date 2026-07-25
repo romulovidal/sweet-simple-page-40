@@ -129,8 +129,8 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
   const rmItem = (i: number) => set({ items: series.items.filter((_, idx) => idx !== i) });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-2xl max-h-[calc(100vh-6rem)] sm:max-h-[90vh] mb-20 sm:mb-0 overflow-y-auto">
         <div className="sticky top-0 bg-[hsl(var(--dark-card))] p-4 border-b border-[hsl(var(--dark-bg))] flex items-center justify-between">
           <p className="font-bold">{series.id ? "Editar série" : "Nova série"}</p>
           <button onClick={onClose}><X className="w-5 h-5" /></button>
@@ -296,8 +296,8 @@ const SubsModal = ({ series, onClose }: { series: Series; onClose: () => void })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-xl max-h-[calc(100vh-6rem)] sm:max-h-[90vh] mb-20 sm:mb-0 overflow-y-auto">
         <div className="sticky top-0 bg-[hsl(var(--dark-card))] p-4 border-b border-[hsl(var(--dark-bg))] flex items-center justify-between">
           <div>
             <p className="font-bold">Inscritos — {series.name}</p>

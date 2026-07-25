@@ -277,32 +277,42 @@ const AtisGroups = () => {
                               {NOTIF_TYPES.map((t) => {
                                 const on = active.includes(t.key);
                                 const Icon = t.icon;
+                                const times = (g.notification_times && typeof g.notification_times === "object") ? g.notification_times : {};
+                                const time = times[t.key] ?? "";
                                 return (
-                                  <button
+                                  <div
                                     key={t.key}
-                                    onClick={() => toggleType(g, t.key)}
                                     className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
                                       on ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"
                                     }`}
                                   >
-                                    <span className={`w-7 h-7 rounded-md grid place-items-center shrink-0 ${on ? "bg-primary/20 text-primary" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+                                    <button onClick={() => toggleType(g, t.key)} className={`w-7 h-7 rounded-md grid place-items-center shrink-0 ${on ? "bg-primary/20 text-primary" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
                                       <Icon className="w-3.5 h-3.5" />
-                                    </span>
-                                    <div className="flex-1 min-w-0">
+                                    </button>
+                                    <button onClick={() => toggleType(g, t.key)} className="flex-1 min-w-0 text-left">
                                       <p className="text-[11px] font-bold leading-tight">{t.label}</p>
                                       <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug">{t.hint}</p>
-                                    </div>
-                                    {on ? (
-                                      <Check className="w-3.5 h-3.5 text-primary" strokeWidth={3} />
-                                    ) : (
-                                      <span className="w-3.5 h-3.5 rounded-full ring-1 ring-[hsl(var(--dark-card-hover))]" />
+                                    </button>
+                                    {on && (
+                                      <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTypeTime(g, t.key, e.target.value)}
+                                        title="Horário deste tipo neste grupo (Fortaleza-CE). Vazio = usa o horário global."
+                                        className="w-[86px] h-7 px-1.5 rounded-md bg-[hsl(var(--dark-card))] text-[10px] font-mono ring-1 ring-[hsl(var(--dark-card-hover))] focus:ring-primary/40 outline-none"
+                                      />
                                     )}
-                                  </button>
+                                    {on ? (
+                                      <Check className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={3} />
+                                    ) : (
+                                      <button onClick={() => toggleType(g, t.key)} className="w-3.5 h-3.5 rounded-full ring-1 ring-[hsl(var(--dark-card-hover))] shrink-0" />
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>
                             <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug pt-1">
-                              Desmarque os tipos que não devem ser postados neste grupo.
+                              Desmarque para não postar neste grupo. Deixe o horário vazio para usar o padrão global.
                             </p>
                           </div>
                         )}

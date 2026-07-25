@@ -607,6 +607,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          group_ids: string[]
           id: string
           items: Json
           name: string
@@ -617,6 +618,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          group_ids?: string[]
           id?: string
           items?: Json
           name: string
@@ -627,6 +629,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          group_ids?: string[]
           id?: string
           items?: Json
           name?: string
@@ -635,6 +638,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      atis_series_group_progress: {
+        Row: {
+          active: boolean
+          current_day: number
+          group_id: string
+          id: string
+          last_sent_date: string | null
+          series_id: string
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          current_day?: number
+          group_id: string
+          id?: string
+          last_sent_date?: string | null
+          series_id: string
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          current_day?: number
+          group_id?: string
+          id?: string
+          last_sent_date?: string | null
+          series_id?: string
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_series_group_progress_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "atis_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atis_series_group_progress_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "atis_series"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       atis_series_subscribers: {
         Row: {

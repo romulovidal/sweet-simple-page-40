@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus, Users2 } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus, Users2, Sparkles } from "lucide-react";
 
 type SeriesItem = { day: number; title?: string; verse_ref?: string; verse_text?: string; body: string };
 type Series = {
   id: string; name: string; theme: string | null;
   items: SeriesItem[]; send_time: string; active: boolean;
   group_ids?: string[] | null;
+  ai_commentary?: boolean;
 };
 type Subscriber = {
   id: string; series_id: string; phone: string; name: string | null;
   current_day: number; active: boolean; last_sent_date: string | null;
 };
 
-const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true, group_ids: [] };
+const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true, group_ids: [], ai_commentary: false };
 
 const AtisSeries = () => {
   const [list, setList] = useState<Series[]>([]);
@@ -41,6 +42,7 @@ const AtisSeries = () => {
       items: editing.items.map((it, i) => ({ ...it, day: i + 1 })),
       send_time: editing.send_time, active: editing.active,
       group_ids: editing.group_ids ?? [],
+      ai_commentary: !!editing.ai_commentary,
     };
     let res;
     if (editing.id) res = await atisDb.from("atis_series").update(payload).eq("id", editing.id);
@@ -142,6 +144,19 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
               <input type="checkbox" checked={series.active} onChange={(e) => set({ active: e.target.checked })} /> Ativa
             </label>
           </div>
+
+          <label className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${series.ai_commentary ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"}`}>
+            <input type="checkbox" checked={!!series.ai_commentary} onChange={(e) => set({ ai_commentary: e.target.checked })} className="mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-bold">Complementar com IA</span>
+              </div>
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-snug mt-0.5">
+                A IA adiciona um comentário curto ao final de cada dia (contexto + aplicação) para aprofundar o tema.
+              </p>
+            </div>
+          </label>
 
           <div className="pt-2 space-y-2">
             <div className="flex items-center gap-2">

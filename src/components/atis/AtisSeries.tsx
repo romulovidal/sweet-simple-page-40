@@ -167,17 +167,21 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
               A série será enviada também para os grupos marcados. Respeita o horário definido no grupo (tipo "Séries temáticas") ou usa o horário padrão da série.
             </p>
             {groups.length === 0 ? (
-              <p className="text-[11px] text-[hsl(var(--dark-muted))] italic">Nenhum grupo cadastrado no Atis.</p>
+              <p className="text-[11px] text-[hsl(var(--dark-muted))] italic bg-[hsl(var(--dark-bg))] rounded-xl p-3">
+                Nenhum grupo cadastrado no Atis. Abra a aba "Grupos" e importe/adicione um primeiro.
+              </p>
             ) : (
               <div className="max-h-40 overflow-y-auto space-y-1 bg-[hsl(var(--dark-bg))] rounded-xl p-2">
                 {groups.map((g) => {
                   const on = linked.has(g.id);
-                  const disabled = !g.wa_group_id || !g.forward_notifications;
+                  const missingId = !g.wa_group_id;
+                  const noFwd = !g.forward_notifications;
                   return (
-                    <label key={g.id} className={`flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer ${on ? "bg-primary/15" : "hover:bg-[hsl(var(--dark-card))]"} ${disabled ? "opacity-50" : ""}`}>
-                      <input type="checkbox" checked={on} disabled={disabled} onChange={() => toggleGroup(g.id)} />
+                    <label key={g.id} className={`flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer ${on ? "bg-primary/15" : "hover:bg-[hsl(var(--dark-card))]"}`}>
+                      <input type="checkbox" checked={on} onChange={() => toggleGroup(g.id)} />
                       <span className="flex-1 truncate">{g.name}</span>
-                      {disabled && <span className="text-[9px] text-[hsl(var(--dark-muted))]">sem ID/notif</span>}
+                      {missingId && <span className="text-[9px] text-amber-400" title="Grupo sem wa_group_id — não vai enviar">sem ID</span>}
+                      {noFwd && !missingId && <span className="text-[9px] text-amber-400" title="Encaminhamento desativado no grupo">notif off</span>}
                     </label>
                   );
                 })}

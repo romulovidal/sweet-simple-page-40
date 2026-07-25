@@ -120,14 +120,23 @@ Deno.serve(async (req) => {
   const NOTIF = 'devotional'
   const { data: gRows } = await admin
     .from('atis_groups')
-    .select('wa_group_id, notification_types, active')
+    .select('wa_group_id, notification_types, notification_times, active')
     .in('wa_group_id', groupIdsRaw)
+  const globalTime = cfg.time ?? '06:30'
   const allowed = new Set(
     (gRows ?? [])
       .filter((g: any) => g.active !== false)
       .filter((g: any) => {
         const t = Array.isArray(g.notification_types) ? g.notification_types : null
         return !t || t.length === 0 || t.includes(NOTIF)
+      })
+      .filter((g: any) => {
+        // Per-group time (Fortaleza). If defined, must match now. Else use global.
+        if (force) return true
+        const times = g.notification_times && typeof g.notification_times === 'object' ? g.notification_times : {}
+        const perGroup = typeof times[NOTIF] === 'string' ? times[NOTIF] : ''
+        const target = perGroup || globalTime
+        return target === timeKey
       })
       .map((g: any) => g.wa_group_id),
   )

@@ -1,0 +1,1 @@
+alter table public.atis_series add column if not exists ai_commentary boolean not null default false;

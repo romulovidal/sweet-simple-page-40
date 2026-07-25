@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus, Users2 } from "lucide-react";
 
 type SeriesItem = { day: number; title?: string; verse_ref?: string; verse_text?: string; body: string };
 type Series = {
   id: string; name: string; theme: string | null;
   items: SeriesItem[]; send_time: string; active: boolean;
+  group_ids?: string[] | null;
 };
 type Subscriber = {
   id: string; series_id: string; phone: string; name: string | null;
   current_day: number; active: boolean; last_sent_date: string | null;
 };
 
-const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true };
+const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true, group_ids: [] };
 
 const AtisSeries = () => {
   const [list, setList] = useState<Series[]>([]);
@@ -39,6 +40,7 @@ const AtisSeries = () => {
       name: editing.name.trim(), theme: editing.theme?.trim() || null,
       items: editing.items.map((it, i) => ({ ...it, day: i + 1 })),
       send_time: editing.send_time, active: editing.active,
+      group_ids: editing.group_ids ?? [],
     };
     let res;
     if (editing.id) res = await atisDb.from("atis_series").update(payload).eq("id", editing.id);
@@ -106,6 +108,17 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
   series: Series; onChange: (s: Series) => void; onSave: () => void; onClose: () => void; saving: boolean;
 }) => {
   const set = (p: Partial<Series>) => onChange({ ...series, ...p });
+  const [groups, setGroups] = useState<Array<{ id: string; name: string; wa_group_id: string | null; forward_notifications: boolean }>>([]);
+  useEffect(() => {
+    atisDb.from("atis_groups").select("id,name,wa_group_id,forward_notifications").order("name").then(({ data }) => {
+      setGroups((data ?? []) as any);
+    });
+  }, []);
+  const linked = new Set(series.group_ids ?? []);
+  const toggleGroup = (id: string) => {
+    const next = linked.has(id) ? [...linked].filter((x) => x !== id) : [...linked, id];
+    set({ group_ids: next });
+  };
   const setItem = (i: number, p: Partial<SeriesItem>) => {
     const items = series.items.map((it, idx) => idx === i ? { ...it, ...p } : it);
     set({ items });
@@ -128,6 +141,33 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
             <label className="flex items-center gap-2 text-sm px-3">
               <input type="checkbox" checked={series.active} onChange={(e) => set({ active: e.target.checked })} /> Ativa
             </label>
+          </div>
+
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <Users2 className="w-4 h-4 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))]">Grupos do WhatsApp ({linked.size})</p>
+            </div>
+            <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-snug">
+              A série será enviada também para os grupos marcados. Respeita o horário definido no grupo (tipo "Séries temáticas") ou usa o horário padrão da série.
+            </p>
+            {groups.length === 0 ? (
+              <p className="text-[11px] text-[hsl(var(--dark-muted))] italic">Nenhum grupo cadastrado no Atis.</p>
+            ) : (
+              <div className="max-h-40 overflow-y-auto space-y-1 bg-[hsl(var(--dark-bg))] rounded-xl p-2">
+                {groups.map((g) => {
+                  const on = linked.has(g.id);
+                  const disabled = !g.wa_group_id || !g.forward_notifications;
+                  return (
+                    <label key={g.id} className={`flex items-center gap-2 text-xs p-1.5 rounded cursor-pointer ${on ? "bg-primary/15" : "hover:bg-[hsl(var(--dark-card))]"} ${disabled ? "opacity-50" : ""}`}>
+                      <input type="checkbox" checked={on} disabled={disabled} onChange={() => toggleGroup(g.id)} />
+                      <span className="flex-1 truncate">{g.name}</span>
+                      {disabled && <span className="text-[9px] text-[hsl(var(--dark-muted))]">sem ID/notif</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 pt-2">

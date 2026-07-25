@@ -116,8 +116,8 @@ Deno.serve(async (req) => {
   if (!groupIdsRaw.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
 
   // Respeita filtro por grupo (Atis › Grupos › Tipos de notificação).
-  // Devocional diário = tipo "daily-verse".
-  const NOTIF = 'daily-verse'
+  // Devocional diário = tipo "devotional".
+  const NOTIF = 'devotional'
   const { data: gRows } = await admin
     .from('atis_groups')
     .select('wa_group_id, notification_types, active')

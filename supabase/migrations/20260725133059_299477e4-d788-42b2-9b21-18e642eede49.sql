@@ -1,0 +1,1 @@
+ALTER TABLE public.atis_series ADD COLUMN IF NOT EXISTS mention_all boolean NOT NULL DEFAULT false;

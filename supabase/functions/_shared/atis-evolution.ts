@@ -37,16 +37,18 @@ export function phoneNumberVariants(to: string): string[] {
 
 export type SendResult = { ok: boolean; status: number; body: any; jid: string | null };
 
-export async function evolutionSendText(to: string, text: string): Promise<SendResult> {
+export async function evolutionSendText(to: string, text: string, opts?: { mentionsEveryOne?: boolean }): Promise<SendResult> {
   if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution-not-configured', jid: null };
   const attempts = phoneVariants(to);
   let last: SendResult = { ok: false, status: 0, body: 'no-attempts', jid: null };
   for (const jid of attempts) {
     try {
+      const payload: Record<string, unknown> = { number: jid, text, linkPreview: true };
+      if (opts?.mentionsEveryOne && jid.includes('@g.us')) payload.mentionsEveryOne = true;
       const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-        body: JSON.stringify({ number: jid, text, linkPreview: true }),
+        body: JSON.stringify(payload),
       });
       const raw = await res.text().catch(() => '');
       let body: any = raw;

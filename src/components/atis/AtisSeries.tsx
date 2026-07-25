@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus, Users2, Sparkles } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Users, X, BookOpen, UserPlus, Users2, Sparkles, AtSign } from "lucide-react";
 
 type SeriesItem = { day: number; title?: string; verse_ref?: string; verse_text?: string; body: string };
 type Series = {
@@ -9,13 +9,14 @@ type Series = {
   items: SeriesItem[]; send_time: string; active: boolean;
   group_ids?: string[] | null;
   ai_commentary?: boolean;
+  mention_all?: boolean;
 };
 type Subscriber = {
   id: string; series_id: string; phone: string; name: string | null;
   current_day: number; active: boolean; last_sent_date: string | null;
 };
 
-const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true, group_ids: [], ai_commentary: false };
+const emptySeries: Series = { id: "", name: "", theme: "", items: [{ day: 1, body: "" }], send_time: "07:00", active: true, group_ids: [], ai_commentary: false, mention_all: false };
 
 const AtisSeries = () => {
   const [list, setList] = useState<Series[]>([]);
@@ -43,6 +44,7 @@ const AtisSeries = () => {
       send_time: editing.send_time, active: editing.active,
       group_ids: editing.group_ids ?? [],
       ai_commentary: !!editing.ai_commentary,
+      mention_all: !!editing.mention_all,
     };
     let res;
     if (editing.id) res = await atisDb.from("atis_series").update(payload).eq("id", editing.id);
@@ -154,6 +156,19 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
               </div>
               <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-snug mt-0.5">
                 A IA adiciona um comentário curto ao final de cada dia (contexto + aplicação) para aprofundar o tema.
+              </p>
+            </div>
+          </label>
+
+          <label className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${series.mention_all ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"}`}>
+            <input type="checkbox" checked={!!series.mention_all} onChange={(e) => set({ mention_all: e.target.checked })} className="mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <AtSign className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-bold">Marcar @todos nos grupos</span>
+              </div>
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-snug mt-0.5">
+                Ao enviar em grupos vinculados, notifica todos os membros (equivalente ao @todos do WhatsApp). Use com moderação para evitar sensação de spam.
               </p>
             </div>
           </label>

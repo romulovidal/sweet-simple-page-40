@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X, Lock } from "lucide-react";
+import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X, Lock, Clock } from "lucide-react";
 
 type DailyVerseDM = { enabled?: boolean; time?: string; include_reflection?: boolean; target?: "profiles" | "contacts" | "both"; last_sent_date?: string };
 type Welcome = { enabled?: boolean; template?: string | null };
 type Crisis = { enabled?: boolean; pastor_phones?: string[]; custom_keywords?: string[]; alert_template?: string | null };
 type Access = { dm_restrict?: boolean; allow_group_members?: boolean; deny_reply?: string | null };
+type Timed = { enabled?: boolean; time?: string };
+type DevoT = Timed & { group_ids?: string[]; last_sent_date?: string };
+type BdayT = Timed & { group_ids?: string[]; template?: string | null; use_ai?: boolean; last_sent_date?: string };
 
 const DEFAULTS = {
   daily_verse_dm: { enabled: false, time: "07:00", include_reflection: true, target: "both" } as DailyVerseDM,
   welcome: { enabled: true, template: null } as Welcome,
   crisis: { enabled: true, pastor_phones: [], custom_keywords: [], alert_template: null } as Crisis,
   access: { dm_restrict: false, allow_group_members: true, deny_reply: null } as Access,
+  devotional: { enabled: false, time: "06:30", group_ids: [] } as DevoT,
+  birthday: { enabled: false, time: "08:00", group_ids: [], template: null, use_ai: true } as BdayT,
 };
 
 async function loadSetting<T>(key: string, fallback: T): Promise<T> {
@@ -29,6 +34,8 @@ const AtisAdvancedSettings = () => {
   const [wc, setWc] = useState<Welcome>(DEFAULTS.welcome);
   const [cr, setCr] = useState<Crisis>(DEFAULTS.crisis);
   const [ac, setAc] = useState<Access>(DEFAULTS.access);
+  const [devo, setDevo] = useState<DevoT>(DEFAULTS.devotional);
+  const [bday, setBday] = useState<BdayT>(DEFAULTS.birthday);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [newPhone, setNewPhone] = useState("");
@@ -36,13 +43,15 @@ const AtisAdvancedSettings = () => {
 
   useEffect(() => {
     (async () => {
-      const [a, b, c, d] = await Promise.all([
+      const [a, b, c, d, e, f] = await Promise.all([
         loadSetting("atis_daily_verse_dm", DEFAULTS.daily_verse_dm),
         loadSetting("atis_welcome", DEFAULTS.welcome),
         loadSetting("atis_crisis_alert", DEFAULTS.crisis),
         loadSetting("atis_access_control", DEFAULTS.access),
+        loadSetting("atis_daily_devotional", DEFAULTS.devotional),
+        loadSetting("atis_birthday_greeting", DEFAULTS.birthday),
       ]);
-      setDv(a); setWc(b); setCr(c); setAc(d); setLoading(false);
+      setDv(a); setWc(b); setCr(c); setAc(d); setDevo(e); setBday(f); setLoading(false);
     })();
   }, []);
 
@@ -57,6 +66,49 @@ const AtisAdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
+      {/* Horários automáticos (grupos e DMs) */}
+      <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-9 rounded-lg grid place-items-center bg-primary/20 text-primary"><Clock className="w-4 h-4" /></span>
+          <div className="flex-1">
+            <p className="text-sm font-bold">Horários automáticos</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Horário de envio (Fortaleza-CE) de cada automação do Atis. As notificações nativas do app Bíblia Atalaia (versículo do dia no push, lembretes) seguem sua própria configuração no painel admin.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Reflexão devocional (grupos)</span>
+            <input type="time" value={devo.time ?? "06:30"} onChange={(e) => setDevo({ ...devo, time: e.target.value })} className="input" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Aniversariantes (grupos)</span>
+            <input type="time" value={bday.time ?? "08:00"} onChange={(e) => setBday({ ...bday, time: e.target.value })} className="input" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Versículo do dia (DM)</span>
+            <input type="time" value={dv.time ?? "07:00"} onChange={(e) => setDv({ ...dv, time: e.target.value })} className="input" />
+          </label>
+        </div>
+        <p className="text-[10px] text-[hsl(var(--dark-muted))]">Planos de leitura e séries têm horário definido por assinante (aba Planos WA e Séries). Lembretes de culto seguem a escala configurada.</p>
+        <button
+          onClick={async () => {
+            setSaving("horarios");
+            try {
+              await Promise.all([
+                saveSetting("atis_daily_devotional", devo),
+                saveSetting("atis_birthday_greeting", bday),
+                saveSetting("atis_daily_verse_dm", dv),
+              ]);
+              toast.success("Horários salvos");
+            } catch (e: any) { toast.error(e.message); }
+            finally { setSaving(null); }
+          }}
+          disabled={saving === "horarios"}
+          className="btn-save">
+          <Save className="w-3.5 h-3.5" /> {saving === "horarios" ? "Salvando…" : "Salvar horários"}
+        </button>
+      </div>
+
       {/* Controle de acesso — DM restrita */}
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <div className="flex items-center gap-2">

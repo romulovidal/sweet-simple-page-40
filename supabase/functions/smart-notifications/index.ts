@@ -108,6 +108,7 @@ serve(async (req) => {
             title: "🙏 Sentimos sua falta",
             body: "Que tal ler o versículo do dia hoje e renovar suas forças?",
             url: "/",
+            type: "inactivity",
           }),
         });
       }
@@ -131,6 +132,7 @@ serve(async (req) => {
               title: "📖 Meta de leitura",
               body: `Você já leu ${completed} capítulos. Continue firme em seu propósito!`,
               url: "/perfil",
+              type: "goal",
             }),
           });
         }

@@ -3,6 +3,7 @@ import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check, SlidersHorizontal, BookOpen, Sparkles, CalendarClock, Megaphone, FileText, HandHeart, Cake, ListChecks, Layers } from "lucide-react";
+import { Clock, Target } from "lucide-react";
 
 type Group = {
   id: string;
@@ -28,6 +29,8 @@ const NOTIF_TYPES: { key: string; label: string; hint: string; icon: any }[] = [
   { key: "birthday", label: "Aniversariantes", hint: "Parabéns diário aos aniversariantes", icon: Cake },
   { key: "plan", label: "Planos de leitura", hint: "Envios dos planos de leitura semanais", icon: ListChecks },
   { key: "series", label: "Séries temáticas", hint: "Envios de séries programadas", icon: Layers },
+  { key: "inactivity", label: "Lembrete de inatividade", hint: "\"Sentimos sua falta\" após 3 dias sem ler", icon: Clock },
+  { key: "goal", label: "Meta de leitura", hint: "Progresso da meta anual de capítulos", icon: Target },
   { key: "general", label: "Avisos gerais", hint: "Pushes manuais do admin", icon: Megaphone },
 ];
 const ALL_TYPES = NOTIF_TYPES.map((t) => t.key);

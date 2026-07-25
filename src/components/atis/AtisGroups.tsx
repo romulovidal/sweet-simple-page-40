@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check, SlidersHorizontal, BookOpen, Sparkles, CalendarClock, Megaphone, FileText } from "lucide-react";
+import { Plus, Trash2, Loader2, Bot, Search, Bell, BellOff, X, Users, ChevronDown, RefreshCw, Check, SlidersHorizontal, BookOpen, Sparkles, CalendarClock, Megaphone, FileText, HandHeart, Cake, ListChecks, Layers } from "lucide-react";
 
 type Group = {
   id: string;
@@ -24,6 +24,10 @@ const NOTIF_TYPES: { key: string; label: string; hint: string; icon: any }[] = [
   { key: "motivational", label: "Motivacional", hint: "Mensagens motivacionais", icon: Sparkles },
   { key: "culto-reminder", label: "Lembrete de culto", hint: "Antes de cada culto", icon: CalendarClock },
   { key: "post", label: "Novo post", hint: "Devocional/estudo publicado", icon: FileText },
+  { key: "devotional", label: "Reflexão devocional", hint: "Devocional diário automático do Atis", icon: HandHeart },
+  { key: "birthday", label: "Aniversariantes", hint: "Parabéns diário aos aniversariantes", icon: Cake },
+  { key: "plan", label: "Planos de leitura", hint: "Envios dos planos de leitura semanais", icon: ListChecks },
+  { key: "series", label: "Séries temáticas", hint: "Envios de séries programadas", icon: Layers },
   { key: "general", label: "Avisos gerais", hint: "Pushes manuais do admin", icon: Megaphone },
 ];
 const ALL_TYPES = NOTIF_TYPES.map((t) => t.key);

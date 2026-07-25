@@ -1,18 +1,31 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName, brDateParts } from '../_shared/atis-evolution.ts';
+import { aiGenerateText } from '../_shared/ai-fetch.ts';
 
 type SeriesItem = { day: number; title?: string; verse_ref?: string; verse_text?: string; body: string };
 
-function buildText(seriesName: string, item: SeriesItem, nome: string, total: number): string {
+function buildText(seriesName: string, item: SeriesItem, nome: string, total: number, commentary?: string): string {
   const header = `📚 *${seriesName}* — Dia ${item.day}/${total}`;
   const title = item.title ? `\n*${item.title}*` : '';
   const verse = item.verse_ref
     ? `\n\n📖 *${item.verse_ref}*${item.verse_text ? `\n"${item.verse_text}"` : ''}`
     : '';
   const body = item.body ? `\n\n${item.body}` : '';
+  const extra = commentary ? `\n\n✨ *Aprofundando*\n${commentary}` : '';
   const salut = nome ? `Olá, ${nome}!\n\n` : '';
-  return `${salut}${header}${title}${verse}${body}\n\n— Bíblia Atalaia`;
+  return `${salut}${header}${title}${verse}${body}${extra}\n\n— Bíblia Atalaia`;
+}
+
+async function generateCommentary(seriesName: string, item: SeriesItem): Promise<string> {
+  const parts: string[] = [];
+  if (item.title) parts.push(`Título: ${item.title}`);
+  if (item.verse_ref) parts.push(`Versículo: ${item.verse_ref}${item.verse_text ? ` — "${item.verse_text}"` : ''}`);
+  if (item.body) parts.push(`Reflexão do dia:\n${item.body}`);
+  const user = `Série: "${seriesName}"\n\n${parts.join('\n\n')}\n\nComplemente com um comentário curto (máx 3 parágrafos) que dê profundidade ao tema deste dia — contexto bíblico, aplicação prática e um convite pastoral final. Não repita o versículo nem a reflexão; apenas aprofunde. Tom acolhedor, evangélico, sem clichês.`;
+  const system = `Você é um pastor evangélico brasileiro que escreve devocionais curtos e profundos. Responda apenas com o texto do comentário (sem título, sem "Comentário:", sem markdown pesado).`;
+  const out = await aiGenerateText({ system, user, temperature: 0.8, maxTokens: 500 });
+  return out.trim();
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +61,8 @@ Deno.serve(async (req) => {
         continue;
       }
       const nome = firstName(sub.name);
-      const text = buildText(s.name, item, nome, total);
+      const commentary = s.ai_commentary ? await generateCommentary(s.name, item) : '';
+      const text = buildText(s.name, item, nome, total, commentary);
       const r = await evolutionSendText(sub.phone, text);
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: sub.phone, body: text,
@@ -97,7 +111,8 @@ Deno.serve(async (req) => {
           if (prog) await admin.from('atis_series_group_progress').update({ active: false }).eq('id', prog.id);
           continue;
         }
-        const text = buildText(s.name, item, '', total);
+        const commentary = s.ai_commentary ? await generateCommentary(s.name, item) : '';
+        const text = buildText(s.name, item, '', total, commentary);
         const r = await evolutionSendText(g.wa_group_id, text);
         await admin.from('atis_messages_log').insert({
           direction: 'outbound', wa_group_id: g.wa_group_id, body: text,

@@ -220,15 +220,31 @@ const SubsModal = ({ series, onClose }: { series: Series; onClose: () => void })
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [manualPhone, setManualPhone] = useState("");
   const [manualName, setManualName] = useState("");
+  const [groupProgress, setGroupProgress] = useState<Array<{
+    id: string; group_id: string; name: string; current_day: number;
+    last_sent_date: string | null; active: boolean; started_at: string;
+  }>>([]);
+
+  const todayFortaleza = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: gp }] = await Promise.all([
       atisDb.from("atis_series_subscribers").select("*").eq("series_id", series.id).order("created_at", { ascending: false }),
       atisDb.from("atis_contacts").select("id,name,phone,opt_in").eq("opt_in", true).order("name"),
+      atisDb.from("atis_series_group_progress")
+        .select("id,group_id,current_day,last_sent_date,active,started_at,atis_groups(name)")
+        .eq("series_id", series.id),
     ]);
     setSubs((s as Subscriber[]) ?? []);
     setContacts((c as any) ?? []);
+    setGroupProgress(((gp as any[]) ?? []).map((r) => ({
+      id: r.id, group_id: r.group_id, name: r.atis_groups?.name ?? "(grupo)",
+      current_day: r.current_day, last_sent_date: r.last_sent_date,
+      active: r.active, started_at: r.started_at,
+    })));
     setLoading(false);
   };
   useEffect(() => { load(); }, [series.id]);
@@ -262,6 +278,23 @@ const SubsModal = ({ series, onClose }: { series: Series; onClose: () => void })
     if (error) toast.error(error.message); else load();
   };
 
+  const toggleGroupActive = async (g: { id: string; active: boolean }) => {
+    const { error } = await atisDb.from("atis_series_group_progress").update({ active: !g.active }).eq("id", g.id);
+    if (error) toast.error(error.message); else load();
+  };
+
+  const resetGroup = async (g: { id: string }) => {
+    if (!confirm("Reiniciar do dia 1 para este grupo?")) return;
+    const { error } = await atisDb.from("atis_series_group_progress").update({ current_day: 1, last_sent_date: null }).eq("id", g.id);
+    if (error) toast.error(error.message); else { toast.success("Reiniciado"); load(); }
+  };
+
+  const setGroupDay = async (g: { id: string }, day: number) => {
+    const d = Math.max(1, Math.min(series.items.length, Math.floor(day || 1)));
+    const { error } = await atisDb.from("atis_series_group_progress").update({ current_day: d }).eq("id", g.id);
+    if (error) toast.error(error.message); else load();
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
       <div className="bg-[hsl(var(--dark-card))] rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
@@ -274,6 +307,68 @@ const SubsModal = ({ series, onClose }: { series: Series; onClose: () => void })
         </div>
 
         <div className="p-4 space-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users2 className="w-4 h-4 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))]">Grupos vinculados ({groupProgress.length})</p>
+            </div>
+            {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> :
+              !groupProgress.length ? (
+                <p className="text-[11px] text-[hsl(var(--dark-muted))] italic bg-[hsl(var(--dark-bg))] rounded-xl p-3">
+                  Nenhum grupo vinculado ainda. Edite a série para vincular grupos do WhatsApp.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {groupProgress.map((g) => {
+                    const total = series.items.length;
+                    const sentToday = g.last_sent_date === todayFortaleza;
+                    const finished = g.current_day > total;
+                    const pct = Math.min(100, Math.round((Math.min(g.current_day, total) / total) * 100));
+                    return (
+                      <div key={g.id} className="bg-[hsl(var(--dark-bg))] rounded-lg p-2.5 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold truncate">{g.name}</p>
+                            <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                              Dia {Math.min(g.current_day, total)}/{total} · {finished ? "concluída" : sentToday ? `enviado hoje (${g.last_sent_date})` : g.last_sent_date ? `último: ${g.last_sent_date}` : "ainda não enviado"}
+                            </p>
+                          </div>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                            finished ? "bg-blue-500/20 text-blue-400" :
+                            sentToday ? "bg-green-500/20 text-green-400" :
+                            "bg-amber-500/20 text-amber-400"
+                          }`}>
+                            {finished ? "fim" : sentToday ? "hoje ✓" : "pendente"}
+                          </span>
+                          <button onClick={() => toggleGroupActive(g)} className={`text-[10px] px-2 py-1 rounded ${g.active ? "bg-green-500/20 text-green-400" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+                            {g.active ? "ativo" : "pausado"}
+                          </button>
+                        </div>
+                        <div className="h-1 bg-[hsl(var(--dark-card))] rounded-full overflow-hidden">
+                          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <label className="text-[10px] text-[hsl(var(--dark-muted))]">Dia:</label>
+                          <input
+                            type="number" min={1} max={total}
+                            defaultValue={Math.min(g.current_day, total)}
+                            onBlur={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (v !== g.current_day) setGroupDay(g, v);
+                            }}
+                            className="w-14 h-6 text-[11px] px-2 rounded bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]"
+                          />
+                          <button onClick={() => resetGroup(g)} className="ml-auto text-[10px] text-[hsl(var(--dark-muted))] hover:text-primary underline">
+                            reiniciar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+          </div>
+
           <div className="bg-[hsl(var(--dark-bg))] rounded-xl p-3 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))]">Adicionar</p>
             <div className="max-h-48 overflow-y-auto space-y-1 pr-1">

@@ -606,6 +606,7 @@ export type Database = {
       atis_series: {
         Row: {
           active: boolean
+          ai_commentary: boolean
           created_at: string
           group_ids: string[]
           id: string
@@ -617,6 +618,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          ai_commentary?: boolean
           created_at?: string
           group_ids?: string[]
           id?: string
@@ -628,6 +630,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          ai_commentary?: boolean
           created_at?: string
           group_ids?: string[]
           id?: string

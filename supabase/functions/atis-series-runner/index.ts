@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         }
         const commentary = s.ai_commentary ? await generateCommentary(s.name, item) : '';
         const text = buildText(s.name, item, '', total, commentary);
-        const r = await evolutionSendText(g.wa_group_id, text);
+        const r = await evolutionSendText(g.wa_group_id, text, { mentionsEveryOne: !!s.mention_all });
         await admin.from('atis_messages_log').insert({
           direction: 'outbound', wa_group_id: g.wa_group_id, body: text,
           command: 'series', status: r.ok ? 'sent' : 'error',

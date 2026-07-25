@@ -101,15 +101,13 @@ Deno.serve(async (req) => {
 
   const { data: settingRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_daily_devotional').maybeSingle()
   const cfg = (settingRow?.value ?? {}) as {
-    enabled?: boolean; time?: string; group_ids?: string[]; last_sent_date?: string
+    enabled?: boolean; time?: string; group_ids?: string[]; last_sent_date?: string; last_sent_dates?: Record<string, string>
   }
 
   const { dateKey, timeKey, period } = brNow()
 
   if (!force) {
     if (!cfg.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
-    if ((cfg.time ?? '06:30') !== timeKey) return new Response(JSON.stringify({ skipped: true, reason: 'not-time', now: timeKey, target: cfg.time }), { headers: corsHeaders })
-    if (cfg.last_sent_date === dateKey) return new Response(JSON.stringify({ skipped: true, reason: 'already-sent-today' }), { headers: corsHeaders })
   }
 
   const groupIdsRaw = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
@@ -120,14 +118,26 @@ Deno.serve(async (req) => {
   const NOTIF = 'devotional'
   const { data: gRows } = await admin
     .from('atis_groups')
-    .select('wa_group_id, notification_types, active')
+    .select('wa_group_id, notification_types, notification_times, active')
     .in('wa_group_id', groupIdsRaw)
+  const globalTime = cfg.time ?? '06:30'
+  const lastSentMap: Record<string, string> = (cfg.last_sent_dates && typeof cfg.last_sent_dates === 'object') ? cfg.last_sent_dates : {}
   const allowed = new Set(
     (gRows ?? [])
       .filter((g: any) => g.active !== false)
       .filter((g: any) => {
         const t = Array.isArray(g.notification_types) ? g.notification_types : null
         return !t || t.length === 0 || t.includes(NOTIF)
+      })
+      .filter((g: any) => {
+        if (force) return true
+        // Skip if already sent to this group today
+        if (lastSentMap[g.wa_group_id] === dateKey) return false
+        // Per-group time (Fortaleza). If defined, must match now. Else use global.
+        const times = g.notification_times && typeof g.notification_times === 'object' ? g.notification_times : {}
+        const perGroup = typeof times[NOTIF] === 'string' ? times[NOTIF] : ''
+        const target = perGroup || globalTime
+        return target === timeKey
       })
       .map((g: any) => g.wa_group_id),
   )
@@ -175,8 +185,10 @@ Deno.serve(async (req) => {
   }
 
   if (!force) {
+    const nextMap = { ...lastSentMap }
+    for (const r of results) if (r.ok) nextMap[r.jid] = dateKey
     await admin.from('admin_settings').upsert(
-      { key: 'atis_daily_devotional', value: { ...cfg, last_sent_date: dateKey } },
+      { key: 'atis_daily_devotional', value: { ...cfg, last_sent_dates: nextMap, last_sent_date: dateKey } },
       { onConflict: 'key' },
     )
   }

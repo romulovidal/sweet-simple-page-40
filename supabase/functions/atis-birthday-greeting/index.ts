@@ -150,8 +150,8 @@ Deno.serve(async (req) => {
   if (!groupIdsRaw.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
 
   // Respeita filtro por grupo (Atis › Grupos › Tipos de notificação).
-  // Aniversariantes = tipo "general".
-  const NOTIF = 'general'
+  // Aniversariantes = tipo "birthday".
+  const NOTIF = 'birthday'
   const { data: gRows } = await admin
     .from('atis_groups')
     .select('wa_group_id, notification_types, active')

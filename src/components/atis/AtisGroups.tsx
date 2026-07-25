@@ -293,7 +293,7 @@ const AtisGroups = () => {
                                       <p className="text-[11px] font-bold leading-tight">{t.label}</p>
                                       <p className="text-[9px] text-[hsl(var(--dark-muted))] leading-snug">{t.hint}</p>
                                     </button>
-                                    {on && !["culto-reminder", "general"].includes(t.key) && (
+                                    {on && !["culto-reminder", "general", "post"].includes(t.key) && (
                                       <input
                                         type="time"
                                         value={time}
@@ -302,7 +302,7 @@ const AtisGroups = () => {
                                         className="w-[86px] h-7 px-1.5 rounded-md bg-[hsl(var(--dark-card))] text-[10px] font-mono ring-1 ring-[hsl(var(--dark-card-hover))] focus:ring-primary/40 outline-none"
                                       />
                                     )}
-                                    {on && ["culto-reminder", "general"].includes(t.key) && (
+                                    {on && ["culto-reminder", "general", "post"].includes(t.key) && (
                                       <span className="text-[9px] text-[hsl(var(--dark-muted))] font-medium px-1.5" title="Segue o disparo nativo do app">
                                         push do app
                                       </span>

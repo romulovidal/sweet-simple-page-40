@@ -22,9 +22,9 @@ async function generateCommentary(seriesName: string, item: SeriesItem): Promise
   if (item.title) parts.push(`Título: ${item.title}`);
   if (item.verse_ref) parts.push(`Versículo: ${item.verse_ref}${item.verse_text ? ` — "${item.verse_text}"` : ''}`);
   if (item.body) parts.push(`Reflexão do dia:\n${item.body}`);
-  const user = `Série: "${seriesName}"\n\n${parts.join('\n\n')}\n\nComplemente com um comentário curto (máx 3 parágrafos) que dê profundidade ao tema deste dia — contexto bíblico, aplicação prática e um convite pastoral final. Não repita o versículo nem a reflexão; apenas aprofunde. Tom acolhedor, evangélico, sem clichês.`;
-  const system = `Você é um pastor evangélico brasileiro que escreve devocionais curtos e profundos. Responda apenas com o texto do comentário (sem título, sem "Comentário:", sem markdown pesado).`;
-  const out = await aiGenerateText({ system, user, temperature: 0.8, maxTokens: 500 });
+  const user = `Série: "${seriesName}"\n\n${parts.join('\n\n')}\n\nComplemente com um comentário curto (2 parágrafos) que dê profundidade ao tema deste dia — contexto bíblico e aplicação prática. Não repita o versículo nem a reflexão; apenas aprofunde. Em seguida, adicione uma linha em branco e escreva uma oração curta (3-5 linhas) começando com "🙏 *Oração:*" em nova linha, dirigida a Deus, coerente com o tema do dia. Tom acolhedor, evangélico, sem clichês.`;
+  const system = `Você é um pastor evangélico brasileiro que escreve devocionais curtos e profundos. Responda apenas com o texto do comentário seguido da oração (sem título extra, sem "Comentário:", sem markdown pesado além do indicado).`;
+  const out = await aiGenerateText({ system, user, temperature: 0.8, maxTokens: 700 });
   return out.trim();
 }
 

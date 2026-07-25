@@ -611,6 +611,7 @@ export type Database = {
           group_ids: string[]
           id: string
           items: Json
+          mention_all: boolean
           name: string
           send_time: string
           theme: string | null
@@ -623,6 +624,7 @@ export type Database = {
           group_ids?: string[]
           id?: string
           items?: Json
+          mention_all?: boolean
           name: string
           send_time?: string
           theme?: string | null
@@ -635,6 +637,7 @@ export type Database = {
           group_ids?: string[]
           id?: string
           items?: Json
+          mention_all?: boolean
           name?: string
           send_time?: string
           theme?: string | null

@@ -160,6 +160,19 @@ const EditorModal = ({ series, onChange, onSave, onClose, saving }: {
             </div>
           </label>
 
+          <label className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${series.mention_all ? "bg-primary/10 ring-1 ring-primary/30" : "bg-[hsl(var(--dark-bg))] ring-1 ring-[hsl(var(--dark-card-hover))]"}`}>
+            <input type="checkbox" checked={!!series.mention_all} onChange={(e) => set({ mention_all: e.target.checked })} className="mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <AtSign className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-bold">Marcar @todos nos grupos</span>
+              </div>
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-snug mt-0.5">
+                Ao enviar em grupos vinculados, notifica todos os membros (equivalente ao @todos do WhatsApp). Use com moderação para evitar sensação de spam.
+              </p>
+            </div>
+          </label>
+
           <div className="pt-2 space-y-2">
             <div className="flex items-center gap-2">
               <Users2 className="w-4 h-4 text-primary" />

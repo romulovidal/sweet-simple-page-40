@@ -146,8 +146,27 @@ Deno.serve(async (req) => {
     if (cfg.last_sent_date === dateKey) return new Response(JSON.stringify({ skipped: true, reason: 'already-sent-today' }), { headers: corsHeaders })
   }
 
-  const groupIds = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
-  if (!groupIds.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
+  const groupIdsRaw = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
+  if (!groupIdsRaw.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
+
+  // Respeita filtro por grupo (Atis › Grupos › Tipos de notificação).
+  // Aniversariantes = tipo "general".
+  const NOTIF = 'general'
+  const { data: gRows } = await admin
+    .from('atis_groups')
+    .select('wa_group_id, notification_types, active')
+    .in('wa_group_id', groupIdsRaw)
+  const allowed = new Set(
+    (gRows ?? [])
+      .filter((g: any) => g.active !== false)
+      .filter((g: any) => {
+        const t = Array.isArray(g.notification_types) ? g.notification_types : null
+        return !t || t.length === 0 || t.includes(NOTIF)
+      })
+      .map((g: any) => g.wa_group_id),
+  )
+  const groupIds = groupIdsRaw.filter((jid) => allowed.has(jid) || !(gRows ?? []).some((g: any) => g.wa_group_id === jid))
+  if (!groupIds.length) return new Response(JSON.stringify({ skipped: true, reason: 'filtered-out' }), { headers: corsHeaders })
 
   const { data: bdays } = await admin.from('atis_birthdays').select('name,birth_date,active,phone')
   const todays = (bdays ?? []).filter((b: any) => b.active !== false && String(b.birth_date ?? '').slice(5, 10) === mmdd)

@@ -14,6 +14,7 @@ type Group = {
   welcome_message: string | null;
   forward_notifications: boolean;
   notification_types: string[] | null;
+  notification_times: Record<string, string> | null;
 };
 
 type WAGroup = { wa_group_id: string; name: string; size: number | null };
@@ -75,6 +76,13 @@ const AtisGroups = () => {
       : ALL_TYPES;
     const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
     await update(g.id, { notification_types: next });
+  };
+
+  const setTypeTime = async (g: Group, key: string, hhmm: string) => {
+    const current = (g.notification_times && typeof g.notification_times === "object") ? { ...g.notification_times } : {};
+    if (hhmm && /^\d{2}:\d{2}$/.test(hhmm)) current[key] = hhmm;
+    else delete current[key];
+    await update(g.id, { notification_times: current as any });
   };
 
   const remove = async (id: string) => {

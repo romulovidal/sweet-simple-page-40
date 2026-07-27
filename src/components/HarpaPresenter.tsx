@@ -138,11 +138,14 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   // Fonte fluida: escala com a altura da viewport e diminui quando a estrofe
   // tem muitas linhas, garantindo que TUDO caiba na tela em qualquer orientação.
   const lineCount = Math.max(current.lines.length, 1);
-  // Alvo: cada linha ocupa ~ (100 / (linhas + margem)) vh
-  const vhPerLine = 78 / (lineCount + 1.2);
+  // Quando estamos no fallback de rotação (iOS Safari em retrato), a altura
+  // "visual" após o rotate é a LARGURA da viewport — então precisamos medir
+  // em vw. Sem rotação, medimos em vh normalmente.
+  const hUnit = rotateFallback ? "vw" : "vh";
+  const perLine = 70 / (lineCount + 1.2);
   const fontSize = isTitle
-    ? "clamp(1.75rem, 9vh, 5.5rem)"
-    : `clamp(1.1rem, ${vhPerLine}vh, 4.5rem)`;
+    ? `clamp(1.5rem, 8${hUnit}, 5rem)`
+    : `clamp(1rem, ${perLine}${hUnit}, 4.5rem)`;
 
   // Tap na esquerda volta, na direita avança. Ignora se clicou em um controle
   // (que já usa stopPropagation).
@@ -228,12 +231,12 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
           }`}
         >
           {isChorus && (
-            <p className="uppercase tracking-[0.3em] mb-3 opacity-80" style={{ fontSize: "clamp(0.75rem, 2.2vh, 1.5rem)" }}>
+            <p className="uppercase tracking-[0.3em] mb-3 opacity-80" style={{ fontSize: `clamp(0.7rem, 2${hUnit}, 1.4rem)` }}>
               Coro
             </p>
           )}
           {!isTitle && !isChorus && current.index !== undefined && (
-            <p className="text-primary/80 font-semibold mb-3" style={{ fontSize: "clamp(0.8rem, 2.4vh, 1.5rem)" }}>
+            <p className="text-primary/80 font-semibold mb-3" style={{ fontSize: `clamp(0.75rem, 2.2${hUnit}, 1.4rem)` }}>
               Estrofe {current.index}
             </p>
           )}
@@ -247,7 +250,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
             </p>
           ))}
           {isTitle && (
-            <p className="mt-6 text-white/50" style={{ fontSize: "clamp(0.9rem, 2.6vh, 1.75rem)" }}>
+            <p className="mt-6 text-white/50" style={{ fontSize: `clamp(0.85rem, 2.4${hUnit}, 1.6rem)` }}>
               Hino {hino.number} — Harpa Cristã
             </p>
           )}

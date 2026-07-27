@@ -890,6 +890,50 @@ export type Database = {
         }
         Relationships: []
       }
+      culto_selections: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          culto_date: string
+          id: string
+          is_active: boolean
+          items: Json
+          schedule_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          culto_date: string
+          id?: string
+          is_active?: boolean
+          items?: Json
+          schedule_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          culto_date?: string
+          id?: string
+          is_active?: boolean
+          items?: Json
+          schedule_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "culto_selections_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "culto_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_verse_queue: {
         Row: {
           created_at: string

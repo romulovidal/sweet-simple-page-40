@@ -39,12 +39,24 @@ export default function HarpaPresenter({ hino, onClose }: Props) {
   useEffect(() => {
     const el = document.documentElement;
     el.requestFullscreen?.().catch(() => {});
+    // Trava em paisagem no mobile (quando suportado)
+    const lockLandscape = async () => {
+      try {
+        // @ts-ignore
+        await screen.orientation?.lock?.("landscape");
+      } catch {}
+    };
+    lockLandscape();
     const onFsChange = () => {
       if (!document.fullscreenElement) onClose();
     };
     document.addEventListener("fullscreenchange", onFsChange);
     return () => {
       document.removeEventListener("fullscreenchange", onFsChange);
+      try {
+        // @ts-ignore
+        screen.orientation?.unlock?.();
+      } catch {}
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     };
   }, [onClose]);

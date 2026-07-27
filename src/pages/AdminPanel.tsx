@@ -25,11 +25,12 @@ import AdminUsers, { type UserProfile } from "@/components/admin/AdminUsers";
 import AdminRetention from "@/components/admin/AdminRetention";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminHarpaReports from "@/components/admin/AdminHarpaReports";
+import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "culto-selections" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -55,6 +56,7 @@ const ADMIN_SECTIONS = [
       { id: "plans", label: "Planos de Leitura", desc: "Trilhas bíblicas", icon: BookOpen },
       { id: "verse", label: "Versículo do Dia", desc: "Push diário", icon: BookMarked },
       { id: "cultos", label: "Escala de Cultos", desc: "Lembretes de culto", icon: Calendar },
+      { id: "culto-selections", label: "Seleção de Hinos", desc: "Monta hinário do culto com playback", icon: Music2 },
     ],
   },
   {
@@ -314,6 +316,7 @@ const AdminPanel = () => {
       case "roles": return <AdminRoles />;
       case "log": return <AdminActivityLog />;
       case "cultos": return <AdminCultoSchedule />;
+      case "culto-selections": return <AdminCultoSelections />;
       case "ai": return <AdminAISettings />;
       case "ai-prompts": return <AdminAIInstructions />;
       case "app-features": return <AdminAppFeatures />;

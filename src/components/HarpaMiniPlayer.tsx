@@ -9,11 +9,27 @@ type Props = {
   title: string;
   autoPlay?: boolean;
   onEnded?: () => void;
+  /** Optional explicit YouTube URL (admin-curated playback). When set, skips the search. */
+  videoUrl?: string | null;
 };
 
 type SearchResult = { videoId: string; title: string; channel: string };
 
-export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Props) {
+function extractYouTubeId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url.trim());
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1) || null;
+    if (u.searchParams.get("v")) return u.searchParams.get("v");
+    const m = u.pathname.match(/\/(embed|shorts|v)\/([^/?#]+)/);
+    if (m) return m[2];
+    return null;
+  } catch {
+    return /^[\w-]{6,}$/.test(url) ? url : null;
+  }
+}
+
+export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, videoUrl }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
   const [found, setFound] = useState<SearchResult | null>(null);
   const playerRef = useRef<any>(null);
@@ -21,12 +37,16 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Pr
   const onEndedRef = useRef<typeof onEnded>(onEnded);
   const foundRef = useRef<{ number: number; video: SearchResult } | null>(null);
   const numberRef = useRef<number>(number);
+  const videoUrlRef = useRef<string | null | undefined>(videoUrl);
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
   useEffect(() => {
     numberRef.current = number;
   }, [number]);
+  useEffect(() => {
+    videoUrlRef.current = videoUrl;
+  }, [videoUrl]);
 
   // Reset when hymn changes
   useEffect(() => {
@@ -52,6 +72,14 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded }: Pr
   async function ensureVideo(): Promise<SearchResult | null> {
     const cached = foundRef.current;
     if (cached && cached.number === numberRef.current) return cached.video;
+    // Admin-curated URL takes precedence over search
+    const overrideId = extractYouTubeId(videoUrlRef.current);
+    if (overrideId) {
+      const video: SearchResult = { videoId: overrideId, title, channel: "Playback selecionado" };
+      foundRef.current = { number: numberRef.current, video };
+      setFound(video);
+      return video;
+    }
     const { data, error } = await supabase.functions.invoke("youtube-search", {
       body: { number: numberRef.current, title },
     });

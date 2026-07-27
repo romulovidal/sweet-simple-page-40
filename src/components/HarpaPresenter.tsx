@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import type { HarpaHino } from "@/data/harpa";
+import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 
 type Props = {
   hino: HarpaHino;
   onClose: () => void;
+  /** Optional admin-curated YouTube URL. Enables audio playback in presentation mode. */
+  videoUrl?: string | null;
+  /** Called when the video ends (used to auto-advance in a culto sequence). */
+  onAudioEnded?: () => void;
 };
 
 // Modo apresentação: uma estrofe por vez, fonte gigante, fundo preto.
 // Ideal para púlpito/projetor. Navegação: setas, espaço, PageUp/PageDown, Esc.
-export default function HarpaPresenter({ hino, onClose }: Props) {
+export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }: Props) {
   const [step, setStep] = useState(0);
+  const [audioOn, setAudioOn] = useState(false);
 
   // Sequência de "telas": título + cada estrofe (com coro repetido entre estrofes)
   const slides = useMemo(() => {
@@ -111,6 +117,12 @@ export default function HarpaPresenter({ hino, onClose }: Props) {
           {hino.number}. {hino.title}
         </span>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setAudioOn((v) => !v)}
+            className="text-xs px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 transition"
+          >
+            {audioOn ? "🔊 Áudio ativo" : "🔈 Ativar áudio"}
+          </button>
           <span>
             {step + 1} / {slides.length}
           </span>
@@ -123,6 +135,25 @@ export default function HarpaPresenter({ hino, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {audioOn && (
+        <div
+          className="flex justify-center pb-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <HarpaMiniPlayer
+            number={hino.number}
+            title={hino.title}
+            autoPlay
+            videoUrl={videoUrl ?? undefined}
+            onEnded={() => {
+              try {
+                onAudioEnded?.();
+              } catch {}
+            }}
+          />
+        </div>
+      )}
 
       {/* Conteúdo central */}
       <div className="flex-1 flex items-center justify-center px-8 md:px-20">

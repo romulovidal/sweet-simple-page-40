@@ -16,6 +16,8 @@ import {
   ListMusic,
   Presentation,
   Trash2,
+  Church,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -25,6 +27,7 @@ import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
 import HarpaReportButton from "@/components/HarpaReportButton";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getFavorites,
   isFavorite,
@@ -43,7 +46,26 @@ const FONT_KEY = "harpa:font-size";
 const MIN_FONT = 14;
 const MAX_FONT = 26;
 
-type TabKey = "todos" | "favoritos" | "historico" | "temas";
+type TabKey = "todos" | "cultos" | "favoritos" | "historico" | "temas";
+
+type CultoItem = { hino_number: number; youtube_url?: string | null; note?: string | null };
+type CultoSelection = {
+  id: string;
+  title: string;
+  culto_date: string;
+  items: CultoItem[];
+  is_active: boolean;
+};
+
+const fmtCultoDate = (iso: string) => {
+  try {
+    const [y, m, d] = iso.split("-").map(Number);
+    const dt = new Date(y, (m || 1) - 1, d || 1);
+    return dt.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
+  } catch {
+    return iso;
+  }
+};
 
 const HarpaPage = () => {
   const navigate = useNavigate();
@@ -56,6 +78,8 @@ const HarpaPage = () => {
   const [favorites, setFavorites] = useState<number[]>(() => getFavorites());
   const [history, setHistory] = useState<HarpaHistoryEntry[]>(() => getHistory());
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
+  const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
+  const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -145,6 +169,33 @@ const HarpaPage = () => {
 
   const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
 
+  // Fetch admin-curated culto selections (visible to all users)
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("culto_selections")
+        .select("id,title,culto_date,items,is_active")
+        .eq("is_active", true)
+        .order("culto_date", { ascending: false })
+        .limit(30);
+      if (data) setCultoSelections(data as CultoSelection[]);
+    })();
+  }, []);
+
+  // Map hymn number → admin YouTube URL for the currently-open culto
+  const cultoUrlMap = useMemo(() => {
+    const m = new Map<number, string | null>();
+    if (activeCulto) {
+      for (const it of activeCulto.items) m.set(it.hino_number, it.youtube_url || null);
+    }
+    return m;
+  }, [activeCulto]);
+
+  const activeSequence = useMemo(
+    () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),
+    [activeCulto]
+  );
+
   const baseList = useMemo<HarpaHino[]>(() => {
     if (tab === "favoritos") {
       const set = new Set(favorites);
@@ -159,8 +210,14 @@ const HarpaPage = () => {
       if (!theme) return [];
       return hymnsByTheme(themeIndex, theme);
     }
+    if (tab === "cultos" && activeCulto) {
+      const map = new Map(hinos.map((h) => [h.number, h] as const));
+      return activeCulto.items
+        .map((it) => map.get(it.hino_number))
+        .filter(Boolean) as HarpaHino[];
+    }
     return hinos;
-  }, [tab, hinos, favorites, history, activeTheme, themeIndex]);
+  }, [tab, hinos, favorites, history, activeTheme, themeIndex, activeCulto]);
 
   const results = useMemo(() => {
     const raw = query.trim();
@@ -192,6 +249,21 @@ const HarpaPage = () => {
 
   const goToHymn = (delta: number) => {
     if (!selected) return;
+    // Inside a culto: navigate through the curated sequence
+    if (activeCulto && activeSequence.length > 0) {
+      const idx = activeSequence.indexOf(selected.number);
+      if (idx >= 0) {
+        const nextNum = activeSequence[idx + delta];
+        if (nextNum) {
+          const next = hinos.find((h) => h.number === nextNum);
+          if (next) {
+            setAutoPlayNext(false);
+            setSelected(next);
+            return;
+          }
+        }
+      }
+    }
     const idx = hinos.findIndex((h) => h.number === selected.number);
     const next = hinos[idx + delta];
     if (next) {
@@ -200,12 +272,28 @@ const HarpaPage = () => {
     }
   };
 
+  // For the currently-open hymn, resolve the admin YouTube URL if in a culto
+  const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
+
+  // In presenter, when audio ends, jump to the next hino of the culto sequence
+  const presenterVideoUrl = presenting ? cultoUrlMap.get(presenting.number) ?? null : null;
+  const advancePresenterFromCulto = () => {
+    if (!presenting || !activeCulto || activeSequence.length === 0) return;
+    const idx = activeSequence.indexOf(presenting.number);
+    if (idx < 0) return;
+    const nextNum = activeSequence[idx + 1];
+    if (!nextNum) return;
+    const next = hinos.find((h) => h.number === nextNum);
+    if (next) setPresenting(next);
+  };
+
   const handleToggleFav = (n: number) => {
     const now = toggleFavorite(n);
     toast.success(now ? "Adicionado aos favoritos" : "Removido dos favoritos");
   };
 
   const showThemeGrid = tab === "temas" && !activeTheme;
+  const showCultoGrid = tab === "cultos" && !activeCulto;
 
   const shareHymn = async (h: HarpaHino) => {
     const url = `${window.location.origin}/harpa/${h.number}`;
@@ -266,6 +354,7 @@ const HarpaPage = () => {
               {(
                 [
                   { id: "todos", label: "Todos", Icon: ListMusic },
+                  { id: "cultos", label: "Cultos", Icon: Church },
                   { id: "favoritos", label: "Favoritos", Icon: Star },
                   { id: "historico", label: "Recentes", Icon: Clock },
                   { id: "temas", label: "Temas", Icon: Tag },
@@ -276,6 +365,7 @@ const HarpaPage = () => {
                   onClick={() => {
                     setTab(id);
                     setActiveTheme(null);
+                    setActiveCulto(null);
                     setQuery("");
                   }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full transition font-medium ${
@@ -292,7 +382,7 @@ const HarpaPage = () => {
           </div>
         )}
 
-        {!empty && !loading && !showThemeGrid && (
+        {!empty && !loading && !showThemeGrid && !showCultoGrid && (
           <div className="px-4 pb-3 max-w-3xl mx-auto">
             <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--dark-card))] border border-transparent focus-within:border-primary/40">
               <Search className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
@@ -318,6 +408,13 @@ const HarpaPage = () => {
                 >
                   <ChevronLeft className="w-3 h-3" /> Voltar aos temas
                 </button>
+              ) : activeCulto ? (
+                <button
+                  onClick={() => setActiveCulto(null)}
+                  className="text-[11px] text-primary flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3 h-3" /> Voltar aos cultos
+                </button>
               ) : (
                 <span />
               )}
@@ -327,6 +424,18 @@ const HarpaPage = () => {
                   : `${baseList.length} hino${baseList.length === 1 ? "" : "s"}`}
               </p>
             </div>
+            {tab === "cultos" && activeCulto && baseList.length > 0 && (
+              <button
+                onClick={() => {
+                  const first = baseList[0];
+                  if (first) setPresenting(first);
+                }}
+                className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
+              >
+                <Presentation className="w-3.5 h-3.5" />
+                Apresentar culto (auto-avança)
+              </button>
+            )}
             {tab === "historico" && history.length > 0 && (
               <button
                 onClick={() => {
@@ -356,6 +465,40 @@ const HarpaPage = () => {
             <img src={harpaIcon} alt="" width={96} height={96} className="w-24 h-24 mx-auto opacity-80" />
             <h2 className="mt-4 text-lg font-semibold">Hinário ainda não carregado</h2>
           </div>
+        ) : showCultoGrid ? (
+          cultoSelections.length === 0 ? (
+            <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+              <Church className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Nenhuma seleção de culto disponível ainda.</p>
+              <p className="text-xs mt-1">O admin pode criar em Administração → Seleção de Hinos.</p>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 gap-2">
+              {cultoSelections.map((c) => (
+                <li key={c.id}>
+                  <button
+                    onClick={() => setActiveCulto(c)}
+                    className="w-full text-left p-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 active:scale-[0.99] transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-11 h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                        <Church className="w-5 h-5" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{c.title}</p>
+                        <p className="text-[11px] text-[hsl(var(--dark-muted))] flex items-center gap-1">
+                          <CalendarIcon className="w-3 h-3" />
+                          {fmtCultoDate(c.culto_date)} · {c.items.length} hino
+                          {c.items.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
         ) : showThemeGrid ? (
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {HARPA_THEMES.map((t) => {
@@ -410,7 +553,11 @@ const HarpaPage = () => {
                       </span>
                     )}
                   </span>
-                  {favorites.includes(h.number) ? (
+                  {tab === "cultos" && activeCulto && cultoUrlMap.get(h.number) ? (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
+                      ♪
+                    </span>
+                  ) : favorites.includes(h.number) ? (
                     <Star className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" />
                   ) : (
                     <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
@@ -517,7 +664,22 @@ const HarpaPage = () => {
                 number={selected.number}
                 title={selected.title}
                 autoPlay={autoPlayNext}
+                videoUrl={currentVideoUrl}
                 onEnded={() => {
+                  // In a culto: advance through the curated sequence first
+                  if (activeCulto && activeSequence.length > 0) {
+                    const idx = activeSequence.indexOf(selected.number);
+                    const nextNum = idx >= 0 ? activeSequence[idx + 1] : undefined;
+                    if (nextNum) {
+                      const next = hinos.find((h) => h.number === nextNum);
+                      if (next) {
+                        setAutoPlayNext(true);
+                        setSelected(next);
+                        return;
+                      }
+                    }
+                    return; // end of culto sequence — do not jump to next global hymn
+                  }
                   const idx = hinos.findIndex((h) => h.number === selected.number);
                   const next = hinos[idx + 1];
                   if (next) {
@@ -592,7 +754,12 @@ const HarpaPage = () => {
       )}
 
       {presenting && (
-        <HarpaPresenter hino={presenting} onClose={() => setPresenting(null)} />
+        <HarpaPresenter
+          hino={presenting}
+          videoUrl={presenterVideoUrl}
+          onAudioEnded={advancePresenterFromCulto}
+          onClose={() => setPresenting(null)}
+        />
       )}
     </div>
   );

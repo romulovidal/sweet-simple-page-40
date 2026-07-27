@@ -150,10 +150,19 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   // Tap na esquerda volta, na direita avança. Ignora se clicou em um controle
   // (que já usa stopPropagation).
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width / 2) prev();
-    else next();
+    // Quando estamos no fallback de rotação (iOS Safari), o elemento está
+    // girado 90° visualmente, mas as coordenadas do toque vêm no espaço da
+    // viewport real. Nesse caso, o "esquerdo visual" corresponde ao TOPO da
+    // viewport (menor clientY). Sem rotação, usamos clientX normalmente.
+    if (rotateFallback) {
+      if (e.clientY < window.innerHeight / 2) prev();
+      else next();
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      if (x < rect.width / 2) prev();
+      else next();
+    }
   };
 
   // Estilo do fallback de rotação (iOS Safari, quando não conseguimos travar).

@@ -135,24 +135,34 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   const isChorus = current.kind === "chorus";
   const isTitle = current.kind === "title";
 
+  // Tap na esquerda volta, na direita avança. Ignora se clicou em um controle
+  // (que já usa stopPropagation).
+  const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width / 2) prev();
+    else next();
+  };
+
+  // Estilo do fallback de rotação (iOS Safari, quando não conseguimos travar).
+  // Usa transform-origin no topo-esquerdo para não brigar com inset-0.
+  const rotateStyle: React.CSSProperties | undefined = rotateFallback
+    ? {
+        inset: "auto",
+        top: 0,
+        left: "100vw",
+        width: "100vh",
+        height: "100vw",
+        transformOrigin: "top left",
+        transform: "rotate(90deg)",
+      }
+    : undefined;
+
   return (
     <div
       className="fixed inset-0 z-[100] bg-black text-white flex flex-col select-none"
-      style={
-        rotateFallback
-          ? {
-              transform: "rotate(90deg)",
-              transformOrigin: "center center",
-              width: "100vh",
-              height: "100vw",
-              top: "50%",
-              left: "50%",
-              marginTop: "-50vw",
-              marginLeft: "-50vh",
-            }
-          : undefined
-      }
-      onClick={next}
+      style={rotateStyle}
+      onClick={handleTap}
     >
       {/* Barra superior */}
       <div

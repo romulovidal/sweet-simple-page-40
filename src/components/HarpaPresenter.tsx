@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from "react";
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import type { HarpaHino } from "@/data/harpa";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
@@ -135,17 +135,52 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   const isChorus = current.kind === "chorus";
   const isTitle = current.kind === "title";
 
-  // Fonte fluida: escala com a altura da viewport e diminui quando a estrofe
-  // tem muitas linhas, garantindo que TUDO caiba na tela em qualquer orientação.
-  const lineCount = Math.max(current.lines.length, 1);
-  // Quando estamos no fallback de rotação (iOS Safari em retrato), a altura
-  // "visual" após o rotate é a LARGURA da viewport — então precisamos medir
-  // em vw. Sem rotação, medimos em vh normalmente.
-  const hUnit = rotateFallback ? "vw" : "vh";
-  const perLine = 70 / (lineCount + 1.2);
-  const fontSize = isTitle
-    ? `clamp(1.5rem, 8${hUnit}, 5rem)`
-    : `clamp(1rem, ${perLine}${hUnit}, 4.5rem)`;
+  // Auto-fit: mede o container e reduz a fonte até TUDO caber sem scroll.
+  const contentBoxRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [fitFont, setFitFont] = useState(48);
+
+  useLayoutEffect(() => {
+    const box = contentBoxRef.current;
+    const el = contentRef.current;
+    if (!box || !el) return;
+
+    const fit = () => {
+      // Reseta para o tamanho máximo e diminui até caber
+      const maxH = box.clientHeight;
+      const maxW = box.clientWidth;
+      if (maxH <= 0 || maxW <= 0) return;
+      // Ponto inicial: altura por linha ~ maxH / (linhas + 1)
+      const lineCount = Math.max(current.lines.length, 1);
+      let size = isTitle
+        ? Math.min(maxH * 0.35, maxW * 0.12, 96)
+        : Math.min(maxH / (lineCount + 1.2), maxW * 0.09, 72);
+      const min = isTitle ? 20 : 14;
+      // Ajusta iterativamente enquanto transbordar
+      el.style.fontSize = `${size}px`;
+      let guard = 40;
+      while (
+        guard-- > 0 &&
+        size > min &&
+        (el.scrollHeight > maxH || el.scrollWidth > maxW)
+      ) {
+        size = Math.max(min, size - Math.max(1, size * 0.06));
+        el.style.fontSize = `${size}px`;
+      }
+      setFitFont(size);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("orientationchange", fit);
+    };
+  }, [current, isTitle, rotateFallback, audioOn]);
 
   // Tap na esquerda volta, na direita avança. Ignora se clicou em um controle
   // (que já usa stopPropagation).
@@ -233,33 +268,37 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
       )}
 
       {/* Conteúdo central */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16 overflow-y-auto">
+      <div
+        ref={contentBoxRef}
+        className="flex-1 min-h-0 flex items-center justify-center px-3 sm:px-8 md:px-16 overflow-hidden"
+      >
         <div
-          className={`w-full max-w-6xl text-center py-4 ${
+          ref={contentRef}
+          className={`w-full max-w-6xl text-center ${
             isChorus ? "text-[hsl(var(--destructive))]" : "text-white"
           }`}
+          style={{ fontSize: `${fitFont}px` }}
         >
           {isChorus && (
-            <p className="uppercase tracking-[0.3em] mb-3 opacity-80" style={{ fontSize: `clamp(0.7rem, 2${hUnit}, 1.4rem)` }}>
+            <p className="uppercase tracking-[0.3em] opacity-80" style={{ fontSize: "0.35em", marginBottom: "0.6em", letterSpacing: "0.3em" }}>
               Coro
             </p>
           )}
           {!isTitle && !isChorus && current.index !== undefined && (
-            <p className="text-primary/80 font-semibold mb-3" style={{ fontSize: `clamp(0.75rem, 2.2${hUnit}, 1.4rem)` }}>
+            <p className="text-primary/80 font-semibold" style={{ fontSize: "0.4em", marginBottom: "0.6em" }}>
               Estrofe {current.index}
             </p>
           )}
           {current.lines.map((line, i) => (
             <p
               key={i}
-              className={isTitle ? "font-bold leading-tight" : "font-semibold leading-[1.2]"}
-              style={{ fontSize }}
+              className={isTitle ? "font-bold leading-tight" : "font-semibold leading-[1.18]"}
             >
               {line}
             </p>
           ))}
           {isTitle && (
-            <p className="mt-6 text-white/50" style={{ fontSize: `clamp(0.85rem, 2.4${hUnit}, 1.6rem)` }}>
+            <p className="text-white/50" style={{ fontSize: "0.28em", marginTop: "1em" }}>
               Hino {hino.number} — Harpa Cristã
             </p>
           )}

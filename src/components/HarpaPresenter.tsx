@@ -17,6 +17,7 @@ type Props = {
 export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }: Props) {
   const [step, setStep] = useState(0);
   const [audioOn, setAudioOn] = useState(false);
+  const [rotateFallback, setRotateFallback] = useState(false);
 
   // Sequência de "telas": título + cada estrofe (com coro repetido entre estrofes)
   const slides = useMemo(() => {
@@ -41,29 +42,60 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   const next = useCallback(() => setStep((s) => Math.min(slides.length - 1, s + 1)), [slides.length]);
   const prev = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
 
-  // Fullscreen ao abrir + limpar ao fechar
+  // Fullscreen + travar paisagem. Robusto para iOS (sem fullscreen/lock) e
+  // Android (fullscreen precisa vir ANTES do lock).
   useEffect(() => {
-    const el = document.documentElement;
-    el.requestFullscreen?.().catch(() => {});
-    // Trava em paisagem no mobile (quando suportado)
-    const lockLandscape = async () => {
-      try {
-        // @ts-ignore
-        await screen.orientation?.lock?.("landscape");
-      } catch {}
-    };
-    lockLandscape();
+    let cancelled = false;
+    let entered = false;
+    let locked = false;
+
     const onFsChange = () => {
-      if (!document.fullscreenElement) onClose();
+      // Só fecha se realmente entramos em fullscreen e depois saímos
+      if (entered && !document.fullscreenElement) onClose();
     };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", onFsChange);
+
+    (async () => {
+      const el = document.documentElement;
+      try {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+          if (cancelled) return;
+          entered = true;
+          document.addEventListener("fullscreenchange", onFsChange);
+        }
+      } catch {
+        // fullscreen negado — segue sem
+      }
       try {
         // @ts-ignore
-        screen.orientation?.unlock?.();
-      } catch {}
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        if (screen.orientation?.lock) {
+          // @ts-ignore
+          await screen.orientation.lock("landscape");
+          locked = true;
+        } else {
+          // iOS Safari e afins: aplica fallback via CSS rotate quando em retrato
+          const portrait = window.innerHeight > window.innerWidth;
+          if (portrait) setRotateFallback(true);
+        }
+      } catch {
+        // lock rejeitado (ex: iOS) — usa fallback
+        const portrait = window.innerHeight > window.innerWidth;
+        if (portrait) setRotateFallback(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("fullscreenchange", onFsChange);
+      if (locked) {
+        try {
+          // @ts-ignore
+          screen.orientation?.unlock?.();
+        } catch {}
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
     };
   }, [onClose]);
 
@@ -106,6 +138,20 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   return (
     <div
       className="fixed inset-0 z-[100] bg-black text-white flex flex-col select-none"
+      style={
+        rotateFallback
+          ? {
+              transform: "rotate(90deg)",
+              transformOrigin: "center center",
+              width: "100vh",
+              height: "100vw",
+              top: "50%",
+              left: "50%",
+              marginTop: "-50vw",
+              marginLeft: "-50vh",
+            }
+          : undefined
+      }
       onClick={next}
     >
       {/* Barra superior */}

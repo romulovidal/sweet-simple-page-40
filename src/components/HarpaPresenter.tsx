@@ -135,6 +135,15 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
   const isChorus = current.kind === "chorus";
   const isTitle = current.kind === "title";
 
+  // Fonte fluida: escala com a altura da viewport e diminui quando a estrofe
+  // tem muitas linhas, garantindo que TUDO caiba na tela em qualquer orientação.
+  const lineCount = Math.max(current.lines.length, 1);
+  // Alvo: cada linha ocupa ~ (100 / (linhas + margem)) vh
+  const vhPerLine = 78 / (lineCount + 1.2);
+  const fontSize = isTitle
+    ? "clamp(1.75rem, 9vh, 5.5rem)"
+    : `clamp(1.1rem, ${vhPerLine}vh, 4.5rem)`;
+
   // Tap na esquerda volta, na direita avança. Ignora se clicou em um controle
   // (que já usa stopPropagation).
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -212,36 +221,33 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
       )}
 
       {/* Conteúdo central */}
-      <div className="flex-1 flex items-center justify-center px-8 md:px-20">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16 overflow-y-auto">
         <div
-          className={`w-full max-w-6xl text-center ${
+          className={`w-full max-w-6xl text-center py-4 ${
             isChorus ? "text-[hsl(var(--destructive))]" : "text-white"
           }`}
         >
           {isChorus && (
-            <p className="uppercase tracking-[0.3em] text-lg md:text-2xl mb-6 opacity-80">
+            <p className="uppercase tracking-[0.3em] mb-3 opacity-80" style={{ fontSize: "clamp(0.75rem, 2.2vh, 1.5rem)" }}>
               Coro
             </p>
           )}
           {!isTitle && !isChorus && current.index !== undefined && (
-            <p className="text-primary/80 text-lg md:text-2xl mb-6 font-semibold">
+            <p className="text-primary/80 font-semibold mb-3" style={{ fontSize: "clamp(0.8rem, 2.4vh, 1.5rem)" }}>
               Estrofe {current.index}
             </p>
           )}
           {current.lines.map((line, i) => (
             <p
               key={i}
-              className={
-                isTitle
-                  ? "text-5xl md:text-7xl lg:text-8xl font-bold leading-tight"
-                  : "text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.25] mb-2"
-              }
+              className={isTitle ? "font-bold leading-tight" : "font-semibold leading-[1.2]"}
+              style={{ fontSize }}
             >
               {line}
             </p>
           ))}
           {isTitle && (
-            <p className="mt-10 text-xl md:text-3xl text-white/50">
+            <p className="mt-6 text-white/50" style={{ fontSize: "clamp(0.9rem, 2.6vh, 1.75rem)" }}>
               Hino {hino.number} — Harpa Cristã
             </p>
           )}
@@ -250,13 +256,13 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
 
       {/* Controles */}
       <div
-        className="flex items-center justify-between px-6 py-4"
+        className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={prev}
           disabled={step === 0}
-          className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition"
+          className="flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition text-sm sm:text-base"
         >
           <ChevronLeft className="w-5 h-5" /> Anterior
         </button>
@@ -267,7 +273,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
         <button
           onClick={next}
           disabled={step === slides.length - 1}
-          className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition"
+          className="flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 transition text-sm sm:text-base"
         >
           Próximo <ChevronRight className="w-5 h-5" />
         </button>

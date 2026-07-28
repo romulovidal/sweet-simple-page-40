@@ -61,8 +61,8 @@ export default function AdminCanticos() {
     if (c.error) toast.error(c.error.message);
     if (m.error) toast.error(m.error.message);
     if (l.error) toast.error(l.error.message);
-    setList((c.data as Cantico[]) || []);
-    setMinistros((m.data as Ministro[]) || []);
+    setList(((c.data as unknown) as Cantico[]) || []);
+    setMinistros(((m.data as unknown) as Ministro[]) || []);
     const map: Record<string, string[]> = {};
     ((l.data as any[]) || []).forEach((r) => {
       map[r.cantico_id] = [...(map[r.cantico_id] || []), r.ministro_id];

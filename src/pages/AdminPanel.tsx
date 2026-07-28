@@ -26,11 +26,13 @@ import AdminRetention from "@/components/admin/AdminRetention";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminHarpaReports from "@/components/admin/AdminHarpaReports";
 import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
+import AdminCanticos from "@/components/admin/AdminCanticos";
+import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "culto-selections" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -57,6 +59,8 @@ const ADMIN_SECTIONS = [
       { id: "verse", label: "Versículo do Dia", desc: "Push diário", icon: BookMarked },
       { id: "cultos", label: "Escala de Cultos", desc: "Lembretes de culto", icon: Calendar },
       { id: "culto-selections", label: "Seleção de Hinos", desc: "Monta hinário do culto com playback", icon: Music2 },
+      { id: "canticos-ministros", label: "Ministros", desc: "Cadastro de ministros dos cânticos", icon: HandHeart },
+      { id: "canticos", label: "Cânticos", desc: "Repertório paralelo à Harpa (IA Groq)", icon: Music2 },
     ],
   },
   {
@@ -317,6 +321,8 @@ const AdminPanel = () => {
       case "log": return <AdminActivityLog />;
       case "cultos": return <AdminCultoSchedule />;
       case "culto-selections": return <AdminCultoSelections />;
+      case "canticos": return <AdminCanticos />;
+      case "canticos-ministros": return <AdminCanticosMinistros />;
       case "ai": return <AdminAISettings />;
       case "ai-prompts": return <AdminAIInstructions />;
       case "app-features": return <AdminAppFeatures />;

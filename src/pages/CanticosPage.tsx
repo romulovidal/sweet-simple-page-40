@@ -1,5 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Search, Music2, Loader2, Play, Tag, User, Settings, BookOpen, HandHeart } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Search,
+  Music2,
+  Loader2,
+  Play,
+  Tag,
+  User,
+  Settings,
+  BookOpen,
+  HandHeart,
+  Star,
+  Share2,
+  Presentation,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +25,13 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
+import HarpaPresenter from "@/components/HarpaPresenter";
+import type { HarpaHino } from "@/data/harpa";
+import {
+  getFavorites as getCanticoFavs,
+  toggleFavorite as toggleCanticoFav,
+} from "@/lib/canticoUserData";
+import { toast } from "sonner";
 
 type LetraBloco = { tipo: "verso" | "refrao" | "ponte"; numero?: number; linhas: string[] };
 type Playback = { label: string; url: string };
@@ -26,6 +51,19 @@ type Ministro = { id: string; nome: string };
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+const FONT_KEY = "canticos:font-size";
+const MIN_FONT = 14;
+const MAX_FONT = 26;
+
+function canticoToHino(c: Cantico): HarpaHino {
+  const strophes = (c.letra_json || []).map((b, i) => ({
+    chorus: b.tipo === "refrao",
+    index: b.tipo === "verso" ? b.numero ?? i + 1 : undefined,
+    lines: b.linhas,
+  }));
+  return { number: c.numero, title: c.titulo, strophes };
+}
+
 export default function CanticosPage() {
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
@@ -40,10 +78,28 @@ export default function CanticosPage() {
   const [filterMinistro, setFilterMinistro] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [playbackIdx, setPlaybackIdx] = useState<number>(0);
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const s = typeof window !== "undefined" ? Number(localStorage.getItem(FONT_KEY)) : 0;
+    return s >= MIN_FONT && s <= MAX_FONT ? s : 17;
+  });
+  const [favorites, setFavorites] = useState<string[]>(() => getCanticoFavs());
+  const [presenting, setPresenting] = useState<Cantico | null>(null);
+  const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setPlaybackIdx(0);
+    if (readerRef.current) readerRef.current.scrollTo({ top: 0, behavior: "auto" });
   }, [openId]);
+
+  useEffect(() => {
+    try { localStorage.setItem(FONT_KEY, String(fontSize)); } catch {}
+  }, [fontSize]);
+
+  useEffect(() => {
+    const onFav = () => setFavorites(getCanticoFavs());
+    window.addEventListener("canticos:favorites-changed", onFav);
+    return () => window.removeEventListener("canticos:favorites-changed", onFav);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -91,6 +147,37 @@ export default function CanticosPage() {
 
   const open = list.find((c) => c.id === openId) || null;
   const openMinistros = open ? (linksByCantico[open.id] || []).map((id) => ministros.find((m) => m.id === id)?.nome).filter(Boolean) : [];
+
+  const openIdxInFiltered = open ? filtered.findIndex((c) => c.id === open.id) : -1;
+  const atFirst = openIdxInFiltered <= 0;
+  const atLast = openIdxInFiltered < 0 || openIdxInFiltered >= filtered.length - 1;
+  const goToCantico = (delta: number) => {
+    if (!open || openIdxInFiltered < 0) return;
+    const next = filtered[openIdxInFiltered + delta];
+    if (next) setOpenId(next.id);
+  };
+  const handleToggleFav = (id: string) => {
+    const now = toggleCanticoFav(id);
+    toast.success(now ? "Adicionado aos favoritos" : "Removido dos favoritos");
+  };
+  const shareCantico = async (c: Cantico) => {
+    const url = `${window.location.origin}/canticos`;
+    const text = [
+      `🎵 Cânticos Atalaia — ${c.numero}. ${c.titulo}`,
+      "",
+      ...(c.letra_json || []).flatMap((b) => {
+        const header = b.tipo === "refrao" ? "Refrão:" : b.tipo === "ponte" ? "Ponte:" : `${b.numero ?? ""}.`;
+        return [header, ...b.linhas, ""].filter(Boolean);
+      }),
+      "",
+      "🎶 Cante no app Atalaia:",
+      url,
+    ].join("\n");
+    try {
+      if (navigator.share) await navigator.share({ title: `${c.numero} — ${c.titulo}`, text, url });
+      else { await navigator.clipboard.writeText(text); toast.success("Cântico copiado"); }
+    } catch {}
+  };
 
   if (isAdmin && adminView) {
     return (
@@ -236,44 +323,97 @@ export default function CanticosPage() {
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] flex flex-col">
-          <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur-sm border-b border-[hsl(var(--dark-card-hover))]">
-            <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8 max-w-3xl mx-auto">
+        <div ref={readerRef} className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] overflow-y-auto animate-fade-in">
+          <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))]">
+            <div className="flex items-center gap-3 px-4 py-3 max-w-3xl mx-auto">
               <button
                 onClick={() => setOpenId(null)}
-                className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Fechar"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
+              <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
+                {open.numero}
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-wider">
-                  Cântico Nº {open.numero}
+                <h2 className="text-base font-bold leading-tight truncate">{open.titulo}</h2>
+                <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
+                  Cântico {open.numero}{list.length ? ` de ${list.length}` : ""}
                 </p>
-                <h2 className="text-lg font-bold truncate">{open.titulo}</h2>
+              </div>
+              <button
+                onClick={() => handleToggleFav(open.id)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label={favorites.includes(open.id) ? "Remover favorito" : "Adicionar favorito"}
+              >
+                <Star
+                  className={`w-4 h-4 ${favorites.includes(open.id) ? "text-yellow-400" : ""}`}
+                  fill={favorites.includes(open.id) ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={() => setPresenting(open)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label="Modo apresentação"
+                title="Apresentar"
+              >
+                <Presentation className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => shareCantico(open)}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                aria-label="Compartilhar"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Controles: tamanho da fonte + navegação */}
+            <div className="flex items-center justify-between gap-2 px-4 pb-3 max-w-3xl mx-auto">
+              <div className="flex items-center gap-1 bg-[hsl(var(--dark-card))] rounded-full p-1">
+                <button
+                  onClick={() => setFontSize((f) => Math.max(MIN_FONT, f - 1))}
+                  disabled={fontSize <= MIN_FONT}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
+                  aria-label="Diminuir fonte"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] text-[hsl(var(--dark-muted))] w-8 text-center">{fontSize}</span>
+                <button
+                  onClick={() => setFontSize((f) => Math.min(MAX_FONT, f + 1))}
+                  disabled={fontSize >= MAX_FONT}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
+                  aria-label="Aumentar fonte"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1 bg-[hsl(var(--dark-card))] rounded-full p-1">
+                <button
+                  onClick={() => goToCantico(-1)}
+                  disabled={atFirst}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
+                  aria-label="Cântico anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => goToCantico(1)}
+                  disabled={atLast}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
+                  aria-label="Próximo cântico"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          </header>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full">
-            <div className="flex items-center gap-2 flex-wrap text-xs">
-              {open.categoria && <span className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-medium">{open.categoria}</span>}
-              {open.tom && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Tom {open.tom}</span>}
-              {open.capotraste != null && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Capo {open.capotraste}</span>}
-              {open.referencia_biblica && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">📖 {open.referencia_biblica}</span>}
-            </div>
-
-            {openMinistros.length > 0 && (
-              <div className="text-xs text-[hsl(var(--dark-muted))] flex items-center gap-1.5 flex-wrap">
-                <User className="w-3.5 h-3.5" /> {openMinistros.join(", ")}
-              </div>
-            )}
 
             {(open.playbacks?.length ?? 0) > 0 && (
-              <div>
-                <div className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase mb-2">Playback</div>
+              <div className="px-4 pb-3 max-w-3xl mx-auto flex flex-col items-center gap-2">
                 {open.playbacks.length > 1 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
+                  <div className="flex flex-wrap gap-1.5 justify-center">
                     {open.playbacks.map((p, i) => (
                       <button
                         key={i}
@@ -297,25 +437,83 @@ export default function CanticosPage() {
                 />
               </div>
             )}
+          </header>
 
-            <div className="space-y-4 pt-2 text-base leading-relaxed">
-              {(open.letra_json || []).map((b, i) => (
-                <div key={i} className={b.tipo === "refrao" ? "pl-4 border-l-2 border-primary italic" : ""}>
-                  {b.tipo === "verso" && (
-                    <div className="text-xs font-semibold text-primary mb-1">Verso {b.numero ?? i + 1}</div>
-                  )}
-                  {b.tipo === "refrao" && (
-                    <div className="text-xs font-semibold text-primary mb-1 uppercase">Refrão</div>
-                  )}
-                  {b.tipo === "ponte" && (
-                    <div className="text-xs font-semibold text-primary mb-1 uppercase">Ponte</div>
-                  )}
-                  {b.linhas.map((l, j) => <div key={j}>{l}</div>)}
-                </div>
-              ))}
+          <article
+            className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed"
+            style={{ fontSize: `${fontSize}px` }}
+          >
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              {open.categoria && <span className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-medium">{open.categoria}</span>}
+              {open.tom && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Tom {open.tom}</span>}
+              {open.capotraste != null && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Capo {open.capotraste}</span>}
+              {open.referencia_biblica && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">📖 {open.referencia_biblica}</span>}
             </div>
-          </div>
+
+            {openMinistros.length > 0 && (
+              <div className="text-xs text-[hsl(var(--dark-muted))] flex items-center gap-1.5 flex-wrap">
+                <User className="w-3.5 h-3.5" /> {openMinistros.join(", ")}
+              </div>
+            )}
+
+            {(open.letra_json || []).map((b, i) => (
+              <div
+                key={i}
+                className={
+                  b.tipo === "refrao"
+                    ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
+                    : ""
+                }
+              >
+                {b.tipo === "verso" && (
+                  <span className="block text-xs text-primary/80 font-semibold mb-1">
+                    {b.numero ?? i + 1}
+                  </span>
+                )}
+                {b.tipo === "refrao" && (
+                  <span className="block text-[11px] uppercase tracking-wider text-[hsl(var(--destructive))] font-bold mb-1">
+                    Refrão
+                  </span>
+                )}
+                {b.tipo === "ponte" && (
+                  <span className="block text-[11px] uppercase tracking-wider text-primary font-bold mb-1">
+                    Ponte
+                  </span>
+                )}
+                {b.linhas.map((l, j) => (
+                  <p key={j} className={b.tipo === "refrao" ? "text-[hsl(var(--destructive))] font-medium" : ""}>
+                    {l}
+                  </p>
+                ))}
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between pt-6 border-t border-[hsl(var(--dark-card))]">
+              <button
+                onClick={() => goToCantico(-1)}
+                disabled={atFirst}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] disabled:opacity-40 transition"
+              >
+                <ChevronLeft className="w-4 h-4" /> Anterior
+              </button>
+              <button
+                onClick={() => goToCantico(1)}
+                disabled={atLast}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] disabled:opacity-40 transition"
+              >
+                Próximo <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </article>
         </div>
+      )}
+
+      {presenting && (
+        <HarpaPresenter
+          hino={canticoToHino(presenting)}
+          videoUrl={presenting.playbacks?.[playbackIdx]?.url ?? presenting.playbacks?.[0]?.url ?? null}
+          onClose={() => setPresenting(null)}
+        />
       )}
     </div>
   );

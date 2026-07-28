@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Search, Music2, Loader2, Play, ExternalLink, Tag, User, Settings, BookOpen, HandHeart } from "lucide-react";
+import { ArrowLeft, Search, Music2, Loader2, Play, ExternalLink, Tag, User, Settings, BookOpen, HandHeart, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,35 +88,47 @@ export default function CanticosPage() {
 
   if (isAdmin && adminView) {
     return (
-      <div className="min-h-screen bg-background pb-24">
+      <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] pb-24">
         <PageHead title="Cânticos — Admin" description="Gestão de cânticos" path="/canticos" />
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-[hsl(var(--dark-hover-strong))]">
-          <div className="flex items-center gap-3 p-4">
-            <button onClick={() => setAdminView(null)} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover))]">
+        <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur-sm max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))]">
+          <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8">
+            <button
+              onClick={() => setAdminView(null)}
+              className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+              aria-label="Voltar"
+            >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 flex-1">
-              <Settings className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-semibold">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold truncate">
                 {adminView === "canticos" ? "Gerenciar Cânticos" : "Gerenciar Ministros"}
               </h1>
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-wider">
+                Painel de administração
+              </p>
             </div>
           </div>
-          <div className="flex gap-2 px-4 pb-3">
-            <button
-              onClick={() => setAdminView("canticos")}
-              className={`h-9 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 ${adminView === "canticos" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]"}`}
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Cânticos
-            </button>
-            <button
-              onClick={() => setAdminView("ministros")}
-              className={`h-9 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 ${adminView === "ministros" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]"}`}
-            >
-              <HandHeart className="w-3.5 h-3.5" /> Ministros
-            </button>
+          <div className="px-4 pb-2 max-w-3xl mx-auto">
+            <div className="flex gap-1 p-1 rounded-full bg-[hsl(var(--dark-card))] text-xs">
+              {([
+                { id: "canticos", label: "Cânticos", Icon: BookOpen },
+                { id: "ministros", label: "Ministros", Icon: HandHeart },
+              ] as const).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setAdminView(id)}
+                  className={`flex-1 h-8 px-3 rounded-full font-medium flex items-center justify-center gap-1.5 transition ${
+                    adminView === id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-[hsl(var(--dark-muted))]"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" /> {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </header>
         <div className="p-4">
           {adminView === "canticos" ? <AdminCanticos /> : <AdminCanticosMinistros />}
         </div>
@@ -125,44 +137,50 @@ export default function CanticosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] pb-24">
       <PageHead title="Cânticos" description="Repertório de cânticos com playbacks" path="/canticos" />
 
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-[hsl(var(--dark-hover-strong))]">
-        <div className="flex items-center gap-3 p-4">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover))]">
+      <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur-sm max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))]">
+        <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+            aria-label="Voltar"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2 flex-1">
-            <Music2 className="w-5 h-5 text-primary" />
-            <h1 className="text-lg font-semibold">Cânticos</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold truncate">Cânticos</h1>
+            <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-wider">
+              {loading ? "Carregando…" : `${list.length} cântico${list.length === 1 ? "" : "s"}`}
+            </p>
           </div>
           {isAdmin && (
             <button
               onClick={() => setAdminView("canticos")}
-              className="h-9 px-3 rounded-lg bg-primary/10 text-primary text-xs font-medium flex items-center gap-1.5"
-              title="Gerenciar"
+              className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5 shrink-0"
+              aria-label="Gerenciar"
             >
-              <Settings className="w-4 h-4" /> Gerenciar
+              <Settings className="w-3.5 h-3.5" /> Gerenciar
             </button>
           )}
         </div>
 
-        <div className="px-4 pb-3 space-y-2">
+        <div className="px-4 pb-3 space-y-2 max-w-3xl mx-auto">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--dark-muted))]" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por número, título ou trecho da letra…"
-              className="w-full h-10 pl-9 pr-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+              className="w-full h-10 pl-9 pr-3 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm placeholder:text-[hsl(var(--dark-muted))] focus:outline-none focus:border-primary/50"
             />
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <select
               value={filterCat}
               onChange={(e) => setFilterCat(e.target.value)}
-              className="h-9 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-xs shrink-0"
+              className="h-9 px-3 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-xs shrink-0"
             >
               <option value="">Todas categorias</option>
               {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -170,14 +188,14 @@ export default function CanticosPage() {
             <select
               value={filterMinistro}
               onChange={(e) => setFilterMinistro(e.target.value)}
-              className="h-9 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-xs shrink-0"
+              className="h-9 px-3 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-xs shrink-0"
             >
               <option value="">Todos ministros</option>
               {ministros.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
           </div>
         </div>
-      </div>
+      </header>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin inline text-primary" /></div>
@@ -187,14 +205,14 @@ export default function CanticosPage() {
           Nenhum cântico {list.length ? "encontrado" : "cadastrado ainda"}
         </div>
       ) : (
-        <ul className="p-4 space-y-2">
+        <ul className="p-4 space-y-2 max-w-3xl mx-auto">
           {filtered.map((c) => (
             <li key={c.id}>
               <button
                 onClick={() => setOpenId(c.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-left hover:bg-[hsl(var(--dark-hover-strong))] transition"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-left hover:bg-[hsl(var(--dark-card-hover))] transition"
               >
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                   {c.numero}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -212,23 +230,31 @@ export default function CanticosPage() {
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
-          <div className="flex items-center gap-3 p-4 border-b border-[hsl(var(--dark-hover-strong))]">
-            <button onClick={() => setOpenId(null)} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover))]">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-[hsl(var(--dark-muted))]">Cântico #{open.numero}</div>
-              <div className="text-base font-semibold truncate">{open.titulo}</div>
+        <div className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] flex flex-col">
+          <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur-sm border-b border-[hsl(var(--dark-card-hover))]">
+            <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8 max-w-3xl mx-auto">
+              <button
+                onClick={() => setOpenId(null)}
+                className="w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center"
+                aria-label="Fechar"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] font-medium uppercase tracking-wider">
+                  Cântico Nº {open.numero}
+                </p>
+                <h2 className="text-lg font-bold truncate">{open.titulo}</h2>
+              </div>
             </div>
-          </div>
+          </header>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full">
             <div className="flex items-center gap-2 flex-wrap text-xs">
-              {open.categoria && <span className="px-2 py-1 rounded-full bg-primary/10 text-primary">{open.categoria}</span>}
-              {open.tom && <span className="px-2 py-1 rounded-full bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">Tom {open.tom}</span>}
-              {open.capotraste != null && <span className="px-2 py-1 rounded-full bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">Capo {open.capotraste}</span>}
-              {open.referencia_biblica && <span className="px-2 py-1 rounded-full bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">📖 {open.referencia_biblica}</span>}
+              {open.categoria && <span className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-medium">{open.categoria}</span>}
+              {open.tom && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Tom {open.tom}</span>}
+              {open.capotraste != null && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">Capo {open.capotraste}</span>}
+              {open.referencia_biblica && <span className="px-2.5 py-1 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">📖 {open.referencia_biblica}</span>}
             </div>
 
             {openMinistros.length > 0 && (
@@ -247,7 +273,7 @@ export default function CanticosPage() {
                       href={p.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1.5"
+                      className="h-9 px-3 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5"
                     >
                       <Play className="w-3.5 h-3.5" /> {p.label}
                       <ExternalLink className="w-3 h-3 opacity-70" />

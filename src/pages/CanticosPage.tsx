@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Search, Music2, Loader2, Play, ExternalLink, Tag, User, Settings, BookOpen, HandHeart, X } from "lucide-react";
+import { ArrowLeft, Search, Music2, Loader2, Play, Tag, User, Settings, BookOpen, HandHeart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
+import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 
 type LetraBloco = { tipo: "verso" | "refrao" | "ponte"; numero?: number; linhas: string[] };
 type Playback = { label: string; url: string };
@@ -38,6 +39,11 @@ export default function CanticosPage() {
   const [filterCat, setFilterCat] = useState<string>("");
   const [filterMinistro, setFilterMinistro] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [playbackIdx, setPlaybackIdx] = useState<number>(0);
+
+  useEffect(() => {
+    setPlaybackIdx(0);
+  }, [openId]);
 
   useEffect(() => {
     (async () => {
@@ -265,21 +271,30 @@ export default function CanticosPage() {
 
             {(open.playbacks?.length ?? 0) > 0 && (
               <div>
-                <div className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase mb-2">Playbacks</div>
-                <div className="flex flex-wrap gap-2">
-                  {open.playbacks.map((p, i) => (
-                    <a
-                      key={i}
-                      href={p.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-9 px-3 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <Play className="w-3.5 h-3.5" /> {p.label}
-                      <ExternalLink className="w-3 h-3 opacity-70" />
-                    </a>
-                  ))}
-                </div>
+                <div className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase mb-2">Playback</div>
+                {open.playbacks.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {open.playbacks.map((p, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPlaybackIdx(i)}
+                        className={`h-7 px-2.5 rounded-full text-xs font-medium border transition ${
+                          i === playbackIdx
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-muted))]"
+                        }`}
+                      >
+                        {p.label || `Playback ${i + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <HarpaMiniPlayer
+                  key={`${open.id}-${playbackIdx}`}
+                  number={open.numero}
+                  title={open.titulo}
+                  videoUrl={open.playbacks[playbackIdx]?.url ?? null}
+                />
               </div>
             )}
 

@@ -277,6 +277,25 @@ const HarpaPage = () => {
   // For the currently-open hymn, resolve the admin YouTube URL if in a culto
   const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
 
+  // Navigation boundaries — inside a culto, boundaries follow the curated
+  // sequence; otherwise they follow the global hymn list.
+  const cultoIdx =
+    selected && activeCulto && activeSequence.length > 0
+      ? activeSequence.indexOf(selected.number)
+      : -1;
+  const atFirst =
+    cultoIdx >= 0
+      ? cultoIdx === 0
+      : selected
+      ? hinos.findIndex((h) => h.number === selected.number) === 0
+      : true;
+  const atLast =
+    cultoIdx >= 0
+      ? cultoIdx === activeSequence.length - 1
+      : selected
+      ? hinos.findIndex((h) => h.number === selected.number) === hinos.length - 1
+      : true;
+
   // In presenter, when audio ends, jump to the next hino of the culto sequence
   const presenterVideoUrl = presenting ? cultoUrlMap.get(presenting.number) ?? null : null;
   const advancePresenterFromCulto = () => {

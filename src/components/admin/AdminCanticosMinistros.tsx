@@ -94,7 +94,7 @@ export default function AdminCanticosMinistros() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="Nome do ministro"
-          className="flex-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+          className="flex-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
           onKeyDown={(e) => e.key === "Enter" && add()}
         />
         <button
@@ -114,8 +114,8 @@ export default function AdminCanticosMinistros() {
       ) : (
         <ul className="space-y-2">
           {list.map((m, idx) => (
-            <li key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">
-              <button onClick={() => setFoto(m)} className="w-10 h-10 rounded-full bg-[hsl(var(--dark-hover-strong))] flex items-center justify-center overflow-hidden shrink-0">
+            <li key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">
+              <button onClick={() => setFoto(m)} className="w-10 h-10 rounded-full bg-[hsl(var(--dark-card-hover))] flex items-center justify-center overflow-hidden shrink-0">
                 {m.foto_url ? (
                   <img src={m.foto_url} alt={m.nome} className="w-full h-full object-cover" />
                 ) : (
@@ -130,10 +130,10 @@ export default function AdminCanticosMinistros() {
                 Ativo
               </label>
               <div className="flex items-center gap-1">
-                <button onClick={() => move(idx, -1)} disabled={idx === 0} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover-strong))] disabled:opacity-30">
+                <button onClick={() => move(idx, -1)} disabled={idx === 0} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-card-hover))] disabled:opacity-30">
                   <ArrowUp className="w-4 h-4" />
                 </button>
-                <button onClick={() => move(idx, 1)} disabled={idx === list.length - 1} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover-strong))] disabled:opacity-30">
+                <button onClick={() => move(idx, 1)} disabled={idx === list.length - 1} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-card-hover))] disabled:opacity-30">
                   <ArrowDown className="w-4 h-4" />
                 </button>
                 <button onClick={() => remove(m.id)} className="p-1.5 rounded-md text-red-400 hover:bg-red-500/10">

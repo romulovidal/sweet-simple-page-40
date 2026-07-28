@@ -235,13 +235,13 @@ export default function AdminCanticos() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por número, título ou letra…"
-            className="w-full h-10 pl-9 pr-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+            className="w-full h-10 pl-9 pr-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
           />
         </div>
         <select
           value={filterCat}
           onChange={(e) => setFilterCat(e.target.value)}
-          className="h-10 px-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+          className="h-10 px-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
         >
           <option value="">Todas categorias</option>
           {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -264,7 +264,7 @@ export default function AdminCanticos() {
       ) : (
         <ul className="space-y-2">
           {filtered.map((c, idx) => (
-            <li key={c.id} className="p-3 rounded-xl bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">
+            <li key={c.id} className="p-3 rounded-xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                   {c.numero}
@@ -279,10 +279,10 @@ export default function AdminCanticos() {
                   </div>
                 </button>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => reordenar(idx, -1)} disabled={idx === 0} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover-strong))] disabled:opacity-30">
+                  <button onClick={() => reordenar(idx, -1)} disabled={idx === 0} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-card-hover))] disabled:opacity-30">
                     <ArrowUp className="w-4 h-4" />
                   </button>
-                  <button onClick={() => reordenar(idx, 1)} disabled={idx === filtered.length - 1} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover-strong))] disabled:opacity-30">
+                  <button onClick={() => reordenar(idx, 1)} disabled={idx === filtered.length - 1} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-card-hover))] disabled:opacity-30">
                     <ArrowDown className="w-4 h-4" />
                   </button>
                   <button onClick={() => remover(c)} className="p-1.5 rounded-md text-red-400 hover:bg-red-500/10">
@@ -342,12 +342,12 @@ function EditorModal(props: {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-3xl max-h-[90vh] bg-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl border border-[hsl(var(--dark-hover-strong))] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--dark-hover-strong))] shrink-0">
+      <div className="w-full sm:max-w-3xl max-h-[90vh] bg-[hsl(var(--dark-card))] rounded-t-2xl sm:rounded-2xl border border-[hsl(var(--dark-card-hover))] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--dark-card-hover))] shrink-0">
           <h3 className="text-lg font-semibold">
             {editing.id ? `Editar cântico #${(editing as any).numero}` : "Novo cântico"}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover))]">
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-card))]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -358,7 +358,7 @@ function EditorModal(props: {
             <input
               value={editing.titulo || ""}
               onChange={(e) => setEditing({ ...editing, titulo: e.target.value })}
-              className="w-full mt-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+              className="w-full mt-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
             />
           </div>
 
@@ -378,7 +378,7 @@ function EditorModal(props: {
               value={editing.letra_raw || ""}
               onChange={(e) => setEditing({ ...editing, letra_raw: e.target.value })}
               rows={8}
-              className="w-full p-3 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm font-mono"
+              className="w-full p-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm font-mono"
               placeholder={"Cole a letra aqui...\n\nVerso 1\nlinha 1\nlinha 2\n\nCoro\nlinha 1\nlinha 2"}
             />
           </div>
@@ -416,7 +416,7 @@ function EditorModal(props: {
               <select
                 value={editing.categoria || ""}
                 onChange={(e) => setEditing({ ...editing, categoria: e.target.value || null })}
-                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
               >
                 <option value="">—</option>
                 {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -428,7 +428,7 @@ function EditorModal(props: {
                 value={editing.tom || ""}
                 onChange={(e) => setEditing({ ...editing, tom: e.target.value || null })}
                 placeholder="ex: G, Am"
-                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
               />
             </div>
             <div>
@@ -438,7 +438,7 @@ function EditorModal(props: {
                 min={0} max={12}
                 value={editing.capotraste ?? ""}
                 onChange={(e) => setEditing({ ...editing, capotraste: e.target.value ? Number(e.target.value) : null })}
-                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
               />
             </div>
             <div>
@@ -447,7 +447,7 @@ function EditorModal(props: {
                 value={editing.referencia_biblica || ""}
                 onChange={(e) => setEditing({ ...editing, referencia_biblica: e.target.value || null })}
                 placeholder="Sl 23"
-                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-sm"
+                className="w-full mt-1 h-10 px-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm"
               />
             </div>
           </div>
@@ -461,7 +461,7 @@ function EditorModal(props: {
                   <button
                     key={m}
                     onClick={() => toggleMomento(m)}
-                    className={`px-2.5 h-7 rounded-full text-xs border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-[hsl(var(--dark-hover))] border-[hsl(var(--dark-hover-strong))]"}`}
+                    className={`px-2.5 h-7 rounded-full text-xs border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))]"}`}
                   >
                     {m}
                   </button>
@@ -482,7 +482,7 @@ function EditorModal(props: {
                     <button
                       key={m.id}
                       onClick={() => toggleMinistro(m.id)}
-                      className={`px-2.5 h-7 rounded-full text-xs border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-[hsl(var(--dark-hover))] border-[hsl(var(--dark-hover-strong))]"}`}
+                      className={`px-2.5 h-7 rounded-full text-xs border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))]"}`}
                     >
                       {m.nome}
                     </button>
@@ -497,7 +497,7 @@ function EditorModal(props: {
               <label className="text-xs font-medium text-[hsl(var(--dark-muted))]">Playbacks</label>
               <button
                 onClick={addPlayback}
-                className="h-7 px-2 rounded-md bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-xs flex items-center gap-1"
+                className="h-7 px-2 rounded-md bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-xs flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Adicionar
               </button>
@@ -512,7 +512,7 @@ function EditorModal(props: {
                       value={p.label}
                       onChange={(e) => updatePlayback(i, { label: e.target.value })}
                       placeholder="Rótulo"
-                      className="w-28 h-9 px-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-xs"
+                      className="w-28 h-9 px-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-xs"
                     />
                     <div className="flex-1 relative">
                       <Link2 className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--dark-muted))]" />
@@ -520,7 +520,7 @@ function EditorModal(props: {
                         value={p.url}
                         onChange={(e) => updatePlayback(i, { url: e.target.value })}
                         placeholder="URL do YouTube ou MP3"
-                        className="w-full h-9 pl-8 pr-2 rounded-lg bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))] text-xs"
+                        className="w-full h-9 pl-8 pr-2 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-xs"
                       />
                     </div>
                     <button onClick={() => removePlayback(i)} className="p-1.5 rounded-md text-red-400 hover:bg-red-500/10">
@@ -542,8 +542,8 @@ function EditorModal(props: {
           </label>
         </div>
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-[hsl(var(--dark-hover-strong))] shrink-0">
-          <button onClick={onClose} className="h-10 px-4 rounded-lg text-sm bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]">
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-[hsl(var(--dark-card-hover))] shrink-0">
+          <button onClick={onClose} className="h-10 px-4 rounded-lg text-sm bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">
             Cancelar
           </button>
           <button

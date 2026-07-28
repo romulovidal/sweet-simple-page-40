@@ -83,7 +83,7 @@ export default function CanticosPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <PageHead title="Cânticos" description="Repertório de cânticos com playbacks" />
+      <PageHead title="Cânticos" description="Repertório de cânticos com playbacks" path="/canticos" />
 
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-[hsl(var(--dark-hover-strong))]">
         <div className="flex items-center gap-3 p-4">

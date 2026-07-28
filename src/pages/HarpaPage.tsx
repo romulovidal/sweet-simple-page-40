@@ -259,9 +259,11 @@ const HarpaPage = () => {
           if (next) {
             setAutoPlayNext(false);
             setSelected(next);
-            return;
           }
         }
+        // Always return when inside a culto — never fall through to the
+        // global hymn list, otherwise navigation escapes the curated set.
+        return;
       }
     }
     const idx = hinos.findIndex((h) => h.number === selected.number);

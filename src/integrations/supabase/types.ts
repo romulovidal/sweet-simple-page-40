@@ -813,6 +813,126 @@ export type Database = {
         }
         Relationships: []
       }
+      canticos: {
+        Row: {
+          capotraste: number | null
+          categoria: string | null
+          created_at: string
+          created_by: string | null
+          historico_execucao: Json
+          id: string
+          letra_json: Json
+          letra_raw: string
+          momentos_sugeridos: string[]
+          numero: number
+          playbacks: Json
+          publicado: boolean
+          referencia_biblica: string | null
+          titulo: string
+          tom: string | null
+          updated_at: string
+        }
+        Insert: {
+          capotraste?: number | null
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          historico_execucao?: Json
+          id?: string
+          letra_json?: Json
+          letra_raw: string
+          momentos_sugeridos?: string[]
+          numero: number
+          playbacks?: Json
+          publicado?: boolean
+          referencia_biblica?: string | null
+          titulo: string
+          tom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capotraste?: number | null
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          historico_execucao?: Json
+          id?: string
+          letra_json?: Json
+          letra_raw?: string
+          momentos_sugeridos?: string[]
+          numero?: number
+          playbacks?: Json
+          publicado?: boolean
+          referencia_biblica?: string | null
+          titulo?: string
+          tom?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      canticos_ministros: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          foto_url: string | null
+          id: string
+          nome: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          foto_url?: string | null
+          id?: string
+          nome: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          foto_url?: string | null
+          id?: string
+          nome?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      canticos_ministros_link: {
+        Row: {
+          cantico_id: string
+          created_at: string
+          ministro_id: string
+        }
+        Insert: {
+          cantico_id: string
+          created_at?: string
+          ministro_id: string
+        }
+        Update: {
+          cantico_id?: string
+          created_at?: string
+          ministro_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canticos_ministros_link_cantico_id_fkey"
+            columns: ["cantico_id"]
+            isOneToOne: false
+            referencedRelation: "canticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canticos_ministros_link_ministro_id_fkey"
+            columns: ["ministro_id"]
+            isOneToOne: false
+            referencedRelation: "canticos_ministros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       culto_reminders: {
         Row: {
           created_at: string
@@ -1586,6 +1706,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      next_cantico_numero: { Args: never; Returns: number }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user"

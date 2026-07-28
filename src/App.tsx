@@ -35,6 +35,7 @@ import AtisPage from "@/pages/AtisPage";
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
 import HarpaPage from "@/pages/HarpaPage";
+import CanticosPage from "@/pages/CanticosPage";
 import VerseShareRedirect from "@/pages/VerseShareRedirect";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
@@ -78,6 +79,7 @@ const AppContent = () => {
             <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
             <Route path="/harpa" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/harpa/:number" element={<PageTransition><HarpaPage /></PageTransition>} />
+            <Route path="/canticos" element={<PageTransition><CanticosPage /></PageTransition>} />
             <Route path="/v/:slug" element={<VerseShareRedirect />} />
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />

@@ -259,9 +259,11 @@ const HarpaPage = () => {
           if (next) {
             setAutoPlayNext(false);
             setSelected(next);
-            return;
           }
         }
+        // Always return when inside a culto — never fall through to the
+        // global hymn list, otherwise navigation escapes the curated set.
+        return;
       }
     }
     const idx = hinos.findIndex((h) => h.number === selected.number);
@@ -274,6 +276,25 @@ const HarpaPage = () => {
 
   // For the currently-open hymn, resolve the admin YouTube URL if in a culto
   const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
+
+  // Navigation boundaries — inside a culto, boundaries follow the curated
+  // sequence; otherwise they follow the global hymn list.
+  const cultoIdx =
+    selected && activeCulto && activeSequence.length > 0
+      ? activeSequence.indexOf(selected.number)
+      : -1;
+  const atFirst =
+    cultoIdx >= 0
+      ? cultoIdx === 0
+      : selected
+      ? hinos.findIndex((h) => h.number === selected.number) === 0
+      : true;
+  const atLast =
+    cultoIdx >= 0
+      ? cultoIdx === activeSequence.length - 1
+      : selected
+      ? hinos.findIndex((h) => h.number === selected.number) === hinos.length - 1
+      : true;
 
   // In presenter, when audio ends, jump to the next hino of the culto sequence
   const presenterVideoUrl = presenting ? cultoUrlMap.get(presenting.number) ?? null : null;
@@ -645,7 +666,7 @@ const HarpaPage = () => {
                   onClick={() => goToHymn(-1)}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
                   aria-label="Hino anterior"
-                  disabled={hinos.findIndex((h) => h.number === selected.number) === 0}
+                  disabled={atFirst}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -653,7 +674,7 @@ const HarpaPage = () => {
                   onClick={() => goToHymn(1)}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card-hover))] active:scale-95 transition disabled:opacity-40"
                   aria-label="Próximo hino"
-                  disabled={hinos.findIndex((h) => h.number === selected.number) === hinos.length - 1}
+                  disabled={atLast}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -729,14 +750,14 @@ const HarpaPage = () => {
             <div className="flex items-center justify-between pt-6 border-t border-[hsl(var(--dark-card))]">
               <button
                 onClick={() => goToHymn(-1)}
-                disabled={hinos.findIndex((h) => h.number === selected.number) === 0}
+                disabled={atFirst}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] disabled:opacity-40 transition"
               >
                 <ChevronLeft className="w-4 h-4" /> Anterior
               </button>
               <button
                 onClick={() => goToHymn(1)}
-                disabled={hinos.findIndex((h) => h.number === selected.number) === hinos.length - 1}
+                disabled={atLast}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card))] disabled:opacity-40 transition"
               >
                 Próximo <ChevronRight className="w-4 h-4" />

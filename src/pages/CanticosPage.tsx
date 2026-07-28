@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Search, Music2, Loader2, Play, ExternalLink, Tag, User } from "lucide-react";
+import { ArrowLeft, Search, Music2, Loader2, Play, ExternalLink, Tag, User, Settings, BookOpen, HandHeart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHead from "@/components/PageHead";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import AdminCanticos from "@/components/admin/AdminCanticos";
+import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 
 type LetraBloco = { tipo: "verso" | "refrao" | "ponte"; numero?: number; linhas: string[] };
 type Playback = { label: string; url: string };
@@ -24,6 +27,8 @@ const normalize = (s: string) =>
 
 export default function CanticosPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
+  const [adminView, setAdminView] = useState<null | "canticos" | "ministros">(null);
   const [list, setList] = useState<Cantico[]>([]);
   const [ministros, setMinistros] = useState<Ministro[]>([]);
   const [linksByCantico, setLinksByCantico] = useState<Record<string, string[]>>({});
@@ -81,6 +86,44 @@ export default function CanticosPage() {
   const open = list.find((c) => c.id === openId) || null;
   const openMinistros = open ? (linksByCantico[open.id] || []).map((id) => ministros.find((m) => m.id === id)?.nome).filter(Boolean) : [];
 
+  if (isAdmin && adminView) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <PageHead title="Cânticos — Admin" description="Gestão de cânticos" path="/canticos" />
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-[hsl(var(--dark-hover-strong))]">
+          <div className="flex items-center gap-3 p-4">
+            <button onClick={() => setAdminView(null)} className="p-1.5 rounded-md hover:bg-[hsl(var(--dark-hover))]">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 flex-1">
+              <Settings className="w-5 h-5 text-primary" />
+              <h1 className="text-lg font-semibold">
+                {adminView === "canticos" ? "Gerenciar Cânticos" : "Gerenciar Ministros"}
+              </h1>
+            </div>
+          </div>
+          <div className="flex gap-2 px-4 pb-3">
+            <button
+              onClick={() => setAdminView("canticos")}
+              className={`h-9 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 ${adminView === "canticos" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]"}`}
+            >
+              <BookOpen className="w-3.5 h-3.5" /> Cânticos
+            </button>
+            <button
+              onClick={() => setAdminView("ministros")}
+              className={`h-9 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 ${adminView === "ministros" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-hover))] border border-[hsl(var(--dark-hover-strong))]"}`}
+            >
+              <HandHeart className="w-3.5 h-3.5" /> Ministros
+            </button>
+          </div>
+        </div>
+        <div className="p-4">
+          {adminView === "canticos" ? <AdminCanticos /> : <AdminCanticosMinistros />}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <PageHead title="Cânticos" description="Repertório de cânticos com playbacks" path="/canticos" />
@@ -94,6 +137,15 @@ export default function CanticosPage() {
             <Music2 className="w-5 h-5 text-primary" />
             <h1 className="text-lg font-semibold">Cânticos</h1>
           </div>
+          {isAdmin && (
+            <button
+              onClick={() => setAdminView("canticos")}
+              className="h-9 px-3 rounded-lg bg-primary/10 text-primary text-xs font-medium flex items-center gap-1.5"
+              title="Gerenciar"
+            >
+              <Settings className="w-4 h-4" /> Gerenciar
+            </button>
+          )}
         </div>
 
         <div className="px-4 pb-3 space-y-2">

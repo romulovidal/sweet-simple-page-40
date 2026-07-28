@@ -59,8 +59,6 @@ const ADMIN_SECTIONS = [
       { id: "verse", label: "Versículo do Dia", desc: "Push diário", icon: BookMarked },
       { id: "cultos", label: "Escala de Cultos", desc: "Lembretes de culto", icon: Calendar },
       { id: "culto-selections", label: "Seleção de Hinos", desc: "Monta hinário do culto com playback", icon: Music2 },
-      { id: "canticos-ministros", label: "Ministros", desc: "Cadastro de ministros dos cânticos", icon: HandHeart },
-      { id: "canticos", label: "Cânticos", desc: "Repertório paralelo à Harpa (IA Groq)", icon: Music2 },
     ],
   },
   {

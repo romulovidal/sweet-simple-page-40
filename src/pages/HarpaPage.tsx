@@ -367,6 +367,14 @@ const HarpaPage = () => {
               {loading ? "Carregando…" : empty ? "Hinário indisponível" : `${hinos.length} hinos`}
             </p>
           </div>
+          <button
+            onClick={() => navigate("/canticos")}
+            className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5 shrink-0"
+            aria-label="Abrir Cânticos"
+          >
+            <Music2 className="w-3.5 h-3.5" />
+            Cânticos
+          </button>
         </div>
 
         {!empty && !loading && (

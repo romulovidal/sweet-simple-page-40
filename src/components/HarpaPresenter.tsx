@@ -24,14 +24,23 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }
     const arr: { kind: "title" | "chorus" | "verse"; index?: number; lines: string[] }[] = [
       { kind: "title", lines: [hino.title] },
     ];
-    const chorus = hino.strophes.find((s) => s.chorus);
-    for (const s of hino.strophes) {
-      if (s.chorus) continue;
-      arr.push({ kind: "verse", index: s.index, lines: s.lines });
-      if (chorus) arr.push({ kind: "chorus", lines: chorus.lines });
+    const choruses = hino.strophes.filter((s) => s.chorus);
+    if (choruses.length > 1) {
+      // Hinos com coros diferentes por estrofe: respeita a ordem original.
+      for (const s of hino.strophes) {
+        if (s.chorus) arr.push({ kind: "chorus", lines: s.lines });
+        else arr.push({ kind: "verse", index: s.index, lines: s.lines });
+      }
+    } else {
+      const chorus = choruses[0];
+      for (const s of hino.strophes) {
+        if (s.chorus) continue;
+        arr.push({ kind: "verse", index: s.index, lines: s.lines });
+        if (chorus) arr.push({ kind: "chorus", lines: chorus.lines });
+      }
+      // Se o hino for só coro (raro), garante que apareça
+      if (arr.length === 1 && chorus) arr.push({ kind: "chorus", lines: chorus.lines });
     }
-    // Se o hino for só coro (raro), garante que apareça
-    if (arr.length === 1 && chorus) arr.push({ kind: "chorus", lines: chorus.lines });
     return arr;
   }, [hino]);
 

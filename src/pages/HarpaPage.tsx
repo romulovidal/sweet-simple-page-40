@@ -230,10 +230,17 @@ const HarpaPage = () => {
   const cultoUrlMap = useMemo(() => {
     const m = new Map<number, string | null>();
     if (activeCulto) {
-      for (const it of activeCulto.items) m.set(it.hino_number, it.youtube_url || null);
+      for (const it of activeCulto.items) {
+        let url = it.youtube_url || null;
+        if (!url && isCanticoRef(it.hino_number)) {
+          const c = canticos.find((x) => x.numero === refDisplayNumber(it.hino_number));
+          url = c?.playbacks?.[0]?.url || null;
+        }
+        m.set(it.hino_number, url);
+      }
     }
     return m;
-  }, [activeCulto]);
+  }, [activeCulto, canticos]);
 
   const activeSequence = useMemo(
     () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),

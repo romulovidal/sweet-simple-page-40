@@ -11,6 +11,10 @@ type Props = {
   onEnded?: () => void;
   /** Optional explicit YouTube URL (admin-curated playback). When set, skips the search. */
   videoUrl?: string | null;
+  /** Called ~4x/s with the playback position in seconds (only while playing). */
+  onTime?: (seconds: number) => void;
+  /** Receives a seek function so parents can jump to a marked cue. */
+  onControls?: (controls: { seek: (seconds: number) => void } | null) => void;
 };
 
 type SearchResult = { videoId: string; title: string; channel: string };
@@ -29,18 +33,49 @@ function extractYouTubeId(url: string | null | undefined): string | null {
   }
 }
 
-export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, videoUrl }: Props) {
+export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, videoUrl, onTime, onControls }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
   const [found, setFound] = useState<SearchResult | null>(null);
   const playerRef = useRef<any>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onEndedRef = useRef<typeof onEnded>(onEnded);
+  const onTimeRef = useRef<typeof onTime>(onTime);
   const foundRef = useRef<{ number: number; video: SearchResult } | null>(null);
   const numberRef = useRef<number>(number);
   const videoUrlRef = useRef<string | null | undefined>(videoUrl);
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
+  useEffect(() => {
+    onTimeRef.current = onTime;
+  }, [onTime]);
+
+  // Expose a seek handle to the parent (used to jump to marked cues).
+  useEffect(() => {
+    onControls?.({
+      seek: (s: number) => {
+        try {
+          playerRef.current?.seekTo?.(Math.max(0, s), true);
+          playerRef.current?.playVideo?.();
+        } catch {}
+      },
+    });
+    return () => onControls?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Emite o tempo corrente enquanto toca — base da sincronia com as estrofes.
+  useEffect(() => {
+    if (state !== "playing") return;
+    const id = window.setInterval(() => {
+      try {
+        const t = playerRef.current?.getCurrentTime?.();
+        if (typeof t === "number") onTimeRef.current?.(t);
+      } catch {}
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [state]);
+
   useEffect(() => {
     numberRef.current = number;
   }, [number]);

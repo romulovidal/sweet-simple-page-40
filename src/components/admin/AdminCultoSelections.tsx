@@ -48,6 +48,8 @@ type Schedule = {
 
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+type PlaybackLib = Record<number, { youtube_url: string | null; cues: (number | null)[] | null }>;
+
 const todayISO = () => {
   const d = new Date();
   const off = d.getTimezoneOffset();

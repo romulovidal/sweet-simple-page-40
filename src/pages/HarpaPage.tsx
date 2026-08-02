@@ -816,6 +816,7 @@ const HarpaPage = () => {
                 title={selected.title}
                 autoPlay={autoPlayNext}
                 videoUrl={currentVideoUrl}
+                onTime={(t) => setPlayTime(t)}
                 onEnded={() => {
                   // In a culto: advance through the curated sequence first
                   if (activeCulto && activeSequence.length > 0) {

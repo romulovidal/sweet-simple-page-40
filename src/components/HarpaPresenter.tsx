@@ -46,8 +46,15 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
     if (hasCues) setAudioOn(true);
   }, [hasCues, hino.number]);
 
-  const next = useCallback(() => setStep((s) => Math.min(slides.length - 1, s + 1)), [slides.length]);
-  const prev = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+  // Navegação manual desliga a sincronia até o operador reativar.
+  const next = useCallback(() => {
+    setFollowCues(false);
+    setStep((s) => Math.min(slides.length - 1, s + 1));
+  }, [slides.length]);
+  const prev = useCallback(() => {
+    setFollowCues(false);
+    setStep((s) => Math.max(0, s - 1));
+  }, []);
 
   // Fullscreen + travar paisagem. Robusto para iOS (sem fullscreen/lock) e
   // Android (fullscreen precisa vir ANTES do lock).

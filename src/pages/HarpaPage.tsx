@@ -203,6 +203,22 @@ const HarpaPage = () => {
     [activeCulto]
   );
 
+  const shareCulto = async (c: CultoSelection) => {
+    const url = `${window.location.origin}/harpa/culto/${c.id}`;
+    const lista = c.items.map((it) => `• Hino ${it.hino_number}`).join("\n");
+    const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: c.title, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      toast.success("Link da seleção copiado!");
+    } catch {
+      /* cancelado pelo usuário */
+    }
+  };
+
   // Abrir seleção de culto automaticamente a partir da URL /harpa/culto/:id
   useEffect(() => {
     if (!routeCultoId || activeCulto?.id === routeCultoId) return;

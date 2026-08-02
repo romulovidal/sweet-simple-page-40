@@ -928,6 +928,18 @@ const HarpaPage = () => {
         </div>
       )}
 
+      {/* Botão flutuante de edição (somente admin, com hino aberto) */}
+      {selected && isAdmin && !presenting && !editing && (
+        <button
+          onClick={() => setEditing(selected)}
+          className="fixed z-[60] bottom-24 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition"
+          aria-label="Editar hino"
+          title="Editar hino"
+        >
+          <Pencil className="w-5 h-5" />
+        </button>
+      )}
+
       {presenting && (
         <HarpaPresenter
           hino={presenting}

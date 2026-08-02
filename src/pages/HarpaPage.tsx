@@ -348,6 +348,7 @@ const HarpaPage = () => {
 
   // For the currently-open hymn, resolve the admin YouTube URL if in a culto
   const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
+  const currentCues = selected ? cultoCuesMap.get(selected.number) ?? null : null;
 
   // Navigation boundaries — inside a culto, boundaries follow the curated
   // sequence; otherwise they follow the global hymn list.

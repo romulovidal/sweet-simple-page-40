@@ -125,6 +125,22 @@ export default function CanticosPage() {
     })();
   }, []);
 
+  // Biblioteca de playbacks/marcações salvos (mesma usada nas seleções de culto)
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("harpa_playbacks")
+        .select("hino_number, youtube_url, cues")
+        .gte("hino_number", 100000);
+      if (!data) return;
+      const map: Record<number, { youtube_url: string | null; cues: (number | null)[] | null }> = {};
+      (data as any[]).forEach((r) => {
+        map[r.hino_number] = { youtube_url: r.youtube_url, cues: r.cues };
+      });
+      setLib(map);
+    })();
+  }, []);
+
   const categorias = useMemo(() => {
     const s = new Set<string>();
     list.forEach((c) => c.categoria && s.add(c.categoria));

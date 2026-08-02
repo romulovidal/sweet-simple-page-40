@@ -863,6 +863,7 @@ const HarpaPage = () => {
                 title={selected.title}
                 autoPlay={autoPlayNext}
                 videoUrl={currentVideoUrl}
+                searchable={selected.kind !== "cantico"}
                 onTime={(t) => setPlayTime(t)}
                 onEnded={() => {
                   // In a culto: advance through the curated sequence first
@@ -990,6 +991,7 @@ const HarpaPage = () => {
         <HarpaPresenter
           hino={presenting}
           videoUrl={presenterVideoUrl}
+          searchable={presenting.kind !== "cantico"}
           cues={cultoCuesMap.get(presenting.number) ?? null}
           onAudioEnded={advancePresenterFromCulto}
           onClose={() => setPresenting(null)}

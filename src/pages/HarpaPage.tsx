@@ -210,6 +210,17 @@ const HarpaPage = () => {
     [activeCulto]
   );
 
+  // Marcações (segundos por estrofe) definidas pelo admin no culto
+  const cultoCuesMap = useMemo(() => {
+    const m = new Map<number, (number | null)[]>();
+    if (activeCulto) {
+      for (const it of activeCulto.items) {
+        if (it.cues && it.cues.some((c) => typeof c === "number")) m.set(it.hino_number, it.cues);
+      }
+    }
+    return m;
+  }, [activeCulto]);
+
   const shareCulto = async (c: CultoSelection) => {
     const fallback = `${window.location.origin}/harpa/culto/${c.id}`;
     const url = await createShortCultoLink(c.id, fallback);

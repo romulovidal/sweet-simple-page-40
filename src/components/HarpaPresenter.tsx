@@ -236,6 +236,17 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
           {hino.number}. {hino.title}
         </span>
         <div className="flex items-center gap-4">
+          {hasCues && (
+            <button
+              onClick={() => setFollowCues((v) => !v)}
+              className={`text-xs px-3 py-1 rounded-full transition ${
+                followCues ? "bg-primary/25 text-primary" : "bg-white/10 hover:bg-white/20"
+              }`}
+              title="Avanço automático de estrofe pelas marcações do culto"
+            >
+              {followCues ? "🎯 Sincronizado" : "Sincronizar"}
+            </button>
+          )}
           <button
             onClick={() => setAudioOn((v) => !v)}
             className="text-xs px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 transition"
@@ -265,6 +276,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
             title={hino.title}
             autoPlay
             videoUrl={videoUrl ?? undefined}
+            onTime={handleTime}
             onEnded={() => {
               try {
                 onAudioEnded?.();

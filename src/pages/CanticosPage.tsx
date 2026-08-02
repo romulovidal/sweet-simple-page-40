@@ -517,11 +517,20 @@ export default function CanticosPage() {
             {(open.letra_json || []).map((b, i) => (
               <div
                 key={i}
-                className={
+                ref={(el) => {
+                  blockRefs.current[i] = el;
+                }}
+                className={`${
                   b.tipo === "refrao"
                     ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
                     : ""
-                }
+                } ${
+                  activeBlockIdx === i
+                    ? "rounded-xl ring-2 ring-primary/60 bg-primary/5 px-2 py-2 transition"
+                    : activeBlockIdx >= 0
+                    ? "opacity-50 transition"
+                    : ""
+                }`}
               >
                 {b.tipo === "verso" && (
                   <span className="block text-xs text-primary/80 font-semibold mb-1">

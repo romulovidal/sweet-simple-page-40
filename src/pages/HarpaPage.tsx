@@ -649,6 +649,16 @@ const HarpaPage = () => {
               >
                 <Share2 className="w-4 h-4" />
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setEditing(selected)}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                  aria-label="Editar hino"
+                  title="Editar hino"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Controles: tamanho da fonte + navegação */}

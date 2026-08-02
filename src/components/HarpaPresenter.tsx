@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Maximize2, Rewind, FastForward } from "lucide-react";
 import type { HarpaHino } from "@/data/harpa";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
@@ -27,9 +27,33 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
   // Sequência de "telas": título + cada estrofe (com coro repetido entre estrofes)
   const slides = useMemo(() => buildHarpaSlides(hino), [hino]);
 
+  // Controle do player (seek) + último tempo conhecido do playback.
+  const controlsRef = useRef<{ seek: (s: number) => void } | null>(null);
+  const timeRef = useRef(0);
+  const handleControls = useCallback((c: { seek: (s: number) => void } | null) => {
+    controlsRef.current = c;
+  }, []);
+
+  const cueAt = useCallback(
+    (idx: number): number | null => {
+      const c = cues?.[idx];
+      return typeof c === "number" && c >= 0 ? c : null;
+    },
+    [cues]
+  );
+
+  /** Move o playback em segundos relativos (voltar/avançar manual). */
+  const nudge = useCallback((delta: number) => {
+    const t = Math.max(0, timeRef.current + delta);
+    timeRef.current = t;
+    controlsRef.current?.seek(t);
+    setFollowCues(true);
+  }, []);
+
   // Sincronia automática com o playback quando há marcações do culto.
   const handleTime = useCallback(
     (t: number) => {
+      timeRef.current = t;
       if (!hasCues || !followCues || !cues) return;
       const idx = slideIndexAt(cues, t);
       if (idx >= 0) setStep((s) => (s === idx ? s : idx));
@@ -47,15 +71,26 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
     if (hasCues) setAudioOn(true);
   }, [hasCues, hino.number]);
 
-  // Navegação manual desliga a sincronia até o operador reativar.
-  const next = useCallback(() => {
-    setFollowCues(false);
-    setStep((s) => Math.min(slides.length - 1, s + 1));
-  }, [slides.length]);
-  const prev = useCallback(() => {
-    setFollowCues(false);
-    setStep((s) => Math.max(0, s - 1));
-  }, []);
+  // Navegação manual: se a estrofe alvo tem marcação, leva o playback junto
+  // (permite voltar o hino para um ponto específico). Sem marcação, apenas
+  // troca a estrofe e desliga a sincronia.
+  const goTo = useCallback(
+    (target: number) => {
+      const idx = Math.max(0, Math.min(slides.length - 1, target));
+      const cue = cueAt(idx);
+      if (cue !== null && controlsRef.current) {
+        timeRef.current = cue;
+        controlsRef.current.seek(cue);
+        setFollowCues(true);
+      } else {
+        setFollowCues(false);
+      }
+      setStep(idx);
+    },
+    [slides.length, cueAt]
+  );
+  const next = useCallback(() => goTo(stepRef.current + 1), [goTo]);
+  const prev = useCallback(() => goTo(stepRef.current - 1), [goTo]);
 
   // Fullscreen + travar paisagem. Robusto para iOS (sem fullscreen/lock) e
   // Android (fullscreen precisa vir ANTES do lock).

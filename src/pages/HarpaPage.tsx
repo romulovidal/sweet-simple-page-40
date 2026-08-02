@@ -43,6 +43,12 @@ import {
 import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 import { createShortCultoLink } from "@/lib/cultoShare";
 import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
+import {
+  canticoToHino,
+  displayNumber as refDisplayNumber,
+  isCanticoRef,
+  type CanticoLite,
+} from "@/lib/canticoAdapt";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -90,6 +96,7 @@ const HarpaPage = () => {
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
+  const [canticos, setCanticos] = useState<CanticoLite[]>([]);
   const [editing, setEditing] = useState<HarpaHino | null>(null);
   const [playTime, setPlayTime] = useState(0);
   const [followCues, setFollowCues] = useState(true);

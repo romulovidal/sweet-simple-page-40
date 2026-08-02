@@ -14,13 +14,17 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Timer,
 } from "lucide-react";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
+import CultoCueMarker from "@/components/admin/CultoCueMarker";
 
 type CultoItem = {
   hino_number: number;
   youtube_url?: string | null;
   note?: string | null;
+  /** Marcações (segundos) por slide — sincroniza a letra com o playback. */
+  cues?: (number | null)[] | null;
 };
 
 type CultoSelection = {
@@ -292,6 +296,7 @@ function SelectionEditor({
   const [isActive, setIsActive] = useState(value.is_active);
   const [saving, setSaving] = useState(false);
   const [addNumber, setAddNumber] = useState("");
+  const [marking, setMarking] = useState<number | null>(null);
 
   const hinoMap = useMemo(() => {
     const m = new Map<number, HarpaHino>();
@@ -497,6 +502,21 @@ function SelectionEditor({
                         placeholder="URL do YouTube (playback) — opcional"
                         className="mt-2 w-full h-9 px-3 rounded-lg bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-xs focus:outline-none focus:border-primary/60"
                       />
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => setMarking(i)}
+                          disabled={!it.youtube_url || !h}
+                          className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-primary/15 text-primary text-[11px] font-semibold hover:bg-primary/25 disabled:opacity-40"
+                          title="Marcar o tempo de cada estrofe no playback"
+                        >
+                          <Timer className="w-3.5 h-3.5" /> Marcar estrofes
+                        </button>
+                        <span className="text-[10px] text-[hsl(var(--dark-muted))]">
+                          {it.cues && it.cues.some((c) => typeof c === "number")
+                            ? `${it.cues.filter((c) => typeof c === "number").length} marcações`
+                            : "sem marcações"}
+                        </span>
+                      </div>
                     </li>
                   );
                 })}
@@ -522,6 +542,16 @@ function SelectionEditor({
           </button>
         </div>
       </div>
+
+      {marking !== null && hinoMap.get(items[marking]?.hino_number) && (
+        <CultoCueMarker
+          hino={hinoMap.get(items[marking].hino_number)!}
+          youtubeUrl={items[marking].youtube_url}
+          cues={items[marking].cues}
+          onClose={() => setMarking(null)}
+          onSave={(cues) => updateItem(marking, { cues: cues.length ? cues : null })}
+        />
+      )}
     </div>
   );
 }

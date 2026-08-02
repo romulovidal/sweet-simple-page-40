@@ -42,6 +42,7 @@ import {
 } from "@/lib/harpaUserData";
 import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 import { createShortCultoLink } from "@/lib/cultoShare";
+import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -52,7 +53,12 @@ const MAX_FONT = 26;
 
 type TabKey = "todos" | "cultos" | "favoritos" | "historico" | "temas";
 
-type CultoItem = { hino_number: number; youtube_url?: string | null; note?: string | null };
+type CultoItem = {
+  hino_number: number;
+  youtube_url?: string | null;
+  note?: string | null;
+  cues?: (number | null)[] | null;
+};
 type CultoSelection = {
   id: string;
   title: string;
@@ -85,8 +91,11 @@ const HarpaPage = () => {
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
   const [editing, setEditing] = useState<HarpaHino | null>(null);
+  const [playTime, setPlayTime] = useState(0);
+  const [followCues, setFollowCues] = useState(true);
   const { isAdmin } = useIsAdmin();
   const readerRef = useRef<HTMLDivElement | null>(null);
+  const stropheRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (selected && readerRef.current) {
@@ -203,6 +212,17 @@ const HarpaPage = () => {
     () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),
     [activeCulto]
   );
+
+  // Marcações (segundos por estrofe) definidas pelo admin no culto
+  const cultoCuesMap = useMemo(() => {
+    const m = new Map<number, (number | null)[]>();
+    if (activeCulto) {
+      for (const it of activeCulto.items) {
+        if (it.cues && it.cues.some((c) => typeof c === "number")) m.set(it.hino_number, it.cues);
+      }
+    }
+    return m;
+  }, [activeCulto]);
 
   const shareCulto = async (c: CultoSelection) => {
     const fallback = `${window.location.origin}/harpa/culto/${c.id}`;
@@ -331,6 +351,26 @@ const HarpaPage = () => {
 
   // For the currently-open hymn, resolve the admin YouTube URL if in a culto
   const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
+  const currentCues = selected ? cultoCuesMap.get(selected.number) ?? null : null;
+
+  // Estrofe ativa segundo as marcações do culto (sincronia com o playback)
+  const activeStropheIdx = useMemo(() => {
+    if (!selected || !currentCues || !followCues) return -1;
+    const slides = buildHarpaSlides(selected);
+    const i = slideIndexAt(currentCues, playTime);
+    return i >= 0 ? slides[i]?.stropheIdx ?? -1 : -1;
+  }, [selected, currentCues, followCues, playTime]);
+
+  useEffect(() => {
+    setPlayTime(0);
+    setFollowCues(true);
+  }, [selected]);
+
+  useEffect(() => {
+    if (activeStropheIdx < 0) return;
+    const el = stropheRefs.current[activeStropheIdx];
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeStropheIdx]);
 
   // Navigation boundaries — inside a culto, boundaries follow the curated
   // sequence; otherwise they follow the global hymn list.
@@ -776,6 +816,7 @@ const HarpaPage = () => {
                 title={selected.title}
                 autoPlay={autoPlayNext}
                 videoUrl={currentVideoUrl}
+                onTime={(t) => setPlayTime(t)}
                 onEnded={() => {
                   // In a culto: advance through the curated sequence first
                   if (activeCulto && activeSequence.length > 0) {
@@ -806,14 +847,37 @@ const HarpaPage = () => {
             className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed"
             style={{ fontSize: `${fontSize}px` }}
           >
+            {currentCues && (
+              <button
+                onClick={() => setFollowCues((v) => !v)}
+                className={`w-full text-xs font-semibold py-2 rounded-xl transition ${
+                  followCues
+                    ? "bg-primary/15 text-primary"
+                    : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                }`}
+              >
+                {followCues
+                  ? "🎯 Acompanhando o playback"
+                  : "Ativar acompanhamento do playback"}
+              </button>
+            )}
             {selected.strophes.map((s, i) => (
               <div
                 key={i}
-                className={
+                ref={(el) => {
+                  stropheRefs.current[i] = el;
+                }}
+                className={`${
                   s.chorus
                     ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
                     : ""
-                }
+                } ${
+                  activeStropheIdx === i
+                    ? "rounded-xl ring-2 ring-primary/60 bg-primary/5 px-2 py-2 transition"
+                    : activeStropheIdx >= 0
+                    ? "opacity-50 transition"
+                    : ""
+                }`}
               >
                 {!s.chorus && s.index !== undefined && (
                   <span className="block text-xs text-primary/80 font-semibold mb-1">
@@ -868,6 +932,7 @@ const HarpaPage = () => {
         <HarpaPresenter
           hino={presenting}
           videoUrl={presenterVideoUrl}
+          cues={cultoCuesMap.get(presenting.number) ?? null}
           onAudioEnded={advancePresenterFromCulto}
           onClose={() => setPresenting(null)}
         />

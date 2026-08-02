@@ -204,7 +204,8 @@ const HarpaPage = () => {
   );
 
   const shareCulto = async (c: CultoSelection) => {
-    const url = `${window.location.origin}/harpa/culto/${c.id}`;
+    const fallback = `${window.location.origin}/harpa/culto/${c.id}`;
+    const url = await createShortCultoLink(c.id, fallback);
     const lista = c.items.map((it) => `• Hino ${it.hino_number}`).join("\n");
     const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
     try {

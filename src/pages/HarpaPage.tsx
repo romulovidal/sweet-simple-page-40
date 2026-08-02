@@ -507,16 +507,26 @@ const HarpaPage = () => {
               </p>
             </div>
             {tab === "cultos" && activeCulto && baseList.length > 0 && (
-              <button
-                onClick={() => {
-                  const first = baseList[0];
-                  if (first) setPresenting(first);
-                }}
-                className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
-              >
-                <Presentation className="w-3.5 h-3.5" />
-                Apresentar culto (auto-avança)
-              </button>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    const first = baseList[0];
+                    if (first) setPresenting(first);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
+                >
+                  <Presentation className="w-3.5 h-3.5" />
+                  Apresentar culto (auto-avança)
+                </button>
+                <button
+                  onClick={() => shareCulto(activeCulto)}
+                  aria-label="Compartilhar seleção do culto"
+                  className="px-3 flex items-center justify-center gap-1.5 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Compartilhar
+                </button>
+              </div>
             )}
             {tab === "historico" && history.length > 0 && (
               <button

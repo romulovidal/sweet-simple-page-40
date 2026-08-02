@@ -27,6 +27,8 @@ import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
 import type { HarpaHino } from "@/data/harpa";
+import { canticoRef, canticoToHino as adaptCantico } from "@/lib/canticoAdapt";
+import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
 import {
   getFavorites as getCanticoFavs,
   toggleFavorite as toggleCanticoFav,
@@ -34,7 +36,7 @@ import {
 import { toast } from "sonner";
 
 type LetraBloco = { tipo: "verso" | "refrao" | "ponte"; numero?: number; linhas: string[] };
-type Playback = { label: string; url: string };
+type Playback = { label: string; url: string; cues?: (number | null)[] | null };
 type Cantico = {
   id: string;
   numero: number;
@@ -55,14 +57,7 @@ const FONT_KEY = "canticos:font-size";
 const MIN_FONT = 14;
 const MAX_FONT = 26;
 
-function canticoToHino(c: Cantico): HarpaHino {
-  const strophes = (c.letra_json || []).map((b, i) => ({
-    chorus: b.tipo === "refrao",
-    index: b.tipo === "verso" ? b.numero ?? i + 1 : undefined,
-    lines: b.linhas,
-  }));
-  return { number: c.numero, title: c.titulo, strophes };
-}
+const canticoToHino = (c: Cantico): HarpaHino => adaptCantico(c);
 
 export default function CanticosPage() {
   const navigate = useNavigate();
@@ -84,10 +79,18 @@ export default function CanticosPage() {
   });
   const [favorites, setFavorites] = useState<string[]>(() => getCanticoFavs());
   const [presenting, setPresenting] = useState<Cantico | null>(null);
+  const [playTime, setPlayTime] = useState(0);
+  const [followCues, setFollowCues] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(false);
+  /** Biblioteca global de playbacks/marcações (compartilhada com a Harpa). */
+  const [lib, setLib] = useState<Record<number, { youtube_url: string | null; cues: (number | null)[] | null }>>({});
   const readerRef = useRef<HTMLDivElement | null>(null);
+  const blockRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     setPlaybackIdx(0);
+    setPlayTime(0);
+    setFollowCues(true);
     if (readerRef.current) readerRef.current.scrollTo({ top: 0, behavior: "auto" });
   }, [openId]);
 

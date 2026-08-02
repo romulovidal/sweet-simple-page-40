@@ -714,15 +714,15 @@ const HarpaPage = () => {
       {selected && (
         <div ref={readerRef} className="fixed inset-0 z-50 bg-[hsl(var(--dark-bg))] overflow-y-auto animate-fade-in">
           <header className="sticky top-0 z-10 bg-[hsl(var(--dark-bg))]/95 backdrop-blur border-b border-[hsl(var(--dark-card))]">
-            <div className="flex items-center gap-3 px-4 py-3 max-w-3xl mx-auto">
+            <div className="flex items-center gap-1.5 px-3 py-3 max-w-3xl mx-auto">
               <button
                 onClick={() => { setAutoPlayNext(false); setSelected(null); }}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Fechar"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
+              <span className="w-9 h-9 shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
                 {selected.number}
               </span>
               <div className="flex-1 min-w-0">
@@ -733,7 +733,7 @@ const HarpaPage = () => {
               </div>
               <button
                 onClick={() => handleToggleFav(selected.number)}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label={favorites.includes(selected.number) ? "Remover favorito" : "Adicionar favorito"}
               >
                 <Star
@@ -743,7 +743,7 @@ const HarpaPage = () => {
               </button>
               <button
                 onClick={() => setPresenting(selected)}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Modo apresentação"
                 title="Apresentar"
               >
@@ -751,7 +751,7 @@ const HarpaPage = () => {
               </button>
               <button
                 onClick={() => shareHymn(selected)}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                 aria-label="Compartilhar hino"
               >
                 <Share2 className="w-4 h-4" />
@@ -759,7 +759,7 @@ const HarpaPage = () => {
               {isAdmin && (
                 <button
                   onClick={() => setEditing(selected)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                  className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
                   aria-label="Editar hino"
                   title="Editar hino"
                 >

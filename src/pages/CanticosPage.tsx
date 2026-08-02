@@ -173,7 +173,42 @@ export default function CanticosPage() {
   const goToCantico = (delta: number) => {
     if (!open || openIdxInFiltered < 0) return;
     const next = filtered[openIdxInFiltered + delta];
-    if (next) setOpenId(next.id);
+    if (next) {
+      setAutoPlay(false);
+      setOpenId(next.id);
+    }
+  };
+
+  const savedLib = open ? lib[canticoRef(open.numero)] : undefined;
+  const currentUrl =
+    open?.playbacks?.[playbackIdx]?.url ?? savedLib?.youtube_url ?? null;
+  const currentCues = useMemo(() => {
+    const own = open?.playbacks?.[playbackIdx]?.cues;
+    const cues = own && own.length ? own : savedLib?.cues;
+    return cues && cues.some((c) => typeof c === "number") ? cues : null;
+  }, [open, playbackIdx, savedLib]);
+
+  /** Bloco da letra em destaque conforme as marcações do playback. */
+  const activeBlockIdx = useMemo(() => {
+    if (!open || !currentCues || !followCues) return -1;
+    const slides = buildHarpaSlides(canticoToHino(open));
+    const i = slideIndexAt(currentCues, playTime);
+    return i >= 0 ? slides[i]?.stropheIdx ?? -1 : -1;
+  }, [open, currentCues, followCues, playTime]);
+
+  useEffect(() => {
+    if (activeBlockIdx < 0) return;
+    blockRefs.current[activeBlockIdx]?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeBlockIdx]);
+
+  /** Ao terminar o playback, segue para o próximo cântico da lista. */
+  const handleAudioEnded = () => {
+    if (openIdxInFiltered < 0) return;
+    const next = filtered[openIdxInFiltered + 1];
+    if (next) {
+      setAutoPlay(true);
+      setOpenId(next.id);
+    }
   };
   const handleToggleFav = (id: string) => {
     const now = toggleCanticoFav(id);

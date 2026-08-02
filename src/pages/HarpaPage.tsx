@@ -91,8 +91,11 @@ const HarpaPage = () => {
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
   const [editing, setEditing] = useState<HarpaHino | null>(null);
+  const [playTime, setPlayTime] = useState(0);
+  const [followCues, setFollowCues] = useState(true);
   const { isAdmin } = useIsAdmin();
   const readerRef = useRef<HTMLDivElement | null>(null);
+  const stropheRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (selected && readerRef.current) {

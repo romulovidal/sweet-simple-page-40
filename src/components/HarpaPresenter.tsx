@@ -19,6 +19,10 @@ type Props = {
 // Ideal para púlpito/projetor. Navegação: setas, espaço, PageUp/PageDown, Esc.
 export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, cues }: Props) {
   const [step, setStep] = useState(0);
+  const stepRef = useRef(0);
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
   const [audioOn, setAudioOn] = useState(false);
   const hasCues = !!cues && cues.some((c) => typeof c === "number" && c >= 0);
   const [followCues, setFollowCues] = useState(true);

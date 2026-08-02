@@ -850,7 +850,7 @@ const HarpaPage = () => {
                     const idx = activeSequence.indexOf(selected.number);
                     const nextNum = idx >= 0 ? activeSequence[idx + 1] : undefined;
                     if (nextNum) {
-                      const next = hinos.find((h) => h.number === nextNum);
+                      const next = resolveItem(nextNum);
                       if (next) {
                         setAutoPlayNext(true);
                         setSelected(next);

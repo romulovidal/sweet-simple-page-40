@@ -314,6 +314,7 @@ function SelectionEditor({
   isNew,
   schedules,
   hinos,
+  canticos,
   lib,
   onClose,
   onSaved,
@@ -322,6 +323,7 @@ function SelectionEditor({
   isNew: boolean;
   schedules: Schedule[];
   hinos: HarpaHino[];
+  canticos: CanticoLite[];
   lib: PlaybackLib;
   onClose: () => void;
   onSaved: () => void;
@@ -333,6 +335,7 @@ function SelectionEditor({
   const [isActive, setIsActive] = useState(value.is_active);
   const [saving, setSaving] = useState(false);
   const [addNumber, setAddNumber] = useState("");
+  const [addCantico, setAddCantico] = useState("");
   const [marking, setMarking] = useState<number | null>(null);
 
   const hinoMap = useMemo(() => {
@@ -372,6 +375,31 @@ function SelectionEditor({
       );
     }
     setAddNumber("");
+  };
+
+  /** Adiciona um cântico à sequência (número virtual + playback salvo). */
+  const addCanticoItem = () => {
+    const numero = Number(addCantico);
+    const c = canticos.find((x) => x.numero === numero);
+    if (!c) {
+      toast.error("Selecione um cântico");
+      return;
+    }
+    const ref = canticoRef(c.numero);
+    if (items.some((it) => it.hino_number === ref)) {
+      toast.error("Cântico já adicionado");
+      return;
+    }
+    const saved = lib[ref];
+    setItems((prev) => [
+      ...prev,
+      {
+        hino_number: ref,
+        youtube_url: saved?.youtube_url || c.playbacks?.[0]?.url || null,
+        cues: saved?.cues && saved.cues.length ? saved.cues : null,
+      },
+    ]);
+    setAddCantico("");
   };
 
   const move = (from: number, dir: -1 | 1) => {

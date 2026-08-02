@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Maximize2, Rewind, FastForward } from "lucide-react";
 import type { HarpaHino } from "@/data/harpa";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
@@ -19,6 +19,10 @@ type Props = {
 // Ideal para púlpito/projetor. Navegação: setas, espaço, PageUp/PageDown, Esc.
 export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, cues }: Props) {
   const [step, setStep] = useState(0);
+  const stepRef = useRef(0);
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
   const [audioOn, setAudioOn] = useState(false);
   const hasCues = !!cues && cues.some((c) => typeof c === "number" && c >= 0);
   const [followCues, setFollowCues] = useState(true);
@@ -27,9 +31,33 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
   // Sequência de "telas": título + cada estrofe (com coro repetido entre estrofes)
   const slides = useMemo(() => buildHarpaSlides(hino), [hino]);
 
+  // Controle do player (seek) + último tempo conhecido do playback.
+  const controlsRef = useRef<{ seek: (s: number) => void } | null>(null);
+  const timeRef = useRef(0);
+  const handleControls = useCallback((c: { seek: (s: number) => void } | null) => {
+    controlsRef.current = c;
+  }, []);
+
+  const cueAt = useCallback(
+    (idx: number): number | null => {
+      const c = cues?.[idx];
+      return typeof c === "number" && c >= 0 ? c : null;
+    },
+    [cues]
+  );
+
+  /** Move o playback em segundos relativos (voltar/avançar manual). */
+  const nudge = useCallback((delta: number) => {
+    const t = Math.max(0, timeRef.current + delta);
+    timeRef.current = t;
+    controlsRef.current?.seek(t);
+    setFollowCues(true);
+  }, []);
+
   // Sincronia automática com o playback quando há marcações do culto.
   const handleTime = useCallback(
     (t: number) => {
+      timeRef.current = t;
       if (!hasCues || !followCues || !cues) return;
       const idx = slideIndexAt(cues, t);
       if (idx >= 0) setStep((s) => (s === idx ? s : idx));
@@ -47,15 +75,26 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
     if (hasCues) setAudioOn(true);
   }, [hasCues, hino.number]);
 
-  // Navegação manual desliga a sincronia até o operador reativar.
-  const next = useCallback(() => {
-    setFollowCues(false);
-    setStep((s) => Math.min(slides.length - 1, s + 1));
-  }, [slides.length]);
-  const prev = useCallback(() => {
-    setFollowCues(false);
-    setStep((s) => Math.max(0, s - 1));
-  }, []);
+  // Navegação manual: se a estrofe alvo tem marcação, leva o playback junto
+  // (permite voltar o hino para um ponto específico). Sem marcação, apenas
+  // troca a estrofe e desliga a sincronia.
+  const goTo = useCallback(
+    (target: number) => {
+      const idx = Math.max(0, Math.min(slides.length - 1, target));
+      const cue = cueAt(idx);
+      if (cue !== null && controlsRef.current) {
+        timeRef.current = cue;
+        controlsRef.current.seek(cue);
+        setFollowCues(true);
+      } else {
+        setFollowCues(false);
+      }
+      setStep(idx);
+    },
+    [slides.length, cueAt]
+  );
+  const next = useCallback(() => goTo(stepRef.current + 1), [goTo]);
+  const prev = useCallback(() => goTo(stepRef.current - 1), [goTo]);
 
   // Fullscreen + travar paisagem. Robusto para iOS (sem fullscreen/lock) e
   // Android (fullscreen precisa vir ANTES do lock).
@@ -285,6 +324,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
             autoPlay
             videoUrl={videoUrl ?? undefined}
             onTime={handleTime}
+            onControls={handleControls}
             onEnded={() => {
               try {
                 onAudioEnded?.();
@@ -344,10 +384,29 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
         >
           <ChevronLeft className="w-5 h-5" /> Anterior
         </button>
-        <span className="hidden md:flex items-center gap-2 text-white/40 text-xs">
-          <Maximize2 className="w-3 h-3" />
-          Setas/espaço para navegar · Esc para sair
-        </span>
+        {audioOn ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => nudge(-10)}
+              className="flex items-center gap-1 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-xs sm:text-sm"
+              title="Voltar 10 segundos do playback"
+            >
+              <Rewind className="w-4 h-4" /> 10s
+            </button>
+            <button
+              onClick={() => nudge(10)}
+              className="flex items-center gap-1 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-xs sm:text-sm"
+              title="Avançar 10 segundos do playback"
+            >
+              10s <FastForward className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <span className="hidden md:flex items-center gap-2 text-white/40 text-xs">
+            <Maximize2 className="w-3 h-3" />
+            Setas/espaço para navegar · Esc para sair
+          </span>
+        )}
         <button
           onClick={next}
           disabled={step === slides.length - 1}

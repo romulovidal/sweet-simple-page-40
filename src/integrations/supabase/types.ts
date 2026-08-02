@@ -1019,6 +1019,7 @@ export type Database = {
           is_active: boolean
           items: Json
           schedule_id: string | null
+          share_slug: string | null
           title: string
           updated_at: string
         }
@@ -1030,6 +1031,7 @@ export type Database = {
           is_active?: boolean
           items?: Json
           schedule_id?: string | null
+          share_slug?: string | null
           title: string
           updated_at?: string
         }
@@ -1041,6 +1043,7 @@ export type Database = {
           is_active?: boolean
           items?: Json
           schedule_id?: string | null
+          share_slug?: string | null
           title?: string
           updated_at?: string
         }

@@ -39,6 +39,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
 
   useEffect(() => {
     setStep(0);
+    setFollowCues(true);
   }, [hino.number]);
 
   // Ao abrir um hino com marcações, ativa o áudio para seguir o playback.

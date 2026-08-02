@@ -193,6 +193,28 @@ const HarpaPage = () => {
 
   const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
 
+  // Cânticos publicados — usados nas seleções de culto (números virtuais)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("canticos")
+        .select("id, numero, titulo, letra_json, playbacks")
+        .eq("publicado", true)
+        .order("numero");
+      if (data) setCanticos(data as unknown as CanticoLite[]);
+    })();
+  }, []);
+
+  const canticoHinos = useMemo(() => canticos.map(canticoToHino), [canticos]);
+  /** Todos os itens endereçáveis: hinos da Harpa + cânticos (número virtual). */
+  const allItems = useMemo(() => [...hinos, ...canticoHinos], [hinos, canticoHinos]);
+  const itemMap = useMemo(() => {
+    const m = new Map<number, HarpaHino>();
+    allItems.forEach((h) => m.set(h.number, h));
+    return m;
+  }, [allItems]);
+  const resolveItem = (n: number | undefined) => (n === undefined ? undefined : itemMap.get(n));
+
   // Fetch admin-curated culto selections (visible to all users)
   useEffect(() => {
     (async () => {

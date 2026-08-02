@@ -18,6 +18,7 @@ import {
   Trash2,
   Church,
   Calendar as CalendarIcon,
+  Pencil,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -27,6 +28,8 @@ import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
 import HarpaReportButton from "@/components/HarpaReportButton";
+import HarpaEditorDialog from "@/components/HarpaEditorDialog";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFavorites,
@@ -80,6 +83,8 @@ const HarpaPage = () => {
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
+  const [editing, setEditing] = useState<HarpaHino | null>(null);
+  const { isAdmin } = useIsAdmin();
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

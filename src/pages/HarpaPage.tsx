@@ -108,7 +108,7 @@ const HarpaPage = () => {
     if (selected && readerRef.current) {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
-    if (selected) pushHistory(selected.number);
+    if (selected && !isCanticoRef(selected.number)) pushHistory(selected.number);
     const basePath = activeCulto ? `/harpa/culto/${activeCulto.id}` : "/harpa";
     if (selected) {
       const target = activeCulto ? basePath : `/harpa/${selected.number}`;
@@ -711,10 +711,17 @@ const HarpaPage = () => {
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
                 >
                   <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-sm">
-                    {h.number}
+                    {refDisplayNumber(h.number)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block font-semibold truncate text-sm">{h.title}</span>
+                    <span className="block font-semibold truncate text-sm">
+                      {h.title}
+                      {h.kind === "cantico" && (
+                        <span className="ml-1.5 text-[9px] align-middle font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                          Cântico
+                        </span>
+                      )}
+                    </span>
                     {match && (
                       <span className="block truncate text-[11px] text-[hsl(var(--dark-muted))] italic">
                         “{match}”

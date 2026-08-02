@@ -514,6 +514,19 @@ export default function CanticosPage() {
               </div>
             )}
 
+            {currentCues && (
+              <button
+                onClick={() => setFollowCues((v) => !v)}
+                className={`w-full text-xs font-semibold py-2 rounded-xl transition ${
+                  followCues
+                    ? "bg-primary/15 text-primary"
+                    : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                }`}
+              >
+                {followCues ? "🎯 Acompanhando o playback" : "Ativar acompanhamento do playback"}
+              </button>
+            )}
+
             {(open.letra_json || []).map((b, i) => (
               <div
                 key={i}
@@ -578,7 +591,14 @@ export default function CanticosPage() {
       {presenting && (
         <HarpaPresenter
           hino={canticoToHino(presenting)}
-          videoUrl={presenting.playbacks?.[playbackIdx]?.url ?? presenting.playbacks?.[0]?.url ?? null}
+          videoUrl={
+            presenting.playbacks?.[playbackIdx]?.url ??
+            presenting.playbacks?.[0]?.url ??
+            lib[canticoRef(presenting.numero)]?.youtube_url ??
+            null
+          }
+          searchable={false}
+          cues={currentCues}
           onClose={() => setPresenting(null)}
         />
       )}

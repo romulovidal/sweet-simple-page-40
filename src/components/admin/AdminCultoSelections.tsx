@@ -79,18 +79,27 @@ export default function AdminCultoSelections() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CultoSelection | null>(null);
   const [creating, setCreating] = useState(false);
+  const [lib, setLib] = useState<PlaybackLib>({});
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [selRes, schedRes] = await Promise.all([
+    const [selRes, schedRes, libRes] = await Promise.all([
       (supabase as any)
         .from("culto_selections")
         .select("*")
         .order("culto_date", { ascending: false }),
       supabase.from("culto_schedules").select("*").order("day_of_week"),
+      (supabase as any).from("harpa_playbacks").select("hino_number, youtube_url, cues"),
     ]);
     if (selRes.data) setRows(selRes.data as CultoSelection[]);
     if (schedRes.data) setSchedules(schedRes.data as Schedule[]);
+    if (libRes?.data) {
+      const map: PlaybackLib = {};
+      (libRes.data as any[]).forEach((r) => {
+        map[r.hino_number] = { youtube_url: r.youtube_url, cues: r.cues };
+      });
+      setLib(map);
+    }
     setLoading(false);
   }, []);
 
@@ -261,6 +270,7 @@ export default function AdminCultoSelections() {
           isNew={creating}
           schedules={schedules}
           hinos={hinos}
+          lib={lib}
           onClose={() => {
             setEditing(null);
             setCreating(false);

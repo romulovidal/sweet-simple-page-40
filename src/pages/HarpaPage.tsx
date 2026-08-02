@@ -568,11 +568,11 @@ const HarpaPage = () => {
             <ul className="grid grid-cols-1 gap-2">
               {cultoSelections.map((c) => (
                 <li key={c.id}>
-                  <button
-                    onClick={() => setActiveCulto(c)}
-                    className="w-full text-left p-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 active:scale-[0.99] transition"
-                  >
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 transition pr-2">
+                    <button
+                      onClick={() => setActiveCulto(c)}
+                      className="flex-1 min-w-0 text-left p-4 flex items-center gap-3 active:scale-[0.99] transition"
+                    >
                       <span className="w-11 h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
                         <Church className="w-5 h-5" />
                       </span>
@@ -585,8 +585,15 @@ const HarpaPage = () => {
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={() => shareCulto(c)}
+                      aria-label={`Compartilhar ${c.title}`}
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dark-muted))] hover:text-primary hover:bg-primary/10 transition flex-shrink-0"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

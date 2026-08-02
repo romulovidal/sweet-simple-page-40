@@ -178,19 +178,6 @@ const HarpaPage = () => {
     };
   }, []);
 
-  // Índice de busca por trecho: hino + linha normalizada concatenada
-  const searchIndex = useMemo(
-    () =>
-      hinos.map((h) => ({
-        hino: h,
-        titleN: normalize(h.title),
-        bodyN: normalize(
-          h.strophes.flatMap((s) => s.lines).join(" \n ")
-        ),
-      })),
-    [hinos]
-  );
-
   const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
 
   // Cânticos publicados — usados nas seleções de culto (números virtuais)
@@ -214,6 +201,17 @@ const HarpaPage = () => {
     return m;
   }, [allItems]);
   const resolveItem = (n: number | undefined) => (n === undefined ? undefined : itemMap.get(n));
+
+  // Índice de busca por trecho: hino/cântico + linha normalizada concatenada
+  const searchIndex = useMemo(
+    () =>
+      allItems.map((h) => ({
+        hino: h,
+        titleN: normalize(h.title),
+        bodyN: normalize(h.strophes.flatMap((s) => s.lines).join(" \n ")),
+      })),
+    [allItems]
+  );
 
   // Fetch admin-curated culto selections (visible to all users)
   useEffect(() => {

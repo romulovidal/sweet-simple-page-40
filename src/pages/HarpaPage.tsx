@@ -72,7 +72,7 @@ const fmtCultoDate = (iso: string) => {
 
 const HarpaPage = () => {
   const navigate = useNavigate();
-  const { number: routeNumber } = useParams();
+  const { number: routeNumber, cultoId: routeCultoId } = useParams();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
@@ -92,15 +92,17 @@ const HarpaPage = () => {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
     if (selected) pushHistory(selected.number);
+    const basePath = activeCulto ? `/harpa/culto/${activeCulto.id}` : "/harpa";
     if (selected) {
-      const target = `/harpa/${selected.number}`;
+      const target = activeCulto ? basePath : `/harpa/${selected.number}`;
       if (window.location.pathname !== target) {
         window.history.replaceState(null, "", target);
       }
-    } else if (window.location.pathname !== "/harpa") {
-      window.history.replaceState(null, "", "/harpa");
+    } else if (window.location.pathname !== basePath) {
+      window.history.replaceState(null, "", basePath);
     }
-  }, [selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, activeCulto]);
 
   useEffect(() => {
     const onFav = () => setFavorites(getFavorites());
@@ -200,6 +202,52 @@ const HarpaPage = () => {
     () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),
     [activeCulto]
   );
+
+  const shareCulto = async (c: CultoSelection) => {
+    const url = `${window.location.origin}/harpa/culto/${c.id}`;
+    const lista = c.items.map((it) => `• Hino ${it.hino_number}`).join("\n");
+    const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: c.title, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      toast.success("Link da seleção copiado!");
+    } catch {
+      /* cancelado pelo usuário */
+    }
+  };
+
+  // Abrir seleção de culto automaticamente a partir da URL /harpa/culto/:id
+  useEffect(() => {
+    if (!routeCultoId || activeCulto?.id === routeCultoId) return;
+    let alive = true;
+    (async () => {
+      const local = cultoSelections.find((c) => c.id === routeCultoId);
+      if (local) {
+        setTab("cultos");
+        setActiveCulto(local);
+        return;
+      }
+      const { data } = await (supabase as any)
+        .from("culto_selections")
+        .select("id,title,culto_date,items,is_active")
+        .eq("id", routeCultoId)
+        .maybeSingle();
+      if (!alive) return;
+      if (data) {
+        setTab("cultos");
+        setActiveCulto(data as CultoSelection);
+      } else {
+        toast.error("Seleção de culto não encontrada");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeCultoId, cultoSelections]);
 
   const baseList = useMemo<HarpaHino[]>(() => {
     if (tab === "favoritos") {
@@ -459,16 +507,26 @@ const HarpaPage = () => {
               </p>
             </div>
             {tab === "cultos" && activeCulto && baseList.length > 0 && (
-              <button
-                onClick={() => {
-                  const first = baseList[0];
-                  if (first) setPresenting(first);
-                }}
-                className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
-              >
-                <Presentation className="w-3.5 h-3.5" />
-                Apresentar culto (auto-avança)
-              </button>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    const first = baseList[0];
+                    if (first) setPresenting(first);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
+                >
+                  <Presentation className="w-3.5 h-3.5" />
+                  Apresentar culto (auto-avança)
+                </button>
+                <button
+                  onClick={() => shareCulto(activeCulto)}
+                  aria-label="Compartilhar seleção do culto"
+                  className="px-3 flex items-center justify-center gap-1.5 rounded-xl bg-primary/15 text-primary text-xs font-bold hover:bg-primary/25 transition"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Compartilhar
+                </button>
+              </div>
             )}
             {tab === "historico" && history.length > 0 && (
               <button
@@ -510,11 +568,11 @@ const HarpaPage = () => {
             <ul className="grid grid-cols-1 gap-2">
               {cultoSelections.map((c) => (
                 <li key={c.id}>
-                  <button
-                    onClick={() => setActiveCulto(c)}
-                    className="w-full text-left p-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 active:scale-[0.99] transition"
-                  >
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 transition pr-2">
+                    <button
+                      onClick={() => setActiveCulto(c)}
+                      className="flex-1 min-w-0 text-left p-4 flex items-center gap-3 active:scale-[0.99] transition"
+                    >
                       <span className="w-11 h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
                         <Church className="w-5 h-5" />
                       </span>
@@ -527,8 +585,15 @@ const HarpaPage = () => {
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={() => shareCulto(c)}
+                      aria-label={`Compartilhar ${c.title}`}
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dark-muted))] hover:text-primary hover:bg-primary/10 transition flex-shrink-0"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

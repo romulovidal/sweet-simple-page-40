@@ -1111,6 +1111,33 @@ export type Database = {
         }
         Relationships: []
       }
+      harpa_overrides: {
+        Row: {
+          created_at: string
+          number: number
+          secoes: Json
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          number: number
+          secoes?: Json
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          number?: number
+          secoes?: Json
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       harpa_reports: {
         Row: {
           admin_notes: string | null

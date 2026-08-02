@@ -18,6 +18,7 @@ import {
   Trash2,
   Church,
   Calendar as CalendarIcon,
+  Pencil,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -27,6 +28,8 @@ import { toast } from "sonner";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
 import HarpaReportButton from "@/components/HarpaReportButton";
+import HarpaEditorDialog from "@/components/HarpaEditorDialog";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFavorites,
@@ -80,6 +83,8 @@ const HarpaPage = () => {
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
+  const [editing, setEditing] = useState<HarpaHino | null>(null);
+  const { isAdmin } = useIsAdmin();
   const readerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -644,6 +649,16 @@ const HarpaPage = () => {
               >
                 <Share2 className="w-4 h-4" />
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setEditing(selected)}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
+                  aria-label="Editar hino"
+                  title="Editar hino"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Controles: tamanho da fonte + navegação */}
@@ -788,6 +803,18 @@ const HarpaPage = () => {
           videoUrl={presenterVideoUrl}
           onAudioEnded={advancePresenterFromCulto}
           onClose={() => setPresenting(null)}
+        />
+      )}
+
+      {editing && isAdmin && (
+        <HarpaEditorDialog
+          hino={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            setHinos((list) => list.map((h) => (h.number === updated.number ? updated : h)));
+            setSelected((cur) => (cur && cur.number === updated.number ? updated : cur));
+            setEditing(null);
+          }}
         />
       )}
     </div>

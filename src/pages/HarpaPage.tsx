@@ -42,6 +42,7 @@ import {
 } from "@/lib/harpaUserData";
 import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 import { createShortCultoLink } from "@/lib/cultoShare";
+import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -52,7 +53,12 @@ const MAX_FONT = 26;
 
 type TabKey = "todos" | "cultos" | "favoritos" | "historico" | "temas";
 
-type CultoItem = { hino_number: number; youtube_url?: string | null; note?: string | null };
+type CultoItem = {
+  hino_number: number;
+  youtube_url?: string | null;
+  note?: string | null;
+  cues?: (number | null)[] | null;
+};
 type CultoSelection = {
   id: string;
   title: string;

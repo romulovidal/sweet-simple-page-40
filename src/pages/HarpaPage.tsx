@@ -805,6 +805,18 @@ const HarpaPage = () => {
           onClose={() => setPresenting(null)}
         />
       )}
+
+      {editing && isAdmin && (
+        <HarpaEditorDialog
+          hino={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            setHinos((list) => list.map((h) => (h.number === updated.number ? updated : h)));
+            setSelected((cur) => (cur && cur.number === updated.number ? updated : cur));
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 };

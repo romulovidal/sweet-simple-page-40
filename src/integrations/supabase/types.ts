@@ -1141,6 +1141,33 @@ export type Database = {
         }
         Relationships: []
       }
+      harpa_playbacks: {
+        Row: {
+          created_at: string
+          cues: Json
+          hino_number: number
+          updated_at: string
+          updated_by: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          cues?: Json
+          hino_number: number
+          updated_at?: string
+          updated_by?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          cues?: Json
+          hino_number?: number
+          updated_at?: string
+          updated_by?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       harpa_reports: {
         Row: {
           admin_notes: string | null

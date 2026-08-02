@@ -48,6 +48,8 @@ type Schedule = {
 
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+type PlaybackLib = Record<number, { youtube_url: string | null; cues: (number | null)[] | null }>;
+
 const todayISO = () => {
   const d = new Date();
   const off = d.getTimezoneOffset();
@@ -77,18 +79,27 @@ export default function AdminCultoSelections() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CultoSelection | null>(null);
   const [creating, setCreating] = useState(false);
+  const [lib, setLib] = useState<PlaybackLib>({});
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [selRes, schedRes] = await Promise.all([
+    const [selRes, schedRes, libRes] = await Promise.all([
       (supabase as any)
         .from("culto_selections")
         .select("*")
         .order("culto_date", { ascending: false }),
       supabase.from("culto_schedules").select("*").order("day_of_week"),
+      (supabase as any).from("harpa_playbacks").select("hino_number, youtube_url, cues"),
     ]);
     if (selRes.data) setRows(selRes.data as CultoSelection[]);
     if (schedRes.data) setSchedules(schedRes.data as Schedule[]);
+    if (libRes?.data) {
+      const map: PlaybackLib = {};
+      (libRes.data as any[]).forEach((r) => {
+        map[r.hino_number] = { youtube_url: r.youtube_url, cues: r.cues };
+      });
+      setLib(map);
+    }
     setLoading(false);
   }, []);
 
@@ -259,6 +270,7 @@ export default function AdminCultoSelections() {
           isNew={creating}
           schedules={schedules}
           hinos={hinos}
+          lib={lib}
           onClose={() => {
             setEditing(null);
             setCreating(false);
@@ -279,6 +291,7 @@ function SelectionEditor({
   isNew,
   schedules,
   hinos,
+  lib,
   onClose,
   onSaved,
 }: {
@@ -286,6 +299,7 @@ function SelectionEditor({
   isNew: boolean;
   schedules: Schedule[];
   hinos: HarpaHino[];
+  lib: PlaybackLib;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -318,7 +332,22 @@ function SelectionEditor({
       toast.error("Hino já adicionado");
       return;
     }
-    setItems((prev) => [...prev, { hino_number: n, youtube_url: null }]);
+    const saved = lib[n];
+    setItems((prev) => [
+      ...prev,
+      {
+        hino_number: n,
+        youtube_url: saved?.youtube_url || null,
+        cues: saved?.cues && saved.cues.length ? saved.cues : null,
+      },
+    ]);
+    if (saved?.youtube_url) {
+      toast.success(
+        saved.cues && saved.cues.length
+          ? `Playback e marcações do hino ${n} reaproveitados`
+          : `Playback salvo do hino ${n} reaproveitado`
+      );
+    }
     setAddNumber("");
   };
 
@@ -358,11 +387,26 @@ function SelectionEditor({
     const { error } = isNew
       ? await (supabase as any).from("culto_selections").insert(payload)
       : await (supabase as any).from("culto_selections").update(payload).eq("id", value.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error(error.message || "Falha ao salvar");
       return;
     }
+
+    // Guarda playbacks + marcações na biblioteca para reutilizar em cultos futuros
+    const libRows = items
+      .filter((it) => it.youtube_url)
+      .map((it) => ({
+        hino_number: it.hino_number,
+        youtube_url: it.youtube_url,
+        cues: (it.cues || []).filter((c) => c !== undefined),
+      }));
+    if (libRows.length) {
+      await (supabase as any)
+        .from("harpa_playbacks")
+        .upsert(libRows, { onConflict: "hino_number" });
+    }
+    setSaving(false);
     toast.success("Seleção salva");
     onSaved();
   };

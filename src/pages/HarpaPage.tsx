@@ -439,28 +439,31 @@ const HarpaPage = () => {
   const showCultoGrid = tab === "cultos" && !activeCulto;
 
   const shareHymn = async (h: HarpaHino) => {
-    const url = `${window.location.origin}/harpa/${h.number}`;
+    const isCantico = h.kind === "cantico";
+    const url = isCantico
+      ? `${window.location.origin}/canticos`
+      : `${window.location.origin}/harpa/${h.number}`;
     const text = [
-      `🎵 Harpa Cristã Atalaia — ${h.number}. ${h.title}`,
+      `🎵 ${isCantico ? "Cânticos Atalaia" : "Harpa Cristã Atalaia"} — ${refDisplayNumber(h.number)}. ${h.title}`,
       "",
       ...h.strophes.flatMap((s) => {
         const header = s.chorus ? "Coro:" : s.index ? `${s.index}.` : "";
         return [header, ...s.lines, ""].filter(Boolean);
       }),
       "",
-      "🎶 Cante e leia este hino no app Atalaia:",
+      `🎶 Cante e leia ${isCantico ? "este cântico" : "este hino"} no app Atalaia:`,
       url,
     ].join("\n");
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Harpa ${h.number} — ${h.title}`,
+          title: `${isCantico ? "Cântico" : "Harpa"} ${refDisplayNumber(h.number)} — ${h.title}`,
           text,
           url,
         });
       } else {
         await navigator.clipboard.writeText(text);
-        toast.success("Hino e link copiados");
+        toast.success("Letra e link copiados");
       }
     } catch {}
   };

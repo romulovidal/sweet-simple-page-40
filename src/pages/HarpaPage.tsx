@@ -353,6 +353,25 @@ const HarpaPage = () => {
   const currentVideoUrl = selected ? cultoUrlMap.get(selected.number) ?? null : null;
   const currentCues = selected ? cultoCuesMap.get(selected.number) ?? null : null;
 
+  // Estrofe ativa segundo as marcações do culto (sincronia com o playback)
+  const activeStropheIdx = useMemo(() => {
+    if (!selected || !currentCues || !followCues) return -1;
+    const slides = buildHarpaSlides(selected);
+    const i = slideIndexAt(currentCues, playTime);
+    return i >= 0 ? slides[i]?.stropheIdx ?? -1 : -1;
+  }, [selected, currentCues, followCues, playTime]);
+
+  useEffect(() => {
+    setPlayTime(0);
+    setFollowCues(true);
+  }, [selected]);
+
+  useEffect(() => {
+    if (activeStropheIdx < 0) return;
+    const el = stropheRefs.current[activeStropheIdx];
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeStropheIdx]);
+
   // Navigation boundaries — inside a culto, boundaries follow the curated
   // sequence; otherwise they follow the global hymn list.
   const cultoIdx =

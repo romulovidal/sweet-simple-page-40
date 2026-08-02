@@ -464,9 +464,9 @@ export default function CanticosPage() {
               </div>
             </div>
 
-            {(open.playbacks?.length ?? 0) > 0 && (
+            {((open.playbacks?.length ?? 0) > 0 || currentUrl) && (
               <div className="px-4 pb-3 max-w-3xl mx-auto flex flex-col items-center gap-2">
-                {open.playbacks.length > 1 && (
+                {(open.playbacks?.length ?? 0) > 1 && (
                   <div className="flex flex-wrap gap-1.5 justify-center">
                     {open.playbacks.map((p, i) => (
                       <button
@@ -487,7 +487,11 @@ export default function CanticosPage() {
                   key={`${open.id}-${playbackIdx}`}
                   number={open.numero}
                   title={open.titulo}
-                  videoUrl={open.playbacks[playbackIdx]?.url ?? null}
+                  videoUrl={currentUrl}
+                  searchable={false}
+                  autoPlay={autoPlay}
+                  onTime={(t) => setPlayTime(t)}
+                  onEnded={handleAudioEnded}
                 />
               </div>
             )}

@@ -180,7 +180,11 @@ export default function HarpaEditorDialog({ hino, onClose, onSaved }: Props) {
                     s.tipo === "refrao" ? "text-[hsl(var(--destructive))]" : "text-primary"
                   }`}
                 >
-                  {s.tipo === "refrao" ? "Coro" : `Estrofe ${s.numero}`}
+                  {s.tipo === "refrao"
+                    ? refroes > 1
+                      ? `Coro ${secoes.slice(0, i + 1).filter((x) => x.tipo === "refrao").length}`
+                      : "Coro"
+                    : `Estrofe ${s.numero}`}
                 </p>
                 {s.linhas.map((l, j) => (
                   <p key={j} className="text-sm leading-relaxed">
@@ -195,7 +199,8 @@ export default function HarpaEditorDialog({ hino, onClose, onSaved }: Props) {
             const num =
               s.tipo === "estrofe"
                 ? sections.slice(0, i + 1).filter((x) => x.tipo === "estrofe").length
-                : null;
+                : sections.slice(0, i + 1).filter((x) => x.tipo === "refrao").length;
+            const totalRefroes = sections.filter((x) => x.tipo === "refrao").length;
             return (
               <div key={i} className="rounded-2xl bg-[hsl(var(--dark-card))] p-3">
                 <div className="flex items-center gap-2 mb-2">
@@ -208,7 +213,11 @@ export default function HarpaEditorDialog({ hino, onClose, onSaved }: Props) {
                     <option value="refrao">Coro</option>
                   </select>
                   <span className="text-[11px] text-[hsl(var(--dark-muted))]">
-                    {s.tipo === "estrofe" ? `nº ${num}` : "repetido após cada estrofe"}
+                    {s.tipo === "estrofe"
+                      ? `nº ${num}`
+                      : totalRefroes > 1
+                        ? `coro ${num} de ${totalRefroes} — vale a partir daqui`
+                        : "repetido após cada estrofe"}
                   </span>
                   <div className="ml-auto flex items-center gap-1">
                     <button

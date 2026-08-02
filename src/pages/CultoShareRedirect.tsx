@@ -36,7 +36,11 @@ const CultoShareRedirect = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-[hsl(var(--dark-muted))]">
-      <PageHead title="Seleção de hinos — Bíblia do Atalaia" />
+      <PageHead
+        title="Seleção de hinos — Bíblia do Atalaia"
+        description="Abra a seleção de hinos do culto na Harpa Atalaia."
+        path={`/c/${slug ?? ""}`}
+      />
       {error ? (
         <>
           <p className="text-sm">{error}</p>

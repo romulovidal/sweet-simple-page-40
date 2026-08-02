@@ -210,7 +210,7 @@ export default function HarpaEditorDialog({ hino, onClose, onSaved }: Props) {
                     className="text-[11px] font-bold uppercase tracking-wide bg-[hsl(var(--dark-bg))] rounded-full px-3 py-1.5 outline-none"
                   >
                     <option value="estrofe">Estrofe</option>
-                    <option value="refrao">{totalRefroes > 1 ? `Coro ${num}` : "Coro"}</option>
+                    <option value="refrao">Coro</option>
                   </select>
                   <span className="text-[11px] text-[hsl(var(--dark-muted))]">
                     {s.tipo === "estrofe"

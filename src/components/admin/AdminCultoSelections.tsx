@@ -18,6 +18,13 @@ import {
 } from "lucide-react";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import CultoCueMarker from "@/components/admin/CultoCueMarker";
+import {
+  canticoToHino,
+  canticoRef,
+  displayNumber as refDisplayNumber,
+  isCanticoRef,
+  type CanticoLite,
+} from "@/lib/canticoAdapt";
 
 type CultoItem = {
   hino_number: number;
@@ -76,6 +83,7 @@ export default function AdminCultoSelections() {
   const [rows, setRows] = useState<CultoSelection[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [hinos, setHinos] = useState<HarpaHino[]>([]);
+  const [canticos, setCanticos] = useState<CanticoLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CultoSelection | null>(null);
   const [creating, setCreating] = useState(false);
@@ -83,16 +91,22 @@ export default function AdminCultoSelections() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [selRes, schedRes, libRes] = await Promise.all([
+    const [selRes, schedRes, libRes, canRes] = await Promise.all([
       (supabase as any)
         .from("culto_selections")
         .select("*")
         .order("culto_date", { ascending: false }),
       supabase.from("culto_schedules").select("*").order("day_of_week"),
       (supabase as any).from("harpa_playbacks").select("hino_number, youtube_url, cues"),
+      (supabase as any)
+        .from("canticos")
+        .select("id, numero, titulo, letra_json, playbacks")
+        .eq("publicado", true)
+        .order("numero"),
     ]);
     if (selRes.data) setRows(selRes.data as CultoSelection[]);
     if (schedRes.data) setSchedules(schedRes.data as Schedule[]);
+    if (canRes?.data) setCanticos(canRes.data as CanticoLite[]);
     if (libRes?.data) {
       const map: PlaybackLib = {};
       (libRes.data as any[]).forEach((r) => {
@@ -108,11 +122,15 @@ export default function AdminCultoSelections() {
     loadHarpa().then(setHinos).catch(() => {});
   }, [fetchAll]);
 
+  const allItems = useMemo(
+    () => [...hinos, ...canticos.map(canticoToHino)],
+    [hinos, canticos]
+  );
   const hinoMap = useMemo(() => {
     const m = new Map<number, HarpaHino>();
-    hinos.forEach((h) => m.set(h.number, h));
+    allItems.forEach((h) => m.set(h.number, h));
     return m;
-  }, [hinos]);
+  }, [allItems]);
 
   const startCreate = () => {
     setEditing({

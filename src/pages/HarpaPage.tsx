@@ -72,7 +72,7 @@ const fmtCultoDate = (iso: string) => {
 
 const HarpaPage = () => {
   const navigate = useNavigate();
-  const { number: routeNumber } = useParams();
+  const { number: routeNumber, cultoId: routeCultoId } = useParams();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
@@ -92,15 +92,17 @@ const HarpaPage = () => {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
     if (selected) pushHistory(selected.number);
+    const basePath = activeCulto ? `/harpa/culto/${activeCulto.id}` : "/harpa";
     if (selected) {
-      const target = `/harpa/${selected.number}`;
+      const target = activeCulto ? basePath : `/harpa/${selected.number}`;
       if (window.location.pathname !== target) {
         window.history.replaceState(null, "", target);
       }
-    } else if (window.location.pathname !== "/harpa") {
-      window.history.replaceState(null, "", "/harpa");
+    } else if (window.location.pathname !== basePath) {
+      window.history.replaceState(null, "", basePath);
     }
-  }, [selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, activeCulto]);
 
   useEffect(() => {
     const onFav = () => setFavorites(getFavorites());
@@ -200,6 +202,36 @@ const HarpaPage = () => {
     () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),
     [activeCulto]
   );
+
+  // Abrir seleção de culto automaticamente a partir da URL /harpa/culto/:id
+  useEffect(() => {
+    if (!routeCultoId || activeCulto?.id === routeCultoId) return;
+    let alive = true;
+    (async () => {
+      const local = cultoSelections.find((c) => c.id === routeCultoId);
+      if (local) {
+        setTab("cultos");
+        setActiveCulto(local);
+        return;
+      }
+      const { data } = await (supabase as any)
+        .from("culto_selections")
+        .select("id,title,culto_date,items,is_active")
+        .eq("id", routeCultoId)
+        .maybeSingle();
+      if (!alive) return;
+      if (data) {
+        setTab("cultos");
+        setActiveCulto(data as CultoSelection);
+      } else {
+        toast.error("Seleção de culto não encontrada");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeCultoId, cultoSelections]);
 
   const baseList = useMemo<HarpaHino[]>(() => {
     if (tab === "favoritos") {

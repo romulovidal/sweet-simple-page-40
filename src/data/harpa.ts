@@ -14,6 +14,10 @@ export interface HarpaHino {
   number: number;
   title: string;
   strophes: HarpaStrophe[];
+  /** "cantico" quando o item vem do repertório de Cânticos (número virtual). */
+  kind?: "harpa" | "cantico";
+  /** Número exibido ao usuário (cânticos usam número virtual internamente). */
+  displayNumber?: number;
 }
 
 // Formato bruto vindo do JSON público.

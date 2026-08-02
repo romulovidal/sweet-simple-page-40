@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } fr
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import type { HarpaHino } from "@/data/harpa";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
+import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
 
 type Props = {
   hino: HarpaHino;
@@ -10,43 +11,40 @@ type Props = {
   videoUrl?: string | null;
   /** Called when the video ends (used to auto-advance in a culto sequence). */
   onAudioEnded?: () => void;
+  /** Marcações (segundos) por slide — avanço automático acompanhando o playback. */
+  cues?: (number | null)[] | null;
 };
 
 // Modo apresentação: uma estrofe por vez, fonte gigante, fundo preto.
 // Ideal para púlpito/projetor. Navegação: setas, espaço, PageUp/PageDown, Esc.
-export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded }: Props) {
+export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, cues }: Props) {
   const [step, setStep] = useState(0);
   const [audioOn, setAudioOn] = useState(false);
+  const hasCues = !!cues && cues.some((c) => typeof c === "number" && c >= 0);
+  const [followCues, setFollowCues] = useState(true);
   const [rotateFallback, setRotateFallback] = useState(false);
 
   // Sequência de "telas": título + cada estrofe (com coro repetido entre estrofes)
-  const slides = useMemo(() => {
-    const arr: { kind: "title" | "chorus" | "verse"; index?: number; lines: string[] }[] = [
-      { kind: "title", lines: [hino.title] },
-    ];
-    const choruses = hino.strophes.filter((s) => s.chorus);
-    if (choruses.length > 1) {
-      // Hinos com coros diferentes por estrofe: respeita a ordem original.
-      for (const s of hino.strophes) {
-        if (s.chorus) arr.push({ kind: "chorus", lines: s.lines });
-        else arr.push({ kind: "verse", index: s.index, lines: s.lines });
-      }
-    } else {
-      const chorus = choruses[0];
-      for (const s of hino.strophes) {
-        if (s.chorus) continue;
-        arr.push({ kind: "verse", index: s.index, lines: s.lines });
-        if (chorus) arr.push({ kind: "chorus", lines: chorus.lines });
-      }
-      // Se o hino for só coro (raro), garante que apareça
-      if (arr.length === 1 && chorus) arr.push({ kind: "chorus", lines: chorus.lines });
-    }
-    return arr;
-  }, [hino]);
+  const slides = useMemo(() => buildHarpaSlides(hino), [hino]);
+
+  // Sincronia automática com o playback quando há marcações do culto.
+  const handleTime = useCallback(
+    (t: number) => {
+      if (!hasCues || !followCues || !cues) return;
+      const idx = slideIndexAt(cues, t);
+      if (idx >= 0) setStep((s) => (s === idx ? s : idx));
+    },
+    [hasCues, followCues, cues]
+  );
 
   useEffect(() => {
     setStep(0);
   }, [hino.number]);
+
+  // Ao abrir um hino com marcações, ativa o áudio para seguir o playback.
+  useEffect(() => {
+    if (hasCues) setAudioOn(true);
+  }, [hasCues, hino.number]);
 
   const next = useCallback(() => setStep((s) => Math.min(slides.length - 1, s + 1)), [slides.length]);
   const prev = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);

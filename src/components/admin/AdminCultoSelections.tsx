@@ -259,14 +259,18 @@ export default function AdminCultoSelections() {
                   <ul className="mt-3 flex flex-wrap gap-1.5">
                     {row.items.map((it, i) => {
                       const h = hinoMap.get(it.hino_number);
+                      const isCan = isCanticoRef(it.hino_number);
                       return (
                         <li
                           key={i}
                           className="text-[11px] px-2 py-1 rounded-full bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] flex items-center gap-1"
                         >
-                          <span className="text-primary font-bold">{it.hino_number}</span>
+                          <span className="text-primary font-bold">
+                            {isCan ? "♪" : ""}
+                            {refDisplayNumber(it.hino_number)}
+                          </span>
                           <span className="text-[hsl(var(--dark-muted))] truncate max-w-[140px]">
-                            {h?.title || "hino"}
+                            {h?.title || (isCan ? "cântico" : "hino")}
                           </span>
                           {it.youtube_url && (
                             <ExternalLink className="w-3 h-3 text-[hsl(var(--dark-muted))]" />
@@ -287,7 +291,8 @@ export default function AdminCultoSelections() {
           value={editing}
           isNew={creating}
           schedules={schedules}
-          hinos={hinos}
+          hinos={allItems}
+          canticos={canticos}
           lib={lib}
           onClose={() => {
             setEditing(null);

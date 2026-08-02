@@ -847,14 +847,37 @@ const HarpaPage = () => {
             className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed"
             style={{ fontSize: `${fontSize}px` }}
           >
+            {currentCues && (
+              <button
+                onClick={() => setFollowCues((v) => !v)}
+                className={`w-full text-xs font-semibold py-2 rounded-xl transition ${
+                  followCues
+                    ? "bg-primary/15 text-primary"
+                    : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                }`}
+              >
+                {followCues
+                  ? "🎯 Acompanhando o playback"
+                  : "Ativar acompanhamento do playback"}
+              </button>
+            )}
             {selected.strophes.map((s, i) => (
               <div
                 key={i}
-                className={
+                ref={(el) => {
+                  stropheRefs.current[i] = el;
+                }}
+                className={`${
                   s.chorus
                     ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
                     : ""
-                }
+                } ${
+                  activeStropheIdx === i
+                    ? "rounded-xl ring-2 ring-primary/60 bg-primary/5 px-2 py-2 transition"
+                    : activeStropheIdx >= 0
+                    ? "opacity-50 transition"
+                    : ""
+                }`}
               >
                 {!s.chorus && s.index !== undefined && (
                   <span className="block text-xs text-primary/80 font-semibold mb-1">

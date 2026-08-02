@@ -313,13 +313,12 @@ const HarpaPage = () => {
       return hymnsByTheme(themeIndex, theme);
     }
     if (tab === "cultos" && activeCulto) {
-      const map = new Map(hinos.map((h) => [h.number, h] as const));
       return activeCulto.items
-        .map((it) => map.get(it.hino_number))
+        .map((it) => itemMap.get(it.hino_number))
         .filter(Boolean) as HarpaHino[];
     }
     return hinos;
-  }, [tab, hinos, favorites, history, activeTheme, themeIndex, activeCulto]);
+  }, [tab, hinos, favorites, history, activeTheme, themeIndex, activeCulto, itemMap]);
 
   const results = useMemo(() => {
     const raw = query.trim();
@@ -330,10 +329,11 @@ const HarpaPage = () => {
     const baseSet = new Set(baseList.map((h) => h.number));
     return searchIndex
       .filter((it) => {
+        const num = it.hino.displayNumber ?? it.hino.number;
         if (!baseSet.has(it.hino.number)) return false;
-        if (numericOnly && String(it.hino.number) === raw) return true;
-        if (numericOnly && String(it.hino.number).startsWith(raw)) return true;
-        if (!Number.isNaN(asNumber) && String(it.hino.number).includes(q)) return true;
+        if (numericOnly && String(num) === raw) return true;
+        if (numericOnly && String(num).startsWith(raw)) return true;
+        if (!Number.isNaN(asNumber) && String(num).includes(q)) return true;
         if (it.titleN.includes(q)) return true;
         return it.bodyN.includes(q);
       })

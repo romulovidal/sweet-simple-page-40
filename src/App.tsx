@@ -37,6 +37,7 @@ import ManualPage from "@/pages/ManualPage";
 import HarpaPage from "@/pages/HarpaPage";
 import CanticosPage from "@/pages/CanticosPage";
 import VerseShareRedirect from "@/pages/VerseShareRedirect";
+import CultoShareRedirect from "@/pages/CultoShareRedirect";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/NotFound";
@@ -82,6 +83,7 @@ const AppContent = () => {
             <Route path="/harpa/:number" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/canticos" element={<PageTransition><CanticosPage /></PageTransition>} />
             <Route path="/v/:slug" element={<VerseShareRedirect />} />
+            <Route path="/c/:slug" element={<CultoShareRedirect />} />
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />

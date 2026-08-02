@@ -15,6 +15,8 @@ type Props = {
   onTime?: (seconds: number) => void;
   /** Receives a seek function so parents can jump to a marked cue. */
   onControls?: (controls: { seek: (seconds: number) => void } | null) => void;
+  /** Quando false, não busca no YouTube — só toca se houver videoUrl. */
+  searchable?: boolean;
 };
 
 type SearchResult = { videoId: string; title: string; channel: string };
@@ -33,7 +35,7 @@ function extractYouTubeId(url: string | null | undefined): string | null {
   }
 }
 
-export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, videoUrl, onTime, onControls }: Props) {
+export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, videoUrl, onTime, onControls, searchable = true }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
   const [found, setFound] = useState<SearchResult | null>(null);
   const playerRef = useRef<any>(null);
@@ -43,6 +45,10 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, vide
   const foundRef = useRef<{ number: number; video: SearchResult } | null>(null);
   const numberRef = useRef<number>(number);
   const videoUrlRef = useRef<string | null | undefined>(videoUrl);
+  const searchableRef = useRef<boolean>(searchable);
+  useEffect(() => {
+    searchableRef.current = searchable;
+  }, [searchable]);
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
@@ -114,6 +120,10 @@ export default function HarpaMiniPlayer({ number, title, autoPlay, onEnded, vide
       foundRef.current = { number: numberRef.current, video };
       setFound(video);
       return video;
+    }
+    if (!searchableRef.current) {
+      toast.error("Nenhum playback cadastrado para este item");
+      return null;
     }
     const { data, error } = await supabase.functions.invoke("youtube-search", {
       body: { number: numberRef.current, title },

@@ -13,11 +13,13 @@ type Props = {
   onAudioEnded?: () => void;
   /** Marcações (segundos) por slide — avanço automático acompanhando o playback. */
   cues?: (number | null)[] | null;
+  /** Quando false, o player não busca no YouTube (usado por Cânticos). */
+  searchable?: boolean;
 };
 
 // Modo apresentação: uma estrofe por vez, fonte gigante, fundo preto.
 // Ideal para púlpito/projetor. Navegação: setas, espaço, PageUp/PageDown, Esc.
-export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, cues }: Props) {
+export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, cues, searchable = true }: Props) {
   const [step, setStep] = useState(0);
   const stepRef = useRef(0);
   useEffect(() => {
@@ -280,7 +282,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
         onClick={(e) => e.stopPropagation()}
       >
         <span className="font-semibold">
-          {hino.number}. {hino.title}
+          {(hino.displayNumber ?? hino.number)}. {hino.title}
         </span>
         <div className="flex items-center gap-4">
           {hasCues && (
@@ -323,6 +325,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
             title={hino.title}
             autoPlay
             videoUrl={videoUrl ?? undefined}
+            searchable={searchable}
             onTime={handleTime}
             onControls={handleControls}
             onEnded={() => {
@@ -366,7 +369,9 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
           ))}
           {isTitle && (
             <p className="text-white/50" style={{ fontSize: "0.28em", marginTop: "1em" }}>
-              Hino {hino.number} — Harpa Cristã
+              {hino.kind === "cantico"
+                ? `Cântico ${hino.displayNumber ?? hino.number} — Cânticos Atalaia`
+                : `Hino ${hino.number} — Harpa Cristã`}
             </p>
           )}
         </div>

@@ -18,6 +18,13 @@ import {
 } from "lucide-react";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
 import CultoCueMarker from "@/components/admin/CultoCueMarker";
+import {
+  canticoToHino,
+  canticoRef,
+  displayNumber as refDisplayNumber,
+  isCanticoRef,
+  type CanticoLite,
+} from "@/lib/canticoAdapt";
 
 type CultoItem = {
   hino_number: number;
@@ -76,6 +83,7 @@ export default function AdminCultoSelections() {
   const [rows, setRows] = useState<CultoSelection[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [hinos, setHinos] = useState<HarpaHino[]>([]);
+  const [canticos, setCanticos] = useState<CanticoLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CultoSelection | null>(null);
   const [creating, setCreating] = useState(false);
@@ -83,16 +91,22 @@ export default function AdminCultoSelections() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [selRes, schedRes, libRes] = await Promise.all([
+    const [selRes, schedRes, libRes, canRes] = await Promise.all([
       (supabase as any)
         .from("culto_selections")
         .select("*")
         .order("culto_date", { ascending: false }),
       supabase.from("culto_schedules").select("*").order("day_of_week"),
       (supabase as any).from("harpa_playbacks").select("hino_number, youtube_url, cues"),
+      (supabase as any)
+        .from("canticos")
+        .select("id, numero, titulo, letra_json, playbacks")
+        .eq("publicado", true)
+        .order("numero"),
     ]);
     if (selRes.data) setRows(selRes.data as CultoSelection[]);
     if (schedRes.data) setSchedules(schedRes.data as Schedule[]);
+    if (canRes?.data) setCanticos(canRes.data as CanticoLite[]);
     if (libRes?.data) {
       const map: PlaybackLib = {};
       (libRes.data as any[]).forEach((r) => {
@@ -108,11 +122,15 @@ export default function AdminCultoSelections() {
     loadHarpa().then(setHinos).catch(() => {});
   }, [fetchAll]);
 
+  const allItems = useMemo(
+    () => [...hinos, ...canticos.map(canticoToHino)],
+    [hinos, canticos]
+  );
   const hinoMap = useMemo(() => {
     const m = new Map<number, HarpaHino>();
-    hinos.forEach((h) => m.set(h.number, h));
+    allItems.forEach((h) => m.set(h.number, h));
     return m;
-  }, [hinos]);
+  }, [allItems]);
 
   const startCreate = () => {
     setEditing({
@@ -241,14 +259,18 @@ export default function AdminCultoSelections() {
                   <ul className="mt-3 flex flex-wrap gap-1.5">
                     {row.items.map((it, i) => {
                       const h = hinoMap.get(it.hino_number);
+                      const isCan = isCanticoRef(it.hino_number);
                       return (
                         <li
                           key={i}
                           className="text-[11px] px-2 py-1 rounded-full bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] flex items-center gap-1"
                         >
-                          <span className="text-primary font-bold">{it.hino_number}</span>
+                          <span className="text-primary font-bold">
+                            {isCan ? "♪" : ""}
+                            {refDisplayNumber(it.hino_number)}
+                          </span>
                           <span className="text-[hsl(var(--dark-muted))] truncate max-w-[140px]">
-                            {h?.title || "hino"}
+                            {h?.title || (isCan ? "cântico" : "hino")}
                           </span>
                           {it.youtube_url && (
                             <ExternalLink className="w-3 h-3 text-[hsl(var(--dark-muted))]" />
@@ -269,7 +291,8 @@ export default function AdminCultoSelections() {
           value={editing}
           isNew={creating}
           schedules={schedules}
-          hinos={hinos}
+          hinos={allItems}
+          canticos={canticos}
           lib={lib}
           onClose={() => {
             setEditing(null);
@@ -291,6 +314,7 @@ function SelectionEditor({
   isNew,
   schedules,
   hinos,
+  canticos,
   lib,
   onClose,
   onSaved,
@@ -299,6 +323,7 @@ function SelectionEditor({
   isNew: boolean;
   schedules: Schedule[];
   hinos: HarpaHino[];
+  canticos: CanticoLite[];
   lib: PlaybackLib;
   onClose: () => void;
   onSaved: () => void;
@@ -310,6 +335,7 @@ function SelectionEditor({
   const [isActive, setIsActive] = useState(value.is_active);
   const [saving, setSaving] = useState(false);
   const [addNumber, setAddNumber] = useState("");
+  const [addCantico, setAddCantico] = useState("");
   const [marking, setMarking] = useState<number | null>(null);
 
   const hinoMap = useMemo(() => {
@@ -349,6 +375,31 @@ function SelectionEditor({
       );
     }
     setAddNumber("");
+  };
+
+  /** Adiciona um cântico à sequência (número virtual + playback salvo). */
+  const addCanticoItem = () => {
+    const numero = Number(addCantico);
+    const c = canticos.find((x) => x.numero === numero);
+    if (!c) {
+      toast.error("Selecione um cântico");
+      return;
+    }
+    const ref = canticoRef(c.numero);
+    if (items.some((it) => it.hino_number === ref)) {
+      toast.error("Cântico já adicionado");
+      return;
+    }
+    const saved = lib[ref];
+    setItems((prev) => [
+      ...prev,
+      {
+        hino_number: ref,
+        youtube_url: saved?.youtube_url || c.playbacks?.[0]?.url || null,
+        cues: saved?.cues && saved.cues.length ? saved.cues : null,
+      },
+    ]);
+    setAddCantico("");
   };
 
   const move = (from: number, dir: -1 | 1) => {
@@ -472,7 +523,7 @@ function SelectionEditor({
 
           <div className="pt-2 border-t border-[hsl(var(--dark-card-hover))]">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold">Hinos ({items.length})</p>
+              <p className="text-sm font-bold">Hinos e cânticos ({items.length})</p>
             </div>
             <div className="flex gap-2 mb-3">
               <input
@@ -492,6 +543,27 @@ function SelectionEditor({
                 <Plus className="w-4 h-4" /> Adicionar
               </button>
             </div>
+            <div className="flex gap-2 mb-3">
+              <select
+                value={addCantico}
+                onChange={(e) => setAddCantico(e.target.value)}
+                className="flex-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm focus:outline-none focus:border-primary/60"
+              >
+                <option value="">— Escolher cântico —</option>
+                {canticos.map((c) => (
+                  <option key={c.id} value={c.numero}>
+                    {c.numero}. {c.titulo}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={addCanticoItem}
+                disabled={!addCantico}
+                className="px-4 h-10 rounded-lg bg-primary/15 text-primary text-sm font-semibold hover:bg-primary/25 disabled:opacity-40 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" /> Cântico
+              </button>
+            </div>
 
             {items.length === 0 ? (
               <p className="text-xs text-[hsl(var(--dark-muted))] text-center py-6">
@@ -501,6 +573,7 @@ function SelectionEditor({
               <ul className="space-y-2">
                 {items.map((it, i) => {
                   const h = hinoMap.get(it.hino_number);
+                  const isCan = isCanticoRef(it.hino_number);
                   return (
                     <li
                       key={i}
@@ -524,13 +597,19 @@ function SelectionEditor({
                           </button>
                         </div>
                         <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
-                          {it.hino_number}
+                          {refDisplayNumber(it.hino_number)}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">
-                            {h?.title || <span className="text-[hsl(var(--destructive))]">Hino não encontrado</span>}
+                            {h?.title || (
+                              <span className="text-[hsl(var(--destructive))]">
+                                {isCan ? "Cântico" : "Hino"} não encontrado
+                              </span>
+                            )}
                           </p>
-                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Posição {i + 1}</p>
+                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                            {isCan ? "Cântico" : "Hino"} · Posição {i + 1}
+                          </p>
                         </div>
                         <button
                           onClick={() => removeItem(i)}

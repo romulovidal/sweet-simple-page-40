@@ -27,6 +27,8 @@ import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import HarpaMiniPlayer from "@/components/HarpaMiniPlayer";
 import HarpaPresenter from "@/components/HarpaPresenter";
 import type { HarpaHino } from "@/data/harpa";
+import { canticoRef, canticoToHino as adaptCantico } from "@/lib/canticoAdapt";
+import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
 import {
   getFavorites as getCanticoFavs,
   toggleFavorite as toggleCanticoFav,
@@ -34,7 +36,7 @@ import {
 import { toast } from "sonner";
 
 type LetraBloco = { tipo: "verso" | "refrao" | "ponte"; numero?: number; linhas: string[] };
-type Playback = { label: string; url: string };
+type Playback = { label: string; url: string; cues?: (number | null)[] | null };
 type Cantico = {
   id: string;
   numero: number;
@@ -55,14 +57,7 @@ const FONT_KEY = "canticos:font-size";
 const MIN_FONT = 14;
 const MAX_FONT = 26;
 
-function canticoToHino(c: Cantico): HarpaHino {
-  const strophes = (c.letra_json || []).map((b, i) => ({
-    chorus: b.tipo === "refrao",
-    index: b.tipo === "verso" ? b.numero ?? i + 1 : undefined,
-    lines: b.linhas,
-  }));
-  return { number: c.numero, title: c.titulo, strophes };
-}
+const canticoToHino = (c: Cantico): HarpaHino => adaptCantico(c);
 
 export default function CanticosPage() {
   const navigate = useNavigate();
@@ -84,10 +79,18 @@ export default function CanticosPage() {
   });
   const [favorites, setFavorites] = useState<string[]>(() => getCanticoFavs());
   const [presenting, setPresenting] = useState<Cantico | null>(null);
+  const [playTime, setPlayTime] = useState(0);
+  const [followCues, setFollowCues] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(false);
+  /** Biblioteca global de playbacks/marcações (compartilhada com a Harpa). */
+  const [lib, setLib] = useState<Record<number, { youtube_url: string | null; cues: (number | null)[] | null }>>({});
   const readerRef = useRef<HTMLDivElement | null>(null);
+  const blockRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     setPlaybackIdx(0);
+    setPlayTime(0);
+    setFollowCues(true);
     if (readerRef.current) readerRef.current.scrollTo({ top: 0, behavior: "auto" });
   }, [openId]);
 
@@ -119,6 +122,22 @@ export default function CanticosPage() {
       setLinksByCantico(byC);
       setLinksByMinistro(byM);
       setLoading(false);
+    })();
+  }, []);
+
+  // Biblioteca de playbacks/marcações salvos (mesma usada nas seleções de culto)
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("harpa_playbacks")
+        .select("hino_number, youtube_url, cues")
+        .gte("hino_number", 100000);
+      if (!data) return;
+      const map: Record<number, { youtube_url: string | null; cues: (number | null)[] | null }> = {};
+      (data as any[]).forEach((r) => {
+        map[r.hino_number] = { youtube_url: r.youtube_url, cues: r.cues };
+      });
+      setLib(map);
     })();
   }, []);
 
@@ -154,7 +173,42 @@ export default function CanticosPage() {
   const goToCantico = (delta: number) => {
     if (!open || openIdxInFiltered < 0) return;
     const next = filtered[openIdxInFiltered + delta];
-    if (next) setOpenId(next.id);
+    if (next) {
+      setAutoPlay(false);
+      setOpenId(next.id);
+    }
+  };
+
+  const savedLib = open ? lib[canticoRef(open.numero)] : undefined;
+  const currentUrl =
+    open?.playbacks?.[playbackIdx]?.url ?? savedLib?.youtube_url ?? null;
+  const currentCues = useMemo(() => {
+    const own = open?.playbacks?.[playbackIdx]?.cues;
+    const cues = own && own.length ? own : savedLib?.cues;
+    return cues && cues.some((c) => typeof c === "number") ? cues : null;
+  }, [open, playbackIdx, savedLib]);
+
+  /** Bloco da letra em destaque conforme as marcações do playback. */
+  const activeBlockIdx = useMemo(() => {
+    if (!open || !currentCues || !followCues) return -1;
+    const slides = buildHarpaSlides(canticoToHino(open));
+    const i = slideIndexAt(currentCues, playTime);
+    return i >= 0 ? slides[i]?.stropheIdx ?? -1 : -1;
+  }, [open, currentCues, followCues, playTime]);
+
+  useEffect(() => {
+    if (activeBlockIdx < 0) return;
+    blockRefs.current[activeBlockIdx]?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeBlockIdx]);
+
+  /** Ao terminar o playback, segue para o próximo cântico da lista. */
+  const handleAudioEnded = () => {
+    if (openIdxInFiltered < 0) return;
+    const next = filtered[openIdxInFiltered + 1];
+    if (next) {
+      setAutoPlay(true);
+      setOpenId(next.id);
+    }
   };
   const handleToggleFav = (id: string) => {
     const now = toggleCanticoFav(id);
@@ -410,9 +464,9 @@ export default function CanticosPage() {
               </div>
             </div>
 
-            {(open.playbacks?.length ?? 0) > 0 && (
+            {((open.playbacks?.length ?? 0) > 0 || currentUrl) && (
               <div className="px-4 pb-3 max-w-3xl mx-auto flex flex-col items-center gap-2">
-                {open.playbacks.length > 1 && (
+                {(open.playbacks?.length ?? 0) > 1 && (
                   <div className="flex flex-wrap gap-1.5 justify-center">
                     {open.playbacks.map((p, i) => (
                       <button
@@ -433,7 +487,11 @@ export default function CanticosPage() {
                   key={`${open.id}-${playbackIdx}`}
                   number={open.numero}
                   title={open.titulo}
-                  videoUrl={open.playbacks[playbackIdx]?.url ?? null}
+                  videoUrl={currentUrl}
+                  searchable={false}
+                  autoPlay={autoPlay}
+                  onTime={(t) => setPlayTime(t)}
+                  onEnded={handleAudioEnded}
                 />
               </div>
             )}
@@ -456,14 +514,36 @@ export default function CanticosPage() {
               </div>
             )}
 
+            {currentCues && (
+              <button
+                onClick={() => setFollowCues((v) => !v)}
+                className={`w-full text-xs font-semibold py-2 rounded-xl transition ${
+                  followCues
+                    ? "bg-primary/15 text-primary"
+                    : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"
+                }`}
+              >
+                {followCues ? "🎯 Acompanhando o playback" : "Ativar acompanhamento do playback"}
+              </button>
+            )}
+
             {(open.letra_json || []).map((b, i) => (
               <div
                 key={i}
-                className={
+                ref={(el) => {
+                  blockRefs.current[i] = el;
+                }}
+                className={`${
                   b.tipo === "refrao"
                     ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
                     : ""
-                }
+                } ${
+                  activeBlockIdx === i
+                    ? "rounded-xl ring-2 ring-primary/60 bg-primary/5 px-2 py-2 transition"
+                    : activeBlockIdx >= 0
+                    ? "opacity-50 transition"
+                    : ""
+                }`}
               >
                 {b.tipo === "verso" && (
                   <span className="block text-xs text-primary/80 font-semibold mb-1">
@@ -511,7 +591,14 @@ export default function CanticosPage() {
       {presenting && (
         <HarpaPresenter
           hino={canticoToHino(presenting)}
-          videoUrl={presenting.playbacks?.[playbackIdx]?.url ?? presenting.playbacks?.[0]?.url ?? null}
+          videoUrl={
+            presenting.playbacks?.[playbackIdx]?.url ??
+            presenting.playbacks?.[0]?.url ??
+            lib[canticoRef(presenting.numero)]?.youtube_url ??
+            null
+          }
+          searchable={false}
+          cues={currentCues}
           onClose={() => setPresenting(null)}
         />
       )}

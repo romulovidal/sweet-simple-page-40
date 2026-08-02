@@ -43,6 +43,12 @@ import {
 import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
 import { createShortCultoLink } from "@/lib/cultoShare";
 import { buildHarpaSlides, slideIndexAt } from "@/lib/harpaSlides";
+import {
+  canticoToHino,
+  displayNumber as refDisplayNumber,
+  isCanticoRef,
+  type CanticoLite,
+} from "@/lib/canticoAdapt";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -90,6 +96,7 @@ const HarpaPage = () => {
   const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [cultoSelections, setCultoSelections] = useState<CultoSelection[]>([]);
   const [activeCulto, setActiveCulto] = useState<CultoSelection | null>(null);
+  const [canticos, setCanticos] = useState<CanticoLite[]>([]);
   const [editing, setEditing] = useState<HarpaHino | null>(null);
   const [playTime, setPlayTime] = useState(0);
   const [followCues, setFollowCues] = useState(true);
@@ -101,7 +108,7 @@ const HarpaPage = () => {
     if (selected && readerRef.current) {
       readerRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
-    if (selected) pushHistory(selected.number);
+    if (selected && !isCanticoRef(selected.number)) pushHistory(selected.number);
     const basePath = activeCulto ? `/harpa/culto/${activeCulto.id}` : "/harpa";
     if (selected) {
       const target = activeCulto ? basePath : `/harpa/${selected.number}`;
@@ -171,20 +178,40 @@ const HarpaPage = () => {
     };
   }, []);
 
-  // Índice de busca por trecho: hino + linha normalizada concatenada
+  const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
+
+  // Cânticos publicados — usados nas seleções de culto (números virtuais)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("canticos")
+        .select("id, numero, titulo, letra_json, playbacks")
+        .eq("publicado", true)
+        .order("numero");
+      if (data) setCanticos(data as unknown as CanticoLite[]);
+    })();
+  }, []);
+
+  const canticoHinos = useMemo(() => canticos.map(canticoToHino), [canticos]);
+  /** Todos os itens endereçáveis: hinos da Harpa + cânticos (número virtual). */
+  const allItems = useMemo(() => [...hinos, ...canticoHinos], [hinos, canticoHinos]);
+  const itemMap = useMemo(() => {
+    const m = new Map<number, HarpaHino>();
+    allItems.forEach((h) => m.set(h.number, h));
+    return m;
+  }, [allItems]);
+  const resolveItem = (n: number | undefined) => (n === undefined ? undefined : itemMap.get(n));
+
+  // Índice de busca por trecho: hino/cântico + linha normalizada concatenada
   const searchIndex = useMemo(
     () =>
-      hinos.map((h) => ({
+      allItems.map((h) => ({
         hino: h,
         titleN: normalize(h.title),
-        bodyN: normalize(
-          h.strophes.flatMap((s) => s.lines).join(" \n ")
-        ),
+        bodyN: normalize(h.strophes.flatMap((s) => s.lines).join(" \n ")),
       })),
-    [hinos]
+    [allItems]
   );
-
-  const themeIndex = useMemo(() => buildIndex(hinos), [hinos]);
 
   // Fetch admin-curated culto selections (visible to all users)
   useEffect(() => {
@@ -203,10 +230,17 @@ const HarpaPage = () => {
   const cultoUrlMap = useMemo(() => {
     const m = new Map<number, string | null>();
     if (activeCulto) {
-      for (const it of activeCulto.items) m.set(it.hino_number, it.youtube_url || null);
+      for (const it of activeCulto.items) {
+        let url = it.youtube_url || null;
+        if (!url && isCanticoRef(it.hino_number)) {
+          const c = canticos.find((x) => x.numero === refDisplayNumber(it.hino_number));
+          url = c?.playbacks?.[0]?.url || null;
+        }
+        m.set(it.hino_number, url);
+      }
     }
     return m;
-  }, [activeCulto]);
+  }, [activeCulto, canticos]);
 
   const activeSequence = useMemo(
     () => (activeCulto ? activeCulto.items.map((it) => it.hino_number) : []),
@@ -227,7 +261,13 @@ const HarpaPage = () => {
   const shareCulto = async (c: CultoSelection) => {
     const fallback = `${window.location.origin}/harpa/culto/${c.id}`;
     const url = await createShortCultoLink(c.id, fallback);
-    const lista = c.items.map((it) => `• Hino ${it.hino_number}`).join("\n");
+    const lista = c.items
+      .map((it) =>
+        isCanticoRef(it.hino_number)
+          ? `• Cântico ${refDisplayNumber(it.hino_number)}`
+          : `• Hino ${it.hino_number}`
+      )
+      .join("\n");
     const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
     try {
       if (navigator.share) {
@@ -286,13 +326,12 @@ const HarpaPage = () => {
       return hymnsByTheme(themeIndex, theme);
     }
     if (tab === "cultos" && activeCulto) {
-      const map = new Map(hinos.map((h) => [h.number, h] as const));
       return activeCulto.items
-        .map((it) => map.get(it.hino_number))
+        .map((it) => itemMap.get(it.hino_number))
         .filter(Boolean) as HarpaHino[];
     }
     return hinos;
-  }, [tab, hinos, favorites, history, activeTheme, themeIndex, activeCulto]);
+  }, [tab, hinos, favorites, history, activeTheme, themeIndex, activeCulto, itemMap]);
 
   const results = useMemo(() => {
     const raw = query.trim();
@@ -303,10 +342,11 @@ const HarpaPage = () => {
     const baseSet = new Set(baseList.map((h) => h.number));
     return searchIndex
       .filter((it) => {
+        const num = it.hino.displayNumber ?? it.hino.number;
         if (!baseSet.has(it.hino.number)) return false;
-        if (numericOnly && String(it.hino.number) === raw) return true;
-        if (numericOnly && String(it.hino.number).startsWith(raw)) return true;
-        if (!Number.isNaN(asNumber) && String(it.hino.number).includes(q)) return true;
+        if (numericOnly && String(num) === raw) return true;
+        if (numericOnly && String(num).startsWith(raw)) return true;
+        if (!Number.isNaN(asNumber) && String(num).includes(q)) return true;
         if (it.titleN.includes(q)) return true;
         return it.bodyN.includes(q);
       })
@@ -330,7 +370,7 @@ const HarpaPage = () => {
       if (idx >= 0) {
         const nextNum = activeSequence[idx + delta];
         if (nextNum) {
-          const next = hinos.find((h) => h.number === nextNum);
+          const next = resolveItem(nextNum);
           if (next) {
             setAutoPlayNext(false);
             setSelected(next);
@@ -399,7 +439,7 @@ const HarpaPage = () => {
     if (idx < 0) return;
     const nextNum = activeSequence[idx + 1];
     if (!nextNum) return;
-    const next = hinos.find((h) => h.number === nextNum);
+    const next = resolveItem(nextNum);
     if (next) setPresenting(next);
   };
 
@@ -412,28 +452,31 @@ const HarpaPage = () => {
   const showCultoGrid = tab === "cultos" && !activeCulto;
 
   const shareHymn = async (h: HarpaHino) => {
-    const url = `${window.location.origin}/harpa/${h.number}`;
+    const isCantico = h.kind === "cantico";
+    const url = isCantico
+      ? `${window.location.origin}/canticos`
+      : `${window.location.origin}/harpa/${h.number}`;
     const text = [
-      `🎵 Harpa Cristã Atalaia — ${h.number}. ${h.title}`,
+      `🎵 ${isCantico ? "Cânticos Atalaia" : "Harpa Cristã Atalaia"} — ${refDisplayNumber(h.number)}. ${h.title}`,
       "",
       ...h.strophes.flatMap((s) => {
         const header = s.chorus ? "Coro:" : s.index ? `${s.index}.` : "";
         return [header, ...s.lines, ""].filter(Boolean);
       }),
       "",
-      "🎶 Cante e leia este hino no app Atalaia:",
+      `🎶 Cante e leia ${isCantico ? "este cântico" : "este hino"} no app Atalaia:`,
       url,
     ].join("\n");
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Harpa ${h.number} — ${h.title}`,
+          title: `${isCantico ? "Cântico" : "Harpa"} ${refDisplayNumber(h.number)} — ${h.title}`,
           text,
           url,
         });
       } else {
         await navigator.clipboard.writeText(text);
-        toast.success("Hino e link copiados");
+        toast.success("Letra e link copiados");
       }
     } catch {}
   };
@@ -684,10 +727,17 @@ const HarpaPage = () => {
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
                 >
                   <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-sm">
-                    {h.number}
+                    {refDisplayNumber(h.number)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block font-semibold truncate text-sm">{h.title}</span>
+                    <span className="block font-semibold truncate text-sm">
+                      {h.title}
+                      {h.kind === "cantico" && (
+                        <span className="ml-1.5 text-[9px] align-middle font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                          Cântico
+                        </span>
+                      )}
+                    </span>
                     {match && (
                       <span className="block truncate text-[11px] text-[hsl(var(--dark-muted))] italic">
                         “{match}”
@@ -723,14 +773,17 @@ const HarpaPage = () => {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <span className="w-9 h-9 shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
-                {selected.number}
+                {refDisplayNumber(selected.number)}
               </span>
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold leading-tight truncate">{selected.title}</h2>
                 <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
-                  Hino {selected.number} de {hinos.length}
+                  {selected.kind === "cantico"
+                    ? `Cântico ${refDisplayNumber(selected.number)}`
+                    : `Hino ${selected.number} de ${hinos.length}`}
                 </p>
               </div>
+              {selected.kind !== "cantico" && (
               <button
                 onClick={() => handleToggleFav(selected.number)}
                 className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -741,6 +794,7 @@ const HarpaPage = () => {
                   fill={favorites.includes(selected.number) ? "currentColor" : "none"}
                 />
               </button>
+              )}
               <button
                 onClick={() => setPresenting(selected)}
                 className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -756,7 +810,7 @@ const HarpaPage = () => {
               >
                 <Share2 className="w-4 h-4" />
               </button>
-              {isAdmin && (
+              {isAdmin && selected.kind !== "cantico" && (
                 <button
                   onClick={() => setEditing(selected)}
                   className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -816,6 +870,7 @@ const HarpaPage = () => {
                 title={selected.title}
                 autoPlay={autoPlayNext}
                 videoUrl={currentVideoUrl}
+                searchable={selected.kind !== "cantico"}
                 onTime={(t) => setPlayTime(t)}
                 onEnded={() => {
                   // In a culto: advance through the curated sequence first
@@ -823,7 +878,7 @@ const HarpaPage = () => {
                     const idx = activeSequence.indexOf(selected.number);
                     const nextNum = idx >= 0 ? activeSequence[idx + 1] : undefined;
                     if (nextNum) {
-                      const next = hinos.find((h) => h.number === nextNum);
+                      const next = resolveItem(nextNum);
                       if (next) {
                         setAutoPlayNext(true);
                         setSelected(next);
@@ -919,17 +974,16 @@ const HarpaPage = () => {
             </div>
 
             <div className="flex justify-center pt-2">
-              <HarpaReportButton
-                hinoNumber={selected.number}
-                hinoTitle={selected.title}
-              />
+              {selected.kind !== "cantico" && (
+                <HarpaReportButton hinoNumber={selected.number} hinoTitle={selected.title} />
+              )}
             </div>
           </article>
         </div>
       )}
 
       {/* Botão flutuante de edição (somente admin, com hino aberto) */}
-      {selected && isAdmin && !presenting && !editing && (
+      {selected && isAdmin && selected.kind !== "cantico" && !presenting && !editing && (
         <button
           onClick={() => setEditing(selected)}
           className="fixed z-[60] bottom-24 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition"
@@ -944,6 +998,7 @@ const HarpaPage = () => {
         <HarpaPresenter
           hino={presenting}
           videoUrl={presenterVideoUrl}
+          searchable={presenting.kind !== "cantico"}
           cues={cultoCuesMap.get(presenting.number) ?? null}
           onAudioEnded={advancePresenterFromCulto}
           onClose={() => setPresenting(null)}

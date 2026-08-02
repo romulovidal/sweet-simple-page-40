@@ -523,7 +523,7 @@ function SelectionEditor({
 
           <div className="pt-2 border-t border-[hsl(var(--dark-card-hover))]">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold">Hinos ({items.length})</p>
+              <p className="text-sm font-bold">Hinos e cânticos ({items.length})</p>
             </div>
             <div className="flex gap-2 mb-3">
               <input
@@ -543,6 +543,27 @@ function SelectionEditor({
                 <Plus className="w-4 h-4" /> Adicionar
               </button>
             </div>
+            <div className="flex gap-2 mb-3">
+              <select
+                value={addCantico}
+                onChange={(e) => setAddCantico(e.target.value)}
+                className="flex-1 h-10 px-3 rounded-lg bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-sm focus:outline-none focus:border-primary/60"
+              >
+                <option value="">— Escolher cântico —</option>
+                {canticos.map((c) => (
+                  <option key={c.id} value={c.numero}>
+                    {c.numero}. {c.titulo}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={addCanticoItem}
+                disabled={!addCantico}
+                className="px-4 h-10 rounded-lg bg-primary/15 text-primary text-sm font-semibold hover:bg-primary/25 disabled:opacity-40 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" /> Cântico
+              </button>
+            </div>
 
             {items.length === 0 ? (
               <p className="text-xs text-[hsl(var(--dark-muted))] text-center py-6">
@@ -552,6 +573,7 @@ function SelectionEditor({
               <ul className="space-y-2">
                 {items.map((it, i) => {
                   const h = hinoMap.get(it.hino_number);
+                  const isCan = isCanticoRef(it.hino_number);
                   return (
                     <li
                       key={i}
@@ -575,13 +597,19 @@ function SelectionEditor({
                           </button>
                         </div>
                         <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
-                          {it.hino_number}
+                          {refDisplayNumber(it.hino_number)}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">
-                            {h?.title || <span className="text-[hsl(var(--destructive))]">Hino não encontrado</span>}
+                            {h?.title || (
+                              <span className="text-[hsl(var(--destructive))]">
+                                {isCan ? "Cântico" : "Hino"} não encontrado
+                              </span>
+                            )}
                           </p>
-                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">Posição {i + 1}</p>
+                          <p className="text-[10px] text-[hsl(var(--dark-muted))]">
+                            {isCan ? "Cântico" : "Hino"} · Posição {i + 1}
+                          </p>
                         </div>
                         <button
                           onClick={() => removeItem(i)}

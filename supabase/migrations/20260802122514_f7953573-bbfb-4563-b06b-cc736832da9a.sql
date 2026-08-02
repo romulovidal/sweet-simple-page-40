@@ -1,0 +1,2 @@
+ALTER TABLE public.culto_selections ADD COLUMN IF NOT EXISTS share_slug text;
+CREATE UNIQUE INDEX IF NOT EXISTS culto_selections_share_slug_key ON public.culto_selections (share_slug) WHERE share_slug IS NOT NULL;

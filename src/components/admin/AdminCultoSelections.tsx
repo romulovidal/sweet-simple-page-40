@@ -291,6 +291,7 @@ function SelectionEditor({
   isNew,
   schedules,
   hinos,
+  lib,
   onClose,
   onSaved,
 }: {
@@ -298,6 +299,7 @@ function SelectionEditor({
   isNew: boolean;
   schedules: Schedule[];
   hinos: HarpaHino[];
+  lib: PlaybackLib;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -330,7 +332,22 @@ function SelectionEditor({
       toast.error("Hino já adicionado");
       return;
     }
-    setItems((prev) => [...prev, { hino_number: n, youtube_url: null }]);
+    const saved = lib[n];
+    setItems((prev) => [
+      ...prev,
+      {
+        hino_number: n,
+        youtube_url: saved?.youtube_url || null,
+        cues: saved?.cues && saved.cues.length ? saved.cues : null,
+      },
+    ]);
+    if (saved?.youtube_url) {
+      toast.success(
+        saved.cues && saved.cues.length
+          ? `Playback e marcações do hino ${n} reaproveitados`
+          : `Playback salvo do hino ${n} reaproveitado`
+      );
+    }
     setAddNumber("");
   };
 
@@ -370,11 +387,26 @@ function SelectionEditor({
     const { error } = isNew
       ? await (supabase as any).from("culto_selections").insert(payload)
       : await (supabase as any).from("culto_selections").update(payload).eq("id", value.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error(error.message || "Falha ao salvar");
       return;
     }
+
+    // Guarda playbacks + marcações na biblioteca para reutilizar em cultos futuros
+    const libRows = items
+      .filter((it) => it.youtube_url)
+      .map((it) => ({
+        hino_number: it.hino_number,
+        youtube_url: it.youtube_url,
+        cues: (it.cues || []).filter((c) => c !== undefined),
+      }));
+    if (libRows.length) {
+      await (supabase as any)
+        .from("harpa_playbacks")
+        .upsert(libRows, { onConflict: "hino_number" });
+    }
+    setSaving(false);
     toast.success("Seleção salva");
     onSaved();
   };

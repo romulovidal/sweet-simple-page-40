@@ -757,14 +757,17 @@ const HarpaPage = () => {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <span className="w-9 h-9 shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
-                {selected.number}
+                {refDisplayNumber(selected.number)}
               </span>
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold leading-tight truncate">{selected.title}</h2>
                 <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
-                  Hino {selected.number} de {hinos.length}
+                  {selected.kind === "cantico"
+                    ? `Cântico ${refDisplayNumber(selected.number)}`
+                    : `Hino ${selected.number} de ${hinos.length}`}
                 </p>
               </div>
+              {selected.kind !== "cantico" && (
               <button
                 onClick={() => handleToggleFav(selected.number)}
                 className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -775,6 +778,7 @@ const HarpaPage = () => {
                   fill={favorites.includes(selected.number) ? "currentColor" : "none"}
                 />
               </button>
+              )}
               <button
                 onClick={() => setPresenting(selected)}
                 className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"
@@ -790,7 +794,7 @@ const HarpaPage = () => {
               >
                 <Share2 className="w-4 h-4" />
               </button>
-              {isAdmin && (
+              {isAdmin && selected.kind !== "cantico" && (
                 <button
                   onClick={() => setEditing(selected)}
                   className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-primary hover:bg-[hsl(var(--dark-card))] active:scale-95 transition"

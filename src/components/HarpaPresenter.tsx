@@ -324,6 +324,7 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
             autoPlay
             videoUrl={videoUrl ?? undefined}
             onTime={handleTime}
+            onControls={handleControls}
             onEnded={() => {
               try {
                 onAudioEnded?.();
@@ -383,10 +384,29 @@ export default function HarpaPresenter({ hino, onClose, videoUrl, onAudioEnded, 
         >
           <ChevronLeft className="w-5 h-5" /> Anterior
         </button>
-        <span className="hidden md:flex items-center gap-2 text-white/40 text-xs">
-          <Maximize2 className="w-3 h-3" />
-          Setas/espaço para navegar · Esc para sair
-        </span>
+        {audioOn ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => nudge(-10)}
+              className="flex items-center gap-1 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-xs sm:text-sm"
+              title="Voltar 10 segundos do playback"
+            >
+              <Rewind className="w-4 h-4" /> 10s
+            </button>
+            <button
+              onClick={() => nudge(10)}
+              className="flex items-center gap-1 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-xs sm:text-sm"
+              title="Avançar 10 segundos do playback"
+            >
+              10s <FastForward className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <span className="hidden md:flex items-center gap-2 text-white/40 text-xs">
+            <Maximize2 className="w-3 h-3" />
+            Setas/espaço para navegar · Esc para sair
+          </span>
+        )}
         <button
           onClick={next}
           disabled={step === slides.length - 1}

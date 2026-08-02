@@ -357,7 +357,7 @@ const HarpaPage = () => {
       if (idx >= 0) {
         const nextNum = activeSequence[idx + delta];
         if (nextNum) {
-          const next = hinos.find((h) => h.number === nextNum);
+          const next = resolveItem(nextNum);
           if (next) {
             setAutoPlayNext(false);
             setSelected(next);
@@ -426,7 +426,7 @@ const HarpaPage = () => {
     if (idx < 0) return;
     const nextNum = activeSequence[idx + 1];
     if (!nextNum) return;
-    const next = hinos.find((h) => h.number === nextNum);
+    const next = resolveItem(nextNum);
     if (next) setPresenting(next);
   };
 

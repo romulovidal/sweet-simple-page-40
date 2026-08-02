@@ -14,13 +14,17 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Timer,
 } from "lucide-react";
 import { loadHarpa, type HarpaHino } from "@/data/harpa";
+import CultoCueMarker from "@/components/admin/CultoCueMarker";
 
 type CultoItem = {
   hino_number: number;
   youtube_url?: string | null;
   note?: string | null;
+  /** Marcações (segundos) por slide — sincroniza a letra com o playback. */
+  cues?: (number | null)[] | null;
 };
 
 type CultoSelection = {

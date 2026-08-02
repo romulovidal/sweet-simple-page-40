@@ -932,6 +932,7 @@ const HarpaPage = () => {
         <HarpaPresenter
           hino={presenting}
           videoUrl={presenterVideoUrl}
+          cues={cultoCuesMap.get(presenting.number) ?? null}
           onAudioEnded={advancePresenterFromCulto}
           onClose={() => setPresenting(null)}
         />

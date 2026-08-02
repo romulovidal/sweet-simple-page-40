@@ -41,6 +41,7 @@ import {
   type HarpaHistoryEntry,
 } from "@/lib/harpaUserData";
 import { HARPA_THEMES, buildIndex, hymnsByTheme } from "@/lib/harpaThemes";
+import { createShortCultoLink } from "@/lib/cultoShare";
 
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");

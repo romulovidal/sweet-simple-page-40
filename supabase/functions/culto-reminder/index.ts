@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           title: `⛪ ${schedule.name}`,
           body: pushBody,
-          url: `/harpa/culto-share?title=${encodeURIComponent(schedule.name)}&body=${encodeURIComponent(pushBody)}`,
+          url: "/?tab=notificacao",
           type: "culto-reminder-manual",
           urgency: "high",
         }),
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               title: `⛪ ${schedule.name}`,
               body: pushBody,
-              url: `/harpa/culto-share?title=${encodeURIComponent(schedule.name)}&body=${encodeURIComponent(pushBody)}`,
+              url: "/?tab=notificacao",
               type: "culto-reminder",
               ttl: Math.max(60, (reminder.minutes_before ?? 60) * 60),
               urgency: "high",

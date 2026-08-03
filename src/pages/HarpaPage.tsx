@@ -509,17 +509,18 @@ const HarpaPage = () => {
           <div className="flex items-center gap-2 shrink-0">
             {isAdmin && (
               <button
-                onClick={() => navigate("/atis")}
-                className="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center transition hover:bg-primary/20"
-                aria-label="Atis Admin"
-                title="Atis Admin"
+                onClick={() => setTab("cultos")}
+                className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5 transition hover:bg-primary/20"
+                aria-label="Gerenciar Cultos"
+                title="Seleção de Hinos do Culto"
               >
-                <Settings className="w-4 h-4" />
+                <Church className="w-3.5 h-3.5" />
+                Cultos
               </button>
             )}
             <button
               onClick={() => navigate("/canticos")}
-              className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5"
+              className="h-9 px-3 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] text-xs font-semibold flex items-center gap-1.5"
               aria-label="Abrir Cânticos"
             >
               <Music2 className="w-3.5 h-3.5" />

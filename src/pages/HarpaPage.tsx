@@ -87,6 +87,9 @@ const fmtCultoDate = (iso: string) => {
 const HarpaPage = () => {
   const navigate = useNavigate();
   const { number: routeNumber, cultoId: routeCultoId } = useParams();
+  const searchParams = new URLSearchParams(window.location.search);
+  const shareTitle = searchParams.get("title");
+  const shareBody = searchParams.get("body");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
@@ -483,6 +486,8 @@ const HarpaPage = () => {
       }
     } catch {}
   };
+
+  const [showShareModal, setShowShareModal] = useState(!!(shareTitle && shareBody));
 
   return (
     <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] pb-24">
@@ -1055,6 +1060,61 @@ const HarpaPage = () => {
             setEditing(null);
           }}
         />
+      )}
+      {/* Modal de Compartilhamento de Notificação de Culto */}
+      {showShareModal && shareTitle && shareBody && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[hsl(var(--dark-card))] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-primary/20 animate-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 grid place-items-center shrink-0">
+                  <Church className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Compartilhar Convite</h3>
+                  <p className="text-xs text-[hsl(var(--dark-muted))]">Envie este convite para o WhatsApp</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 space-y-2">
+                <p className="text-sm font-bold text-primary">Preview da Mensagem:</p>
+                <div className="text-sm italic text-[hsl(var(--dark-text))] opacity-90 leading-relaxed">
+                  "{shareBody}"
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={async () => {
+                    const text = `*${shareTitle}*\n\n${shareBody}\n\n🙌 _Acompanhe no app Atalaia:_\n🔗 ${window.location.origin}`;
+                    try {
+                      if (navigator.share) {
+                        await navigator.share({ title: shareTitle, text });
+                      } else {
+                        await navigator.clipboard.writeText(text);
+                        toast.success("Copiado!");
+                      }
+                      setShowShareModal(false);
+                      navigate("/harpa", { replace: true });
+                    } catch {}
+                  }}
+                  className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                >
+                  <Share2 className="w-5 h-5" /> Compartilhar agora
+                </button>
+                <button
+                  onClick={() => {
+                    setShowShareModal(false);
+                    navigate("/harpa", { replace: true });
+                  }}
+                  className="w-full h-12 rounded-xl bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] font-semibold hover:text-[hsl(var(--dark-text))] transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

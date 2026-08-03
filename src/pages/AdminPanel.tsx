@@ -6,7 +6,7 @@ import {
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
   ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot, Search, X,
-  Church, AlertTriangle
+  Church, AlertTriangle, Library
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -29,11 +29,12 @@ import AdminHarpaReports from "@/components/admin/AdminHarpaReports";
 import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
+import AdminRevistas from "@/components/admin/AdminRevistas";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -58,6 +59,7 @@ const ADMIN_SECTIONS = [
     tabs: [
       { id: "posts", label: "Posts", desc: "Feed devocional", icon: FileText },
       { id: "plans", label: "Planos de Leitura", desc: "Trilhas bíblicas", icon: BookOpen },
+      { id: "revistas", label: "Revista de Estudos", desc: "Publicações periódicas", icon: Library },
       { id: "verse", label: "Versículo do Dia", desc: "Push diário", icon: BookMarked },
     ],
   },
@@ -331,6 +333,7 @@ const AdminPanel = () => {
       case "harpa-reports": return <AdminHarpaReports />;
       case "posts": return <AdminPosts posts={posts} fetchData={fetchData} />;
       case "plans": return <AdminPlans plans={plans} fetchData={fetchData} />;
+      case "revistas": return <AdminRevistas />;
       case "users": return <AdminUsers users={users} fetchData={fetchData} />;
     }
   };

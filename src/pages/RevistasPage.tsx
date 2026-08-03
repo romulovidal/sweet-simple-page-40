@@ -50,7 +50,7 @@ const RevistasPage = () => {
 
   return (
     <div className="pb-20 min-h-screen">
-      <PageHead title="Revista de Estudos Bíblicos" description="Aprofunde seu conhecimento na Palavra com nossas lições bíblicas." />
+      <PageHead title="Revista de Estudos Bíblicos" description="Aprofunde seu conhecimento na Palavra com nossas lições bíblicas." path="/estudos/revistas" />
       
       <div className="px-5 pt-8 max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-6">

@@ -25,9 +25,9 @@ const AdminRevistas = () => {
 
   const fetchRevistas = async () => {
     setLoading(true);
-    // @ts-ignore - admin_revistas might not be in generated types yet
+    // @ts-ignore
     const { data, error } = await supabase
-      .from("admin_revistas" as any)
+      .from("admin_revistas")
       .select("*")
       .order("sort_order", { ascending: true });
     
@@ -35,7 +35,9 @@ const AdminRevistas = () => {
       console.error("Error fetching revistas:", error);
       toast.error("Erro ao carregar revistas");
     } else {
-      setRevistas(data || []);
+      // Cast to any then to Revista[] to bypass complex PostgREST return type issues 
+      // when the table is not yet in the generated types.
+      setRevistas((data as any) || []);
     }
     setLoading(false);
   };
@@ -61,12 +63,12 @@ const AdminRevistas = () => {
 
     if (editingRevista.id) {
       // @ts-ignore
-      const { error } = await supabase.from("admin_revistas" as any).update(data).eq("id", editingRevista.id);
+      const { error } = await supabase.from("admin_revistas").update(data).eq("id", editingRevista.id);
       if (error) toast.error("Erro ao atualizar");
       else toast.success("Revista atualizada");
     } else {
       // @ts-ignore
-      const { error } = await supabase.from("admin_revistas" as any).insert(data);
+      const { error } = await supabase.from("admin_revistas").insert(data);
       if (error) toast.error("Erro ao criar");
       else toast.success("Revista criada");
     }
@@ -78,7 +80,7 @@ const AdminRevistas = () => {
   const deleteRevista = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir esta revista?")) return;
     // @ts-ignore
-    const { error } = await supabase.from("admin_revistas" as any).delete().eq("id", id);
+    const { error } = await supabase.from("admin_revistas").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir");
     else {
       toast.success("Revista excluída");

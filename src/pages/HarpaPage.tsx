@@ -670,7 +670,7 @@ const HarpaPage = () => {
                       Como administrador, você pode montar seleções de hinos e playbacks para os cultos.
                     </p>
                     <button
-                      onClick={() => navigate("/atis?tab=selections")}
+                      onClick={() => navigate("/admin/cultos")}
                       className="mt-4 px-4 py-2 rounded-xl bg-primary text-white text-[11px] font-bold uppercase tracking-wider transition hover:scale-[1.02] active:scale-[0.98]"
                     >
                       Acessar Editor de Seleções

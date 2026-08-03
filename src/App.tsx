@@ -38,6 +38,7 @@ import HarpaPage from "@/pages/HarpaPage";
 import CanticosPage from "@/pages/CanticosPage";
 import VerseShareRedirect from "@/pages/VerseShareRedirect";
 import CultoShareRedirect from "@/pages/CultoShareRedirect";
+import AdminCultoSelectionsPage from "@/pages/AdminCultoSelectionsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/NotFound";
@@ -88,6 +89,7 @@ const AppContent = () => {
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/atis" element={<AtisPage />} />
+            <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/app" element={<AppLanding />} />
             <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
           </Routes>

@@ -1530,6 +1530,74 @@ export type Database = {
         }
         Relationships: []
       }
+      revista_aulas: {
+        Row: {
+          bible_reading_in_class: string | null
+          conclusion: string | null
+          created_at: string | null
+          daily_readings: Json | null
+          date: string | null
+          golden_text: string | null
+          hinos_sugeridos: string | null
+          id: string
+          introduction: string | null
+          lesson_number: number
+          practical_truth: string | null
+          questions: Json | null
+          revista_id: string
+          sort_order: number | null
+          title: string
+          topics: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          bible_reading_in_class?: string | null
+          conclusion?: string | null
+          created_at?: string | null
+          daily_readings?: Json | null
+          date?: string | null
+          golden_text?: string | null
+          hinos_sugeridos?: string | null
+          id?: string
+          introduction?: string | null
+          lesson_number: number
+          practical_truth?: string | null
+          questions?: Json | null
+          revista_id: string
+          sort_order?: number | null
+          title: string
+          topics?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          bible_reading_in_class?: string | null
+          conclusion?: string | null
+          created_at?: string | null
+          daily_readings?: Json | null
+          date?: string | null
+          golden_text?: string | null
+          hinos_sugeridos?: string | null
+          id?: string
+          introduction?: string | null
+          lesson_number?: number
+          practical_truth?: string | null
+          questions?: Json | null
+          revista_id?: string
+          sort_order?: number | null
+          title?: string
+          topics?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revista_aulas_revista_id_fkey"
+            columns: ["revista_id"]
+            isOneToOne: false
+            referencedRelation: "admin_revistas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_badges: {
         Row: {
           badge_id: string

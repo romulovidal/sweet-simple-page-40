@@ -5,7 +5,9 @@ import { BIBLE_CHARACTERS } from "@/data/bibleCharacters";
 import { bibleUrlFromReference } from "@/lib/bibleNav";
 import CharacterStage from "./CharacterStage";
 
-type Module = "characters" | null;
+import { Library } from "lucide-react";
+
+type Module = "characters" | "revistas" | null;
 
 /**
  * Estudos Bíblicos hub — 3 modules that open as fullscreen stages.
@@ -28,6 +30,17 @@ const StudyHub = () => {
   );
 
   const modules = [
+    {
+      id: "revistas" as const,
+      label: "Revista de Estudos",
+      sub: "Lições CPAD 4º Trimestre 2025",
+      icon: Library,
+      color: "142 70% 45%",
+      count: 1,
+      countLabel: "revista ativa",
+      preview: ["📖"],
+      path: "/estudos/revistas"
+    },
     {
       id: "characters" as const,
       label: "Personagens",
@@ -79,6 +92,10 @@ const StudyHub = () => {
             <button
               key={m.id}
               onClick={() => {
+                if (m.id === "revistas" && m.path) {
+                  navigate(m.path);
+                  return;
+                }
                 if (m.id === "characters") setInitialCharacterId(undefined);
                 setActive(m.id);
               }}

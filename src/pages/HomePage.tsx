@@ -30,8 +30,7 @@ const HomePage = () => {
   const [activeTab, setActiveTab] = useState<"hoje" | "comunidade">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab");
-      if (tabParam === "comunidade" || tabParam === "notificacao") return "comunidade";
+      if (params.get("tab") === "comunidade") return "comunidade";
     }
     return "hoje";
   });
@@ -41,8 +40,7 @@ const HomePage = () => {
   useEffect(() => {
     const syncTabFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab");
-      if (tabParam === "comunidade" || tabParam === "notificacao") {
+      if (params.get("tab") === "comunidade") {
         setActiveTab("comunidade");
         const url = new URL(window.location.href);
         url.searchParams.delete("tab");

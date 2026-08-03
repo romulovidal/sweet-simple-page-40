@@ -37,60 +37,62 @@ type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"
 
 const ADMIN_SECTIONS = [
   {
-    id: "overview",
-    title: "Visão Geral",
-    subtitle: "Métricas e atividade",
-    sectionIcon: LayoutDashboard,
+    id: "manejo",
+    title: "Manejo Ministerial",
+    subtitle: "Cultos e Hinários",
+    sectionIcon: Church,
     tabs: [
-      { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
-      { id: "analytics", label: "Analytics", desc: "Eventos e uso", icon: Activity },
-      { id: "retention", label: "Retenção", desc: "D1 · D7 · D30", icon: LineChart },
-      { id: "log", label: "Atividade", desc: "Histórico de ações", icon: Clock },
+      { id: "culto-selections", label: "Seleção de Hinos", desc: "Hinário do culto com playback", icon: Music2 },
+      { id: "cultos", label: "Escala de Cultos", desc: "Agenda e lembretes", icon: Calendar },
+      { id: "canticos", label: "Cânticos Avulsos", desc: "Músicas e playbacks extras", icon: Music2 },
+      { id: "canticos-ministros", label: "Ministros", desc: "Gestão de louvor", icon: Users },
+      { id: "harpa-reports", label: "Correções Harpa", desc: "Relatos de erros nos hinos", icon: AlertTriangle },
     ],
   },
   {
     id: "content",
-    title: "Conteúdo",
-    subtitle: "Publicações e planos",
+    title: "Publicações",
+    subtitle: "Devocional e Planos",
     sectionIcon: FileText,
     tabs: [
       { id: "posts", label: "Posts", desc: "Feed devocional", icon: FileText },
       { id: "plans", label: "Planos de Leitura", desc: "Trilhas bíblicas", icon: BookOpen },
       { id: "verse", label: "Versículo do Dia", desc: "Push diário", icon: BookMarked },
-      { id: "cultos", label: "Escala de Cultos", desc: "Lembretes de culto", icon: Calendar },
-      { id: "culto-selections", label: "Seleção de Hinos", desc: "Monta hinário do culto com playback", icon: Music2 },
+    ],
+  },
+  {
+    id: "overview",
+    title: "Dashboard",
+    subtitle: "Métricas e Atividade",
+    sectionIcon: LayoutDashboard,
+    tabs: [
+      { id: "dashboard", label: "Dashboard", desc: "Métricas e resumo", icon: LayoutDashboard },
+      { id: "analytics", label: "Analytics", desc: "Eventos e uso", icon: Activity },
+      { id: "retention", label: "Retenção", desc: "D1 · D7 · D30", icon: LineChart },
+      { id: "log", label: "Histórico", desc: "Ações do sistema", icon: Clock },
     ],
   },
   {
     id: "community",
     title: "Comunidade",
-    subtitle: "Interação e avisos",
+    subtitle: "Push e Oração",
     sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
       { id: "prayers", label: "Pedidos de Oração", desc: "Moderação", icon: HandHeart },
-      { id: "harpa-reports", label: "Relatos da Harpa", desc: "Erros reportados nos hinos", icon: Music2 },
-    ],
-  },
-  {
-    id: "ai",
-    title: "Inteligência Artificial",
-    subtitle: "Modelos e prompts",
-    sectionIcon: Sparkles,
-    tabs: [
-      { id: "ai", label: "Configurações", desc: "Provedores e modelos", icon: BrainCircuit },
-      { id: "ai-prompts", label: "IAs do App", desc: "Ativar, desativar e editar prompts", icon: Sparkles },
     ],
   },
   {
     id: "system",
-    title: "Sistema",
-    subtitle: "Acesso e ajustes",
+    title: "Configurações",
+    subtitle: "Sistema e IA",
     sectionIcon: Settings2,
     tabs: [
+      { id: "ai", label: "Configurações IA", desc: "Provedores e modelos", icon: BrainCircuit },
+      { id: "ai-prompts", label: "Prompts IAs", desc: "Editar instruções das IAs", icon: Sparkles },
       { id: "app-features", label: "Funcionalidades", desc: "Ligar/desligar recursos", icon: Settings2 },
       { id: "users", label: "Usuários App", desc: "Membros cadastrados", icon: Users },
-      { id: "roles", label: "Administradores", desc: "Permissões", icon: Shield },
+      { id: "roles", label: "Administradores", desc: "Permissões de acesso", icon: Shield },
     ],
   },
 ] as const;
@@ -351,7 +353,7 @@ const AdminPanel = () => {
         <p className="text-[11px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Bem-vindo</p>
         <h2 className="text-2xl font-bold text-[hsl(var(--dark-text))]">Administração</h2>
         <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">
-          Agora vamos ver o que fazer para melhorar para o admin, facilitar o manejo
+          Gerencie o conteúdo, os cultos e a comunidade da Bíblia Atalaia
         </p>
       </div>
 

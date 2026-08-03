@@ -265,18 +265,20 @@ const HarpaPage = () => {
     const lista = c.items
       .map((it) =>
         isCanticoRef(it.hino_number)
-          ? `• Cântico ${refDisplayNumber(it.hino_number)}`
-          : `• Hino ${it.hino_number}`
+          ? `• *Cântico ${refDisplayNumber(it.hino_number)}*`
+          : `• *Hino ${it.hino_number}*`
       )
       .join("\n");
-    const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
+    
+    const text = `🎵 *${c.title}*\n📅 ${fmtCultoDate(c.culto_date)}\n\n*Seleção de Hinos:*\n${lista}\n\n🙌 _Acompanhe a letra e o playback no app Harpa Atalaia:_\n🔗 ${url}`;
+    
     try {
       if (navigator.share) {
-        await navigator.share({ title: c.title, text, url });
+        await navigator.share({ title: c.title, text });
         return;
       }
       await navigator.clipboard.writeText(text);
-      toast.success("Link da seleção copiado!");
+      toast.success("Mensagem formatada copiada!");
     } catch {
       /* cancelado pelo usuário */
     }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree, MessageCircle, Sparkles, Library, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, Users, CalendarClock, BookOpen, Settings, ArrowLeft, Cake, Bot, ListTree, MessageCircle, Sparkles, Library, AlertTriangle, Church } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
 const atisAvatar = atisAvatarAsset.url;
@@ -17,8 +17,9 @@ import AtisSeries from "./AtisSeries";
 import AtisPlansWA from "./AtisPlansWA";
 import AtisAlerts from "./AtisAlerts";
 import { useAtisStatus } from "./useAtisStatus";
+import AdminCultoSelections from "../admin/AdminCultoSelections";
 
-type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "series" | "plans" | "alerts" | "logs" | "config";
+type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "series" | "plans" | "alerts" | "logs" | "config" | "selections";
 
 const resolveAtisAvatar = () => {
   const path = atisAvatarAsset.url;
@@ -31,6 +32,7 @@ const resolveAtisAvatar = () => {
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "dashboard", label: "Painel", icon: LayoutDashboard },
+  { id: "selections", label: "Cultos", icon: Church },
   { id: "contacts", label: "Contatos", icon: Users },
   { id: "groups", label: "Grupos", icon: Bot },
   { id: "individuals", label: "Individuais", icon: MessageCircle },
@@ -44,7 +46,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "config", label: "Config", icon: Settings },
 ];
 
-const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "series", "plans", "alerts", "logs", "config"];
+const MOBILE_BOTTOM: TabId[] = ["dashboard", "selections", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "series", "plans", "alerts", "logs", "config"];
 
 const AtisLayout = () => {
   const isMobile = useIsMobile();
@@ -56,6 +58,7 @@ const AtisLayout = () => {
   const renderTab = () => {
     switch (tab) {
       case "dashboard": return <AtisDashboard onNavigate={setTab} />;
+      case "selections": return <AdminCultoSelections />;
       case "contacts": return <AtisContacts />;
       case "groups": return <AtisGroups />;
       case "individuals": return <AtisIndividuals />;

@@ -19,6 +19,7 @@ import {
   Church,
   Calendar as CalendarIcon,
   Pencil,
+  Settings,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHead from "@/components/PageHead";
@@ -505,14 +506,26 @@ const HarpaPage = () => {
               {loading ? "Carregando…" : empty ? "Hinário indisponível" : `${hinos.length} hinos`}
             </p>
           </div>
-          <button
-            onClick={() => navigate("/canticos")}
-            className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5 shrink-0"
-            aria-label="Abrir Cânticos"
-          >
-            <Music2 className="w-3.5 h-3.5" />
-            Cânticos
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/atis")}
+                className="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center transition hover:bg-primary/20"
+                aria-label="Atis Admin"
+                title="Atis Admin"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => navigate("/canticos")}
+              className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5"
+              aria-label="Abrir Cânticos"
+            >
+              <Music2 className="w-3.5 h-3.5" />
+              Cânticos
+            </button>
+          </div>
         </div>
 
         {!empty && !loading && (
@@ -647,7 +660,7 @@ const HarpaPage = () => {
             <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
               <Church className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="text-sm">Nenhuma seleção de culto disponível ainda.</p>
-              <p className="text-xs mt-1">O admin pode criar em Administração → Seleção de Hinos.</p>
+              <p className="text-xs mt-1">O admin pode criar em Atis → Cultos.</p>
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-2">

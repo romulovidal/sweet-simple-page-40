@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2, Save, X, BookOpen, Link as LinkIcon, FileText, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, BookOpen, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 
 interface Revista {
   id: string;
@@ -12,8 +12,10 @@ interface Revista {
   description: string | null;
   image_url: string | null;
   pdf_url: string | null;
-  is_active: boolean;
-  sort_order: number;
+  is_active: boolean | null;
+  sort_order: number | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 const AdminRevistas = () => {
@@ -23,12 +25,14 @@ const AdminRevistas = () => {
 
   const fetchRevistas = async () => {
     setLoading(true);
+    // @ts-ignore - admin_revistas might not be in generated types yet
     const { data, error } = await supabase
-      .from("admin_revistas")
+      .from("admin_revistas" as any)
       .select("*")
       .order("sort_order", { ascending: true });
     
     if (error) {
+      console.error("Error fetching revistas:", error);
       toast.error("Erro ao carregar revistas");
     } else {
       setRevistas(data || []);
@@ -56,11 +60,13 @@ const AdminRevistas = () => {
     };
 
     if (editingRevista.id) {
-      const { error } = await supabase.from("admin_revistas").update(data).eq("id", editingRevista.id);
+      // @ts-ignore
+      const { error } = await supabase.from("admin_revistas" as any).update(data).eq("id", editingRevista.id);
       if (error) toast.error("Erro ao atualizar");
       else toast.success("Revista atualizada");
     } else {
-      const { error } = await supabase.from("admin_revistas").insert(data);
+      // @ts-ignore
+      const { error } = await supabase.from("admin_revistas" as any).insert(data);
       if (error) toast.error("Erro ao criar");
       else toast.success("Revista criada");
     }
@@ -71,7 +77,8 @@ const AdminRevistas = () => {
 
   const deleteRevista = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir esta revista?")) return;
-    const { error } = await supabase.from("admin_revistas").delete().eq("id", id);
+    // @ts-ignore
+    const { error } = await supabase.from("admin_revistas" as any).delete().eq("id", id);
     if (error) toast.error("Erro ao excluir");
     else {
       toast.success("Revista excluída");

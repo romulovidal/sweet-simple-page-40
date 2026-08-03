@@ -509,17 +509,18 @@ const HarpaPage = () => {
           <div className="flex items-center gap-2 shrink-0">
             {isAdmin && (
               <button
-                onClick={() => navigate("/atis")}
-                className="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center transition hover:bg-primary/20"
-                aria-label="Atis Admin"
-                title="Atis Admin"
+                onClick={() => setTab("cultos")}
+                className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5 transition hover:bg-primary/20"
+                aria-label="Gerenciar Cultos"
+                title="Seleção de Hinos do Culto"
               >
-                <Settings className="w-4 h-4" />
+                <Church className="w-3.5 h-3.5" />
+                Cultos
               </button>
             )}
             <button
               onClick={() => navigate("/canticos")}
-              className="h-9 px-3 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold flex items-center gap-1.5"
+              className="h-9 px-3 rounded-full bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] text-xs font-semibold flex items-center gap-1.5"
               aria-label="Abrir Cânticos"
             >
               <Music2 className="w-3.5 h-3.5" />
@@ -656,46 +657,70 @@ const HarpaPage = () => {
             <h2 className="mt-4 text-lg font-semibold">Hinário ainda não carregado</h2>
           </div>
         ) : showCultoGrid ? (
-          cultoSelections.length === 0 ? (
-            <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
-              <Church className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">Nenhuma seleção de culto disponível ainda.</p>
-              <p className="text-xs mt-1">O admin pode criar em Atis → Cultos.</p>
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 gap-2">
-              {cultoSelections.map((c) => (
-                <li key={c.id}>
-                  <div className="flex items-center gap-1 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 transition pr-2">
+          <div className="space-y-6">
+            {isAdmin && (
+              <div className="p-5 rounded-2xl bg-primary/10 border border-primary/20">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
+                    <Church className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-primary">Painel de Gestão de Cultos</h3>
+                    <p className="text-xs text-primary/70 mt-1 leading-relaxed">
+                      Como administrador, você pode montar seleções de hinos e playbacks para os cultos.
+                    </p>
                     <button
-                      onClick={() => setActiveCulto(c)}
-                      className="flex-1 min-w-0 text-left p-4 flex items-center gap-3 active:scale-[0.99] transition"
+                      onClick={() => navigate("/atis?tab=selections")}
+                      className="mt-4 px-4 py-2 rounded-xl bg-primary text-white text-[11px] font-bold uppercase tracking-wider transition hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <span className="w-11 h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
-                        <Church className="w-5 h-5" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{c.title}</p>
-                        <p className="text-[11px] text-[hsl(var(--dark-muted))] flex items-center gap-1">
-                          <CalendarIcon className="w-3 h-3" />
-                          {fmtCultoDate(c.culto_date)} · {c.items.length} hino
-                          {c.items.length === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                    </button>
-                    <button
-                      onClick={() => shareCulto(c)}
-                      aria-label={`Compartilhar ${c.title}`}
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dark-muted))] hover:text-primary hover:bg-primary/10 transition flex-shrink-0"
-                    >
-                      <Share2 className="w-4 h-4" />
+                      Acessar Editor de Seleções
                     </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )
+                </div>
+              </div>
+            )}
+
+            {cultoSelections.length === 0 ? (
+              <div className="text-center py-16 text-[hsl(var(--dark-muted))]">
+                <Church className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="text-sm">Nenhuma seleção de culto disponível ainda.</p>
+                {isAdmin && <p className="text-xs mt-1">Clique no botão acima para criar a primeira.</p>}
+              </div>
+            ) : (
+              <ul className="grid grid-cols-1 gap-2">
+                {cultoSelections.map((c) => (
+                  <li key={c.id}>
+                    <div className="flex items-center gap-1 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/30 transition pr-2">
+                      <button
+                        onClick={() => setActiveCulto(c)}
+                        className="flex-1 min-w-0 text-left p-4 flex items-center gap-3 active:scale-[0.99] transition"
+                      >
+                        <span className="w-11 h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                          <Church className="w-5 h-5" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{c.title}</p>
+                          <p className="text-[11px] text-[hsl(var(--dark-muted))] flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {fmtCultoDate(c.culto_date)} · {c.items.length} hino
+                            {c.items.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[hsl(var(--dark-muted))]" />
+                      </button>
+                      <button
+                        onClick={() => shareCulto(c)}
+                        aria-label={`Compartilhar ${c.title}`}
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-[hsl(var(--dark-muted))] hover:text-primary hover:bg-primary/10 transition flex-shrink-0"
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ) : showThemeGrid ? (
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {HARPA_THEMES.map((t) => {

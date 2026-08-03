@@ -51,7 +51,11 @@ const MOBILE_BOTTOM: TabId[] = ["dashboard", "selections", "contacts", "groups",
 const AtisLayout = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabId>("dashboard");
+  const [tab, setTab] = useState<TabId>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialTab = params.get("tab") as TabId;
+    return (initialTab && TABS.some(t => t.id === initialTab)) ? initialTab : "dashboard";
+  });
   const status = useAtisStatus();
   const atisAvatarUrl = resolveAtisAvatar();
 

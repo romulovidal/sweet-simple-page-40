@@ -41,6 +41,7 @@ import CultoShareRedirect from "@/pages/CultoShareRedirect";
 import AdminCultoSelectionsPage from "@/pages/AdminCultoSelectionsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
+import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();

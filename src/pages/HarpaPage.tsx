@@ -87,9 +87,6 @@ const fmtCultoDate = (iso: string) => {
 const HarpaPage = () => {
   const navigate = useNavigate();
   const { number: routeNumber, cultoId: routeCultoId } = useParams();
-  const searchParams = new URLSearchParams(window.location.search);
-  const shareTitle = searchParams.get("title");
-  const shareBody = searchParams.get("body");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<HarpaHino | null>(null);
   const [autoPlayNext, setAutoPlayNext] = useState(false);
@@ -268,20 +265,18 @@ const HarpaPage = () => {
     const lista = c.items
       .map((it) =>
         isCanticoRef(it.hino_number)
-          ? `• *Cântico ${refDisplayNumber(it.hino_number)}*`
-          : `• *Hino ${it.hino_number}*`
+          ? `• Cântico ${refDisplayNumber(it.hino_number)}`
+          : `• Hino ${it.hino_number}`
       )
       .join("\n");
-    
-    const text = `🎵 *${c.title}*\n📅 ${fmtCultoDate(c.culto_date)}\n\n*Seleção de Hinos:*\n${lista}\n\n🙌 _Acompanhe a letra e o playback no app Harpa Atalaia:_\n🔗 ${url}`;
-    
+    const text = `🎵 ${c.title} — ${fmtCultoDate(c.culto_date)}\n\n${lista}\n\nAbra a seleção completa na Harpa Atalaia:\n${url}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: c.title, text });
+        await navigator.share({ title: c.title, text, url });
         return;
       }
       await navigator.clipboard.writeText(text);
-      toast.success("Mensagem formatada copiada!");
+      toast.success("Link da seleção copiado!");
     } catch {
       /* cancelado pelo usuário */
     }
@@ -487,8 +482,6 @@ const HarpaPage = () => {
     } catch {}
   };
 
-  const [showShareModal, setShowShareModal] = useState(!!(shareTitle && shareBody));
-
   return (
     <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] pb-24">
       <PageHead
@@ -501,13 +494,7 @@ const HarpaPage = () => {
       <header className="sticky top-0 z-10 bg-dark-bg/95 backdrop-blur-sm max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))]">
         <div className="px-5 pt-12 pb-4 flex items-center gap-3 lg:px-8 lg:pt-8">
           <button
-            onClick={() => {
-              if (shareTitle || shareBody) {
-                navigate("/harpa", { replace: true });
-              } else {
-                navigate(-1);
-              }
-            }}
+            onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
             aria-label="Voltar"
           >
@@ -1066,84 +1053,6 @@ const HarpaPage = () => {
             setEditing(null);
           }}
         />
-      )}
-      {/* Modal de Compartilhamento de Notificação de Culto */}
-       {showShareModal && shareTitle && shareBody && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-[hsl(var(--dark-bg))] w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-white/10 animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-            <div className="relative">
-              {/* Header com gradiente */}
-              <div className="bg-gradient-to-br from-primary/30 to-primary/5 p-8 pb-12 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/20 blur-[80px] rounded-full" />
-                <div className="w-16 h-16 rounded-[22px] bg-primary/20 grid place-items-center mx-auto mb-4 relative z-10 border border-primary/30 shadow-lg">
-                  <Church className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="font-black text-xl leading-tight relative z-10">Convite de Culto</h3>
-                <p className="text-sm text-[hsl(var(--dark-muted))] relative z-10 mt-1 font-medium">Compartilhe as boas novas</p>
-              </div>
-
-              {/* Corpo do Modal */}
-              <div className="p-6 -mt-8 relative z-20 bg-[hsl(var(--dark-bg))] rounded-t-[32px] space-y-6">
-                {/* Preview Estilo WhatsApp */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--dark-muted))] px-2">Visualização no WhatsApp</p>
-                  <div className="relative group">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-primary/20 rounded-[22px] blur opacity-50" />
-                    <div className="relative p-4 rounded-[20px] bg-[#dcf8c6] dark:bg-[#056162] border border-white/10 shadow-sm overflow-hidden">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 blur-2xl rounded-full -mr-10 -mt-10" />
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs">✨</span>
-                          <p className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Convite Especial</p>
-                        </div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">⛪ {shareTitle}</p>
-                        <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed italic line-clamp-3">
-                          "{shareBody}"
-                        </p>
-                        <div className="pt-2 flex items-center justify-between">
-                          <div className="h-0.5 flex-1 bg-black/10 dark:bg-white/10 rounded-full" />
-                          <p className="px-2 text-[10px] font-bold opacity-60">ABRIR NO APP</p>
-                          <div className="h-0.5 flex-1 bg-black/10 dark:bg-white/10 rounded-full" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Botões */}
-                <div className="space-y-3 pt-2">
-                  <button
-                    onClick={async () => {
-                      const text = `✨ *CONVITE ESPECIAL* ✨\n\n⛪ *${shareTitle.toUpperCase()}*\n\n${shareBody}\n\n🙌 _Venha participar conosco, sua presença é muito importante!_\n\n🔗 *Acompanhe pelo App Atalaia:* ${window.location.origin}`;
-                      try {
-                        if (navigator.share) {
-                          await navigator.share({ title: shareTitle, text });
-                        } else {
-                          await navigator.clipboard.writeText(text);
-                          toast.success("Mensagem formatada copiada!");
-                        }
-                        setShowShareModal(false);
-                        navigate("/harpa", { replace: true });
-                      } catch {}
-                    }}
-                    className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-black text-base flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
-                  >
-                    <Share2 className="w-5 h-5" /> Compartilhar agora
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowShareModal(false);
-                      navigate("/harpa", { replace: true });
-                    }}
-                    className="w-full h-12 rounded-2xl bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))] font-bold text-sm hover:text-[hsl(var(--dark-text))] transition-colors border border-white/5"
-                  >
-                    Ignorar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

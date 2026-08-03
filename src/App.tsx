@@ -82,7 +82,6 @@ const AppContent = () => {
             <Route path="/manual" element={<PageTransition><ManualPage /></PageTransition>} />
             <Route path="/harpa" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/harpa/culto/:cultoId" element={<PageTransition><HarpaPage /></PageTransition>} />
-            <Route path="/harpa/culto-share" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/harpa/:number" element={<PageTransition><HarpaPage /></PageTransition>} />
             <Route path="/canticos" element={<PageTransition><CanticosPage /></PageTransition>} />
             <Route path="/v/:slug" element={<VerseShareRedirect />} />

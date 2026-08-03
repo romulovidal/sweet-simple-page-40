@@ -351,7 +351,7 @@ const AdminPanel = () => {
         <p className="text-[11px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Bem-vindo</p>
         <h2 className="text-2xl font-bold text-[hsl(var(--dark-text))]">Administração</h2>
         <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">
-          Todas as ferramentas do app estão no menu lateral. Escolha por onde começar.
+          Agora vamos ver o que fazer para melhorar para o admin, facilitar o manejo
         </p>
       </div>
 

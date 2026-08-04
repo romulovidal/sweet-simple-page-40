@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
+import { safeSend, loadGuard, humanGap, shuffle } from '../_shared/atis-antiban.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -240,19 +241,24 @@ Deno.serve(async (req) => {
 
         let okCount = 0, failCount = 0
         const errors: string[] = []
-        for (const r of recipients) {
+        const guard = await loadGuard(admin)
+        const ordered = shuffle(recipients)
+        let idx = 0
+        for (const r of ordered) {
+          await humanGap(guard, idx++)
           const nome = r.kind === 'contact' ? firstName(r.name) : ''
           const devotional = (b.body ?? '').includes('{devocional_ia}') ? await getDevotional() : ''
           const text = applyPlaceholders(b.body, { nome, verse, birthdays, devotional })
-          const out = await sendText(r.to, text)
+          const out = await safeSend(admin, r.to, text, { kind: 'bulk' })
           if (out.ok) okCount++
-          else { failCount++; errors.push(`${r.to}: ${out.status}`) }
+          else { failCount++; errors.push(`${r.to}: ${out.skipped ? out.reason : out.status}`) }
+          if (out.skipped) continue
           await admin.from('atis_messages_log').insert({
             direction: 'outbound',
             wa_to: r.to,
             body: text,
             status: out.ok ? 'sent' : 'error',
-            raw: out.json,
+            raw: out.body,
           })
         }
 

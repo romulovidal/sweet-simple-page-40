@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X, Lock, Clock } from "lucide-react";
+import { Save, Loader2, Sparkles, HandHeart, Shield, Plus, X, Lock, Clock, ShieldCheck } from "lucide-react";
 
 type DailyVerseDM = { enabled?: boolean; time?: string; include_reflection?: boolean; target?: "profiles" | "contacts" | "both"; last_sent_date?: string };
 type Welcome = { enabled?: boolean; template?: string | null };
@@ -10,6 +10,15 @@ type Access = { dm_restrict?: boolean; allow_group_members?: boolean; deny_reply
 type Timed = { enabled?: boolean; time?: string };
 type DevoT = Timed & { group_ids?: string[]; last_sent_date?: string };
 type BdayT = Timed & { group_ids?: string[]; template?: string | null; use_ai?: boolean; last_sent_date?: string };
+type Guard = {
+  enabled?: boolean; warmup_start_date?: string | null;
+  quiet_start?: number; quiet_end?: number;
+  daily_global_cap?: number; daily_recipient_cap?: number; dedupe_hours?: number;
+  min_gap_ms?: number; max_gap_ms?: number;
+  batch_pause_every?: number; batch_pause_ms?: number;
+  variation?: boolean; optout_footer?: boolean;
+  error_circuit?: number; paused_until?: string | null; consecutive_errors?: number;
+};
 
 const DEFAULTS = {
   daily_verse_dm: { enabled: false, time: "07:00", include_reflection: true, target: "both" } as DailyVerseDM,
@@ -18,6 +27,12 @@ const DEFAULTS = {
   access: { dm_restrict: false, allow_group_members: true, deny_reply: null } as Access,
   devotional: { enabled: false, time: "06:30", group_ids: [] } as DevoT,
   birthday: { enabled: false, time: "08:00", group_ids: [], template: null, use_ai: true } as BdayT,
+  guard: {
+    enabled: true, warmup_start_date: null, quiet_start: 21, quiet_end: 7,
+    daily_global_cap: 250, daily_recipient_cap: 3, dedupe_hours: 20,
+    min_gap_ms: 12000, max_gap_ms: 45000, batch_pause_every: 15, batch_pause_ms: 180000,
+    variation: true, optout_footer: true, error_circuit: 4, paused_until: null, consecutive_errors: 0,
+  } as Guard,
 };
 
 async function loadSetting<T>(key: string, fallback: T): Promise<T> {
@@ -36,6 +51,7 @@ const AtisAdvancedSettings = () => {
   const [ac, setAc] = useState<Access>(DEFAULTS.access);
   const [devo, setDevo] = useState<DevoT>(DEFAULTS.devotional);
   const [bday, setBday] = useState<BdayT>(DEFAULTS.birthday);
+  const [gd, setGd] = useState<Guard>(DEFAULTS.guard);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [newPhone, setNewPhone] = useState("");
@@ -43,15 +59,16 @@ const AtisAdvancedSettings = () => {
 
   useEffect(() => {
     (async () => {
-      const [a, b, c, d, e, f] = await Promise.all([
+      const [a, b, c, d, e, f, g] = await Promise.all([
         loadSetting("atis_daily_verse_dm", DEFAULTS.daily_verse_dm),
         loadSetting("atis_welcome", DEFAULTS.welcome),
         loadSetting("atis_crisis_alert", DEFAULTS.crisis),
         loadSetting("atis_access_control", DEFAULTS.access),
         loadSetting("atis_daily_devotional", DEFAULTS.devotional),
         loadSetting("atis_birthday_greeting", DEFAULTS.birthday),
+        loadSetting("atis_antiban", DEFAULTS.guard),
       ]);
-      setDv(a); setWc(b); setCr(c); setAc(d); setDevo(e); setBday(f); setLoading(false);
+      setDv(a); setWc(b); setCr(c); setAc(d); setDevo(e); setBday(f); setGd(g); setLoading(false);
     })();
   }, []);
 
@@ -66,6 +83,102 @@ const AtisAdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
+      {/* Proteção anti-banimento */}
+      <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-9 rounded-lg grid place-items-center bg-emerald-500/20 text-emerald-400"><ShieldCheck className="w-4 h-4" /></span>
+          <div className="flex-1">
+            <p className="text-sm font-bold">Proteção anti-banimento</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Limites, pausas humanas, aquecimento do número e descadastro automático. Mantenha ativo para reduzir risco de bloqueio pela Meta.</p>
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={gd.enabled !== false} onChange={(e) => setGd({ ...gd, enabled: e.target.checked })} />
+            Ativo
+          </label>
+        </div>
+
+        {gd.paused_until && new Date(gd.paused_until).getTime() > Date.now() && (
+          <div className="rounded-lg bg-destructive/15 text-destructive text-[11px] p-2">
+            Envios pausados automaticamente até {new Date(gd.paused_until).toLocaleTimeString("pt-BR")} — foram detectadas {gd.consecutive_errors ?? 0} falhas seguidas.
+            <button className="ml-2 underline font-semibold" onClick={() => { const next = { ...gd, paused_until: null, consecutive_errors: 0 }; setGd(next); save("atis_antiban", next); }}>Retomar agora</button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Número conectado em (aquecimento)</span>
+            <input type="date" value={gd.warmup_start_date ?? ""} onChange={(e) => setGd({ ...gd, warmup_start_date: e.target.value || null })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Teto diário (após aquecimento)</span>
+            <input type="number" min={10} value={gd.daily_global_cap ?? 250} onChange={(e) => setGd({ ...gd, daily_global_cap: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Máx. por contato/dia</span>
+            <input type="number" min={1} value={gd.daily_recipient_cap ?? 3} onChange={(e) => setGd({ ...gd, daily_recipient_cap: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Bloquear repetição (horas)</span>
+            <input type="number" min={0} value={gd.dedupe_hours ?? 20} onChange={(e) => setGd({ ...gd, dedupe_hours: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Silêncio a partir de (h)</span>
+            <input type="number" min={0} max={23} value={gd.quiet_start ?? 21} onChange={(e) => setGd({ ...gd, quiet_start: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Silêncio até (h)</span>
+            <input type="number" min={0} max={23} value={gd.quiet_end ?? 7} onChange={(e) => setGd({ ...gd, quiet_end: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Intervalo mínimo (segundos)</span>
+            <input type="number" min={3} value={Math.round((gd.min_gap_ms ?? 12000) / 1000)} onChange={(e) => setGd({ ...gd, min_gap_ms: Number(e.target.value) * 1000 })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Intervalo máximo (segundos)</span>
+            <input type="number" min={5} value={Math.round((gd.max_gap_ms ?? 45000) / 1000)} onChange={(e) => setGd({ ...gd, max_gap_ms: Number(e.target.value) * 1000 })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Pausa longa a cada N envios</span>
+            <input type="number" min={0} value={gd.batch_pause_every ?? 15} onChange={(e) => setGd({ ...gd, batch_pause_every: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Duração da pausa longa (min)</span>
+            <input type="number" min={1} value={Math.round((gd.batch_pause_ms ?? 180000) / 60000)} onChange={(e) => setGd({ ...gd, batch_pause_ms: Number(e.target.value) * 60000 })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+        </div>
+
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={gd.variation !== false} onChange={(e) => setGd({ ...gd, variation: e.target.checked })} />
+            Variar levemente cada mensagem (evita envios idênticos em massa)
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={gd.optout_footer !== false} onChange={(e) => setGd({ ...gd, optout_footer: e.target.checked })} />
+            Incluir rodapé "responda SAIR" nas mensagens automáticas em DM
+          </label>
+          <label className="text-xs space-y-1 block">
+            <span className="text-[hsl(var(--dark-muted))]">Pausar tudo após N falhas seguidas</span>
+            <input type="number" min={2} value={gd.error_circuit ?? 4} onChange={(e) => setGd({ ...gd, error_circuit: Number(e.target.value) })}
+              className="w-28 rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+        </div>
+
+        <button onClick={() => save("atis_antiban", gd)} disabled={saving === "atis_antiban"}
+          className="w-full rounded-xl bg-primary text-primary-foreground py-2 text-sm font-semibold flex items-center justify-center gap-2">
+          {saving === "atis_antiban" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar proteção
+        </button>
+      </div>
+
       {/* Horários automáticos (grupos e DMs) */}
       <div className="rounded-2xl bg-[hsl(var(--dark-card))] p-4 space-y-3">
         <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName } from '../_shared/atis-evolution.ts';
+import { safeSend, loadGuard, humanGap, shuffle } from '../_shared/atis-antiban.ts';
 
 const DEFAULT_TEMPLATE = `👋 Olá, {nome}!
 
@@ -63,10 +64,14 @@ Deno.serve(async (req) => {
 
   const results: any[] = [];
   const now = new Date().toISOString();
-  for (const t of targets) {
+  const guard = await loadGuard(admin);
+  let idx = 0;
+  for (const t of shuffle(targets)) {
+    await humanGap(guard, idx++);
     const nome = firstName(t.name);
     const text = applyTemplate(template, nome);
-    const r = await evolutionSendText(t.phone, text);
+    const r = await safeSend(admin, t.phone, text, { kind: 'transactional' });
+    if ((r as any).skipped) { results.push({ kind: t.kind, phone: t.phone, ok: false, skipped: (r as any).reason }); continue; }
     await admin.from('atis_messages_log').insert({
       direction: 'outbound', wa_to: t.phone, body: text,
       command: 'welcome', status: r.ok ? 'sent' : 'error',

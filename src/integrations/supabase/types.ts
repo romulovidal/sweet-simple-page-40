@@ -582,6 +582,27 @@ export type Database = {
         }
         Relationships: []
       }
+      atis_optouts: {
+        Row: {
+          created_at: string
+          phone: string
+          reason: string | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          phone: string
+          reason?: string | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          phone?: string
+          reason?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       atis_plan_subscribers: {
         Row: {
           active: boolean
@@ -638,6 +659,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      atis_send_ledger: {
+        Row: {
+          body_hash: string | null
+          created_at: string
+          day: string
+          id: string
+          is_group: boolean
+          kind: string
+          recipient: string
+        }
+        Insert: {
+          body_hash?: string | null
+          created_at?: string
+          day: string
+          id?: string
+          is_group?: boolean
+          kind?: string
+          recipient: string
+        }
+        Update: {
+          body_hash?: string | null
+          created_at?: string
+          day?: string
+          id?: string
+          is_group?: boolean
+          kind?: string
+          recipient?: string
+        }
+        Relationships: []
       }
       atis_series: {
         Row: {
@@ -1841,6 +1892,18 @@ export type Database = {
       }
     }
     Functions: {
+      atis_guard_check: {
+        Args: {
+          _body_hash: string
+          _daily_global_cap: number
+          _daily_recipient_cap: number
+          _dedupe_hours: number
+          _is_group: boolean
+          _kind: string
+          _recipient: string
+        }
+        Returns: Json
+      }
       check_and_increment_rate_limit: {
         Args: {
           _endpoint: string

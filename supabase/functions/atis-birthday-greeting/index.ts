@@ -1,10 +1,8 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
+import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts'
 
-const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
-const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
-const INSTANCE = 'atis'
 const BRAZIL_TZ = 'America/Fortaleza'
 
 function brNow() {
@@ -66,47 +64,14 @@ async function generateGreeting(names: string[], template: string | null, period
   return text
 }
 
-async function sendToGroup(jid: string, text: string) {
-  if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution not configured' }
-  const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text }),
-  })
-  const body = await res.text().catch(() => '')
-  return { ok: res.ok, status: res.status, body }
+async function sendToGroup(admin: any, jid: string, text: string) {
+  const r = await safeSend(admin, jid, text, { kind: 'bulk', noFooter: true })
+  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped, reason: (r as any).reason }
 }
 
-function phoneVariants(to: string): string[] {
-  if (to.includes('@')) return [to]
-  const digits = to.replace(/\D/g, '')
-  if (!digits) return []
-  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
-  const ddd = withCountry.slice(2, 4)
-  const rest = withCountry.slice(4)
-  const variants = new Set<string>()
-  variants.add(withCountry)
-  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
-  else if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
-  return [...variants].map((n) => `${n}@s.whatsapp.net`)
-}
-
-async function sendDirect(phone: string, text: string) {
-  if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution not configured' }
-  const attempts = phoneVariants(phone)
-  let last = { ok: false, status: 0, body: '' as any }
-  for (const jid of attempts) {
-    const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-      body: JSON.stringify({ number: jid, text }),
-    })
-    const body = await res.text().catch(() => '')
-    last = { ok: res.ok, status: res.status, body }
-    if (res.ok) return last
-    if (!String(body).includes('"exists":false')) return last
-  }
-  return last
+async function sendDirect(admin: any, phone: string, text: string) {
+  const r = await safeSend(admin, phone, text, { kind: 'transactional' })
+  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped, reason: (r as any).reason }
 }
 
 async function generatePersonalGreeting(name: string, period: string): Promise<string> {
@@ -186,9 +151,13 @@ Deno.serve(async (req) => {
   if (!text) return new Response(JSON.stringify({ error: 'empty-text' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   const results: any[] = []
+  const guard = await loadGuard(admin)
+  let gIdx = 0
   for (const jid of groupIds) {
-    const r = await sendToGroup(jid, text)
+    await humanGap(guard, gIdx++)
+    const r = await sendToGroup(admin, jid, text)
     results.push({ jid, ok: r.ok, status: r.status })
+    if (r.skipped) continue
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
       wa_to: jid,
@@ -202,12 +171,15 @@ Deno.serve(async (req) => {
 
   // DM pessoal ao(s) aniversariante(s) que têm telefone cadastrado
   const dms: any[] = []
+  let dIdx = 0
   for (const b of todays) {
     const phone = String((b as any).phone ?? '').trim()
     if (!phone) continue
+    await humanGap(guard, dIdx++)
     const personal = await generatePersonalGreeting(b.name, period)
-    const r = await sendDirect(phone, personal)
+    const r = await sendDirect(admin, phone, personal)
     dms.push({ name: b.name, phone, ok: r.ok, status: r.status })
+    if (r.skipped) continue
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
       wa_to: phone,

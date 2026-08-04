@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName, brDateParts } from '../_shared/atis-evolution.ts';
+import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts';
 import { aiGenerateText } from '../_shared/ai-fetch.ts';
 
 type SeriesItem = { day: number; title?: string; verse_ref?: string; verse_text?: string; body: string };
@@ -38,6 +39,8 @@ Deno.serve(async (req) => {
   if (!series?.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-active-series' }), { headers: corsHeaders });
 
   const results: any[] = [];
+  const guard = await loadGuard(admin);
+  let sendIdx = 0;
   for (const s of series) {
     const items = Array.isArray(s.items) ? (s.items as SeriesItem[]) : [];
     if (!items.length) continue;
@@ -63,7 +66,9 @@ Deno.serve(async (req) => {
       const nome = firstName(sub.name);
       const commentary = s.ai_commentary ? await generateCommentary(s.name, item) : '';
       const text = buildText(s.name, item, nome, total, commentary);
-      const r = await evolutionSendText(sub.phone, text);
+      await humanGap(guard, sendIdx++);
+      const r = await safeSend(admin, sub.phone, text, { kind: 'bulk' });
+      if ((r as any).skipped) { results.push({ series_id: s.id, phone: sub.phone, day, ok: false, skipped: (r as any).reason }); continue; }
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: sub.phone, body: text,
         command: 'series', status: r.ok ? 'sent' : 'error',
@@ -113,7 +118,9 @@ Deno.serve(async (req) => {
         }
         const commentary = s.ai_commentary ? await generateCommentary(s.name, item) : '';
         const text = buildText(s.name, item, '', total, commentary);
-        const r = await evolutionSendText(g.wa_group_id, text, { mentionsEveryOne: !!s.mention_all });
+        await humanGap(guard, sendIdx++);
+        const r = await safeSend(admin, g.wa_group_id, text, { kind: 'bulk', mentionsEveryOne: !!s.mention_all, noFooter: true });
+        if ((r as any).skipped) { results.push({ series_id: s.id, group_id: g.id, ok: false, skipped: (r as any).reason }); continue; }
         await admin.from('atis_messages_log').insert({
           direction: 'outbound', wa_group_id: g.wa_group_id, body: text,
           command: 'series', status: r.ok ? 'sent' : 'error',

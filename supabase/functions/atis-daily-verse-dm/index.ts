@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName, brDateParts } from '../_shared/atis-evolution.ts';
+import { safeSend, loadGuard, humanGap, shuffle } from '../_shared/atis-antiban.ts';
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts';
 
 const DEFAULT_REFLECTION_PROMPT =
@@ -98,11 +99,15 @@ Deno.serve(async (req) => {
 
   let ok = 0, fail = 0;
   const errors: string[] = [];
-  for (const [phone, meta] of recipients) {
+  const guard = await loadGuard(admin);
+  let idx = 0;
+  for (const [phone, meta] of shuffle([...recipients.entries()])) {
+    await humanGap(guard, idx++);
     const nome = firstName(meta.name);
     const text = buildMessage(nome, qv.verse_ref, qv.verse_text, reflection, period);
-    const r = await evolutionSendText(phone, text);
-    if (r.ok) ok++; else { fail++; errors.push(`${phone}:${r.status}`); }
+    const r = await safeSend(admin, phone, text, { kind: 'bulk' });
+    if (r.ok) ok++; else { fail++; errors.push(`${phone}:${(r as any).skipped ? (r as any).reason : r.status}`); }
+    if ((r as any).skipped) continue;
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
       wa_to: phone,

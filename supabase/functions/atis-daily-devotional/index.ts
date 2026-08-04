@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
+import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -81,15 +82,9 @@ function titleByPeriod(period: string): string {
   return '✨ Devocional de hoje'
 }
 
-async function sendToGroup(jid: string, text: string) {
-  if (!EVO_URL || !EVO_KEY) return { ok: false, status: 0, body: 'evolution not configured' }
-  const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text }),
-  })
-  const body = await res.text().catch(() => '')
-  return { ok: res.ok, status: res.status, body }
+async function sendToGroup(admin: any, jid: string, text: string) {
+  const r = await safeSend(admin, jid, text, { kind: 'bulk', noFooter: true })
+  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped }
 }
 
 Deno.serve(async (req) => {
@@ -170,9 +165,13 @@ Deno.serve(async (req) => {
     `— Bíblia Atalaia`
 
   const results: any[] = []
+  const guard = await loadGuard(admin)
+  let gIdx = 0
   for (const jid of groupIds) {
-    const r = await sendToGroup(jid, text)
+    await humanGap(guard, gIdx++)
+    const r = await sendToGroup(admin, jid, text)
     results.push({ jid, ok: r.ok, status: r.status })
+    if (r.skipped) continue
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
       wa_to: jid,

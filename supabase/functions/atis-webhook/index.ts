@@ -2,6 +2,9 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiChatFetch } from '../_shared/ai-fetch.ts'
 import { evolutionSendText, evolutionSendButtons } from '../_shared/atis-evolution.ts'
+import { safeSend, isOptInMessage, normalizeRecipient } from '../_shared/atis-antiban.ts'
+
+let ADMIN_FOR_SEND: any = null
 
 const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
@@ -246,11 +249,9 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
 }
 
 async function sendText(jid: string, text: string) {
-  return fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text, linkPreview: true }),
-  })
+  // Respostas diretas passam pelo guard como 'reply' (isentas de limites de
+  // campanha, mas ainda com pacing humano e circuit breaker).
+  return safeSend(ADMIN_FOR_SEND, jid, text, { kind: 'reply', noFooter: true })
 }
 
 async function sendMediaImage(jid: string, imageUrl: string, caption: string) {
@@ -1065,6 +1066,7 @@ Deno.serve(async (req) => {
   const secretOk = !WEBHOOK_SECRET || providedSecret === WEBHOOK_SECRET
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  ADMIN_FOR_SEND = admin
   const payload = await req.json().catch(() => ({} as any))
 
   try {
@@ -1207,6 +1209,10 @@ Deno.serve(async (req) => {
               admin.from('profiles').update({ whatsapp_opt_in: false }).in('whatsapp', list),
               admin.from('atis_series_subscribers').update({ active: false }).in('phone', list),
               admin.from('atis_plan_subscribers').update({ active: false }).in('phone', list),
+              admin.from('atis_optouts').upsert(
+                { recipient: normalizeRecipient(jid).key, source: 'whatsapp', reason: norm },
+                { onConflict: 'recipient' },
+              ),
             ])
             const okCount = results.filter(r => r.status === 'fulfilled').length
 
@@ -1216,6 +1222,31 @@ Deno.serve(async (req) => {
               direction: 'outbound', wa_to: jid, body: reply,
               command: 'opt-out', status: r.ok ? 'sent' : 'error',
               raw: { auto: true, variants: list, updates_ok: okCount, http: r.status },
+            })
+            continue
+          }
+
+          // Reativação: "VOLTAR" / "quero receber"
+          if (isOptInMessage(text)) {
+            const phoneOnly = jid.replace(/@.*/, '').replace(/\D/g, '')
+            const variants = new Set<string>([phoneOnly])
+            if (phoneOnly.length >= 12 && phoneOnly.startsWith('55')) {
+              const ddd = phoneOnly.slice(2, 4); const rest = phoneOnly.slice(4)
+              if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
+              if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
+            }
+            const list2 = Array.from(variants)
+            await Promise.allSettled([
+              admin.from('atis_optouts').delete().eq('recipient', normalizeRecipient(jid).key),
+              admin.from('atis_contacts').update({ opt_in: true }).in('phone', list2),
+              admin.from('profiles').update({ whatsapp_opt_in: true }).in('whatsapp', list2),
+            ])
+            const reply = `💜 Que bom te ter de volta! Você voltou a receber as mensagens do Atis.\n\nSe quiser parar novamente, é só responder SAIR.\n\n— Bíblia Atalaia`
+            const r = await sendText(jid, reply)
+            await admin.from('atis_messages_log').insert({
+              direction: 'outbound', wa_to: jid, body: reply,
+              command: 'opt-in', status: r.ok ? 'sent' : 'error',
+              raw: { auto: true, variants: list2, http: r.status },
             })
             continue
           }

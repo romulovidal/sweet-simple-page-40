@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { evolutionSendText, firstName, brDateParts } from '../_shared/atis-evolution.ts';
+import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts';
 
 const APP_URL = 'https://biblia.atalaias.online';
 const WA_CHUNK = 3500;
@@ -124,6 +125,8 @@ Deno.serve(async (req) => {
   const planCache = new Map<string, any>();
   const readingsCache = new Map<string, any[]>();
   const results: any[] = [];
+  const guard = await loadGuard(admin);
+  let sendIdx = 0;
 
   for (const sub of subs) {
     if (onlySubId && sub.id !== onlySubId) continue;
@@ -165,16 +168,18 @@ Deno.serve(async (req) => {
     const messages = await buildMessages(plan.title, reading, nome, day, total);
     let allOk = true;
     let lastStatus = 0;
+    await humanGap(guard, sendIdx++);
     for (let i = 0; i < messages.length; i++) {
-      const r = await evolutionSendText(sub.phone, messages[i]);
+      const r = await safeSend(admin, sub.phone, messages[i], { kind: 'bulk', noFooter: i > 0 });
       lastStatus = r.status;
       if (!r.ok) { allOk = false; }
+      if ((r as any).skipped) break;
       await admin.from('atis_messages_log').insert({
         direction: 'outbound', wa_to: sub.phone, body: messages[i],
         command: 'plan-reading', status: r.ok ? 'sent' : 'error',
         raw: { plan_id: sub.plan_id, day, part: i + 1, parts: messages.length, http: r.status },
       });
-      if (i < messages.length - 1) await sleep(900);
+      if (i < messages.length - 1) await sleep(3000 + Math.random() * 5000);
     }
     if (allOk) {
       const nextDay = day + 1;

@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.atis_guard_check(text, boolean, text, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.atis_guard_check(text, boolean, text, text, integer, integer, integer) TO service_role;

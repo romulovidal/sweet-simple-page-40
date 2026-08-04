@@ -2,6 +2,9 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiChatFetch } from '../_shared/ai-fetch.ts'
 import { evolutionSendText, evolutionSendButtons } from '../_shared/atis-evolution.ts'
+import { safeSend, isOptInMessage, normalizeRecipient } from '../_shared/atis-antiban.ts'
+
+let ADMIN_FOR_SEND: any = null
 
 const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
@@ -246,11 +249,9 @@ async function handleCrisis(admin: any, phone: string, name: string | null, text
 }
 
 async function sendText(jid: string, text: string) {
-  return fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number: jid, text, linkPreview: true }),
-  })
+  // Respostas diretas passam pelo guard como 'reply' (isentas de limites de
+  // campanha, mas ainda com pacing humano e circuit breaker).
+  return safeSend(ADMIN_FOR_SEND, jid, text, { kind: 'reply', noFooter: true })
 }
 
 async function sendMediaImage(jid: string, imageUrl: string, caption: string) {

@@ -1066,6 +1066,7 @@ Deno.serve(async (req) => {
   const secretOk = !WEBHOOK_SECRET || providedSecret === WEBHOOK_SECRET
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  ADMIN_FOR_SEND = admin
   const payload = await req.json().catch(() => ({} as any))
 
   try {

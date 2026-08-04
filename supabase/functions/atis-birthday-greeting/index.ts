@@ -1,10 +1,8 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
+import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts'
 
-const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
-const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
-const INSTANCE = 'atis'
 const BRAZIL_TZ = 'America/Fortaleza'
 
 function brNow() {
@@ -69,20 +67,6 @@ async function generateGreeting(names: string[], template: string | null, period
 async function sendToGroup(admin: any, jid: string, text: string) {
   const r = await safeSend(admin, jid, text, { kind: 'bulk', noFooter: true })
   return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped, reason: (r as any).reason }
-}
-
-function phoneVariants(to: string): string[] {
-  if (to.includes('@')) return [to]
-  const digits = to.replace(/\D/g, '')
-  if (!digits) return []
-  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
-  const ddd = withCountry.slice(2, 4)
-  const rest = withCountry.slice(4)
-  const variants = new Set<string>()
-  variants.add(withCountry)
-  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
-  else if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
-  return [...variants].map((n) => `${n}@s.whatsapp.net`)
 }
 
 async function sendDirect(admin: any, phone: string, text: string) {

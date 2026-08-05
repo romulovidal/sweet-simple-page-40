@@ -160,9 +160,37 @@ const AtisAdvancedSettings = () => {
             <input type="number" min={1} value={Math.round((gd.batch_pause_ms ?? 180000) / 60000)} onChange={(e) => setGd({ ...gd, batch_pause_ms: Number(e.target.value) * 60000 })}
               className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
           </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Teto por hora (massa)</span>
+            <input type="number" min={0} value={gd.hourly_cap ?? 20} onChange={(e) => setGd({ ...gd, hourly_cap: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Máx. por grupo/dia</span>
+            <input type="number" min={1} value={gd.daily_group_cap ?? 3} onChange={(e) => setGd({ ...gd, daily_group_cap: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Atraso aleatório máx. (s)</span>
+            <input type="number" min={0} value={Math.round((gd.jitter_max_ms ?? 9000) / 1000)} onChange={(e) => setGd({ ...gd, jitter_max_ms: Number(e.target.value) * 1000 })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs space-y-1">
+            <span className="text-[hsl(var(--dark-muted))]">Tamanho máx. da mensagem</span>
+            <input type="number" min={200} value={gd.max_chars ?? 900} onChange={(e) => setGd({ ...gd, max_chars: Number(e.target.value) })}
+              className="w-full rounded-lg bg-[hsl(var(--dark-bg))] px-3 py-2 text-sm" />
+          </label>
         </div>
 
         <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={gd.read_before_reply !== false} onChange={(e) => setGd({ ...gd, read_before_reply: e.target.checked })} />
+            Marcar como lido antes de responder (comportamento humano)
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={gd.link_guard !== false} onChange={(e) => setGd({ ...gd, link_guard: e.target.checked })} />
+            No máximo 1 link por mensagem automática
+          </label>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={gd.variation !== false} onChange={(e) => setGd({ ...gd, variation: e.target.checked })} />
             Variar levemente cada mensagem (evita envios idênticos em massa)

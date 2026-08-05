@@ -20,6 +20,8 @@ export interface GuardConfig {
   quiet_end: number;                // hora BR antes da qual não envia (ex.: 7)
   daily_global_cap: number;         // teto absoluto por dia (fora warmup)
   daily_recipient_cap: number;      // máximo de mensagens por contato/dia
+  hourly_cap: number;               // teto de envios em massa por hora
+  daily_group_cap: number;          // máximo de mensagens por grupo/dia
   dedupe_hours: number;
   min_gap_ms: number;               // intervalo mínimo entre envios em massa
   max_gap_ms: number;
@@ -32,27 +34,37 @@ export interface GuardConfig {
   error_circuit: number;            // nº de falhas seguidas que pausa o robô
   paused_until: string | null;      // ISO
   consecutive_errors: number;
+  jitter_max_ms: number;            // atraso aleatório antes de cada envio
+  read_before_reply: boolean;       // marcar como lido antes de responder
+  link_guard: boolean;              // no máximo 1 link por mensagem em massa
+  max_chars: number;                // corta mensagens muito longas
 }
 
 export const DEFAULT_GUARD: GuardConfig = {
   enabled: true,
   warmup_start_date: null,
   quiet_start: 21,
-  quiet_end: 7,
-  daily_global_cap: 250,
-  daily_recipient_cap: 3,
+  quiet_end: 8,
+  daily_global_cap: 120,
+  daily_recipient_cap: 2,
+  hourly_cap: 20,
+  daily_group_cap: 3,
   dedupe_hours: 20,
-  min_gap_ms: 12000,
-  max_gap_ms: 45000,
+  min_gap_ms: 25000,
+  max_gap_ms: 95000,
   typing_ms_per_char: 45,
-  typing_max_ms: 9000,
-  batch_pause_every: 15,
-  batch_pause_ms: 180000,
+  typing_max_ms: 12000,
+  batch_pause_every: 8,
+  batch_pause_ms: 300000,
   variation: true,
   optout_footer: true,
-  error_circuit: 4,
+  error_circuit: 3,
   paused_until: null,
   consecutive_errors: 0,
+  jitter_max_ms: 9000,
+  read_before_reply: true,
+  link_guard: true,
+  max_chars: 900,
 };
 
 export const GUARD_KEY = 'atis_antiban';
@@ -86,11 +98,11 @@ async function saveGuard(admin: any, patch: Partial<GuardConfig>, current: Guard
 
 /** Limite diário efetivo considerando o aquecimento do chip. */
 export function warmupCap(cfg: GuardConfig): number {
-  if (!cfg.warmup_start_date) return Math.min(cfg.daily_global_cap, 40);
+  if (!cfg.warmup_start_date) return Math.min(cfg.daily_global_cap, 15);
   const start = new Date(`${cfg.warmup_start_date}T00:00:00-03:00`).getTime();
   const days = Math.floor((Date.now() - start) / 86400000);
-  // rampa suave: d0=20, dobrando a cada ~3 dias até o teto configurado
-  const ramp = [20, 20, 30, 40, 55, 70, 90, 110, 140, 170, 200, 230];
+  // rampa lenta (21 dias) — quanto mais devagar, menor o risco de bloqueio
+  const ramp = [5, 8, 10, 14, 18, 22, 26, 32, 38, 44, 52, 60, 68, 76, 84, 92, 100, 108, 114, 118, 120];
   const v = days < ramp.length ? ramp[Math.max(0, days)] : cfg.daily_global_cap;
   return Math.min(v, cfg.daily_global_cap);
 }
@@ -127,6 +139,43 @@ async function setPresence(jid: string, state: 'composing' | 'paused') {
       body: JSON.stringify({ number: jid, presence: state, delay: 0 }),
     });
   } catch { /* opcional */ }
+}
+
+/** Marca o chat como lido — comportamento típico de humano antes de responder. */
+export async function markChatRead(remoteJid: string, messageId?: string) {
+  if (!EVO_URL || !EVO_KEY || !remoteJid) return;
+  try {
+    await fetch(`${EVO_URL}/chat/markMessageAsRead/${INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ readMessages: [{ remoteJid, fromMe: false, id: messageId ?? '' }] }),
+    });
+  } catch { /* opcional */ }
+}
+
+/** Mantém no máximo 1 link e evita mensagens gigantes (padrões típicos de spam). */
+function sanitizeBulk(text: string, cfg: GuardConfig): string {
+  let out = text;
+  if (cfg.link_guard) {
+    let seen = 0;
+    out = out.replace(/https?:\/\/\S+/g, (m) => (++seen === 1 ? m : ''));
+  }
+  if (cfg.max_chars > 0 && out.length > cfg.max_chars) {
+    out = out.slice(0, cfg.max_chars).replace(/\s+\S*$/, '') + '…';
+  }
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** Envios em massa na última hora (freio adicional ao teto diário). */
+async function hourlyCount(admin: any): Promise<number> {
+  try {
+    const { count } = await admin
+      .from('atis_send_ledger')
+      .select('id', { count: 'exact', head: true })
+      .neq('kind', 'reply')
+      .gt('created_at', new Date(Date.now() - 3600000).toISOString());
+    return count ?? 0;
+  } catch { return 0; }
 }
 
 export function normalizeRecipient(to: string): { key: string; isGroup: boolean } {

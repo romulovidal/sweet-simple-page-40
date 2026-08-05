@@ -223,6 +223,26 @@ export async function safeSend(
     return { ok: false, status: 0, body: null, jid: null, skipped: true, reason: 'quiet_hours' };
   }
 
+  // Freio por hora e teto por grupo (além dos tetos diários)
+  if (kind === 'bulk') {
+    if (cfg.hourly_cap > 0 && (await hourlyCount(admin)) >= cfg.hourly_cap) {
+      return { ok: false, status: 0, body: null, jid: null, skipped: true, reason: 'hourly_cap' };
+    }
+    if (isGroup && cfg.daily_group_cap > 0) {
+      try {
+        const { count } = await admin
+          .from('atis_send_ledger')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient', key)
+          .eq('day', brNowParts().date)
+          .neq('kind', 'reply');
+        if ((count ?? 0) >= cfg.daily_group_cap) {
+          return { ok: false, status: 0, body: null, jid: null, skipped: true, reason: 'group_cap' };
+        }
+      } catch { /* segue */ }
+    }
+  }
+
   const bodyHash = await hash(`${key}|${text.slice(0, 400)}`);
   let allowed = true; let reason = '';
   try {
@@ -241,10 +261,14 @@ export async function safeSend(
   if (!allowed) return { ok: false, status: 0, body: null, jid: null, skipped: true, reason };
 
   let out = text;
+  if (kind !== 'reply') out = sanitizeBulk(out, cfg);
   if (kind === 'bulk' && !isGroup && cfg.optout_footer && !opts.noFooter && !/responda SAIR/i.test(text)) {
     out += OPTOUT_FOOTER;
   }
   out = humanize(out, cfg.variation);
+
+  // Micro-atraso aleatório: nada sai em horário "redondo" nem em cadência fixa
+  if (cfg.jitter_max_ms > 0) await sleep(rand(0, cfg.jitter_max_ms));
 
   // Pacing humano: "digitando..." proporcional ao tamanho do texto
   if (!opts.skipTyping) {

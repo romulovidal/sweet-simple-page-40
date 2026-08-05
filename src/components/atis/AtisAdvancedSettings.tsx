@@ -14,9 +14,11 @@ type Guard = {
   enabled?: boolean; warmup_start_date?: string | null;
   quiet_start?: number; quiet_end?: number;
   daily_global_cap?: number; daily_recipient_cap?: number; dedupe_hours?: number;
+  hourly_cap?: number; daily_group_cap?: number;
   min_gap_ms?: number; max_gap_ms?: number;
   batch_pause_every?: number; batch_pause_ms?: number;
   variation?: boolean; optout_footer?: boolean;
+  jitter_max_ms?: number; read_before_reply?: boolean; link_guard?: boolean; max_chars?: number;
   error_circuit?: number; paused_until?: string | null; consecutive_errors?: number;
 };
 
@@ -28,10 +30,13 @@ const DEFAULTS = {
   devotional: { enabled: false, time: "06:30", group_ids: [] } as DevoT,
   birthday: { enabled: false, time: "08:00", group_ids: [], template: null, use_ai: true } as BdayT,
   guard: {
-    enabled: true, warmup_start_date: null, quiet_start: 21, quiet_end: 7,
-    daily_global_cap: 250, daily_recipient_cap: 3, dedupe_hours: 20,
-    min_gap_ms: 12000, max_gap_ms: 45000, batch_pause_every: 15, batch_pause_ms: 180000,
-    variation: true, optout_footer: true, error_circuit: 4, paused_until: null, consecutive_errors: 0,
+    enabled: true, warmup_start_date: null, quiet_start: 21, quiet_end: 8,
+    daily_global_cap: 120, daily_recipient_cap: 2, dedupe_hours: 20,
+    hourly_cap: 20, daily_group_cap: 3,
+    min_gap_ms: 25000, max_gap_ms: 95000, batch_pause_every: 8, batch_pause_ms: 300000,
+    variation: true, optout_footer: true, jitter_max_ms: 9000, read_before_reply: true,
+    link_guard: true, max_chars: 900,
+    error_circuit: 3, paused_until: null, consecutive_errors: 0,
   } as Guard,
 };
 

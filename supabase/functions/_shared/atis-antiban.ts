@@ -192,6 +192,7 @@ export interface SafeSendOptions {
   skipTyping?: boolean;
   noFooter?: boolean;
   bypassQuietHours?: boolean;
+  replyToMessageId?: string;
 }
 
 export interface SafeSendResult extends SendResult {

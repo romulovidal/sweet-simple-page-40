@@ -273,6 +273,10 @@ export async function safeSend(
   // Pacing humano: "digitando..." proporcional ao tamanho do texto
   if (!opts.skipTyping) {
     const jid = isGroup ? key : `${key}@s.whatsapp.net`;
+    if (kind === 'reply' && cfg.read_before_reply) {
+      await markChatRead(jid, opts.replyToMessageId);
+      await sleep(rand(600, 2200)); // "lendo" antes de digitar
+    }
     const typing = Math.min(cfg.typing_max_ms, 800 + out.length * cfg.typing_ms_per_char * rand(0.7, 1.3));
     await setPresence(jid, 'composing');
     await sleep(typing);

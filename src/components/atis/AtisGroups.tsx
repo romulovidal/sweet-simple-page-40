@@ -35,6 +35,12 @@ const NOTIF_TYPES: { key: string; label: string; hint: string; icon: any }[] = [
   { key: "general", label: "Avisos gerais", hint: "Pushes manuais do admin", icon: Megaphone },
 ];
 const ALL_TYPES = NOTIF_TYPES.map((t) => t.key);
+const NO_TYPES = "__none__";
+
+const enabledTypes = (types: string[] | null) => {
+  if (Array.isArray(types) && types.includes(NO_TYPES)) return [];
+  return Array.isArray(types) && types.length ? types : ALL_TYPES;
+};
 
 const AtisGroups = () => {
   const [items, setItems] = useState<Group[]>([]);
@@ -71,11 +77,9 @@ const AtisGroups = () => {
   };
 
   const toggleType = async (g: Group, key: string) => {
-    const current = Array.isArray(g.notification_types) && g.notification_types.length
-      ? g.notification_types
-      : ALL_TYPES;
+    const current = enabledTypes(g.notification_types);
     const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
-    await update(g.id, { notification_types: next });
+    await update(g.id, { notification_types: next.length ? next : [NO_TYPES] });
   };
 
   const setTypeTime = async (g: Group, key: string, hhmm: string) => {
@@ -240,9 +244,7 @@ const AtisGroups = () => {
                     </button>
                   </div>
                   {g.forward_notifications && g.wa_group_id && (() => {
-                    const active = Array.isArray(g.notification_types) && g.notification_types.length
-                      ? g.notification_types
-                      : ALL_TYPES;
+                    const active = enabledTypes(g.notification_types);
                     const isOpen = !!expanded[g.id];
                     const activeCount = active.length;
                     return (
@@ -269,7 +271,7 @@ const AtisGroups = () => {
                               >Todos</button>
                               <span className="text-[hsl(var(--dark-muted))] text-[10px]">·</span>
                               <button
-                                onClick={() => update(g.id, { notification_types: [] as any })}
+                                onClick={() => update(g.id, { notification_types: [NO_TYPES] })}
                                 className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] hover:underline"
                               >Nenhum</button>
                             </div>

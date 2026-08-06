@@ -134,9 +134,25 @@ serve(async (req) => {
       const todayBR = getBrazilDateKey();
  
      const results: any = { brTime: brTimeStr, date: todayBR };
+
+     // Horários personalizados dos grupos precisam disparar mesmo quando são
+     // diferentes do horário global do push do aplicativo.
+     const { data: waGroups } = await supabase
+       .from("atis_groups")
+       .select("wa_group_id, notification_types, notification_times")
+       .eq("active", true)
+       .eq("forward_notifications", true)
+       .not("wa_group_id", "is", null);
+     const dueGroupTypes = new Set<string>();
+     for (const group of waGroups ?? []) {
+       const types = Array.isArray(group.notification_types) ? group.notification_types : [];
+       const times = group.notification_times && typeof group.notification_times === "object" ? group.notification_times as Record<string, string> : {};
+       if ((!types.length || types.includes("daily-verse")) && times["daily-verse"] === brTimeStr && brTimeStr !== verseTime) dueGroupTypes.add("verse");
+       if ((!types.length || types.includes("motivational")) && times.motivational === brTimeStr && brTimeStr !== motivationalTime) dueGroupTypes.add("motivational");
+     }
  
      // 1. Check Daily Verse Push
-      const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR));
+       const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR) || dueGroupTypes.has("verse"));
       if (runVerse) {
        let baseVerse: { text: string; ref: string } | null = null;
         const { data: queueVerse } = await supabase
@@ -168,7 +184,8 @@ serve(async (req) => {
               body: limitNotificationBody(finalVerse.text),
               url: "/",
               type: "daily-verse",
-              ttl: 86400,
+               ttl: 86400,
+               groupsOnly: !isManual && brTimeStr !== verseTime,
             }),
           });
           results.verse = await response.json();
@@ -182,7 +199,7 @@ serve(async (req) => {
      // 2. Check Motivational Push (AI Generated)
       const runMotivational = onlyType
         ? onlyType === "motivational"
-        : (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR)));
+         : (motivationalEnabled && (isManual || (brTimeStr === motivationalTime && lastMotivationalDate !== todayBR) || dueGroupTypes.has("motivational")));
       if (runMotivational) {
        let aiMessage = "";
         const { period, hour } = getBrazilPeriod();
@@ -238,7 +255,8 @@ serve(async (req) => {
            body: aiMessage,
            url: "/",
            type: "motivational",
-           ttl: 43200,
+            ttl: 43200,
+            groupsOnly: !isManual && brTimeStr !== motivationalTime,
          }),
        });
        results.motivational = await response.json();

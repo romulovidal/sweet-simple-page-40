@@ -170,16 +170,16 @@ Deno.serve(async (req) => {
   for (const jid of groupIds) {
     await humanGap(guard, gIdx++)
     const r = await sendToGroup(admin, jid, text)
-    results.push({ jid, ok: r.ok, status: r.status })
-    if (r.skipped) continue
+    results.push({ jid, ok: r.ok, status: r.status, skipped: r.skipped, reason: (r as any).reason })
     await admin.from('atis_messages_log').insert({
       direction: 'outbound',
       wa_to: jid,
       wa_group_id: jid,
       body: text,
       command: 'daily-devotional',
-      status: r.ok ? 'sent' : 'error',
-      raw: { auto: !force, verse_ref: queueVerse.verse_ref, ai_devotional: !!devotional, http: r.status, body: r.body?.slice?.(0, 300) },
+      status: r.ok ? 'sent' : (r.skipped ? 'skipped' : 'error'),
+      error: r.ok ? null : ((r as any).reason ?? String(r.body ?? '').slice(0, 300)),
+      raw: { auto: !force, verse_ref: queueVerse.verse_ref, ai_devotional: !!devotional, http: r.status, body: r.body?.slice?.(0, 300), skipped: r.skipped ?? false },
     })
   }
 

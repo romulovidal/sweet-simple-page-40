@@ -6,6 +6,7 @@ const corsHeaders = {
 };
  import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
+import { safeSend } from "../_shared/atis-antiban.ts";
 
 const PushPayloadSchema = z.object({
   title: z.string().trim().min(1).max(100),
@@ -175,17 +176,23 @@ Deno.serve(async (req) => {
       if (evoUrl && evoKey) {
         const { data: groups } = await supabase
           .from("atis_groups")
-          .select("wa_group_id, name, notification_types")
+          .select("wa_group_id, name, notification_types, notification_times")
           .eq("forward_notifications", true)
           .eq("active", true)
           .not("wa_group_id", "is", null);
 
         const notifType = body.type || "general";
-        const filteredGroups = (groups ?? []).filter((g: any) => {
+          const nowTime = new Intl.DateTimeFormat("pt-BR", {
+            timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit", hour12: false,
+          }).format(new Date());
+          const filteredGroups = (groups ?? []).filter((g: any) => {
           const types = Array.isArray(g.notification_types) ? g.notification_types : null;
           // null/empty = accepts all (backward compatible)
           if (!types || types.length === 0) return true;
-          return types.includes(notifType);
+            if (!types.includes(notifType)) return false;
+            const times = g.notification_times && typeof g.notification_times === "object" ? g.notification_times : {};
+            const scheduled = typeof times[notifType] === "string" ? times[notifType] : "";
+            return !scheduled || scheduled === nowTime;
         });
 
         if (filteredGroups.length) {
@@ -195,20 +202,16 @@ Deno.serve(async (req) => {
           const waText = `📣 *${body.title}*\n\n${body.body}\n\n🔗 ${link}`;
           const results = await Promise.all(filteredGroups.map(async (g: any) => {
             try {
-              const res = await fetch(`${evoUrl}/message/sendText/atis`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", apikey: evoKey },
-                body: JSON.stringify({ number: g.wa_group_id, text: waText }),
-              });
-              const raw = await res.text().catch(() => "");
+              const res = await safeSend(supabase, g.wa_group_id, waText, { kind: "bulk", noFooter: true });
+              const raw = typeof res.body === "string" ? res.body : JSON.stringify(res.body ?? "");
               await supabase.from("atis_messages_log").insert({
                 direction: "outbound",
                 wa_to: g.wa_group_id,
                 wa_group_id: g.wa_group_id,
                 body: waText,
-                status: res.ok ? "sent" : "error",
-                error: res.ok ? null : `${res.status}: ${raw.slice(0, 300)}`,
-                raw: { source: "push_forward", type: body.type },
+                status: res.ok ? "sent" : (res.skipped ? "skipped" : "error"),
+                error: res.ok ? null : (res.skipped ? res.reason : `${res.status}: ${raw.slice(0, 300)}`),
+                raw: { source: "push_forward", type: body.type, skipped: res.skipped ?? false },
               });
               return res.ok;
             } catch (err) {

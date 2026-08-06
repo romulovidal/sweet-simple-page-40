@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
           title: `⛪ ${schedule.name}`,
           body: pushBody,
           url: "/?tab=comunidade",
-          type: "culto-reminder-manual",
+          type: "culto-reminder",
           urgency: "high",
         }),
       });

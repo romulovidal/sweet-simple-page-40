@@ -15,6 +15,7 @@ const PushPayloadSchema = z.object({
   type: z.string().trim().max(50).optional().default("general"),
   ttl: z.number().int().min(60).max(60 * 60 * 24 * 7).optional().default(60 * 60 * 24),
   urgency: z.enum(["very-low", "low", "normal", "high"]).optional().default("high"),
+  groupsOnly: z.boolean().optional().default(false),
 });
 
 type PushPayload = z.infer<typeof PushPayloadSchema>;
@@ -156,7 +157,7 @@ Deno.serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    const results = await Promise.all((subs || []).map(sub => 
+    const results = body.groupsOnly ? [] : await Promise.all((subs || []).map(sub => 
       sendToSubscription(supabase, sub, payload, requestOptions)
     ));
     
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
           .eq("active", true)
           .not("wa_group_id", "is", null);
 
-        const notifType = body.type || "general";
+        const notifType = body.type === "culto-reminder-manual" ? "culto-reminder" : (body.type || "general");
           const nowTime = new Intl.DateTimeFormat("pt-BR", {
             timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit", hour12: false,
           }).format(new Date());
@@ -224,7 +225,7 @@ Deno.serve(async (req) => {
         }
 
         // Forward to individual users who opted in via profile.
-        const { data: subscribers } = await supabase
+        const { data: subscribers } = body.groupsOnly ? { data: [] } : await supabase
           .from("profiles")
           .select("whatsapp, display_name")
           .eq("whatsapp_opt_in", true)

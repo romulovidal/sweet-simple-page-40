@@ -84,7 +84,7 @@ function titleByPeriod(period: string): string {
 
 async function sendToGroup(admin: any, jid: string, text: string) {
   const r = await safeSend(admin, jid, text, { kind: 'bulk', noFooter: true })
-  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped }
+  return { ok: r.ok, status: r.status, body: r.body, skipped: r.skipped, reason: r.reason }
 }
 
 Deno.serve(async (req) => {

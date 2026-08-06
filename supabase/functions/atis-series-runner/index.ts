@@ -120,12 +120,13 @@ Deno.serve(async (req) => {
         const text = buildText(s.name, item, '', total, commentary);
         await humanGap(guard, sendIdx++);
         const r = await safeSend(admin, g.wa_group_id, text, { kind: 'bulk', mentionsEveryOne: !!s.mention_all, noFooter: true });
-        if ((r as any).skipped) { results.push({ series_id: s.id, group_id: g.id, ok: false, skipped: (r as any).reason }); continue; }
         await admin.from('atis_messages_log').insert({
           direction: 'outbound', wa_group_id: g.wa_group_id, body: text,
-          command: 'series', status: r.ok ? 'sent' : 'error',
-          raw: { series_id: s.id, group_id: g.id, day, http: r.status },
+          command: 'series', status: r.ok ? 'sent' : (r.skipped ? 'skipped' : 'error'),
+          error: r.ok ? null : (r.reason ?? String(r.body ?? '').slice(0, 300)),
+          raw: { series_id: s.id, group_id: g.id, day, http: r.status, skipped: r.skipped ?? false },
         });
+        if (r.skipped) { results.push({ series_id: s.id, group_id: g.id, ok: false, skipped: r.reason }); continue; }
         if (r.ok) {
           const nextDay = day + 1;
           const done = nextDay > total;

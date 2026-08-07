@@ -81,6 +81,8 @@ async function resolveVerseOfDay(admin: any): Promise<string> {
       .from('daily_verse_queue')
       .select('verse_ref, verse_text')
       .eq('scheduled_date', todayBR())
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     if (data?.verse_ref) return `*${data.verse_ref}*\n_"${data.verse_text}"_`
   } catch (_) { /* ignore */ }

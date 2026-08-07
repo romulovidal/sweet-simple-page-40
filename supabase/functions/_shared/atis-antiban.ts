@@ -153,17 +153,48 @@ export async function markChatRead(remoteJid: string, messageId?: string) {
   } catch { /* opcional */ }
 }
 
-/** Mantém no máximo 1 link e evita mensagens gigantes (padrões típicos de spam). */
+/** Mantém no máximo 1 link e normaliza espaçamento (padrões típicos de spam). */
 function sanitizeBulk(text: string, cfg: GuardConfig): string {
   let out = text;
   if (cfg.link_guard) {
     let seen = 0;
     out = out.replace(/https?:\/\/\S+/g, (m) => (++seen === 1 ? m : ''));
   }
-  if (cfg.max_chars > 0 && out.length > cfg.max_chars) {
-    out = out.slice(0, cfg.max_chars).replace(/\s+\S*$/, '') + '…';
-  }
   return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Divide mensagens longas em partes completas (nunca corta o conteúdo).
+ * Quebra preferencialmente por parágrafo, depois por frase, depois por palavra.
+ */
+export function splitMessage(text: string, limit: number): string[] {
+  const max = limit > 0 ? limit : 4000;
+  if (text.length <= max) return [text];
+  const parts: string[] = [];
+  let buf = '';
+  const push = () => { if (buf.trim()) parts.push(buf.trim()); buf = ''; };
+  const add = (piece: string, sep: string) => {
+    if (!piece) return;
+    if (!buf) { buf = piece; return; }
+    if ((buf + sep + piece).length > max) { push(); buf = piece; return; }
+    buf = buf + sep + piece;
+  };
+
+  for (const block of text.split(/\n{2,}/)) {
+    if (block.length <= max) { add(block, '\n\n'); continue; }
+    for (let piece of block.split(/(?<=[.!?…])\s+/)) {
+      while (piece.length > max) {
+        let cut = piece.lastIndexOf(' ', max);
+        if (cut < max * 0.5) cut = max;
+        push();
+        parts.push(piece.slice(0, cut).trim());
+        piece = piece.slice(cut).trim();
+      }
+      add(piece, ' ');
+    }
+  }
+  push();
+  return parts.filter(Boolean);
 }
 
 /** Envios em massa na última hora (freio adicional ao teto diário). */
@@ -285,7 +316,14 @@ export async function safeSend(
     await sleep(rand(200, 900));
   }
 
-  const res = await evolutionSendText(to, out, { mentionsEveryOne: opts.mentionsEveryOne });
+  // Nunca cortar conteúdo: mensagens longas vão em partes completas e sequenciais
+  const chunks = kind === 'reply' ? splitMessage(out, 3500) : splitMessage(out, cfg.max_chars > 0 ? cfg.max_chars : 3500);
+  let res = { ok: false, status: 0, body: null as any, jid: null as string | null };
+  for (let i = 0; i < chunks.length; i++) {
+    if (i > 0) await sleep(rand(1200, 3000));
+    res = await evolutionSendText(to, chunks[i], { mentionsEveryOne: opts.mentionsEveryOne && i === 0 });
+    if (!res.ok) break;
+  }
 
   // Circuit breaker
   if (res.ok) {

@@ -148,6 +148,51 @@ function firstName(n: string | null | undefined): string {
   return String(n).trim().split(/\s+/)[0] || 'irmão(ã)'
 }
 
+const APP_URL = 'https://biblia.atalaias.online'
+
+async function resolveHinoOfDay(): Promise<string> {
+  try {
+    const res = await fetch(`${APP_URL}/harpa/harpa-crista.json`)
+    if (!res.ok) return ''
+    const json: any = await res.json()
+    const list: any[] = Array.isArray(json) ? json : (json?.hinos ?? json?.data ?? [])
+    if (!list.length) return ''
+    // hino determinístico do dia
+    const key = todayBR().replace(/\D/g, '')
+    const h = list[Number(key) % list.length]
+    const num = h?.number ?? h?.numero ?? ''
+    const title = h?.title ?? h?.titulo ?? ''
+    const firstStanza: string = (() => {
+      const secs = h?.secoes ?? h?.sections ?? h?.verses ?? []
+      const s = Array.isArray(secs) ? secs[0] : null
+      const lines = s?.linhas ?? s?.lines ?? s?.text ?? null
+      if (Array.isArray(lines)) return lines.join('\n')
+      return typeof lines === 'string' ? lines : ''
+    })()
+    return `🎵 *Hino ${num} — ${title}*\n\n${firstStanza}\n\n🔗 ${APP_URL}/harpa/${num}`
+  } catch (_) { return '' }
+}
+
+async function resolveStudy(admin: any): Promise<string> {
+  try {
+    const { data } = await admin
+      .from('atis_studies')
+      .select('title, theme, base_text, questions')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data?.title) return ''
+    const qs = Array.isArray(data.questions) ? data.questions.slice(0, 3).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n') : ''
+    return `📚 *${data.title}*${data.theme ? `\n_${data.theme}_` : ''}\n\n${data.base_text ?? ''}${qs ? `\n\n*Para refletir:*\n${qs}` : ''}`
+  } catch (_) { return '' }
+}
+
+function unusedFirstName(n: string | null | undefined): string {
+  if (!n) return 'irmão(ã)'
+  return String(n).trim().split(/\s+/)[0] || 'irmão(ã)'
+}
+
 function applyPlaceholders(body: string, ctx: { nome?: string; verse?: string; birthdays?: string; devotional?: string }) {
   const nowBR = brNow()
   return body

@@ -81,6 +81,8 @@ async function resolveVerseOfDay(admin: any): Promise<string> {
       .from('daily_verse_queue')
       .select('verse_ref, verse_text')
       .eq('scheduled_date', todayBR())
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     if (data?.verse_ref) return `*${data.verse_ref}*\n_"${data.verse_text}"_`
   } catch (_) { /* ignore */ }
@@ -144,6 +146,46 @@ async function resolveDevotional(admin: any): Promise<string> {
 function firstName(n: string | null | undefined): string {
   if (!n) return 'irmão(ã)'
   return String(n).trim().split(/\s+/)[0] || 'irmão(ã)'
+}
+
+const APP_URL = 'https://biblia.atalaias.online'
+
+async function resolveHinoOfDay(): Promise<string> {
+  try {
+    const res = await fetch(`${APP_URL}/harpa/harpa-crista.json`)
+    if (!res.ok) return ''
+    const json: any = await res.json()
+    const list: any[] = Array.isArray(json) ? json : (json?.hinos ?? json?.data ?? [])
+    if (!list.length) return ''
+    // hino determinístico do dia
+    const key = todayBR().replace(/\D/g, '')
+    const h = list[Number(key) % list.length]
+    const num = h?.number ?? h?.numero ?? ''
+    const title = h?.title ?? h?.titulo ?? ''
+    const firstStanza: string = (() => {
+      const secs = h?.secoes ?? h?.sections ?? h?.verses ?? []
+      const s = Array.isArray(secs) ? secs[0] : null
+      const lines = s?.linhas ?? s?.lines ?? s?.text ?? null
+      if (Array.isArray(lines)) return lines.join('\n')
+      return typeof lines === 'string' ? lines : ''
+    })()
+    return `🎵 *Hino ${num} — ${title}*\n\n${firstStanza}\n\n🔗 ${APP_URL}/harpa/${num}`
+  } catch (_) { return '' }
+}
+
+async function resolveStudy(admin: any): Promise<string> {
+  try {
+    const { data } = await admin
+      .from('atis_studies')
+      .select('title, theme, base_text, questions')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data?.title) return ''
+    const qs = Array.isArray(data.questions) ? data.questions.slice(0, 3).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n') : ''
+    return `📚 *${data.title}*${data.theme ? `\n_${data.theme}_` : ''}\n\n${data.base_text ?? ''}${qs ? `\n\n*Para refletir:*\n${qs}` : ''}`
+  } catch (_) { return '' }
 }
 
 function applyPlaceholders(body: string, ctx: { nome?: string; verse?: string; birthdays?: string; devotional?: string }) {
@@ -227,6 +269,35 @@ Deno.serve(async (req) => {
       devotionalCache = await resolveDevotional(admin)
       return devotionalCache
     }
+    let hinoCache: string | null = null
+    const getHino = async () => {
+      if (hinoCache !== null) return hinoCache
+      hinoCache = await resolveHinoOfDay()
+      return hinoCache
+    }
+    let studyCache: string | null = null
+    const getStudy = async () => {
+      if (studyCache !== null) return studyCache
+      studyCache = await resolveStudy(admin)
+      return studyCache
+    }
+
+    // Gera o conteúdo do tipo escolhido quando a mensagem não usa o placeholder correspondente
+    const autoContent = async (b: any): Promise<string> => {
+      const body = String(b.body ?? '')
+      switch (b.content_type) {
+        case 'verse':
+          return body.includes('{versiculo_do_dia}') ? '' : verse
+        case 'devotional':
+          return body.includes('{devocional_ia}') ? '' : await getDevotional()
+        case 'hino':
+          return await getHino()
+        case 'study':
+          return await getStudy()
+        default:
+          return ''
+      }
+    }
 
     for (const b of due ?? []) {
       try {
@@ -240,43 +311,55 @@ Deno.serve(async (req) => {
         }
 
         let okCount = 0, failCount = 0
+        let skippedCount = 0
         const errors: string[] = []
         const guard = await loadGuard(admin)
         const ordered = shuffle(recipients)
         let idx = 0
+        const extra = await autoContent(b)
         for (const r of ordered) {
           await humanGap(guard, idx++)
           const nome = r.kind === 'contact' ? firstName(r.name) : ''
           const devotional = (b.body ?? '').includes('{devocional_ia}') ? await getDevotional() : ''
-          const text = applyPlaceholders(b.body, { nome, verse, birthdays, devotional })
+          const base = applyPlaceholders(b.body, { nome, verse, birthdays, devotional })
+          const text = extra ? `${base}\n\n${extra}`.trim() : base
           const out = await safeSend(admin, r.to, text, { kind: 'bulk' })
           if (out.ok) okCount++
-          else { failCount++; errors.push(`${r.to}: ${out.skipped ? out.reason : out.status}`) }
-          if (out.skipped) continue
+          else if (out.skipped) { skippedCount++; errors.push(`${r.to}: ${out.reason}`) }
+          else { failCount++; errors.push(`${r.to}: ${out.status}`) }
           await admin.from('atis_messages_log').insert({
             direction: 'outbound',
             wa_to: r.to,
+            wa_group_id: r.kind === 'group' ? r.to : null,
             body: text,
-            status: out.ok ? 'sent' : 'error',
-            raw: out.body,
+            command: b.content_type ?? 'text',
+            status: out.ok ? 'sent' : (out.skipped ? 'skipped' : 'error'),
+            error: out.ok ? null : (out.skipped ? out.reason : String(out.body ?? out.status).slice(0, 300)),
+            raw: { source: 'broadcast', broadcast_id: b.id, skipped: out.skipped ?? false, http: out.status },
           })
         }
 
-        const status = okCount > 0 ? 'sent' : 'failed'
+        // Bloqueio pelo anti-ban não é falha: mantém pendente para nova tentativa
+        const allSkipped = okCount === 0 && failCount === 0 && skippedCount > 0
+        const status = okCount > 0 ? 'sent' : (allSkipped ? 'pending' : 'failed')
         const next = nextScheduled(b.scheduled_at ?? new Date().toISOString(), b.recurrence)
         if (next) {
           // reschedule: bump scheduled_at and keep pending
           await admin.from('atis_broadcasts').update({
             scheduled_at: next, status: 'pending', sent_at: new Date().toISOString(),
-            error: failCount > 0 ? errors.join('; ').slice(0, 500) : null,
+            error: errors.length ? errors.join('; ').slice(0, 500) : null,
+          }).eq('id', b.id)
+        } else if (allSkipped) {
+          await admin.from('atis_broadcasts').update({
+            status: 'pending', error: errors.join('; ').slice(0, 500),
           }).eq('id', b.id)
         } else {
           await admin.from('atis_broadcasts').update({
             status, sent_at: new Date().toISOString(),
-            error: failCount > 0 ? errors.join('; ').slice(0, 500) : null,
+            error: errors.length ? errors.join('; ').slice(0, 500) : null,
           }).eq('id', b.id)
         }
-        results.push({ id: b.id, ok: okCount, fail: failCount, next })
+        results.push({ id: b.id, ok: okCount, fail: failCount, skipped: skippedCount, next })
       } catch (e: any) {
         await admin.from('atis_broadcasts').update({
           status: 'failed', error: String(e?.message ?? e).slice(0, 500), sent_at: new Date().toISOString(),

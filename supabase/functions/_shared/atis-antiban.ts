@@ -316,7 +316,14 @@ export async function safeSend(
     await sleep(rand(200, 900));
   }
 
-  const res = await evolutionSendText(to, out, { mentionsEveryOne: opts.mentionsEveryOne });
+  // Nunca cortar conteúdo: mensagens longas vão em partes completas e sequenciais
+  const chunks = kind === 'reply' ? splitMessage(out, 3500) : splitMessage(out, cfg.max_chars > 0 ? cfg.max_chars : 3500);
+  let res = { ok: false, status: 0, body: null as any, jid: null as string | null };
+  for (let i = 0; i < chunks.length; i++) {
+    if (i > 0) await sleep(rand(1200, 3000));
+    res = await evolutionSendText(to, chunks[i], { mentionsEveryOne: opts.mentionsEveryOne && i === 0 });
+    if (!res.ok) break;
+  }
 
   // Circuit breaker
   if (res.ok) {

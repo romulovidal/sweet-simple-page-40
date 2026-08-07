@@ -188,11 +188,6 @@ async function resolveStudy(admin: any): Promise<string> {
   } catch (_) { return '' }
 }
 
-function unusedFirstName(n: string | null | undefined): string {
-  if (!n) return 'irmão(ã)'
-  return String(n).trim().split(/\s+/)[0] || 'irmão(ã)'
-}
-
 function applyPlaceholders(body: string, ctx: { nome?: string; verse?: string; birthdays?: string; devotional?: string }) {
   const nowBR = brNow()
   return body

@@ -173,24 +173,24 @@ export function splitMessage(text: string, limit: number): string[] {
   const parts: string[] = [];
   let buf = '';
   const push = () => { if (buf.trim()) parts.push(buf.trim()); buf = ''; };
+  const add = (piece: string, sep: string) => {
+    if (!piece) return;
+    if (!buf) { buf = piece; return; }
+    if ((buf + sep + piece).length > max) { push(); buf = piece; return; }
+    buf = buf + sep + piece;
+  };
 
-  const blocks = text.split(/\n{2,}/);
-  for (const block of blocks) {
-    const chunkables: string[] = block.length <= max
-      ? [block]
-      : block.split(/(?<=[.!?…])\s+/);
-    for (let piece of chunkables) {
+  for (const block of text.split(/\n{2,}/)) {
+    if (block.length <= max) { add(block, '\n\n'); continue; }
+    for (let piece of block.split(/(?<=[.!?…])\s+/)) {
       while (piece.length > max) {
-        // último recurso: quebra por palavra
         let cut = piece.lastIndexOf(' ', max);
         if (cut < max * 0.5) cut = max;
         push();
         parts.push(piece.slice(0, cut).trim());
         piece = piece.slice(cut).trim();
       }
-      const sep = buf ? (block.length <= max ? '\n\n' : ' ') : '';
-      if ((buf + sep + piece).length > max) push();
-      buf = buf ? `${buf}${buf ? (block.length <= max ? '\n\n' : ' ') : ''}${piece}` : piece;
+      add(piece, ' ');
     }
   }
   push();

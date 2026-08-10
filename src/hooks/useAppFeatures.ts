@@ -30,7 +30,7 @@ export function useAppFeatures() {
       .from("admin_settings")
       .select("value")
       .eq("key", "app_features")
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data?.value && typeof data.value === "object") {
           setFeatures({ ...DEFAULT_FEATURES, ...(data.value as Partial<AppFeatures>) });

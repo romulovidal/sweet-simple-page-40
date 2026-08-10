@@ -28,7 +28,7 @@ export function useAuth() {
               .from("profiles")
               .select("*")
               .eq("user_id", session.user.id)
-              .single();
+              .maybeSingle();
             setProfile(data);
           }, 0);
         } else {
@@ -47,7 +47,7 @@ export function useAuth() {
           .from("profiles")
           .select("*")
           .eq("user_id", session.user.id)
-          .single()
+          .maybeSingle()
           .then(({ data }) => setProfile(data));
       }
       setLoading(false);

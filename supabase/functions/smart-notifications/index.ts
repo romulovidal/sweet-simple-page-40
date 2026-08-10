@@ -120,7 +120,7 @@ serve(async (req) => {
     const { data: goalUsers } = await supabase
       .from("reading_goals")
       .select("user_id, completed_chapters, target_chapters")
-      .filter("updated_at", "lt", today);
+      .lt("updated_at", `${today}T00:00:00-03:00`);
 
     if (goalUsers?.length) {
       for (const g of goalUsers) {

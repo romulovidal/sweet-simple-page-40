@@ -304,7 +304,9 @@ export async function safeSend(
     });
     allowed = (data as any)?.allowed !== false;
     reason = (data as any)?.reason ?? '';
-  } catch { /* se o guard falhar, segue o envio */ }
+  } catch (e) {
+    console.error('[antiban] atis_guard_check falhou — envio segue sem trava', e);
+  }
   if (!allowed) return { ok: false, status: 0, body: null, jid: null, skipped: true, reason };
 
   let out = text;

@@ -85,7 +85,10 @@ export async function loadGuard(admin: any): Promise<GuardConfig> {
   try {
     const { data } = await admin.from('admin_settings').select('value').eq('key', GUARD_KEY).maybeSingle();
     return { ...DEFAULT_GUARD, ...((data?.value ?? {}) as Partial<GuardConfig>) };
-  } catch { return { ...DEFAULT_GUARD }; }
+  } catch (e) {
+    console.error('[antiban] loadGuard falhou, usando padrões', e);
+    return { ...DEFAULT_GUARD };
+  }
 }
 
 async function saveGuard(admin: any, patch: Partial<GuardConfig>, current: GuardConfig) {
@@ -93,7 +96,9 @@ async function saveGuard(admin: any, patch: Partial<GuardConfig>, current: Guard
     await admin.from('admin_settings').upsert(
       { key: GUARD_KEY, value: { ...current, ...patch } }, { onConflict: 'key' },
     );
-  } catch { /* noop */ }
+  } catch (e) {
+    console.error('[antiban] saveGuard falhou', e);
+  }
 }
 
 /** Limite diário efetivo considerando o aquecimento do chip. */

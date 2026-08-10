@@ -176,7 +176,8 @@ Deno.serve(async (req) => {
     try {
       const evoUrl = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
       const evoKey = Deno.env.get("EVOLUTION_API_KEY") ?? "";
-      if (evoUrl && evoKey) {
+      // Envios direcionados a um único usuário nunca vão para grupos/DMs em massa.
+      if (evoUrl && evoKey && !body.user_id) {
         const { data: groups } = await supabase
           .from("atis_groups")
           .select("wa_group_id, name, notification_types, notification_times")

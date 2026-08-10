@@ -94,7 +94,7 @@ const AtisAdvancedSettings = () => {
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-emerald-500/20 text-emerald-400"><ShieldCheck className="w-4 h-4" /></span>
           <div className="flex-1">
             <p className="text-sm font-bold">Proteção anti-banimento</p>
-            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Limites, pausas humanas, aquecimento do número e descadastro automático. Mantenha ativo para reduzir risco de bloqueio pela Meta.</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))]">Limites, pausas humanas, aquecimento do número e descadastro automático. Mantenha ativo para reduzir risco de bloqueio pela Meta. Desativar não interrompe os envios — apenas remove as travas (maior risco).</p>
           </div>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={gd.enabled !== false} onChange={(e) => setGd({ ...gd, enabled: e.target.checked })} />

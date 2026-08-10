@@ -1,8 +1,8 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
-const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
+const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
+const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
 const INSTANCE = 'atis'
 
 function phoneVariants(to: string): string[] {
@@ -19,6 +19,9 @@ function phoneVariants(to: string): string[] {
 }
 
 export async function sendText(to: string, text: string) {
+  if (!EVO_URL || !EVO_KEY) {
+    return { ok: false, status: 0, json: { error: 'evolution-not-configured' } }
+  }
   const attempts = phoneVariants(to)
   let last: { ok: boolean; status: number; json: any } = { ok: false, status: 0, json: null }
   for (const jid of attempts) {

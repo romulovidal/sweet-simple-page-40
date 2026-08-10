@@ -117,11 +117,7 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
   const sendNow = async (s: Sub) => {
     setBusyId(s.id);
     try {
-      const { data, error } = await supabase.functions.invoke("atis-plans-runner", {
-        method: "POST",
-        // encode sub id in URL via body-less GET-style path
-      } as any);
-      // fallback: call via fetch to preserve query params
+      // Envio direcionado apenas a este inscrito (evita disparar o runner inteiro).
       const url = `https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/atis-plans-runner?sub=${s.id}`;
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
@@ -132,7 +128,6 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
       if (r?.ok) toast.success(`Dia ${r.day} enviado (${r.parts} msg)`);
       else toast.error("Falha ao enviar");
       load();
-      void data; void error;
     } catch (e: any) {
       toast.error("Erro: " + (e?.message ?? e));
     } finally { setBusyId(null); }

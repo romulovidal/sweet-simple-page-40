@@ -26,17 +26,20 @@ export function useAIFeatures() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     supabase
       .from("admin_settings")
       .select("value")
       .eq("key", "ai_features")
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
+        if (!active) return;
         if (data?.value && typeof data.value === "object") {
           setFeatures({ ...DEFAULT_FEATURES, ...(data.value as Partial<AIFeatures>) });
         }
         setLoading(false);
       });
+    return () => { active = false; };
   }, []);
 
   return { features, loading };

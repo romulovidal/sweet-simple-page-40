@@ -64,7 +64,7 @@ const ProfilePage = () => {
       .from("profiles")
       .select("whatsapp, whatsapp_opt_in")
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setWaNumber((data as any).whatsapp ?? "");

@@ -67,17 +67,7 @@ const AdminPushSender = () => {
 
       if (error) throw error;
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      await supabase.from("push_log").insert({
-        title: title.trim(),
-        body: body.trim(),
-        sent_by: user?.id || null,
-        total_sent: data?.sent || 0,
-        total_failed: data?.failed || 0,
-      });
-
+      // O histórico é registrado no servidor (send-push), evitando duplicidade.
       toast.success(`Push enviado! ${data?.sent || 0} entregues, ${data?.failed || 0} falhas`);
       setTitle("");
       setBody("");

@@ -109,6 +109,8 @@ serve(async (req) => {
             body: "Que tal ler o versículo do dia hoje e renovar suas forças?",
             url: "/",
             type: "inactivity",
+            ttl: 21600,
+            urgency: "low",
           }),
         });
       }
@@ -118,7 +120,7 @@ serve(async (req) => {
     const { data: goalUsers } = await supabase
       .from("reading_goals")
       .select("user_id, completed_chapters, target_chapters")
-      .filter("updated_at", "lt", today);
+      .lt("updated_at", `${today}T00:00:00-03:00`);
 
     if (goalUsers?.length) {
       for (const g of goalUsers) {
@@ -133,6 +135,8 @@ serve(async (req) => {
               body: `Você já leu ${completed} capítulos. Continue firme em seu propósito!`,
               url: "/perfil",
               type: "goal",
+              ttl: 21600,
+              urgency: "low",
             }),
           });
         }

@@ -1,11 +1,14 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const EVO_URL = Deno.env.get('EVOLUTION_API_URL')!.replace(/\/$/, '')
-const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY')!
+const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
+const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
 const INSTANCE = 'atis'
 
 async function evo(path: string, init: RequestInit = {}) {
+  if (!EVO_URL || !EVO_KEY) {
+    return { ok: false, status: 503, json: { error: 'evolution-not-configured' } }
+  }
   const res = await fetch(`${EVO_URL}${path}`, {
     ...init,
     headers: {

@@ -37,7 +37,7 @@ const ReadingGoals = ({ enabled }: ReadingGoalsProps) => {
       .select("*")
       .eq("user_id", user.id)
       .eq("year", currentYear)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setGoal({

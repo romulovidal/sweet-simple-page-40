@@ -16,6 +16,8 @@ const PushPayloadSchema = z.object({
   ttl: z.number().int().min(60).max(60 * 60 * 24 * 7).optional().default(60 * 60 * 24),
   urgency: z.enum(["very-low", "low", "normal", "high"]).optional().default("high"),
   groupsOnly: z.boolean().optional().default(false),
+  // Quando informado, a notificação vai apenas para as inscrições desse usuário.
+  user_id: z.string().uuid().optional(),
 });
 
 type PushPayload = z.infer<typeof PushPayloadSchema>;
@@ -132,9 +134,9 @@ Deno.serve(async (req) => {
         persistSession: false,
       },
     });
-    const { data: subs, error } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth");
+    let subsQuery = supabase.from("push_subscriptions").select("id, endpoint, p256dh, auth");
+    if (body.user_id) subsQuery = subsQuery.eq("user_id", body.user_id);
+    const { data: subs, error } = await subsQuery;
 
     if (error) throw error;
 
@@ -174,7 +176,8 @@ Deno.serve(async (req) => {
     try {
       const evoUrl = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
       const evoKey = Deno.env.get("EVOLUTION_API_KEY") ?? "";
-      if (evoUrl && evoKey) {
+      // Envios direcionados a um único usuário nunca vão para grupos/DMs em massa.
+      if (evoUrl && evoKey && !body.user_id) {
         const { data: groups } = await supabase
           .from("atis_groups")
           .select("wa_group_id, name, notification_types, notification_times")
@@ -287,6 +290,22 @@ Deno.serve(async (req) => {
       }
     } catch (err) {
       console.error("[send-push] group forward top-level error", err);
+    }
+
+    // Registrar no histórico também os envios automáticos (cron/service-role),
+    // que antes não apareciam no painel.
+    if (!body.user_id) {
+      try {
+        await supabase.from("push_log").insert({
+          title: body.title,
+          body: body.body,
+          sent_by: authResult.userId && authResult.userId !== "service-role" ? authResult.userId : null,
+          total_sent: sent,
+          total_failed: failed,
+        });
+      } catch (logErr) {
+        console.error("[send-push] push_log insert failed", logErr);
+      }
     }
 
     return new Response(

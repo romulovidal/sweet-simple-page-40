@@ -1210,8 +1210,8 @@ Deno.serve(async (req) => {
               admin.from('atis_series_subscribers').update({ active: false }).in('phone', list),
               admin.from('atis_plan_subscribers').update({ active: false }).in('phone', list),
               admin.from('atis_optouts').upsert(
-                { recipient: normalizeRecipient(jid).key, source: 'whatsapp', reason: norm },
-                { onConflict: 'recipient' },
+                { phone: normalizeRecipient(jid).key, source: 'whatsapp', reason: norm },
+                { onConflict: 'phone' },
               ),
             ])
             const okCount = results.filter(r => r.status === 'fulfilled').length
@@ -1237,7 +1237,7 @@ Deno.serve(async (req) => {
             }
             const list2 = Array.from(variants)
             await Promise.allSettled([
-              admin.from('atis_optouts').delete().eq('recipient', normalizeRecipient(jid).key),
+              admin.from('atis_optouts').delete().eq('phone', normalizeRecipient(jid).key),
               admin.from('atis_contacts').update({ opt_in: true }).in('phone', list2),
               admin.from('profiles').update({ whatsapp_opt_in: true }).in('whatsapp', list2),
             ])

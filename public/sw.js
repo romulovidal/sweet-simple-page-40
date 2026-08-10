@@ -232,6 +232,10 @@ self.addEventListener("push", function(event) {
     console.error("Push parse error:", error);
   }
 
+  if (!data || typeof data !== "object") data = {};
+  if (!data.title) data.title = "Bíblia Atalaia";
+  if (!data.body) data.body = "Abra o app para ler";
+
   var options = {
     body: data.body,
     icon: "/logo.png",

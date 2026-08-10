@@ -109,6 +109,8 @@ serve(async (req) => {
             body: "Que tal ler o versículo do dia hoje e renovar suas forças?",
             url: "/",
             type: "inactivity",
+            ttl: 21600,
+            urgency: "low",
           }),
         });
       }
@@ -133,6 +135,8 @@ serve(async (req) => {
               body: `Você já leu ${completed} capítulos. Continue firme em seu propósito!`,
               url: "/perfil",
               type: "goal",
+              ttl: 21600,
+              urgency: "low",
             }),
           });
         }

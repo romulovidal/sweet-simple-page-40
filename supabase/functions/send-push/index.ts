@@ -16,6 +16,8 @@ const PushPayloadSchema = z.object({
   ttl: z.number().int().min(60).max(60 * 60 * 24 * 7).optional().default(60 * 60 * 24),
   urgency: z.enum(["very-low", "low", "normal", "high"]).optional().default("high"),
   groupsOnly: z.boolean().optional().default(false),
+  // Quando informado, a notificação vai apenas para as inscrições desse usuário.
+  user_id: z.string().uuid().optional(),
 });
 
 type PushPayload = z.infer<typeof PushPayloadSchema>;
@@ -132,9 +134,9 @@ Deno.serve(async (req) => {
         persistSession: false,
       },
     });
-    const { data: subs, error } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth");
+    let subsQuery = supabase.from("push_subscriptions").select("id, endpoint, p256dh, auth");
+    if (body.user_id) subsQuery = subsQuery.eq("user_id", body.user_id);
+    const { data: subs, error } = await subsQuery;
 
     if (error) throw error;
 

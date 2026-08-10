@@ -244,7 +244,17 @@ export async function safeSend(
   const cfg = await loadGuard(admin);
   const { key, isGroup } = normalizeRecipient(to);
 
-  if (!cfg.enabled) return { ok: false, status: 0, body: null, jid: null, skipped: true, reason: 'guard_disabled' };
+  // Guard desligado = enviar SEM travas (sem limites, sem pacing). Nunca bloquear o envio.
+  if (!cfg.enabled) {
+    const chunks = splitMessage(text, 3500);
+    let out = { ok: false, status: 0, body: null as any, jid: null as string | null };
+    for (let i = 0; i < chunks.length; i++) {
+      if (i > 0) await sleep(rand(800, 1800));
+      out = await evolutionSendText(to, chunks[i], { mentionsEveryOne: opts.mentionsEveryOne && i === 0 });
+      if (!out.ok) break;
+    }
+    return out;
+  }
 
   // Circuito aberto após erros em cascata (sinal típico de bloqueio/desconexão)
   if (cfg.paused_until && new Date(cfg.paused_until).getTime() > Date.now()) {

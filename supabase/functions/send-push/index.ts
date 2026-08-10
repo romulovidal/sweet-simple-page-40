@@ -292,6 +292,22 @@ Deno.serve(async (req) => {
       console.error("[send-push] group forward top-level error", err);
     }
 
+    // Registrar no histórico também os envios automáticos (cron/service-role),
+    // que antes não apareciam no painel.
+    if (!body.user_id) {
+      try {
+        await supabase.from("push_log").insert({
+          title: body.title,
+          body: body.body,
+          sent_by: authResult.userId && authResult.userId !== "service-role" ? authResult.userId : null,
+          total_sent: sent,
+          total_failed: failed,
+        });
+      } catch (logErr) {
+        console.error("[send-push] push_log insert failed", logErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ sent, failed, total: (subs || []).length, ttl: body.ttl, urgency: body.urgency, waSent, waFailed, waIndividualSent, waIndividualFailed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

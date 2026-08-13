@@ -24,11 +24,16 @@ export default function HarpaReportButton({ hinoNumber, hinoTitle }: Props) {
     }
     setSending(true);
     const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      setSending(false);
+      toast.error("Faça login para enviar um relato.");
+      return;
+    }
     const { error } = await supabase.from("harpa_reports").insert({
       hino_number: hinoNumber,
       hino_title: hinoTitle,
       message: trimmed.slice(0, MAX),
-      user_id: userData.user?.id ?? null,
+      user_id: userData.user.id,
     });
     setSending(false);
     if (error) {

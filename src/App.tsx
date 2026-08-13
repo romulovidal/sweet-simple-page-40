@@ -43,6 +43,7 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
+import RouteIndex from "@/routes/index";
 
 const queryClient = new QueryClient();
 

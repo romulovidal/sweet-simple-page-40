@@ -1,5 +1,26 @@
 # Plano de Migração: Lovable Cloud → Supabase Próprio
 
+## Posso fazer tudo por você?
+
+Quase tudo, sim — mas com dois limites reais que verifiquei agora no seu projeto:
+
+**O que eu consigo executar sozinho** (com a connection string e a service_role key do Supabase de destino, guardadas como secret — nunca coladas no chat):
+
+- Recriar todo o schema `public`: tabelas, tipos, funções, triggers, índices, policies e GRANTs.
+- Copiar todos os dados das 53 tabelas do `public` (volume atual é pequeno, cabe tranquilo).
+- Recriar os usuários no destino via Admin API, preservando o mesmo UUID, e-mail, metadados e data de criação — assim todas as foreign keys e dados vinculados continuam batendo.
+- Reescrever o `.env` do app para apontar ao novo projeto.
+- Ajustar o código onde for necessário e revalidar o build.
+
+**O que eu NÃO consigo fazer, mesmo com key:**
+
+1. **Senhas dos usuários.** Confirmei agora: o acesso que tenho ao banco atual bloqueia a leitura do schema `auth` (`permission denied for schema auth`). Os hashes de senha não são expostos por nenhuma API. Ou seja: eu recrio os usuários, mas quem entra com e-mail e senha vai precisar redefinir a senha uma vez. Quem entra com Google/social não sente nada, desde que o provedor seja reconfigurado no destino com o mesmo e-mail.
+2. **Deploy das Edge Functions no seu Supabase.** O deploy exige login no Supabase CLI com a sua conta. Eu preparo os comandos prontos, mas você roda (é um comando só).
+
+Se preservar as senhas for obrigatório, existe um caminho: você rodar localmente um `pg_dump` do schema `auth` do banco atual (com a connection string que só você acessa) e importar no destino. Aí as senhas vão junto. Eu monto o comando exato.
+
+**Sobre a key:** não cole a service_role key nem a connection string aqui no chat. Eu peço via ferramenta de secret, que grava em local seguro e não fica no histórico.
+
 ## Resumo executivo
 
 Sim, é possível migrar o banco de dados, usuários, edge functions e configurações do Lovable Cloud para um projeto Supabase próprio. O Lovable Cloud é, por baixo, um Supabase gerenciado — o formato dos dados é o mesmo.

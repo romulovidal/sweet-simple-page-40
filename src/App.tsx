@@ -43,7 +43,6 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
-import RouteIndex from "@/routes/index";
 
 const queryClient = new QueryClient();
 
@@ -94,7 +93,6 @@ const AppContent = () => {
             <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/estudos/revistas" element={<PageTransition><RevistasPage /></PageTransition>} />
             <Route path="/app" element={<AppLanding />} />
-            <Route path="/fix-build-error" element={<RouteIndex />} />
             <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
           </Routes>
         </AnimatePresence>

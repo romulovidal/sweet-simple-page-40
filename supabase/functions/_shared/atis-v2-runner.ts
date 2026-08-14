@@ -14,11 +14,20 @@ export async function runAtisAutomations(workerName: string) {
   }
 
   // Busca configurações habilitadas para hoje
+  // Excluímos explicitamente source_keys gerenciados por runners especializados
+  const specializedKeys = [
+    "system:plans",
+    "system:series",
+    "system:welcome",
+    "system:broadcasts",
+  ];
+
   const { data: configs, error } = await supabaseAdmin
     .from("atis_notification_configs")
-    .select("id, name, send_times, days_of_week")
+    .select("id, name, send_times, days_of_week, source_key")
     .eq("enabled", true)
     .eq("automation_mode", "automatic")
+    .not("source_key", "in", `(${specializedKeys.join(",")})`)
     .contains("days_of_week", [weekday]);
 
   if (error) {
@@ -44,6 +53,33 @@ export async function runAtisAutomations(workerName: string) {
       await engine.runConfig(config.id);
       results.push({ id: config.id, name: config.name, status: "triggered" });
     }
+  }
+
+  // FASE B: Processar retries e ocorrências pendentes (Independente de send_times)
+  console.log("[AtisRunner] Checking for pending retries...");
+  const { data: pendingLogs } = await supabaseAdmin
+    .from("atis_automation_logs")
+    .select("*, atis_notification_configs(*)")
+    .in("status", ["retrying", "scheduled", "pending"])
+    .lte("next_retry_at", new Date().toISOString());
+
+  for (const log of pendingLogs ?? []) {
+    const config = log.atis_notification_configs;
+    if (!config || !config.enabled) continue;
+
+    // Se o worker global encontrar um retry de um runner especializado, ele deve respeitar?
+    // Para segurança, o global Tick processa QUALQUER retry vencido, pois o log já existe
+    // e o claim atômico garante que não haverá duplicidade.
+    console.log(`[AtisRunner] Processing retry for log ${log.id} (Config: ${config.name})`);
+    
+    // Simula o recipient para o motor V2
+    const recipient = {
+      recipientType: log.recipient_type,
+      recipientKey: log.recipient_key
+    };
+
+    await engine.processRecipient(config, recipient, log.occurrence_key);
+    results.push({ id: config.id, logId: log.id, status: "retry_processed" });
   }
 
   return { ok: true, processed: results };

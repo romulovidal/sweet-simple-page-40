@@ -81,18 +81,20 @@ export async function safeSend(
     kind?: 'bulk' | 'transactional' | 'reply'; 
     noFooter?: boolean;
     mentionsEveryOne?: boolean;
+    isManual?: boolean;
   } = {}
 ): Promise<SendResult> {
   const cfg = await loadGuard(supabase);
   const { key, isGroup } = normalizeRecipient(to);
   const kind = opts.kind ?? 'bulk';
+  const isManual = opts.isManual === true;
 
   // 1. Verificações Básicas
-  if (!cfg.enabled && kind !== 'reply') {
+  if (!cfg.enabled && kind !== 'reply' && !isManual) {
     return { ok: false, status: 0, body: 'bot-disabled', jid: key, skipped: true, reason: 'global_disabled' };
   }
 
-  if (kind !== 'reply' && isQuietHour(cfg)) {
+  if (kind !== 'reply' && !isManual && isQuietHour(cfg)) {
     return { ok: false, status: 0, body: 'quiet-hours', jid: key, skipped: true, reason: 'quiet_hours' };
   }
 

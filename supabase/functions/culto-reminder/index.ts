@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiChatFetch } from "../_shared/ai-fetch.ts";
+import { decodeJwtPayload, getProjectRef } from "../_shared/auth-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,15 +90,6 @@ Deno.serve(async (req) => {
       // Verify caller is admin or service_role
       const authHeader = req.headers.get("Authorization") || "";
       const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-      const serviceRoleKey = serviceKey;
-
-      console.info("culto-reminder auth diagnostic", {
-        hasAuthHeader: Boolean(authHeader),
-        hasToken: Boolean(token),
-        hasServiceRoleEnv: Boolean(serviceRoleKey),
-        isServiceRoleMatch:
-          Boolean(token && serviceRoleKey && token === serviceRoleKey),
-      });
 
       if (!token) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -106,8 +98,17 @@ Deno.serve(async (req) => {
         });
       }
 
+      const isExactServiceRoleMatch = token === serviceKey;
+      const payload = decodeJwtPayload(token);
+      const projectRef = getProjectRef(supabaseUrl);
+      const isVerifiedServiceRoleClaim = 
+        payload?.role === "service_role" && 
+        payload?.ref === projectRef;
+
       let authorized = false;
-      if (token === serviceKey) {
+      let isAdmin = false;
+
+      if (isExactServiceRoleMatch || isVerifiedServiceRoleClaim) {
         authorized = true;
       } else {
         console.info("culto-reminder entering user auth fallback");
@@ -116,25 +117,24 @@ Deno.serve(async (req) => {
         });
         const { data: userData, error: userError } = await userClient.auth.getUser();
         
-        console.info("culto-reminder user auth result", {
-          userAuthSucceeded: Boolean(userData?.user && !userError),
-        });
-
         if (userData?.user && !userError) {
-          const { data: isAdmin } = await userClient.rpc("has_role", {
+          const { data: hasAdminRole } = await userClient.rpc("has_role", {
             _user_id: userData.user.id,
             _role: "admin",
           });
-          
-          console.info("culto-reminder admin result", {
-            adminAuthorized: Boolean(isAdmin),
-          });
-
+          isAdmin = !!hasAdminRole;
           if (isAdmin) {
             authorized = true;
           }
         }
       }
+
+      console.info("culto-reminder auth result", {
+        isExactServiceRoleMatch,
+        isVerifiedServiceRoleClaim,
+        isAdmin,
+        authorized
+      });
 
       if (!authorized) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {

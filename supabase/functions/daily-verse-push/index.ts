@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiGenerateText, hasAnyAiKey } from "../_shared/ai-fetch.ts";
+import { decodeJwtPayload, getProjectRef } from "../_shared/auth-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,13 +61,23 @@ async function isAuthorizedTrigger(
 
   if (!token) return { ok: false, manual: false };
 
-  // Internal cron / server-to-server: exact service-role key match.
-  if (token === serviceKey) {
-    console.log("Authorized as service_role");
-    return { ok: true, manual: true };
+  // 1. Exact service-role key match (fast-path).
+  const isExactServiceRoleMatch = token === serviceKey;
+  
+  // 2. JWT service_role claim check (for tokens minted by Supabase Gateway).
+  const payload = decodeJwtPayload(token);
+  const projectRef = getProjectRef(supabaseUrl);
+  const isVerifiedServiceRoleClaim = 
+    payload?.role === "service_role" && 
+    payload?.ref === projectRef;
+
+  if (isExactServiceRoleMatch || isVerifiedServiceRoleClaim) {
+    console.log("Authorized as service_role", { isExactServiceRoleMatch, isVerifiedServiceRoleClaim });
+    // IMPORTANT: service_role (Cron) is NOT a manual trigger.
+    return { ok: true, manual: false };
   }
 
-  // Otherwise require an authenticated admin user.
+  // 3. Authenticated admin user.
   try {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -82,6 +93,7 @@ async function isAuthorizedTrigger(
     });
     if (isAdmin === true) {
       console.log("Authorized as admin user");
+      // Authenticated admin users ARE manual triggers.
       return { ok: true, manual: true };
     }
   } catch (e) {

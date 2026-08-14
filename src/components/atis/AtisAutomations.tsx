@@ -4,6 +4,7 @@ import { atisTargetDb, AtisTarget } from "./atisTargetDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AtisTargetSelector } from "./AtisTargetSelector";
+import { isProtectedAutomation } from "@/utils/atis-protection";
 import { 
   Plus, 
   Trash2, 
@@ -116,7 +117,7 @@ const AtisAutomations = () => {
   };
 
   const handleDelete = async (automation: Automation) => {
-    if (automation.source_key?.startsWith("system:")) {
+    if (isProtectedAutomation(automation.source_key)) {
       toast.error("Esta é uma automação de sistema e não pode ser excluída.");
       return;
     }
@@ -247,7 +248,7 @@ const AtisAutomations = () => {
         const keys = Object.keys(form) as (keyof Automation)[];
         
         for (const key of keys) {
-          if (editing.source_key?.startsWith("system:") && (key === "source_key" || key === "notification_type")) {
+          if (isProtectedAutomation(editing.source_key) && (key === "source_key" || key === "notification_type")) {
             continue;
           }
 
@@ -314,7 +315,7 @@ const AtisAutomations = () => {
     }
   };
 
-  const isSystem = (item: Automation | null) => item?.source_key?.startsWith("system:") ?? false;
+  const isSystem = (item: Automation | null) => isProtectedAutomation(item?.source_key);
 
   const isSentinelTime = (item: Automation | null, time: string) => {
     if (!isSystem(item) || !item) return false;

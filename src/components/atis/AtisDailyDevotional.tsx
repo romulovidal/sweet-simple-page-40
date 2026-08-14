@@ -20,7 +20,7 @@ const AtisDailyDevotional = () => {
     setLoading(true);
     try {
       const [{ data: config }, { data: gs }] = await Promise.all([
-        atisDb.from("atis_notification_configs").select("*").eq("source_key", "system:devotional").maybeSingle(),
+        atisDb.from("atis_notification_configs").select("*").eq("source_key", "legacy:atis_daily_devotional").maybeSingle(),
         atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
       ]);
 
@@ -50,7 +50,7 @@ const AtisDailyDevotional = () => {
       const { error } = await atisDb.from("atis_notification_configs").update({
         enabled: cfg.enabled,
         send_times: [cfg.time],
-      }).eq("source_key", "system:devotional");
+      }).eq("source_key", "legacy:atis_daily_devotional");
 
       if (error) throw error;
       toast.success("Devocional diário (V2) salvo");

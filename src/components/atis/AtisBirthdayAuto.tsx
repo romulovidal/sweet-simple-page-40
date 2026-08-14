@@ -20,7 +20,7 @@ const AtisBirthdayAuto = () => {
     setLoading(true);
     try {
       const [{ data: config }, { data: gs }] = await Promise.all([
-        atisDb.from("atis_notification_configs").select("*").eq("source_key", "system:birthday").maybeSingle(),
+        atisDb.from("atis_notification_configs").select("*").eq("source_key", "legacy:atis_birthday_greeting").maybeSingle(),
         atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
       ]);
 
@@ -54,7 +54,7 @@ const AtisBirthdayAuto = () => {
         send_times: [cfg.time],
         message_template: cfg.template,
         use_ai: cfg.use_ai,
-      }).eq("source_key", "system:birthday");
+      }).eq("source_key", "legacy:atis_birthday_greeting");
 
       if (error) throw error;
       toast.success("Aniversário automático (V2) salvo");

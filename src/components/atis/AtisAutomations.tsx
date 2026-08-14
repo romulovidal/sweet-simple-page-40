@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
+import { atisTargetDb, AtisTarget } from "./atisTargetDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AtisTargetSelector } from "./AtisTargetSelector";
 import { 
   Plus, 
   Trash2, 
@@ -16,7 +18,8 @@ import {
   Save,
   X,
   AlertTriangle,
-  Clock
+  Clock,
+  Users
 } from "lucide-react";
 import { 
   Dialog, 

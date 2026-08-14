@@ -191,6 +191,8 @@ const AtisAutomations = () => {
   const openNew = () => {
     setIsNew(true);
     setEditing(null);
+    setTargets([]);
+    setOriginalTargets([]);
     setForm({
       name: "",
       notification_type: "custom",

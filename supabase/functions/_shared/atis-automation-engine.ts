@@ -74,8 +74,6 @@ export class AtisEngine {
     const tz = await this.getTimezone(config.timezone);
     const now = new Date();
     
-    // TODO: Validar days_of_week e horários se for execução agendada automática
-    
     for (const target of config.atis_notification_targets) {
       if (!target.active) continue;
       
@@ -96,7 +94,7 @@ export class AtisEngine {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: tz,
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour: '2-digit', minute: '2-digit',
       hour12: false
     });
     const parts = formatter.formatToParts(date);
@@ -110,7 +108,8 @@ export class AtisEngine {
   async processRecipient(
     config: any, 
     recipient: ResolvedRecipient, 
-    occurrenceKey: string
+    occurrenceKey: string,
+    messageOverride?: string
   ): Promise<AutomationResult> {
     const idempotencyKey = `${config.id}:${recipient.recipientKey}:${occurrenceKey}`;
     
@@ -124,7 +123,7 @@ export class AtisEngine {
         occurrence_key: occurrenceKey,
         idempotency_key: idempotencyKey,
         status: 'scheduled',
-        scheduled_for: new Date().toISOString(), // Idealmente vindo do cálculo de agendamento
+        scheduled_for: new Date().toISOString(),
       }, { onConflict: 'idempotency_key' })
       .select()
       .single();
@@ -151,9 +150,8 @@ export class AtisEngine {
       return { ok: false, skipped: true, reason: 'claim_failed', logId: log.id };
     }
 
-    // 3. Preparar Mensagem (IA ou Template)
-    let message = config.message_template ?? '';
-    // Se use_ai estiver ativo, a lógica de geração deve ser injetada aqui na FASE 2
+    // 3. Preparar Mensagem
+    let message = messageOverride || config.message_template || '';
     
     // 4. Envio Seguro (Antiban + Evolution)
     try {
@@ -172,7 +170,7 @@ export class AtisEngine {
         log_id: log.id,
         attempt_number: (log.attempts ?? 0) + 1,
         status: sendResult.ok ? 'success' : (sendResult.skipped ? 'skipped' : 'error'),
-        error_message: sendResult.reason || sendResult.body,
+        error_message: sendResult.reason || String(sendResult.body),
         response_payload: sendResult.body
       });
 
@@ -194,7 +192,6 @@ export class AtisEngine {
       };
 
     } catch (e) {
-      // Falha catastrófica no motor
       await this.supabase.from('atis_automation_logs').update({
         status: 'failed',
         last_error: String(e)

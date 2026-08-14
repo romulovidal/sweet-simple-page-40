@@ -1,40 +1,45 @@
-# Plano de Reforma do Sistema ATIS V2
+# Plano: Finalização do Frontend Administrativo ATIS V2
 
-Implementação de um motor de automação centralizado, resiliente e idempotente, permitindo múltiplas configurações por tipo, suporte a grupos e gerenciamento avançado de destinatários.
+Finalizar a interface administrativa do ATIS V2 para gerenciar automações, logs e configurações globais, utilizando a infraestrutura de backend já existente.
 
-## 1. Infraestrutura de Banco de Dados (SQL)
+## User Review Required
 
-### Configurações Globais e Automações
-- **`atis_automation_settings`**: Tabela única para configurações do motor (timezone padrão, limites globais, horário silencioso).
-- **`atis_notification_configs`**: Definição das automações. Permite múltiplos registros do mesmo `notification_type`. Inclui `automation_mode` (automatic/manual), `send_times` (array de horários) e suporte a IA.
-- **`atis_notification_targets`**: Tabela normalizada para destinatários (contatos, perfis, grupos @g.us, tags). Resolve o problema de tipos complexos no PostgreSQL.
+> [!IMPORTANT]
+> - O frontend consumirá as tabelas `atis_notification_configs`, `atis_automation_logs` e `atis_automation_settings`.
+> - Automações de sistema (ex: `system:welcome`, `system:broadcasts`) terão proteções visuais para evitar exclusão ou edições que quebrem a semântica técnica (como horários sentinela `00:00`).
 
-### Controle e Idempotência
-- **`atis_automation_logs`**: Registro atômico de cada tentativa de envio.
-- **`idempotency_key`**: Constraint única composta por `config_id` + `recipient_key` + `scheduled_for`. Garante que nenhum runner duplicado envie a mesma mensagem.
-- **Estados**: `scheduled`, `pending`, `processing`, `sent`, `failed`, `skipped`, `retrying`, `postponed`.
+## Proposed Changes
 
-## 2. Refatoração do Backend (Edge Functions)
+### 1. Auditoria e Saneamento
+- Analisar os componentes existentes em `src/components/atis/` para reaproveitar lógica.
+- Remover telas duplicadas e centralizar a navegação no `AtisLayout`.
 
-### Shared Helpers
-- **`atis-recipient-resolver.ts`**: Lógica unificada para normalizar JIDs e expandir grupos/tags em listas de destinatários individuais ou JIDs de grupo.
-- **`atis-automation-engine.ts`**: O "coração" que verifica o que está vencido, faz o claim atômico no banco, processa templates (com placeholders e IA) e invoca o `safeSend`.
+### 2. Gestão de Automações (`AtisAutomations.tsx`)
+- Implementar listagem completa baseada em `atis_notification_configs`.
+- Adicionar suporte a badges "Sistema" para registros protegidos.
+- Criar formulário de criação/edição com suporte a:
+  - Seleção de dias da semana (0-6).
+  - Timepicker para horários.
+  - Configuração de IA e Destinatários (targets).
+  - Validação para não permitir exclusão de automações de sistema.
 
-### Runners
-- Revisão completa de todos os runners (`daily-devotional`, `birthday-greeting`, `daily-verse-dm`, `broadcast`, `series`, `plans`, `welcome`, `culto-reminder`, `daily-verse-push`, `smart-notifications`).
-- Migração gradual para o novo motor, preservando regras de negócio específicas de cada fluxo (ex: planos de leitura mantêm seu progresso individual).
+### 3. Gestão de Destinatários
+- Criar seletor amigável para os tipos suportados: `profile`, `contact`, `group`, `tag`, `jid_individual`, `all_authenticated`.
+- Garantir que IDs de grupos (`@g.us`) sejam preservados sem normalização para telefone.
 
-## 3. Painel Administrativo (Frontend)
+### 4. Configurações Globais (`AtisConfig.tsx` / `AtisAdvancedSettings.tsx`)
+- Unificar ou ajustar os componentes para consumir `atis_automation_settings`.
+- Mapear campos como `global_enabled`, `quiet_hours`, `anti-ban caps` com labels amigáveis em português.
+- Adicionar aviso explicativo sobre o funcionamento do Horário Silencioso (reagendamento automático).
 
-- **`AtisAutomations.tsx`**: Nova tela central para CRUD de automações.
-- **`AtisAutomationLogs.tsx`**: Visualização detalhada de histórico com filtros e diagnóstico da Evolution API.
-- **Ações de Teste**: Botão "Enviar teste" para validar configurações sem disparar para toda a base.
+### 5. Logs e Monitoramento (`AtisLogs.tsx`)
+- Exibir tabela detalhada de `atis_automation_logs`.
+- Incluir status com badges coloridos: `scheduled`, `pending`, `processing`, `retrying`, `sent`, `failed`, `skipped`.
 
-## 4. Estratégia de Migração e Backfill
-- O script SQL incluirá a extração de dados atuais de `admin_settings` para popular as novas tabelas, garantindo que as configurações de horários e templates do usuário sejam preservadas.
-- Inclusão de `INSERT ... ON CONFLICT` para seeds iniciais.
+## Technical Details
 
-## Conteúdo Técnico
-- SQL consolidado em `migration/atis-notifications-v2.sql`.
-- Uso rigoroso de `America/Fortaleza` como fallback de timezone.
-- Centralização de normalização de JIDs (impedindo `@s.whatsapp.net` duplo).
+- **Database**: Uso exclusivo de `atisDb` (helper atual) para interagir com o Supabase.
+- **Componentes**: Reaproveitamento de `shadcn/ui` (Dialogs, Tabs, Select, Switch, etc).
+- **Timezone**: Padrão `America/Fortaleza` em conformidade com o backend.
+- **Segurança**: Verificação de role `admin` já implementada em `AtisPage.tsx`.
+

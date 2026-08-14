@@ -133,10 +133,59 @@ const AtisAutomations = () => {
     }
   };
 
-  const openEdit = (item: Automation) => {
+  const openEdit = async (item: Automation) => {
     setIsNew(false);
     setEditing(item);
     setForm({ ...item });
+    
+    // Carregar targets
+    setLoadingTargets(true);
+    setTargets([]);
+    setOriginalTargets([]);
+    try {
+      const res = await atisTargetDb.getByConfig(item.id);
+      
+      // Tentar resolver nomes amigáveis para exibir na UI
+      const enriched = await Promise.all(res.map(async (t) => {
+        let displayName = t.target_id;
+        let secondaryInfo = "";
+        
+        try {
+          if (t.target_type === 'profile') {
+            const { data } = await atisDb.from("profiles").select("display_name, whatsapp").eq("id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.display_name;
+              secondaryInfo = data.whatsapp;
+            }
+          } else if (t.target_type === 'contact') {
+            const { data } = await atisDb.from("atis_contacts").select("name, phone").eq("id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.name;
+              secondaryInfo = data.phone;
+            }
+          } else if (t.target_type === 'group') {
+            const { data } = await atisDb.from("atis_groups").select("name, wa_group_id").eq("wa_group_id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.name;
+              secondaryInfo = data.wa_group_id;
+            }
+          } else if (t.target_type === 'all_authenticated') {
+            displayName = "Todos os autenticados";
+          }
+        } catch (e) {
+          console.warn("Failed to resolve target name", t);
+        }
+        
+        return { ...t, display_name: displayName, secondary_info: secondaryInfo };
+      }));
+      
+      setTargets(enriched);
+      setOriginalTargets(enriched.map(t => ({ ...t })));
+    } catch (e: any) {
+      toast.error("Erro ao carregar destinatários: " + e.message);
+    } finally {
+      setLoadingTargets(false);
+    }
   };
 
   const openNew = () => {

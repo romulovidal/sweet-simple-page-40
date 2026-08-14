@@ -1,43 +1,48 @@
-# Plano de Implementação - Etapa 4: Logs e Monitoramento ATIS V2
+# Etapa 6: Homologação ATIS V2
 
-Implementação de uma interface de observabilidade para o motor ATIS V2, permitindo o acompanhamento em tempo real (sob demanda) das execuções, falhas e agendamentos.
+Implementação do roteiro de testes e homologação pré-produção para o motor ATIS V2.
 
-## User Review Required
+## Plano de Testes
 
-> [!IMPORTANT]
-> A interface será estritamente de **leitura**. Nenhuma ação de escrita (reenviar, deletar, editar) será implementada nesta etapa para garantir a integridade do motor de automação.
+### 1. Auditoria Realtime (AtisLogs.tsx)
+- Validar se a interface utiliza Supabase Realtime para logs.
+- Verificar vazamentos de memória ou subscrições duplicadas.
 
-## Detalhes Técnicos
+### 2. Ambiente de Teste
+- Utilizar targets seguros (JIDs de teste, perfis administrativos).
+- Criar automação `custom:hml_test`.
 
-### 1. Auditoria de Dados
-- **Tabela Principal**: `atis_automation_logs`
-- **Campos Operacionais**: `status`, `recipient_key`, `scheduled_for`, `attempts`, `last_error`, `processed_at`, `next_retry_at`.
-- **Relacionamentos**: Join com `atis_notification_configs` para exibir o nome amigável da automação.
-- **Histórico de Tentativas**: Visualização da tabela `atis_automation_attempts` nos detalhes do log (quando disponível).
+### 3. Roteiro de Homologação (30 Itens)
+1. **Automação Personalizada**: Criar e validar persistência.
+2. **Ciclo de Sucesso**: Monitorar transição de status.
+3. **Idempotência**: Validar bloqueio de envios duplicados.
+4. **Target Profile**: Resolução de IDs de perfil.
+5. **Target Contact**: Resolução de contatos manuais.
+6. **Group JID**: Preservação literal de `@g.us`.
+7. **JID Individual**: Preservação de `@s.whatsapp.net`.
+8. **Tag**: Resolução de grupos de tags.
+9. **All Authenticated**: Validação lógica (sem envio massivo).
+10. **Quiet Hours**: Testar bloqueio em janelas de silêncio.
+11. **Limite por Minuto**: Validar `max_messages_per_minute`.
+12. **Caps Diários/Horários**: Validar limites de volume.
+13. **Delay e Jitter**: Verificar intervalos entre mensagens.
+14. **Retry Controlado**: Provocar falha e validar `next_retry_at`.
+15. **Failed Definitivo**: Alcançar limite de retries.
+16. **Skipped**: Validar motivos de pulo.
+17. **System:Birthday**: Sincronia entre telas e ausência de split-brain.
+18. **System:Devotional**: Validação do fluxo devocional.
+19. **System:Welcome**: Proteção do horário sentinela `00:00`.
+20. **System:Broadcasts**: Validação do motor de agendamentos.
+21. **Logs e Attempts**: Auditoria de campos e timestamps.
+22. **Sanitização**: Mascaramento de secrets nos logs.
+23. **Status Desconhecido**: Fallback de UI.
+24. **Mobile**: Responsividade das telas de gestão.
+25. **Concorrência**: Updates parciais atômicos.
+26. **Reinício**: Persistência de estado após reload.
+27. **Desativar Motor**: Testar `global_enabled`.
+28. **Desativar Automação**: Bloqueio individual.
+29. **Falha Parcial**: Comportamento com múltiplos targets.
+30. **Auditoria de Escrita**: Garantir que logs são read-only.
 
-### 2. Status e Identidade Visual
-Mapeamento de status para labels em Português e badges coloridas:
-- `scheduled`: Agendado (Cinza/Amarelo)
-- `pending`: Pendente (Azul claro)
-- `processing`: Processando (Azul com spinner)
-- `retrying`: Tentando novamente (Laranja)
-- `sent`: Enviado (Verde)
-- `failed`: Falhou (Vermelho)
-- `skipped`: Ignorado (Roxo/Cinza)
-
-### 3. Funcionalidades da Interface
-- **Filtros Avançados**: Por status, automação (source_key) e período temporal.
-- **Paginação Server-side**: 25 registros por página para performance.
-- **Sanitização de Segurança**: Payloads nos detalhes do log terão chaves sensíveis (`token`, `secret`, `api_key`) mascaradas.
-- **Resolução de JIDs**: Preservação total de identificadores de grupo (`@g.us`) e individuais (`@s.whatsapp.net`).
-- **Timezone**: Exibição ajustada para `America/Fortaleza`.
-
-### 4. Componentes
-- `AtisLogs.tsx`: Refatoração da tabela principal.
-- `AtisLogDetails.tsx`: Diálogo para inspeção técnica profunda de um registro específico.
-- `atisLogDb.ts`: Helper de acesso a dados para logs e tentativas.
-
-## Métricas de Sucesso
-- Carregamento instantâneo via paginação.
-- Identificação clara do motivo de "Skipped" ou "Failed".
-- Mobile friendly (uso de cards em telas pequenas).
+## Relatório Final
+Ao concluir, apresentarei o status de cada teste (PASS/FAIL/BLOCKED) e a recomendação para produção.

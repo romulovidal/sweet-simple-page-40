@@ -539,7 +539,27 @@ const AtisAutomations = () => {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-[hsl(var(--dark-card-hover))]">
+            <div className="space-y-4 pt-4 border-t border-[hsl(var(--dark-card-hover))]">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-primary" />
+                <h4 className="text-sm font-bold">Destinatários / Targets</h4>
+              </div>
+              
+              {loadingTargets ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <AtisTargetSelector 
+                  configId={isNew ? "temp" : editing?.id || ""} 
+                  targets={targets} 
+                  onChange={setTargets}
+                  disabled={saving}
+                />
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-[hsl(var(--dark-card-hover))]">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Conteúdo via Inteligência Artificial</Label>

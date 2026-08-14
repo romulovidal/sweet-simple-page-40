@@ -1,7 +1,7 @@
 -- ========================================================================================
--- SISTEMA ATIS V2 — MIGRATION DE INFRAESTRUTURA (CORRIGIDA V3)
+-- SISTEMA ATIS V2 — MIGRATION DE INFRAESTRUTURA (CORRIGIDA V4 - FINAL)
 -- ========================================================================================
--- FOCO: Segurança (RPC), Idempotência (DB Constraints), Claim Atômico (Lease) e Backfill.
+-- FOCO: Segurança, Idempotência, Claim Atômico e Preservação de Histórico (RESTRICT).
 -- ========================================================================================
 
 BEGIN;
@@ -9,7 +9,6 @@ BEGIN;
 -- 0. PREFLIGHT: VALIDAR ASSINATURA EXATA DE HAS_ROLE
 DO $$
 BEGIN
-    -- Verifica se a função public.has_role(uuid, public.app_role) existe
     IF NOT EXISTS (
         SELECT 1 
         FROM pg_proc p 
@@ -18,7 +17,7 @@ BEGIN
           AND p.proname = 'has_role'
           AND oidvectortypes(p.proargtypes) = 'uuid, app_role'
     ) THEN
-        RAISE EXCEPTION 'ERRO: Função public.has_role(uuid, public.app_role) não encontrada. A migration exige a assinatura exata para prosseguir.';
+        RAISE EXCEPTION 'ERRO: Função public.has_role(uuid, public.app_role) não encontrada.';
     END IF;
 END $$;
 
@@ -35,7 +34,7 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS public.atis_automation_settings (
     id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     timezone text NOT NULL DEFAULT 'America/Fortaleza',
-    global_enabled boolean NOT NULL DEFAULT true, -- Representa atis_antiban.enabled legado
+    global_enabled boolean NOT NULL DEFAULT true,
     quiet_hours_enabled boolean NOT NULL DEFAULT true,
     quiet_hours_start time NOT NULL DEFAULT '21:00',
     quiet_hours_end time NOT NULL DEFAULT '07:00',
@@ -44,7 +43,6 @@ CREATE TABLE IF NOT EXISTS public.atis_automation_settings (
     retry_max integer NOT NULL DEFAULT 3 CHECK (retry_max >= 0),
     retry_interval_minutes integer NOT NULL DEFAULT 15 CHECK (retry_interval_minutes > 0),
     
-    -- Antiban Legado
     daily_global_cap integer DEFAULT 120 CHECK (daily_global_cap >= 0),
     daily_recipient_cap integer DEFAULT 2 CHECK (daily_recipient_cap >= 0),
     daily_group_cap integer DEFAULT 3 CHECK (daily_group_cap >= 0),
@@ -79,6 +77,16 @@ CREATE TABLE IF NOT EXISTS public.atis_notification_configs (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Constraint para dias da semana (Restaura 0=domingo...6=sábado)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_days_of_week_v2') THEN
+        ALTER TABLE public.atis_notification_configs 
+        ADD CONSTRAINT check_days_of_week_v2 
+        CHECK (days_of_week <@ ARRAY[0,1,2,3,4,5,6]);
+    END IF;
+END $$;
+
 -- 4. DESTINATÁRIOS (TARGETS)
 CREATE TABLE IF NOT EXISTS public.atis_notification_targets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,10 +99,10 @@ CREATE TABLE IF NOT EXISTS public.atis_notification_targets (
     UNIQUE(config_id, target_type, target_id)
 );
 
--- 5. MOTOR DE IDEMPOTÊNCIA E LOGS
+-- 5. MOTOR DE IDEMPOTÊNCIA E LOGS (ON DELETE RESTRICT para preservar histórico)
 CREATE TABLE IF NOT EXISTS public.atis_automation_logs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    config_id uuid NOT NULL REFERENCES public.atis_notification_configs(id) ON DELETE CASCADE,
+    config_id uuid NOT NULL REFERENCES public.atis_notification_configs(id) ON DELETE RESTRICT,
     source_target_id uuid REFERENCES public.atis_notification_targets(id) ON DELETE SET NULL,
     recipient_type text NOT NULL CHECK (recipient_type IN ('individual', 'group')), 
     recipient_key text NOT NULL, 
@@ -145,7 +153,7 @@ BEGIN
     END IF;
 END $$;
 
--- 8. FUNÇÃO DE CLAIM ATÔMICO (RPC) - SEGURA E VALIDADA
+-- 8. FUNÇÃO DE CLAIM ATÔMICO (RPC)
 CREATE OR REPLACE FUNCTION public.atis_claim_automation_occurrence(
     _log_id uuid,
     _worker_id text,
@@ -159,7 +167,6 @@ AS $$
 DECLARE
     _result public.atis_automation_logs;
 BEGIN
-    -- Validações de entrada
     IF _worker_id IS NULL OR _worker_id = '' THEN
         RAISE EXCEPTION '_worker_id cannot be null or empty';
     END IF;
@@ -182,10 +189,8 @@ BEGIN
     WHERE id = _log_id
       AND scheduled_for <= now()
       AND (
-          -- Nunca processado ou pronto para retry
           (status IN ('scheduled', 'pending', 'retrying') AND (next_retry_at IS NULL OR next_retry_at <= now()))
           OR
-          -- Recuperar processamento abandonado
           (status = 'processing' AND (claim_expires_at IS NULL OR claim_expires_at < now()))
       )
     RETURNING * INTO _result;
@@ -204,14 +209,12 @@ DO $$
 DECLARE
     t text;
 BEGIN
-    -- Tabelas editáveis pelo painel admin
     FOR t IN SELECT unnest(ARRAY['atis_automation_settings', 'atis_notification_configs', 'atis_notification_targets']) LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('DROP POLICY IF EXISTS "Admins can do everything on %I" ON public.%I', t, t);
         EXECUTE format('CREATE POLICY "Admins can do everything on %I" ON public.%I FOR ALL TO authenticated USING (public.has_role(auth.uid(), ''admin''))', t, t);
     END LOOP;
 
-    -- Tabelas de log (Apenas leitura para admin)
     FOR t IN SELECT unnest(ARRAY['atis_automation_logs', 'atis_automation_attempts']) LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('DROP POLICY IF EXISTS "Admins can select logs on %I" ON public.%I', t, t);
@@ -219,14 +222,11 @@ BEGIN
     END LOOP;
 END $$;
 
--- Privilégios Authenticated (Painel)
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_automation_settings TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_notification_configs TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_notification_targets TO authenticated;
 GRANT SELECT ON public.atis_automation_logs TO authenticated;
 GRANT SELECT ON public.atis_automation_attempts TO authenticated;
-
--- Privilégios Service Role (Edge Functions / Backend)
 GRANT ALL ON public.atis_automation_settings TO service_role;
 GRANT ALL ON public.atis_notification_configs TO service_role;
 GRANT ALL ON public.atis_notification_targets TO service_role;
@@ -236,7 +236,7 @@ GRANT ALL ON public.atis_automation_attempts TO service_role;
 -- 10. ÍNDICES
 CREATE INDEX IF NOT EXISTS idx_atis_logs_processing_queue ON public.atis_automation_logs(status, scheduled_for) WHERE status IN ('scheduled', 'pending', 'retrying', 'processing');
 
--- 11. HELPER: PARSE TIME (TEMPORÁRIO)
+-- 11. HELPER: PARSE TIME
 CREATE OR REPLACE FUNCTION public.atis_v2_parse_time(v text, fallback time) 
 RETURNS time AS $$
 BEGIN
@@ -256,7 +256,7 @@ $$ LANGUAGE plpgsql;
 
 -- 12. SEEDS E BACKFILL
 
--- Global Settings (Antiban Legado)
+-- Global Settings
 DO $$
 DECLARE
     v_antiban jsonb;
@@ -273,8 +273,8 @@ BEGIN
     VALUES (
         1, 
         COALESCE(v_tz, 'America/Fortaleza'),
-        COALESCE((v_antiban->>'enabled')::boolean, true), -- Preserva semântica global
-        true, -- quiet_hours_enabled default
+        COALESCE((v_antiban->>'enabled')::boolean, true),
+        true,
         public.atis_v2_parse_time(v_antiban->>'quiet_start', '21:00'),
         public.atis_v2_parse_time(v_antiban->>'quiet_end', '07:00'),
         COALESCE((v_antiban->>'daily_global_cap')::int, 120),
@@ -288,19 +288,19 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 END $$;
 
--- Seeds e Backfills de Configs
-INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode)
+-- Seeds de Sistema com horários preservados/manuais
+INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode, send_times)
 VALUES 
-    ('system:welcome', 'Mensagem de Boas-vindas', 'welcome', 'automatic'),
-    ('system:smart_notifications', 'Lembretes de Inatividade/Metas', 'smart-notif', 'automatic'),
-    ('system:daily_verse', 'Versículo do Dia (WhatsApp)', 'daily-verse', 'automatic'),
-    ('system:plans', 'Orquestração de Planos de Leitura', 'plan-reading', 'automatic'),
-    ('system:series', 'Orquestração de Séries Temáticas', 'series', 'automatic'),
-    ('system:broadcasts', 'Envios de Transmissão', 'broadcast', 'manual'),
-    ('system:culto', 'Lembretes de Culto/Eventos', 'smart-notif', 'automatic')
+    ('system:welcome', 'Mensagem de Boas-vindas', 'welcome', 'automatic', '{ "00:00" }'), -- Ignorado pela lógica reativa
+    ('system:smart_notifications', 'Lembretes de Inatividade/Metas', 'smart-notif', 'automatic', '{ "09:00" }'),
+    ('system:daily_verse', 'Versículo do Dia (WhatsApp)', 'daily-verse', 'automatic', '{ "07:00" }'),
+    ('system:plans', 'Orquestração de Planos de Leitura', 'plan-reading', 'automatic', '{ "05:00" }'), -- Horário base de processamento
+    ('system:series', 'Orquestração de Séries Temáticas', 'series', 'automatic', '{ "06:00" }'),
+    ('system:broadcasts', 'Envios de Transmissão', 'broadcast', 'manual', '{ "00:00" }'), -- Ignorado (Disparo manual)
+    ('system:culto', 'Lembretes de Culto/Eventos', 'culto', 'automatic', '{ "18:00" }')
 ON CONFLICT (source_key) DO NOTHING;
 
--- Backfill: Devocional Legado
+-- Backfills preservando horários configurados
 DO $$
 DECLARE
     v_config_id uuid;
@@ -330,7 +330,6 @@ BEGIN
     END IF;
 END $$;
 
--- Backfill: Aniversariantes Legado
 DO $$
 DECLARE
     v_config_id uuid;
@@ -362,7 +361,6 @@ BEGIN
     END IF;
 END $$;
 
--- Limpeza
 DROP FUNCTION IF EXISTS public.atis_v2_parse_time(text, time);
 
 COMMIT;

@@ -601,11 +601,12 @@ const AtisAutomations = () => {
             {!isNew && isSystem(editing!) && (
               <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 text-[10px] leading-relaxed">
                 <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
-                <p>
-                  <strong className="text-primary block mb-0.5 uppercase tracking-wide">Atenção</strong>
-                  Configurações de Destinatários (Targets) não são editáveis nesta interface. 
-                  O motor preservará os JIDs e grupos vinculados a esta automação (`{editing?.source_key}`).
-                </p>
+                <div>
+                  <strong className="text-primary block mb-0.5 uppercase tracking-wide">Automação de Sistema</strong>
+                  <p className="text-[hsl(var(--dark-muted))]">
+                    Você está editando uma automação protegida. Campos como <code className="bg-primary/10 px-1 rounded">source_key</code> e <code className="bg-primary/10 px-1 rounded">notification_type</code> não podem ser alterados para manter a compatibilidade com o backend.
+                  </p>
+                </div>
               </div>
             )}
           </div>

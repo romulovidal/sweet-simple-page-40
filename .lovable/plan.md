@@ -1,73 +1,40 @@
-# Plano de Reforma do Sistema ATIS e Notificações Centralizadas
+# Plano de Reforma do Sistema ATIS V2
 
-O objetivo é transformar os diversos fluxos de mensagens (aniversários, devocionais, planos, séries, etc.) em um sistema centralizado, altamente configurável, com suporte robusto a grupos e prevenção de duplicidade.
+Implementação de um motor de automação centralizado, resiliente e idempotente, permitindo múltiplas configurações por tipo, suporte a grupos e gerenciamento avançado de destinatários.
 
-## 1. Estrutura de Dados (Banco de Dados)
+## 1. Infraestrutura de Banco de Dados (SQL)
 
-### Nova Tabela: `atis_notification_configs`
-Centraliza as configurações de cada tipo de automação.
-- `id`: uuid (primary key)
-- `notification_type`: text (unique) - ex: 'devotional', 'birthday', 'verse', 'plan', 'series', 'culto', 'welcome'
-- `enabled`: boolean
-- `send_time`: time (HH:mm)
-- `days_of_week`: int[] (0-6, onde 0 é domingo)
-- `target_type`: text - 'all_contacts', 'all_profiles', 'specific_contacts', 'specific_profiles', 'all_groups', 'specific_groups', 'mixed'
-- `target_ids`: uuid[] or text[] - IDs de contatos, perfis ou wa_group_ids
-- `message_template`: text - Suporta placeholders como {nome}, {versiculo}, etc.
-- `use_ai`: boolean
-- `ai_prompt`: text (opcional)
-- `retry_max`: int (default 3)
-- `metadata`: jsonb - Configurações específicas (ex: include_reflection para versículo)
-- `updated_at`: timestamptz
+### Configurações Globais e Automações
+- **`atis_automation_settings`**: Tabela única para configurações do motor (timezone padrão, limites globais, horário silencioso).
+- **`atis_notification_configs`**: Definição das automações. Permite múltiplos registros do mesmo `notification_type`. Inclui `automation_mode` (automatic/manual), `send_times` (array de horários) e suporte a IA.
+- **`atis_notification_targets`**: Tabela normalizada para destinatários (contatos, perfis, grupos @g.us, tags). Resolve o problema de tipos complexos no PostgreSQL.
 
-### Nova Tabela: `atis_automation_logs`
-Histórico detalhado e controle de idempotência.
-- `id`: uuid (primary key)
-- `config_id`: uuid (references atis_notification_configs)
-- `recipient_key`: text (wa_group_id ou phone formatado)
-- `scheduled_date`: date
-- `status`: text - 'pending', 'sent', 'failed', 'skipped'
-- `attempts`: int
-- `last_error`: text
-- `external_id`: text (ID da mensagem na Evolution API)
-- `created_at`: timestamptz
-- `sent_at`: timestamptz
+### Controle e Idempotência
+- **`atis_automation_logs`**: Registro atômico de cada tentativa de envio.
+- **`idempotency_key`**: Constraint única composta por `config_id` + `recipient_key` + `scheduled_for`. Garante que nenhum runner duplicado envie a mesma mensagem.
+- **Estados**: `scheduled`, `pending`, `processing`, `sent`, `failed`, `skipped`, `retrying`, `postponed`.
 
 ## 2. Refatoração do Backend (Edge Functions)
 
-### Helper Centralizado: `_shared/atis-recipient-resolver.ts`
-Unifica a lógica de "quem deve receber".
-- Normalização de JIDs (@s.whatsapp.net para indivíduos, @g.us para grupos).
-- Diferenciação entre números brutos, contatos do banco e perfis de usuários.
-- Resolução de grupos baseada na tabela `atis_groups`.
+### Shared Helpers
+- **`atis-recipient-resolver.ts`**: Lógica unificada para normalizar JIDs e expandir grupos/tags em listas de destinatários individuais ou JIDs de grupo.
+- **`atis-automation-engine.ts`**: O "coração" que verifica o que está vencido, faz o claim atômico no banco, processa templates (com placeholders e IA) e invoca o `safeSend`.
 
-### Helper de Idempotência: `_shared/atis-automation-helper.ts`
-- Função `shouldSendToday(config, recipient)`: Verifica se já houve envio bem-sucedido ou se está em retry.
-- Função `markAsSent(config, recipient, result)`: Registra o sucesso.
-- Respeito ao "Horário Silencioso" configurado globalmente no `atis_antiban`.
-
-### Atualização dos Runners
-- `atis-daily-devotional`, `atis-birthday-greeting`, `atis-daily-verse-dm`:
-  - Deixam de ler `admin_settings` diretamente com chaves hardcoded.
-  - Passam a buscar a configuração em `atis_notification_configs`.
-  - Usam o `safeSend` atualizado para garantir anti-ban e logs.
+### Runners
+- Revisão completa de todos os runners (`daily-devotional`, `birthday-greeting`, `daily-verse-dm`, `broadcast`, `series`, `plans`, `welcome`, `culto-reminder`, `daily-verse-push`, `smart-notifications`).
+- Migração gradual para o novo motor, preservando regras de negócio específicas de cada fluxo (ex: planos de leitura mantêm seu progresso individual).
 
 ## 3. Painel Administrativo (Frontend)
 
-### Nova Tela: `AtisAutomations.tsx`
-- Interface de cartões para cada tipo de automação.
-- Seleção visual de dias da semana.
-- Seletor de grupos integrado (usando os grupos já importados).
-- Editor de template com pré-visualização de placeholders.
+- **`AtisAutomations.tsx`**: Nova tela central para CRUD de automações.
+- **`AtisAutomationLogs.tsx`**: Visualização detalhada de histórico com filtros e diagnóstico da Evolution API.
+- **Ações de Teste**: Botão "Enviar teste" para validar configurações sem disparar para toda a base.
 
-### Melhoria em `AtisGroups.tsx`
-- Sincronização de nomes de grupos da Evolution API para facilitar a identificação no seletor de destinos.
+## 4. Estratégia de Migração e Backfill
+- O script SQL incluirá a extração de dados atuais de `admin_settings` para popular as novas tabelas, garantindo que as configurações de horários e templates do usuário sejam preservadas.
+- Inclusão de `INSERT ... ON CONFLICT` para seeds iniciais.
 
-## 4. Cron Jobs
-- Manutenção dos cron jobs existentes (que rodam a cada 1-5 minutos).
-- Os scripts agora consultam `atis_notification_configs` e a tabela de logs para decidir se é o momento exato de disparar.
-
-## Detalhes Técnicos de Implementação
-- **Normalização de Grupos**: Garantir que o ID do grupo seja tratado literalmente (terminando em `@g.us`) e nunca passe por funções de limpeza de telefone.
-- **Retry Exponencial**: Implementar um atraso crescente entre tentativas de falhas temporárias (HTTP 429/500).
-- **Timezone**: Uso rigoroso de `America/Fortaleza` em todos os cálculos de "agora".
+## Conteúdo Técnico
+- SQL consolidado em `migration/atis-notifications-v2.sql`.
+- Uso rigoroso de `America/Fortaleza` como fallback de timezone.
+- Centralização de normalização de JIDs (impedindo `@s.whatsapp.net` duplo).

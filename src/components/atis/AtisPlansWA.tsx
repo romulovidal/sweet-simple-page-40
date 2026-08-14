@@ -118,7 +118,7 @@ const PlanSubs = ({ plan, onClose }: { plan: Plan; onClose: () => void }) => {
     setBusyId(s.id);
     try {
       // Envio direcionado apenas a este inscrito (evita disparar o runner inteiro).
-      const url = `https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/atis-plans-runner?sub=${s.id}`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/atis-plans-runner?sub=${s.id}`;
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
       const res = await fetch(url, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} });

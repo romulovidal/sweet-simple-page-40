@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/v/:slug",
-      "destination": "https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/s/:slug"
+      "destination": "https://karyuuhxeismshhxuokg.supabase.co/functions/v1/s/:slug"
     },
     {
       "source": "/c/:slug",
-      "destination": "https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/cs/:slug"
+      "destination": "https://karyuuhxeismshhxuokg.supabase.co/functions/v1/cs/:slug"
     },
     {
       "source": "/(.*)",

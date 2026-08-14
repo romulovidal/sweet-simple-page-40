@@ -50,7 +50,7 @@ const AppContent = () => {
   const location = useLocation();
    const { features } = useAppFeatures();
   const isAdmin = location.pathname.startsWith("/admin");
-  const isAtis = location.pathname.startsWith("/atis");
+  const isAtis = location.pathname.toLowerCase().startsWith("/atis");
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
   const isMobile = useIsMobile();

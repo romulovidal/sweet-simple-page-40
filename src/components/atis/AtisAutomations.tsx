@@ -314,10 +314,10 @@ const AtisAutomations = () => {
     }
   };
 
-  const isSystem = (item: Automation) => item.source_key?.startsWith("system:");
+  const isSystem = (item: Automation | null) => item?.source_key?.startsWith("system:") ?? false;
 
-  const isSentinelTime = (item: Automation, time: string) => {
-    if (!isSystem(item)) return false;
+  const isSentinelTime = (item: Automation | null, time: string) => {
+    if (!isSystem(item) || !item) return false;
     // system:welcome e system:broadcasts usam 00:00 como sentinela (ignorado pelo runner de cron)
     if ((item.source_key === "system:welcome" || item.source_key === "system:broadcasts") && time === "00:00") {
       return true;

@@ -87,7 +87,7 @@ export async function aiChatFetch(body: Record<string, unknown>): Promise<Respon
   const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
   const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY"); // Optional, for fallback context if needed, but not in chain
+  
 
   // Ordered provider chain: Groq → xAI → Gemini.
   const providers: Array<{ name: string; run: () => Promise<Response> }> = [];

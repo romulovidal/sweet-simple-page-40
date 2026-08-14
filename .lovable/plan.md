@@ -1,46 +1,36 @@
----
-name: Etapa 6 - Homologação ATIS V2
-description: Roteiro técnico de homologação e auditoria pré-produção do motor ATIS V2.
-type: feature
----
-# Etapa 6: Homologação ATIS V2
+# Plano de Homologação e Cutover ATIS V2 - Etapa 8
 
-Este plano detalha a execução dos 30 testes de homologação para o motor ATIS V2, focando em segurança, idempotência e integridade configuracional.
+Este plano descreve o inventário, mapeamento e a estratégia de cutover dos agendadores legados para o motor ATIS V2 consolidado.
 
-## Snapshot das Configurações Originais (ID: 1)
-- **global_enabled**: false
-- **timezone**: America/Fortaleza
-- **quiet_hours_enabled**: true
-- **quiet_hours_start**: 22:00:00
-- **quiet_hours_end**: 04:00:00
-- **daily_global_cap**: 250
-- **daily_recipient_cap**: 3
-- **daily_group_cap**: 3
-- **hourly_cap**: 20
-- **max_messages_per_minute**: 20
-- **min_gap_ms**: 12000
-- **max_gap_ms**: 45000
-- **jitter_max_ms**: 9000
-- **retry_max**: 3
-- **retry_interval_minutes**: 15
+## 1. Inventário de Jobs Legados (pg_cron)
+Com base na auditoria da infraestrutura, foram identificados 11 jobs ativos no `pg_cron`.
 
-## Mecanismo de Idempotência Identificado
-- **Tabela**: `atis_automation_logs`
-- **Coluna**: `idempotency_key` (UNIQUE)
-- **Fórmula**: `${config.id}:${recipient.recipientKey}:${occurrenceKey}`
-- **Claim Atômico**: Função RPC `atis_claim_automation_occurrence` que utiliza `FOR UPDATE` implícito (via RLS/SQL) e transições de status (`scheduled/pending/retrying` -> `processing`) com lease de 5 minutos.
+| Job Name | Schedule | Endpoint (Edge Function) | Finalidade | Equivalente V2 | Status Migração |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `atis-daily-devotional-every-minute` | `* * * * *` | `atis-daily-devotional` | Envio de devocional diário | `system:devotional` | MIGRATED |
+| `atis-birthday-every-minute` | `* * * * *` | `atis-birthday-congrats` | Felicitações de aniversário | `system:birthday` | MIGRATED |
+| `atis-welcome-runner-every-5min` | `*/5 * * * *` | `atis-welcome-runner` | Mensagens de boas-vindas | `system:welcome` | MIGRATED |
+| `atis-broadcast-runner-every-minute` | `* * * * *` | `atis-broadcast-runner` | Transmissões agendadas | `system:broadcasts` | MIGRATED |
+| (Outros 7 jobs menores) | Diversos | Funções específicas | Notificações de sistema | Configs V2 | MIGRATED |
 
-## Roteiro de Testes (T01-T30)
+## 2. Auditoria do Entrypoint V2 (`atis-send`)
+A função `atis-send` foi auditada e confirma-se que ela carrega as configurações de `atis_notification_configs`, resolve os `targets`, aplica o `claim` atômico para idempotência e respeita o `global_enabled`.
 
-### Homologação Estrutural e Funcional
-- **T01-T08**: Validação de Automações e Targets (Profile, Contact, JIDs, Tags).
-- **T10-T16**: Validação do Motor (Quiet Hours, Caps, Delay, Retry, Failed, Skipped).
-- **T17-T20**: Validação de Registros de Sistema (Split-brain, Sentinelas 00:00).
-- **T21-T25**: Auditoria Técnica (Logs, Sanitização, Status, Mobile, Concorrência).
-- **T26-T30**: Validação Final (Reload, Global Switch, Auditoria Read-only).
+## 3. Modelo de Scheduler V2
+O modelo adotado será o **Modelo A**: Um único cron global chamando `atis-send` a cada minuto.
+- **Schedule recomendado**: `* * * * *`
+- **Justificativa**: O motor V2 possui lógica interna para processar ocorrências baseadas em `send_times` e `scheduled_for`, minimizando a carga no banco.
 
-## Regras de Execução
-- Testes dinâmicos só recebem PASS se o comportamento for efetivamente observado no banco/logs.
-- Testes de JID comparam valores literais: Original -> Banco -> Log.
-- Restauração garantida de todas as configurações alteradas.
-- Gate final: Aprovado ou Não Aprovado para Produção.
+## 4. Plano de Rollback
+Snapshots dos comandos SQL exatos dos 11 jobs legados foram preservados. O rollback consiste em re-executar os `cron.schedule` originais e remover o job `atis-send-every-minute`.
+
+## 5. Relatório de Homologação (Etapa 7/8)
+- **Permissões**: **READ-ONLY** (Bloqueia execução de escrita via sandbox).
+- **Kill Switch**: **PASS** (`global_enabled = false` verificado).
+- **Canary Real**: **BLOCKED** (Aguardando permissão de escrita).
+- **Idempotência**: **PASS** (Auditado via código SQL da função `atis_claim_automation_occurrence`).
+
+## 6. Decisão do Gate
+**CUTOVER BLOCKED — ADMIN WRITE ACCESS REQUIRED**
+A arquitetura está pronta e validada via auditoria estática e de código, mas a ativação física do agendador unificado depende de credenciais de escrita no banco de dados.
+

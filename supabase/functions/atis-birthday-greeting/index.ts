@@ -1,23 +1,8 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
-import { safeSend, loadGuard, humanGap } from '../_shared/atis-antiban.ts'
-
-const BRAZIL_TZ = 'America/Fortaleza'
-
-function brNow() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: BRAZIL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false,
-  }).formatToParts(new Date())
-  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
-  const dateKey = `${g('year')}-${g('month')}-${g('day')}`
-  const timeKey = `${g('hour')}:${g('minute')}`
-  const mmdd = `${g('month')}-${g('day')}`
-  const hour = parseInt(g('hour'), 10)
-  const period = hour >= 5 && hour < 12 ? 'manhã' : hour >= 12 && hour < 18 ? 'tarde' : hour >= 18 ? 'noite' : 'madrugada'
-  return { dateKey, timeKey, mmdd, hour, period }
-}
+import { AtisEngine } from '../_shared/atis-automation-engine.ts'
+import { brNow } from '../_shared/atis-v2-helpers.ts'
 
 async function generateGreeting(names: string[], template: string | null, period: string): Promise<string> {
   const greeting = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
@@ -29,177 +14,58 @@ async function generateGreeting(names: string[], template: string | null, period
       .replaceAll('{lista}', list)
       .replaceAll('{saudacao}', greeting)
   }
+  
   if (!hasAnyAiKey()) {
-    return `🎉✨ ${greeting}, amada família Atalaias de Betel! ✨🎉\n\nHoje o céu se alegra e a nossa igreja também, porque Deus, em Seu infinito amor, nos presenteou com mais um ano de vida de pessoas muito especiais:\n\n${list}\n\n"O Senhor te abençoe e te guarde; o Senhor faça resplandecer o Seu rosto sobre ti e tenha misericórdia de ti; o Senhor sobre ti levante o Seu rosto e te dê a paz." (Números 6:24-26)\n\nQue este novo ciclo seja marcado por saúde, propósito, sonhos realizados e uma intimidade cada vez maior com o Senhor Jesus. Nós te amamos e celebramos com você! 🎂🙏🕊️\n\n— Com carinho, Igreja Atalaias de Betel`
+    return `🎉✨ ${greeting}, amada família Atalaias de Betel! ✨🎉\n\nHoje o céu se alegra e a nossa igreja também, porque Deus nos presenteou com mais um ano de vida de pessoas muito especiais:\n\n${list}\n\n"O Senhor te abençoe e te guarde..." (Números 6:24)\n\nNós te amamos! 🎂🙏🕊️\n\n— Igreja Atalaias de Betel`
   }
-  const systemPrompt =
-            'Você é Atis, o assistente da Igreja Atalaias de Betel. Sua missão agora é escrever UMA mensagem de aniversário CAPRICHADA, calorosa, poética e profundamente cristã, para ser enviada em um GRUPO de WhatsApp da igreja, parabenizando o(s) aniversariante(s) do dia. Nada de mensagens genéricas, chulas ou copiadas — cada mensagem precisa parecer feita à mão, com sentimento pastoral verdadeiro.\n\n' +
-            'ESTRUTURA OBRIGATÓRIA (em parágrafos separados por uma linha em branco, sem títulos, sem markdown, sem asteriscos):\n' +
-            `1) Abertura festiva começando com "${greeting}, amada família Atalaias de Betel!" acompanhada de 2 a 3 emojis (🎉🎂✨🕊️🙌). Depois, uma frase bonita reconhecendo que hoje é um dia especial, que o céu se alegra junto com a igreja.\n` +
-            '2) Homenagem nominal: cite cada aniversariante em uma lista com "• Nome", e faça uma frase carinhosa antes ou depois da lista mencionando o valor de cada vida para o Corpo de Cristo.\n' +
-            '3) UM versículo bíblico REAL, com referência EXATA (livro, capítulo e versículo), preferencialmente ARA ou ARC, escrito entre aspas, sobre vida, bênção, propósito, gratidão, alegria ou fidelidade de Deus. NUNCA invente referências. Varie o versículo a cada mensagem.\n' +
-            '4) Bênção pastoral personalizada em 3 a 4 frases: fale de saúde, longevidade, propósito, sonhos, família, chamado, comunhão com Jesus e derramar do Espírito Santo. Use uma linguagem quente, próxima, como um pastor abraçando um irmão.\n' +
-            '5) Encerramento em uma linha só, começando com "— Com carinho," seguido de "Igreja Atalaias de Betel" e 1 emoji discreto.\n\n' +
-            'DIRETRIZES DE ESTILO:\n' +
-            '- Tom: acolhedor, digno, cheio de fé, celebrativo, jamais infantil.\n' +
-            '- Português do Brasil, natural e fluído. Sem clichês de cartão como "tudo de bom".\n' +
-            '- Emojis usados com bom gosto (máximo 6 na mensagem inteira, bem distribuídos).\n' +
-            '- NADA de markdown (nada de **negrito**, #, ou listas com "-"). Use apenas "•" para a lista de nomes.\n' +
-            '- Entre 900 e 1400 caracteres.\n' +
-            '- VARIE bastante a cada execução: mude o versículo, as imagens, as palavras, a ordem interna dos parágrafos 3 e 4 se quiser, mantendo a estrutura.\n' +
-            '- Retorne SOMENTE o texto final da mensagem, sem comentários, sem aspas envolvendo tudo.'
-  const userPrompt =
-    `Aniversariante(s) de hoje (${names.length === 1 ? '1 pessoa' : `${names.length} pessoas`}): ${names.join(', ')}.\n` +
-    `Período do dia: ${period} (use isso para dar naturalidade à saudação, mas mantenha "${greeting}, amada família Atalaias de Betel!" como abertura).\n` +
-    'Escreva agora a mensagem de aniversário completa, caprichada e única, seguindo todas as diretrizes.'
-  const text = await aiGenerateText({
-    system: systemPrompt,
-    user: userPrompt,
-    temperature: 1.1,
-    maxTokens: 4096,
-  })
-  if (!text) {
-    return `🎂 ${greeting}, família!\n\nHoje é aniversário de:\n${list}\n\nParabéns! Que Deus abençoe grandemente. 🙏`
-  }
-  return text
-}
 
-async function sendToGroup(admin: any, jid: string, text: string) {
-  const r = await safeSend(admin, jid, text, { kind: 'bulk', noFooter: true })
-  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped, reason: (r as any).reason }
-}
-
-async function sendDirect(admin: any, phone: string, text: string) {
-  const r = await safeSend(admin, phone, text, { kind: 'transactional' })
-  return { ok: r.ok, status: r.status, body: r.body, skipped: (r as any).skipped, reason: (r as any).reason }
+  const systemPrompt = `Você é Atis, assistente da Igreja Atalaias de Betel. Escreva uma mensagem de aniversário celebrativa e pastoral para o GRUPO. Tom caloroso. Mencionando a lista de nomes: ${list}. Máximo 1400 caracteres.`
+  return await aiGenerateText({ system: systemPrompt, user: 'Gere a mensagem do grupo.', temperature: 1.1 })
 }
 
 async function generatePersonalGreeting(name: string, period: string): Promise<string> {
   const saud = period === 'manhã' ? 'Bom dia' : period === 'tarde' ? 'Boa tarde' : period === 'noite' ? 'Boa noite' : 'Paz do Senhor'
-  const fallback = `🎂 ${saud}, ${name}! Hoje é o seu dia, e toda a família Atalaias de Betel celebra com você. 🎉\n\n"O Senhor te abençoe e te guarde." (Números 6:24)\n\nQue este novo ano de vida seja repleto de saúde, propósito e uma comunhão cada vez mais profunda com Jesus. Nós te amamos! 🙏🕊️\n\n— Igreja Atalaias de Betel`
-  if (!hasAnyAiKey()) return fallback
-  const system =
-    'Você é Atis, assistente da Igreja Atalaias de Betel. Escreva uma mensagem PESSOAL de aniversário para ser enviada por WhatsApp DIRETAMENTE ao aniversariante (não em grupo). ' +
-    'Estrutura: 1) saudação carinhosa começando com o nome; 2) reconhecimento pastoral do valor da vida do irmão(ã); 3) UM versículo bíblico REAL com referência exata (nunca invente), sobre vida/bênção/propósito, entre aspas; 4) bênção pessoal em 2-3 frases falando de saúde, sonhos e comunhão com Jesus; 5) assinatura em uma linha só: "— Igreja Atalaias de Betel" com 1 emoji discreto. ' +
-    'Tom acolhedor, digno, português do Brasil, sem markdown, sem asteriscos, sem títulos. Até 6 emojis bem distribuídos. Entre 500 e 900 caracteres. Retorne SOMENTE a mensagem final.'
-  const text = await aiGenerateText({
-    system,
-    user: `Aniversariante: ${name}. Período: ${period}. Escreva a mensagem pessoal agora.`,
-    temperature: 1.1,
-    maxTokens: 2048,
-  })
-  return text || fallback
+  const system = `Você é Atis. Escreva uma mensagem pessoal de aniversário para ${name}. Tom próximo e bíblico. Máximo 800 caracteres.`
+  return await aiGenerateText({ system, user: 'Gere a mensagem pessoal.', temperature: 1.1 })
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const body = await req.json().catch(() => ({} as any))
-  const force = body?.force === true
+  const engine = new AtisEngine(admin, 'atis-birthday-greeting')
+  const { mmdd, dateKey, period } = brNow()
 
-  const { data: settingRow } = await admin.from('admin_settings').select('value').eq('key', 'atis_birthday_greeting').maybeSingle()
-  const cfg = (settingRow?.value ?? {}) as {
-    enabled?: boolean; time?: string; group_ids?: string[]; template?: string | null; use_ai?: boolean; last_sent_date?: string; last_sent_dates?: Record<string, string>
-  }
+  const { data: config } = await admin
+    .from('atis_notification_configs')
+    .select('id, enabled, message_template')
+    .eq('source_key', 'legacy:atis_birthday_greeting')
+    .maybeSingle()
 
-  const { dateKey, timeKey, mmdd, period } = brNow()
+  if (!config?.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
 
-  if (!force) {
-    if (!cfg.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
-  }
-
-  const groupIdsRaw = Array.isArray(cfg.group_ids) ? cfg.group_ids.filter(Boolean) : []
-  if (!groupIdsRaw.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-groups' }), { headers: corsHeaders })
-
-  // Respeita filtro por grupo (Atis › Grupos › Tipos de notificação).
-  // Aniversariantes = tipo "birthday".
-  const NOTIF = 'birthday'
-  const { data: gRows } = await admin
-    .from('atis_groups')
-    .select('wa_group_id, notification_types, notification_times, active')
-    .in('wa_group_id', groupIdsRaw)
-  const globalTime = cfg.time ?? '08:00'
-  const lastSentMap: Record<string, string> = (cfg.last_sent_dates && typeof cfg.last_sent_dates === 'object') ? cfg.last_sent_dates : {}
-  const allowed = new Set(
-    (gRows ?? [])
-      .filter((g: any) => g.active !== false)
-      .filter((g: any) => {
-        const t = Array.isArray(g.notification_types) ? g.notification_types : null
-        return !t || t.length === 0 || t.includes(NOTIF)
-      })
-      .filter((g: any) => {
-        if (force) return true
-        if (lastSentMap[g.wa_group_id] === dateKey) return false
-        const times = g.notification_times && typeof g.notification_times === 'object' ? g.notification_times : {}
-        const perGroup = typeof times[NOTIF] === 'string' ? times[NOTIF] : ''
-        const target = perGroup || globalTime
-        return target === timeKey
-      })
-      .map((g: any) => g.wa_group_id),
-  )
-  const groupIds = groupIdsRaw.filter((jid) => allowed.has(jid) || !(gRows ?? []).some((g: any) => g.wa_group_id === jid))
-  if (!groupIds.length) return new Response(JSON.stringify({ skipped: true, reason: 'filtered-out' }), { headers: corsHeaders })
-
-  const { data: bdays } = await admin.from('atis_birthdays').select('name,birth_date,active,phone')
+  const { data: bdays } = await admin.from('atis_birthdays').select('name, birth_date, active, phone')
   const todays = (bdays ?? []).filter((b: any) => b.active !== false && String(b.birth_date ?? '').slice(5, 10) === mmdd)
-  if (!todays.length) return new Response(JSON.stringify({ skipped: true, reason: 'no-birthdays-today', mmdd }), { headers: corsHeaders })
+  
+  if (!todays.length) return new Response(JSON.stringify({ ok: true, reason: 'no-birthdays' }), { headers: corsHeaders })
 
   const names = todays.map((b: any) => b.name)
-  const useAi = cfg.use_ai !== false && !(cfg.template && cfg.template.trim())
-  const text = await generateGreeting(names, useAi ? null : (cfg.template ?? null), period)
-  if (!text) return new Response(JSON.stringify({ error: 'empty-text' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  const groupText = await generateGreeting(names, config.message_template, period)
 
-  const results: any[] = []
-  const guard = await loadGuard(admin)
-  let gIdx = 0
-  for (const jid of groupIds) {
-    await humanGap(guard, gIdx++)
-    const r = await sendToGroup(admin, jid, text)
-    results.push({ jid, ok: r.ok, status: r.status, skipped: r.skipped, reason: r.reason })
-    await admin.from('atis_messages_log').insert({
-      direction: 'outbound',
-      wa_to: jid,
-      wa_group_id: jid,
-      body: text,
-      command: 'birthday-greeting',
-      status: r.ok ? 'sent' : (r.skipped ? 'skipped' : 'error'),
-      error: r.ok ? null : (r.reason ?? String(r.body ?? '').slice(0, 300)),
-      raw: { auto: !force, ai: useAi, names, http: r.status, body: r.body?.slice?.(0, 300), skipped: r.skipped ?? false },
-    })
-  }
+  // Envia para os targets configurados (Geralmente grupos)
+  await engine.runConfig(config.id, `${dateKey}Tbirthday`)
 
-  // DM pessoal ao(s) aniversariante(s) que têm telefone cadastrado
-  const dms: any[] = []
-  let dIdx = 0
+  // Envio de DMs individuais (lógica reativa do runner)
   for (const b of todays) {
-    const phone = String((b as any).phone ?? '').trim()
-    if (!phone) continue
-    await humanGap(guard, dIdx++)
-    const personal = await generatePersonalGreeting(b.name, period)
-    const r = await sendDirect(admin, phone, personal)
-    dms.push({ name: b.name, phone, ok: r.ok, status: r.status })
-    if (r.skipped) continue
-    await admin.from('atis_messages_log').insert({
-      direction: 'outbound',
-      wa_to: phone,
-      body: personal,
-      command: 'birthday-greeting-dm',
-      status: r.ok ? 'sent' : 'error',
-      raw: { auto: !force, ai: true, name: b.name, http: r.status, body: r.body?.slice?.(0, 300) },
-    })
+    if (b.phone) {
+      const personalText = await generatePersonalGreeting(b.name, period)
+      // Usamos processRecipient diretamente para controle fino sem precisar de uma config específica por pessoa
+      await engine.processRecipient(config, {
+        recipientType: 'individual',
+        recipientKey: b.phone.includes('@') ? b.phone : `${b.phone.replace(/\D/g, '')}@s.whatsapp.net`
+      }, `${dateKey}TbirthdayDM:${b.name}`, personalText)
+    }
   }
 
-  if (!force) {
-    const nextMap = { ...lastSentMap }
-    for (const r of results) if (r.ok) nextMap[r.jid] = dateKey
-    await admin.from('admin_settings').upsert(
-      { key: 'atis_birthday_greeting', value: { ...cfg, last_sent_dates: nextMap, last_sent_date: dateKey } },
-      { onConflict: 'key' },
-    )
-  }
-
-  return new Response(JSON.stringify({ ok: true, sent: results.length, dms_sent: dms.length, names, results, dms, preview: text.slice(0, 200) }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
+  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })

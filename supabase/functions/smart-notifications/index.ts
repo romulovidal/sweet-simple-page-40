@@ -1,153 +1,26 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { AtisEngine } from '../_shared/atis-automation-engine.ts';
+import { brNow } from '../_shared/atis-v2-helpers.ts';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-const BRAZIL_TZ = "America/Fortaleza";
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const engine = new AtisEngine(admin, 'smart-notifications');
+  const { dateKey } = brNow();
 
-function getBrazilDateKey(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: BRAZIL_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
+  const { data: config } = await admin
+    .from('atis_notification_configs')
+    .select('id, enabled')
+    .eq('source_key', 'system:smart_notifications')
+    .maybeSingle();
 
-  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
-  const month = parts.find((part) => part.type === "month")?.value ?? "00";
-  const day = parts.find((part) => part.type === "day")?.value ?? "00";
+  if (!config?.enabled) return new Response(JSON.stringify({ skipped: true }), { headers: corsHeaders });
 
-  return `${year}-${month}-${day}`;
-}
+  // Smart Notifications geralmente são push notifications, mas o motor V2
+  // pode ser usado para espelhar avisos importantes no WhatsApp se configurado.
+  await engine.runConfig(config.id, `${dateKey}Tsmart`);
 
-function addDaysToDateKey(dateKey: string, days: number) {
-  const match = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return dateKey;
-
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days, 12))
-    .toISOString()
-    .slice(0, 10);
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    // Require admin or internal service-role invocation.
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    // Scheduled cron calls arrive with only the anon `apikey` header (no Authorization).
-    // Manual triggers must be admin or service-role.
-    const isScheduledCron = !authHeader;
-    let authorized = isScheduledCron || (token && token === serviceKey);
-    if (!authorized && token) {
-      try {
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: authHeader } },
-        });
-        const { data: userData } = await userClient.auth.getUser();
-        if (userData?.user) {
-          const { data: isAdmin } = await userClient.rpc("has_role", {
-            _user_id: userData.user.id,
-            _role: "admin",
-          });
-          authorized = isAdmin === true;
-        }
-      } catch {
-        authorized = false;
-      }
-    }
-    if (!authorized) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const today = getBrazilDateKey();
-    const threeDaysAgoStr = addDaysToDateKey(today, -3);
-
-    // Idempotency: for scheduled cron, only run once per BR day.
-    if (isScheduledCron) {
-      const { data: last } = await supabase
-        .from("admin_settings")
-        .select("value")
-        .eq("key", "last_smart_notifications_date")
-        .maybeSingle();
-      const lastDate = (last?.value as string | undefined)?.replace(/"/g, "") ?? "";
-      if (lastDate === today) {
-        return new Response(JSON.stringify({ skipped: true, reason: "already ran today", date: today }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      await supabase.from("admin_settings").upsert({ key: "last_smart_notifications_date", value: JSON.stringify(today) });
-    }
-
-    // 1. Inactivity reminder
-    const { data: inactiveUsers } = await supabase
-      .from("user_streaks")
-      .select("user_id")
-      .eq("last_read_date", threeDaysAgoStr);
-
-    if (inactiveUsers?.length) {
-      for (const u of inactiveUsers) {
-        await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-          body: JSON.stringify({
-            user_id: u.user_id,
-            title: "🙏 Sentimos sua falta",
-            body: "Que tal ler o versículo do dia hoje e renovar suas forças?",
-            url: "/",
-            type: "inactivity",
-            ttl: 21600,
-            urgency: "low",
-          }),
-        });
-      }
-    }
-
-    // 2. Goal progress reminder
-    const { data: goalUsers } = await supabase
-      .from("reading_goals")
-      .select("user_id, completed_chapters, target_chapters")
-      .lt("updated_at", `${today}T00:00:00-03:00`);
-
-    if (goalUsers?.length) {
-      for (const g of goalUsers) {
-        const completed = Array.isArray(g.completed_chapters) ? g.completed_chapters.length : 0;
-        if (completed > 0 && completed < (g.target_chapters || 1189)) {
-          await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-            body: JSON.stringify({
-              user_id: g.user_id,
-              title: "📖 Meta de leitura",
-              body: `Você já leu ${completed} capítulos. Continue firme em seu propósito!`,
-              url: "/perfil",
-              type: "goal",
-              ttl: 21600,
-              urgency: "low",
-            }),
-          });
-        }
-      }
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-   } catch (e: any) {
-     const err = e as Error;
-     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-   }
+  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });

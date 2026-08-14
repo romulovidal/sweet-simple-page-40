@@ -14,20 +14,11 @@ export async function runAtisAutomations(workerName: string) {
   }
 
   // Busca configurações habilitadas para hoje
-  // Excluímos explicitamente source_keys gerenciados por runners especializados
-  const specializedKeys = [
-    "system:plans",
-    "system:series",
-    "system:welcome",
-    "system:broadcasts",
-  ];
-
-  const { data: configs, error } = await supabaseAdmin
+  const { data: allConfigs, error } = await supabaseAdmin
     .from("atis_notification_configs")
     .select("id, name, send_times, days_of_week, source_key")
     .eq("enabled", true)
     .eq("automation_mode", "automatic")
-    .not("source_key", "in", `(${specializedKeys.join(",")})`)
     .contains("days_of_week", [weekday]);
 
   if (error) {
@@ -35,7 +26,19 @@ export async function runAtisAutomations(workerName: string) {
     return { error };
   }
 
-  console.log(`[AtisRunner] Found ${configs?.length ?? 0} potential configs for today.`);
+  const SPECIALIZED_SOURCE_KEYS = new Set([
+    "system:plans",
+    "system:series",
+    "system:welcome",
+    "system:broadcasts",
+  ]);
+
+  // Filtra configs que não são gerenciadas por runners especializados
+  const configs = (allConfigs ?? []).filter(
+    (c) => !c.source_key || !SPECIALIZED_SOURCE_KEYS.has(c.source_key)
+  );
+
+  console.log(`[AtisRunner] Found ${configs.length} runnable configs for today (out of ${allConfigs?.length ?? 0}).`);
 
   const results = [];
   for (const config of configs ?? []) {

@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   for (const b of bcasts || []) {
     // Orquestra via V2 para aproveitar segurança e logs
     // Na FASE 2, o motor cuidará da expansão de targets de broadcast
-    await engine.runConfig(null as any, b.id); // TODO: Adaptar para orquestração manual
+    await engine.runConfig(null, b.id); // TODO: Adaptar para orquestração manual
   }
 
   return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

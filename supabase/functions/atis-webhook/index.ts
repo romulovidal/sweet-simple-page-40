@@ -1,4 +1,4 @@
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiChatFetch } from '../_shared/ai-fetch.ts'
 import { evolutionSendText, evolutionSendPoll } from '../_shared/atis-evolution.ts'
@@ -7,7 +7,7 @@ import { normalizeRecipient } from '../_shared/atis-recipient-resolver.ts'
 
 const WEBHOOK_SECRET = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 
-// Funções utilitárias de Opt-out (migradas do legacy atis-antiban se não existirem)
+// Funções utilitárias de Opt-out
 function isOptOutMessage(text: string): boolean {
   const norm = text.trim().toLowerCase().replace(/[.!?]+$/, '')
   const OPT_OUT = ['sair', 'cancelar', 'parar', 'stop', 'descadastrar', 'unsubscribe', 'nao quero mais', 'não quero mais', 'remover me', 'remover-me']
@@ -67,9 +67,13 @@ Deno.serve(async (req) => {
         // Lógica de Opt-out
         if (!isGroup && isOptOutMessage(text)) {
           const { key } = normalizeRecipient(jid)
-          const phoneOnly = key.split('@')[0]
-          await admin.from('atis_contacts').update({ opt_in: false }).eq('phone', phoneOnly)
-          await admin.from('profiles').update({ whatsapp_opt_in: false }).eq('phone', phoneOnly)
+          const phoneOnly = key.split('@')[0].replace(/\D/g, '')
+          
+          await Promise.all([
+            admin.from('atis_contacts').update({ opt_in: false }).eq('phone', phoneOnly),
+            admin.from('profiles').update({ whatsapp_opt_in: false }).eq('phone', phoneOnly),
+            admin.from('atis_optouts').upsert({ phone: phoneOnly, source: 'whatsapp', reason: text }, { onConflict: 'phone' })
+          ])
           
           const reply = '✅ Você foi removido da lista de envios automáticos. Se mudar de ideia, responda VOLTAR. 💜'
           await safeSend(admin, jid, reply, { kind: 'reply' })
@@ -79,9 +83,13 @@ Deno.serve(async (req) => {
         // Lógica de Opt-in
         if (!isGroup && isOptInMessage(text)) {
           const { key } = normalizeRecipient(jid)
-          const phoneOnly = key.split('@')[0]
-          await admin.from('atis_contacts').update({ opt_in: true }).eq('phone', phoneOnly)
-          await admin.from('profiles').update({ whatsapp_opt_in: true }).eq('phone', phoneOnly)
+          const phoneOnly = key.split('@')[0].replace(/\D/g, '')
+          
+          await Promise.all([
+            admin.from('atis_contacts').update({ opt_in: true }).eq('phone', phoneOnly),
+            admin.from('profiles').update({ whatsapp_opt_in: true }).eq('phone', phoneOnly),
+            admin.from('atis_optouts').delete().eq('phone', phoneOnly)
+          ])
           
           const reply = '💜 Que bom te ter de volta! Você voltou a receber as mensagens do Atis.'
           await safeSend(admin, jid, reply, { kind: 'reply' })
@@ -97,4 +105,3 @@ Deno.serve(async (req) => {
 
   return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })
-

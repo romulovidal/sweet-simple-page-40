@@ -3,21 +3,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { aiGenerateText, hasAnyAiKey } from '../_shared/ai-fetch.ts'
 import { AtisEngine } from '../_shared/atis-automation-engine.ts'
 
-const BRAZIL_TZ = 'America/Fortaleza'
+import { brNow } from '../_shared/atis-v2-helpers.ts'
 
-function brNow() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: BRAZIL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false,
-  }).formatToParts(new Date())
-  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
-  const dateKey = `${g('year')}-${g('month')}-${g('day')}`
-  const timeKey = `${g('hour')}:${g('minute')}`
-  const hour = parseInt(g('hour'), 10)
-  const period = hour >= 5 && hour < 12 ? 'manhã' : hour >= 12 && hour < 18 ? 'tarde' : hour >= 18 ? 'noite' : 'madrugada'
-  const dayName = new Intl.DateTimeFormat('pt-BR', { timeZone: BRAZIL_TZ, weekday: 'long' }).format(new Date())
-  return { dateKey, timeKey, hour, period, dayName }
-}
 
 const DEFAULT_DEVOTIONAL_PROMPT =
   'Você é um pastor e escritor devocional. A partir do versículo bíblico fornecido, escreva uma REFLEXÃO DEVOCIONAL curta (2 parágrafos) que:\n' +

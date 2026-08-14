@@ -21,7 +21,9 @@ export interface GuardConfig {
   jitter_max_ms: number;
   paused_until?: string | null;
   consecutive_errors?: number;
+  max_chars?: number;
 }
+
 
 export async function loadGuard(supabase: any): Promise<GuardConfig> {
   const { data } = await supabase
@@ -41,8 +43,10 @@ export async function loadGuard(supabase: any): Promise<GuardConfig> {
     hourly_cap: data?.hourly_cap ?? 20,
     min_gap_ms: data?.min_gap_ms ?? 25000,
     max_gap_ms: data?.max_gap_ms ?? 95000,
-    jitter_max_ms: data?.jitter_max_ms ?? 9000
+    jitter_max_ms: data?.jitter_max_ms ?? 9000,
+    max_chars: data?.max_chars ?? 1500
   };
+
 }
 
 export function isQuietHour(cfg: GuardConfig): boolean {
@@ -99,8 +103,10 @@ export async function safeSend(
     await new Promise(r => setTimeout(r, Math.random() * cfg.jitter_max_ms));
   }
 
-  // 3. Envio Real via Evolution
-  const result = await evolutionSendText(key, text, { mentionsEveryOne: opts.mentionsEveryOne });
+  // 3. Envio Real via Evolution (com suporte a truncamento de segurança se necessário)
+  const safeText = cfg.max_chars ? text.slice(0, cfg.max_chars) : text;
+  const result = await evolutionSendText(key, safeText, { mentionsEveryOne: opts.mentionsEveryOne });
+
 
   // 4. Registro no Ledger (Legado para compatibilidade de caps se necessário)
   if (result.ok) {

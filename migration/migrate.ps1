@@ -35,10 +35,16 @@ foreach ($m in $mandatory) {
 Ok "$SecretsFile validado"
 
 # --- 1. Secrets -------------------------------------------------------------
-Step "1/5 Publicando secrets das Edge Functions (valores nunca são exibidos)"
+Step "1/5 Publicando secrets das Edge Functions"
 Push-Location $RepoRoot
-supabase secrets set --env-file $SecretsFile --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro ao aplicar secrets" }
+# Filtra segredos vazios (especialmente LOVABLE_API_KEY se estiver vazio)
+$TmpSecrets = Join-Path $PSScriptRoot ".env.secrets.tmp"
+Get-Content $SecretsFile | Where-Object { $_ -match "=.+" } | Set-Content $TmpSecrets
+supabase secrets set --env-file $TmpSecrets --project-ref $ProjectRef
+$exit = $LASTEXITCODE
+Remove-Item $TmpSecrets -Force
 Pop-Location
+if ($exit -ne 0) { throw "Erro ao aplicar secrets" }
 Ok "Secrets aplicados"
 
 # --- 2. Deploy das Edge Functions ------------------------------------------
@@ -57,11 +63,12 @@ if ($hasSecret -eq "0") {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
   $tmp = New-TemporaryFile
   "select vault.create_secret(:'k', 'service_role_key');" | Set-Content $tmp -Encoding utf8
-  psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f $tmp << "EOF"
-$plain
-EOF
+  # Usa stdin para evitar expor a chave em argumentos de processo
+  $plain | psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -v k='stdin' -f $tmp
+  $exit = $LASTEXITCODE
   Remove-Item $tmp -Force
   $plain = $null
+  if ($exit -ne 0) { throw "Erro ao gravar segredo no Vault" }
   Ok "Segredo gravado no Vault"
 } else {
   Ok "Segredo já existe no Vault"

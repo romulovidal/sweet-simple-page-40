@@ -1,0 +1,40 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/**'
+      - 'migration/config.target.toml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply Production Config
+        run: |
+          if [ -f "migration/config.target.toml" ]; then
+            cp migration/config.target.toml supabase/config.toml
+            echo "Production config applied successfully."
+          else
+            echo "Error: migration/config.target.toml not found."
+            exit 1
+          fi
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"

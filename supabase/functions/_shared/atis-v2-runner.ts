@@ -1,5 +1,5 @@
 import { supabaseAdmin, brNow } from "./atis-v2-helpers.ts";
-import { AtisEngine } from "./atis-automation_engine.ts";
+import { AtisEngine } from "./atis-automation-engine.ts";
 
 /**
  * Runner Centralizado para Automações Agendadas

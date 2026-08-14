@@ -5,12 +5,7 @@ import { useAtisStatus } from "./useAtisStatus";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
 
 const resolveAtisAvatar = () => {
-  const path = atisAvatarAsset.url;
-  if (typeof window === "undefined") return path;
-  if (window.location.hostname === "biblia.atalaias.online") {
-    return `https://biblia-atalaia.lovable.app${path}`;
-  }
-  return path;
+  return atisAvatarAsset.url;
 };
 
 type Stats = { contacts: number; groups: number; birthdaysToday: number; pending: number; studies: number; messages24h: number };

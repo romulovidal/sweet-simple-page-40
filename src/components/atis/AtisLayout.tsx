@@ -22,12 +22,7 @@ import AdminCultoSelections from "../admin/AdminCultoSelections";
 type TabId = "dashboard" | "contacts" | "groups" | "individuals" | "birthdays" | "broadcasts" | "studies" | "series" | "plans" | "alerts" | "logs" | "config";
 
 const resolveAtisAvatar = () => {
-  const path = atisAvatarAsset.url;
-  if (typeof window === "undefined") return path;
-  if (window.location.hostname === "biblia.atalaias.online") {
-    return `https://biblia-atalaia.lovable.app${path}`;
-  }
-  return path;
+  return atisAvatarAsset.url;
 };
 
 const TABS: { id: TabId; label: string; icon: any }[] = [

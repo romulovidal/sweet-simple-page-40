@@ -62,7 +62,7 @@ const PrivacyPage = () => {
             <h2 className="font-bold text-dark-text mb-1 text-base">4. Inteligência artificial</h2>
             <p>
               Recursos como "Pergunte à Bíblia", devocionais e resumos de capítulo utilizam
-              modelos de IA (Google Gemini via Lovable AI Gateway). Suas perguntas são
+              modelos de IA (Google Gemini, xAI ou Groq). Suas perguntas são
               enviadas ao provedor para gerar a resposta e <strong>não são usadas para
               treinar modelos</strong>. Respostas de IA podem conter imprecisões; sempre
               confirme com a Escritura. Você pode reportar respostas inadequadas pelo botão
@@ -74,7 +74,7 @@ const PrivacyPage = () => {
             <h2 className="font-bold text-dark-text mb-1 text-base">5. Compartilhamento</h2>
             <p>
               Não vendemos, alugamos ou compartilhamos seus dados pessoais com terceiros para
-              fins comerciais. Utilizamos provedores de infraestrutura (Supabase/Lovable Cloud
+              fins comerciais. Utilizamos provedores de infraestrutura (Supabase
               para banco de dados, Google Gemini para IA, Google FCM para notificações), que
               atuam apenas como operadores dos dados.
             </p>

@@ -5,8 +5,8 @@ import { aiChatFetch } from "../_shared/ai-fetch.ts";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!Deno.env.get("XAI_API_KEY") && !Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("LOVABLE_API_KEY")) {
-      return json({ error: "Nenhuma chave de IA configurada (XAI_API_KEY, GEMINI_API_KEY ou LOVABLE_API_KEY)" }, 500);
+    if (!Deno.env.get("XAI_API_KEY") && !Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("GROQ_API_KEY")) {
+      return json({ error: "Nenhuma chave de IA configurada (XAI_API_KEY, GEMINI_API_KEY ou GROQ_API_KEY)" }, 500);
     }
 
     // Auth: only admins

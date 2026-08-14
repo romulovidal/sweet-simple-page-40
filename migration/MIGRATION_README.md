@@ -64,7 +64,7 @@ $env:TARGET_SUPABASE_DB_URL = "postgresql://..."
 **Cadastro manual obrigatório (13):**
 `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `ATIS_WEBHOOK_SECRET`, `GROQ_API_KEY`, `XAI_API_KEY`,
 `GEMINI_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `YOUTUBE_API_KEY`,
-`APP_PUBLIC_URL`, `APP_PUBLIC_ORIGIN`, *(opcional)* `LOVABLE_API_KEY`
+`APP_PUBLIC_URL`, `APP_PUBLIC_ORIGIN`, `OPENAI_API_KEY`.
 
 **Frontend (Vercel):** `VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
@@ -154,7 +154,7 @@ endereço automaticamente.
 
 | Função | Situação fora do Lovable Cloud |
 |---|---|
-| `tts-verse` | **Quebra** — usa exclusivamente `LOVABLE_API_KEY` (Áudio da Bíblia). Requer chave própria de TTS ou reescrita. |
+| `tts-verse` | **OK** — Migrado para chamada direta à OpenAI via `OPENAI_API_KEY`. |
 | `ai-tools`, `exegetai`, `culto-reminder`, `generate-push-message`, `classify-cantico`, `atis-webhook` (e tudo via `_shared/ai-fetch.ts`) | **Continuam funcionando** — fallback Groq → xAI → Gemini preservado, sem remoção silenciosa. |
 
 ---

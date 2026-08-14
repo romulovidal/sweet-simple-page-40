@@ -37,7 +37,7 @@ Ok "$SecretsFile validado"
 # --- 1. Secrets -------------------------------------------------------------
 Step "1/5 Publicando secrets das Edge Functions"
 Push-Location $RepoRoot
-# Filtra segredos vazios (especialmente LOVABLE_API_KEY se estiver vazio)
+# Filtra segredos vazios
 $TmpSecrets = Join-Path $PSScriptRoot ".env.secrets.tmp"
 Get-Content $SecretsFile | Where-Object { $_ -match "=.+" } | Set-Content $TmpSecrets
 supabase secrets set --env-file $TmpSecrets --project-ref $ProjectRef

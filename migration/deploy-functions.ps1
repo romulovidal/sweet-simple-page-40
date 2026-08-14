@@ -21,7 +21,7 @@ try { supabase projects list | Out-Null } catch { supabase login }
 
 Step "Vinculando ao projeto $ProjectRef"
 Push-Location $RepoRoot
-supabase link --project-ref $ProjectRef
+supabase link --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro ao vincular projeto" }
 Pop-Location
 
 Step "Trocando temporariamente supabase/config.toml pelo config.target.toml"

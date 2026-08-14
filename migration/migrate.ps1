@@ -69,7 +69,7 @@ EOF
 
 # --- 4. SQL de infraestrutura (extensões, trigger, cron jobs) ---------------
 Step "4/5 Executando migrate.sql (extensões + trigger + 11 cron jobs)"
-psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot "migrate.sql")
+psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f (Join-Path $PSScriptRoot "migrate.sql"); if ($LASTEXITCODE -ne 0) { throw "Erro no migrate.sql" }
 Ok "Infraestrutura SQL aplicada"
 
 # --- 5. Verificação ---------------------------------------------------------

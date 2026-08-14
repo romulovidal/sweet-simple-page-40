@@ -2,37 +2,229 @@ import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Search, Bell, BellOff, Settings2, History, Info, Play } from "lucide-react";
+import { 
+  Plus, 
+  Trash2, 
+  Loader2, 
+  Search, 
+  Bell, 
+  BellOff, 
+  Settings2, 
+  History, 
+  Info, 
+  Play,
+  Save,
+  X,
+  AlertTriangle,
+  Clock
+} from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Automation = {
   id: string;
+  source_key: string | null;
   name: string;
   notification_type: string;
   enabled: boolean;
   automation_mode: string;
   send_times: string[];
   days_of_week: number[];
-  source_key: string | null;
+  timezone: string | null;
+  message_template: string | null;
+  use_ai: boolean;
+  ai_prompt: string | null;
+  retry_enabled: boolean;
+  retry_max: number;
+  delay_between_messages_ms: number | null;
+  metadata: any;
 };
+
+const WEEKDAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+];
+
+const DEFAULT_TIMEZONE = "America/Fortaleza";
 
 const AtisAutomations = () => {
   const [items, setItems] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  
+  const [editing, setEditing] = useState<Automation | null>(null);
+  const [form, setForm] = useState<Partial<Automation>>({});
+  const [saving, setSaving] = useState(false);
+  const [isNew, setIsNew] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await atisDb.from("atis_notification_configs").select("*").order("name");
-    setItems(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await atisDb.from("atis_notification_configs").select("*").order("name");
+      if (error) throw error;
+      setItems(data || []);
+    } catch (e: any) {
+      toast.error("Erro ao carregar: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const toggleEnabled = async (id: string, current: boolean) => {
-    const { error } = await atisDb.from("atis_notification_configs").update({ enabled: !current }).eq("id", id);
-    if (error) toast.error(error.message);
-    else load();
+    try {
+      const { error } = await atisDb.from("atis_notification_configs")
+        .update({ enabled: !current })
+        .eq("id", id);
+      if (error) throw error;
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleDelete = async (automation: Automation) => {
+    if (automation.source_key?.startsWith("system:")) {
+      toast.error("Esta é uma automação de sistema e não pode ser excluída.");
+      return;
+    }
+
+    if (!confirm(`Excluir automação "${automation.name}"?`)) return;
+
+    try {
+      const { error } = await atisDb.from("atis_notification_configs").delete().eq("id", automation.id);
+      if (error) throw error;
+      toast.success("Automação excluída");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const openEdit = (item: Automation) => {
+    setIsNew(false);
+    setEditing(item);
+    setForm({ ...item });
+  };
+
+  const openNew = () => {
+    setIsNew(true);
+    setEditing(null);
+    setForm({
+      name: "",
+      notification_type: "custom",
+      enabled: true,
+      automation_mode: "automatic",
+      send_times: ["08:00"],
+      days_of_week: [0, 1, 2, 3, 4, 5, 6],
+      timezone: DEFAULT_TIMEZONE,
+      use_ai: false,
+      retry_enabled: true,
+      retry_max: 3,
+      metadata: {}
+    });
+  };
+
+  const save = async () => {
+    if (!form.name) return toast.error("Nome é obrigatório");
+    
+    setSaving(true);
+    try {
+      if (isNew) {
+        // Gerar source_key baseado em slug do nome para personalizadas
+        const slug = form.name?.toLowerCase().trim()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove acentos
+          .replace(/[^a-z0-9]+/g, "_");
+        const source_key = `custom:${slug}_${Date.now()}`;
+        
+        const { error } = await atisDb.from("atis_notification_configs").insert({
+          ...form,
+          source_key
+        });
+        if (error) throw error;
+        toast.success("Automação criada");
+      } else {
+        if (!editing) return;
+        
+        // Update parcial: enviar apenas o que mudou
+        const changes: any = {};
+        const keys = Object.keys(form) as (keyof Automation)[];
+        
+        for (const key of keys) {
+          // Não permitir mudar source_key ou notification_type de sistema
+          if (editing.source_key?.startsWith("system:") && (key === "source_key" || key === "notification_type")) {
+            continue;
+          }
+
+          // Comparação profunda simples para arrays e objetos
+          if (JSON.stringify(form[key]) !== JSON.stringify(editing[key])) {
+            if (key === "metadata") {
+              // Mesclar metadados se necessário (preservar chaves desconhecidas)
+              changes[key] = {
+                ...(editing.metadata || {}),
+                ...(form.metadata || {})
+              };
+            } else {
+              changes[key] = form[key];
+            }
+          }
+        }
+
+        if (Object.keys(changes).length > 0) {
+          const { error } = await atisDb.from("atis_notification_configs")
+            .update(changes)
+            .eq("id", editing.id);
+          if (error) throw error;
+          toast.success("Configurações salvas");
+        } else {
+          toast.info("Nenhuma alteração detectada");
+        }
+      }
+      setEditing(null);
+      setIsNew(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isSystem = (item: Automation) => item.source_key?.startsWith("system:");
+
+  const isSentinelTime = (item: Automation, time: string) => {
+    if (!isSystem(item)) return false;
+    // system:welcome e system:broadcasts usam 00:00 como sentinela (ignorado pelo runner de cron)
+    if ((item.source_key === "system:welcome" || item.source_key === "system:broadcasts") && time === "00:00") {
+      return true;
+    }
+    return false;
   };
 
   const filtered = items.filter(i => 
@@ -51,9 +243,9 @@ const AtisAutomations = () => {
             className="w-full h-11 rounded-xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
-        <button className="h-11 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center gap-2">
+        <Button onClick={openNew} className="h-11 rounded-xl gap-2 font-semibold">
           <Plus className="w-4 h-4" /> Criar
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -67,17 +259,32 @@ const AtisAutomations = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`w-2 h-2 rounded-full ${i.enabled ? 'bg-green-500' : 'bg-[hsl(var(--dark-muted))]'}`} />
                     <h3 className="font-bold text-sm truncate">{i.name}</h3>
+                    {isSystem(i) ? (
+                      <Badge variant="secondary" className="h-5 text-[9px] px-1.5 uppercase tracking-tighter bg-primary/10 text-primary border-primary/20">Sistema</Badge>
+                    ) : (
+                      <Badge variant="outline" className="h-5 text-[9px] px-1.5 uppercase tracking-tighter text-[hsl(var(--dark-muted))]">Personalizada</Badge>
+                    )}
                   </div>
                   <p className="text-[10px] text-[hsl(var(--dark-muted))] uppercase font-semibold tracking-wider">
                     {i.notification_type.replace('-', ' ')} • {i.automation_mode}
                   </p>
                 </div>
-                <button 
-                  onClick={() => toggleEnabled(i.id, i.enabled)}
-                  className={`p-2 rounded-xl transition-colors ${i.enabled ? 'text-primary bg-primary/10' : 'text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-bg))]'}`}
-                >
-                  {i.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-                </button>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => toggleEnabled(i.id, i.enabled)}
+                    className={`p-2 rounded-xl transition-colors ${i.enabled ? 'text-primary bg-primary/10' : 'text-[hsl(var(--dark-muted))] bg-[hsl(var(--dark-bg))]'}`}
+                  >
+                    {i.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  </button>
+                  {!isSystem(i) && (
+                    <button 
+                      onClick={() => handleDelete(i)}
+                      className="p-2 rounded-xl text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-4 text-[11px] text-[hsl(var(--dark-muted))] py-1 border-y border-[hsl(var(--dark-card-hover))]/50">
@@ -92,17 +299,210 @@ const AtisAutomations = () => {
               </div>
 
               <div className="flex items-center gap-2 pt-1">
-                <button className="flex-1 h-9 rounded-lg bg-[hsl(var(--dark-bg))] text-xs font-semibold flex items-center justify-center gap-1.5 border border-[hsl(var(--dark-card-hover))]">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => openEdit(i)}
+                  className="flex-1 h-9 rounded-lg bg-[hsl(var(--dark-bg))] text-xs font-semibold gap-1.5 border-[hsl(var(--dark-card-hover))]"
+                >
                   <Settings2 className="w-3.5 h-3.5" /> Configurar
-                </button>
-                <button className="h-9 w-9 rounded-lg bg-[hsl(var(--dark-bg))] flex items-center justify-center border border-[hsl(var(--dark-card-hover))]">
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-9 w-9 rounded-lg bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))]"
+                >
                   <Info className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <Dialog open={!!editing || isNew} onOpenChange={(open) => !open && (setEditing(null), setIsNew(false))}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] border-[hsl(var(--dark-card-hover))]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isNew ? <Plus className="w-5 h-5 text-primary" /> : <Settings2 className="w-5 h-5 text-primary" />}
+              {isNew ? "Nova Automação" : "Configurar Automação"}
+            </DialogTitle>
+            <DialogDescription>
+              {isNew 
+                ? "Crie uma nova regra de disparo personalizado para o motor ATIS." 
+                : isSystem(editing!) 
+                  ? "Esta é uma automação de sistema. Alguns campos técnicos estão protegidos." 
+                  : "Edite as configurações da automação personalizada."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-6 py-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome da automação</Label>
+                <Input 
+                  id="name" 
+                  value={form.name || ""} 
+                  onChange={e => setForm({...form, name: e.target.value})}
+                  className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">Tipo técnico (slug)</Label>
+                <Input 
+                  id="type" 
+                  disabled={!isNew && isSystem(editing!)}
+                  value={form.notification_type || ""} 
+                  onChange={e => setForm({...form, notification_type: e.target.value})}
+                  className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))] disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))]">
+              <div className="space-y-0.5">
+                <Label>Status da automação</Label>
+                <p className="text-[10px] text-[hsl(var(--dark-muted))]">Define se o motor deve processar este registro.</p>
+              </div>
+              <Switch 
+                checked={form.enabled || false} 
+                onCheckedChange={checked => setForm({...form, enabled: checked})}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <Label>Horários de disparo (America/Fortaleza)</Label>
+              <div className="flex flex-wrap gap-2">
+                {(form.send_times || []).map((time, idx) => (
+                  <div key={idx} className="flex items-center gap-1 bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] rounded-lg px-2 py-1">
+                    {isSentinelTime(editing!, time) ? (
+                      <div className="flex items-center gap-1.5 px-1">
+                        <Clock className="w-3 h-3 text-primary" />
+                        <span className="text-xs font-mono">{time}</span>
+                        <Badge variant="outline" className="h-4 text-[8px] px-1 text-primary border-primary/20">Sentinela</Badge>
+                      </div>
+                    ) : (
+                      <>
+                        <input 
+                          type="time" 
+                          value={time} 
+                          onChange={e => {
+                            const newTimes = [...(form.send_times || [])];
+                            newTimes[idx] = e.target.value;
+                            setForm({...form, send_times: newTimes});
+                          }}
+                          className="bg-transparent border-none text-xs font-mono outline-none focus:ring-0"
+                        />
+                        <button 
+                          onClick={() => {
+                            const newTimes = (form.send_times || []).filter((_, i) => i !== idx);
+                            setForm({...form, send_times: newTimes});
+                          }}
+                          className="p-1 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setForm({...form, send_times: [...(form.send_times || []), "08:00"]})}
+                  className="h-8 border-dashed border-[hsl(var(--dark-card-hover))]"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+              <p className="text-[10px] text-[hsl(var(--dark-muted))] italic">O formato salvo é time[] (HH:mm:ss).</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Dias da semana</Label>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map(day => (
+                  <Button
+                    key={day.value}
+                    variant={form.days_of_week?.includes(day.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const current = form.days_of_week || [];
+                      const next = current.includes(day.value) 
+                        ? current.filter(d => d !== day.value)
+                        : [...current, day.value].sort();
+                      setForm({...form, days_of_week: next});
+                    }}
+                    className="h-9 w-10 text-[10px] font-bold uppercase rounded-lg border-[hsl(var(--dark-card-hover))]"
+                  >
+                    {day.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2 border-t border-[hsl(var(--dark-card-hover))]">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Conteúdo via Inteligência Artificial</Label>
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))]">Atis usará o Gemini para gerar mensagens contextualizadas.</p>
+                </div>
+                <Switch 
+                  checked={form.use_ai || false} 
+                  onCheckedChange={checked => setForm({...form, use_ai: checked})}
+                />
+              </div>
+
+              {form.use_ai ? (
+                <div className="space-y-2">
+                  <Label htmlFor="prompt">Prompt da IA</Label>
+                  <Textarea 
+                    id="prompt" 
+                    value={form.ai_prompt || ""} 
+                    onChange={e => setForm({...form, ai_prompt: e.target.value})}
+                    placeholder="Instruções para a IA gerar a mensagem..."
+                    rows={4}
+                    className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))]"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="template">Template da mensagem</Label>
+                  <Textarea 
+                    id="template" 
+                    value={form.message_template || ""} 
+                    onChange={e => setForm({...form, message_template: e.target.value})}
+                    placeholder="Olá {nome}, esta é uma mensagem automática..."
+                    rows={4}
+                    className="bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))]"
+                  />
+                </div>
+              )}
+            </div>
+
+            {!isNew && isSystem(editing!) && (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 text-[10px] leading-relaxed">
+                <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
+                <p>
+                  <strong className="text-primary block mb-0.5 uppercase tracking-wide">Atenção</strong>
+                  Configurações de Destinatários (Targets) não são editáveis nesta interface. 
+                  O motor preservará os JIDs e grupos vinculados a esta automação (`{editing?.source_key}`).
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => (setEditing(null), setIsNew(false))} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={save} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

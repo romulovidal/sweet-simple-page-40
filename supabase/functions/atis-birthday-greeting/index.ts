@@ -53,19 +53,19 @@ Deno.serve(async (req) => {
   const groupText = await generateGreeting(names, config.message_template, period)
 
   // Envia para os targets configurados (Geralmente grupos)
-  await engine.runConfig(config.id, `${dateKey}Tbirthday`)
+  await engine.runConfig(config.id, `${dateKey}Tbirthday`);
 
-  // Envio de DMs individuais (lógica reativa do runner)
+  // Envio de DMs individuais
   for (const b of todays) {
     if (b.phone) {
-      const personalText = await generatePersonalGreeting(b.name, period)
-      // Usamos processRecipient diretamente para controle fino sem precisar de uma config específica por pessoa
+      const personalText = await generatePersonalGreeting(b.name, period);
       await engine.processRecipient(config, {
         recipientType: 'individual',
         recipientKey: b.phone.includes('@') ? b.phone : `${b.phone.replace(/\D/g, '')}@s.whatsapp.net`
-      }, `${dateKey}TbirthdayDM:${b.name}`, personalText)
+      }, `${dateKey}TbirthdayDM:${b.phone}`, personalText);
     }
   }
+
 
   return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })

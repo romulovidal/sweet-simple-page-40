@@ -109,8 +109,10 @@ export class AtisEngine {
     config: any, 
     recipient: ResolvedRecipient, 
     occurrenceKey: string,
-    messageOverride?: string
+    messageOverride?: string,
+    metadata?: any
   ): Promise<AutomationResult> {
+
     const idempotencyKey = `${config.id}:${recipient.recipientKey}:${occurrenceKey}`;
     
     // 1. Garantir log (Idempotência Canônica)
@@ -161,8 +163,10 @@ export class AtisEngine {
         message,
         {
           kind: config.notification_type === 'welcome' ? 'transactional' : 'bulk',
-          noFooter: config.metadata?.no_footer === true
+          noFooter: config.metadata?.no_footer === true,
+          mentionsEveryOne: metadata?.mentionsEveryOne ?? false
         }
+
       );
 
       // 5. Registrar Tentativa

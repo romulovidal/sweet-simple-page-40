@@ -106,7 +106,7 @@ const AppContent = () => {
        {showBottomNav && <BottomNav />}
       {!isAdmin && !isAtis && !isLanding && <AppTour />}
       <PushNotificationViewer />
-      {!isAdmin && !isAtis && !isLanding && <Onboarding />}
+      <Onboarding />
     </div>
   );
 };

@@ -220,29 +220,39 @@ const AtisAutomations = () => {
           .replace(/[^a-z0-9]+/g, "_");
         const source_key = `custom:${slug}_${Date.now()}`;
         
-        const { error } = await atisDb.from("atis_notification_configs").insert({
+        const { data: newConfig, error } = await atisDb.from("atis_notification_configs").insert({
           ...form,
           source_key
-        });
+        }).select("id").single();
+        
         if (error) throw error;
+        
+        // Salvar targets para nova automação
+        if (targets.length > 0) {
+          await atisTargetDb.insert(targets.map(t => ({
+            config_id: newConfig.id,
+            target_type: t.target_type,
+            target_id: t.target_id,
+            active: t.active,
+            metadata: t.metadata || {}
+          })));
+        }
+        
         toast.success("Automação criada");
       } else {
         if (!editing) return;
         
-        // Update parcial: enviar apenas o que mudou
+        // Update parcial da config
         const changes: any = {};
         const keys = Object.keys(form) as (keyof Automation)[];
         
         for (const key of keys) {
-          // Não permitir mudar source_key ou notification_type de sistema
           if (editing.source_key?.startsWith("system:") && (key === "source_key" || key === "notification_type")) {
             continue;
           }
 
-          // Comparação profunda simples para arrays e objetos
           if (JSON.stringify(form[key]) !== JSON.stringify(editing[key])) {
             if (key === "metadata") {
-              // Mesclar metadados se necessário (preservar chaves desconhecidas)
               changes[key] = {
                 ...(editing.metadata || {}),
                 ...(form.metadata || {})
@@ -258,10 +268,41 @@ const AtisAutomations = () => {
             .update(changes)
             .eq("id", editing.id);
           if (error) throw error;
-          toast.success("Configurações salvas");
-        } else {
-          toast.info("Nenhuma alteração detectada");
         }
+
+        // Salvar alterações nos targets (Diff explícito)
+        const toAdd = targets.filter(t => !t.id);
+        const toRemove = originalTargets
+          .filter(ot => !targets.some(t => t.id === ot.id))
+          .map(ot => ot.id as string);
+        const toUpdate = targets.filter(t => {
+          if (!t.id) return false;
+          const orig = originalTargets.find(ot => ot.id === t.id);
+          return orig && (orig.active !== t.active || JSON.stringify(orig.metadata) !== JSON.stringify(t.metadata));
+        });
+
+        if (toAdd.length > 0) {
+          await atisTargetDb.insert(toAdd.map(t => ({
+            config_id: editing.id,
+            target_type: t.target_type,
+            target_id: t.target_id,
+            active: t.active,
+            metadata: t.metadata || {}
+          })));
+        }
+
+        if (toRemove.length > 0) {
+          await atisTargetDb.delete(toRemove);
+        }
+
+        for (const t of toUpdate) {
+          await atisTargetDb.update(t.id!, { 
+            active: t.active, 
+            metadata: t.metadata 
+          });
+        }
+
+        toast.success("Configurações salvas");
       }
       setEditing(null);
       setIsNew(false);

@@ -1,28 +1,46 @@
-# Homologação ATIS V2 - Etapa 6
+---
+name: Etapa 6 - Homologação ATIS V2
+description: Roteiro técnico de homologação e auditoria pré-produção do motor ATIS V2.
+type: feature
+---
+# Etapa 6: Homologação ATIS V2
 
-Executando a homologação técnica do motor ATIS V2. Este plano segue o roteiro de 30 testes para validar a prontidão para produção.
+Este plano detalha a execução dos 30 testes de homologação para o motor ATIS V2, focando em segurança, idempotência e integridade configuracional.
 
-## 1. Auditoria de Monitoramento (Realtime vs Polling)
-- **Status**: Analisado `AtisLogs.tsx`.
-- **Estratégia**: Atualmente utiliza **Refresh Manual** (botão de atualizar) e carregamento inicial via `useEffect`. Não há Supabase Realtime implementado no frontend para logs.
-- **Veredito**: PASS (estratégia conservadora e segura).
+## Snapshot das Configurações Originais (ID: 1)
+- **global_enabled**: false
+- **timezone**: America/Fortaleza
+- **quiet_hours_enabled**: true
+- **quiet_hours_start**: 22:00:00
+- **quiet_hours_end**: 04:00:00
+- **daily_global_cap**: 250
+- **daily_recipient_cap**: 3
+- **daily_group_cap**: 3
+- **hourly_cap**: 20
+- **max_messages_per_minute**: 20
+- **min_gap_ms**: 12000
+- **max_gap_ms**: 45000
+- **jitter_max_ms**: 9000
+- **retry_max**: 3
+- **retry_interval_minutes**: 15
 
-## 2. Pre-Check do Ambiente
-- **Ambiente**: Lovable Cloud (Supabase `hvdmobypsqksgkfrzhzf`).
-- **Valores Originais (Referência)**:
-    - `global_enabled`: true
-    - `timezone`: America/Fortaleza
-    - `quiet_hours_enabled`: true (22:00 - 07:00)
-    - `retry_max`: 3
-    - `atis_automation_logs`: Acessível (Read-only)
+## Mecanismo de Idempotência Identificado
+- **Tabela**: `atis_automation_logs`
+- **Coluna**: `idempotency_key` (UNIQUE)
+- **Fórmula**: `${config.id}:${recipient.recipientKey}:${occurrenceKey}`
+- **Claim Atômico**: Função RPC `atis_claim_automation_occurrence` que utiliza `FOR UPDATE` implícito (via RLS/SQL) e transições de status (`scheduled/pending/retrying` -> `processing`) com lease de 5 minutos.
 
-## 3. Roteiro de Testes (Resumo)
-- **T01 - Automação Personalizada**: Validar criação via `AtisAutomations.tsx` (slug: `custom:hml_test_*`).
-- **T02 - Ciclo de Sucesso**: Monitorar transição de estados no banco.
-- **T03 - Idempotência**: Verificar `idempotency_key` via `atis_automation_logs`.
-- **T06 - Group JID**: Confirmar preservação de `@g.us` no formulário e banco.
-- **T22 - Sanitização**: Validar mascaramento recursivo em `AtisLogDetails.tsx`.
-- **T30 - Auditoria de Escrita**: Confirmar que o frontend não possui `atisDb.from('atis_automation_logs').insert/update`.
+## Roteiro de Testes (T01-T30)
 
-## 4. Relatório Final
-Ao final, apresentarei a tabela PASS/FAIL/BLOCKED para cada um dos 30 itens.
+### Homologação Estrutural e Funcional
+- **T01-T08**: Validação de Automações e Targets (Profile, Contact, JIDs, Tags).
+- **T10-T16**: Validação do Motor (Quiet Hours, Caps, Delay, Retry, Failed, Skipped).
+- **T17-T20**: Validação de Registros de Sistema (Split-brain, Sentinelas 00:00).
+- **T21-T25**: Auditoria Técnica (Logs, Sanitização, Status, Mobile, Concorrência).
+- **T26-T30**: Validação Final (Reload, Global Switch, Auditoria Read-only).
+
+## Regras de Execução
+- Testes dinâmicos só recebem PASS se o comportamento for efetivamente observado no banco/logs.
+- Testes de JID comparam valores literais: Original -> Banco -> Log.
+- Restauração garantida de todas as configurações alteradas.
+- Gate final: Aprovado ou Não Aprovado para Produção.

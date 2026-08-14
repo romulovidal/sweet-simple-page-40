@@ -21,10 +21,14 @@ try { supabase projects list | Out-Null } catch { supabase login }
 
 Step "Vinculando ao projeto $ProjectRef"
 Push-Location $RepoRoot
-supabase link --project-ref $ProjectRef
+supabase link --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro ao vincular projeto" }
 Pop-Location
 
 Step "Trocando temporariamente supabase/config.toml pelo config.target.toml"
+if (Test-Path $BackupCfg) {
+  Write-Host "Restaurando backup anterior do config.toml..." -ForegroundColor Yellow
+  Copy-Item $BackupCfg $ConfigPath -Force
+}
 Copy-Item $ConfigPath $BackupCfg -Force
 Copy-Item $TargetCfg $ConfigPath -Force
 
@@ -51,7 +55,7 @@ try {
   foreach ($f in $functions) {
     $i++
     Step "[$i/$($functions.Count)] Deploy $f"
-    try   { supabase functions deploy $f --project-ref $ProjectRef }
+    try   { supabase functions deploy $f --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro CLI $LASTEXITCODE" } }
     catch { Write-Host "FALHOU: $f" -ForegroundColor Red; $failed += $f }
   }
   Pop-Location

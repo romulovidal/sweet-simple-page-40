@@ -46,4 +46,13 @@ verify_jwt = false
 [functions.ai-tools]
 verify_jwt = false
 
-# Todas as outras 20 functions ficam no padrão verify_jwt = true.
+[functions.create-verse-share]
+verify_jwt = false
+
+[functions.create-culto-share]
+verify_jwt = false
+
+[functions.push-subscription]
+verify_jwt = false
+
+# Todas as outras ficam no padrão verify_jwt = true.

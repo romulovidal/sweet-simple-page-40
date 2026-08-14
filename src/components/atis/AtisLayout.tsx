@@ -28,6 +28,8 @@ const resolveAtisAvatar = () => {
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "dashboard", label: "Painel", icon: LayoutDashboard },
+  { id: "automations", label: "Automações", icon: Settings2 },
+  { id: "logs", label: "Monitoramento", icon: ListTree },
   { id: "contacts", label: "Contatos", icon: Users },
   { id: "groups", label: "Grupos", icon: Bot },
   { id: "individuals", label: "Individuais", icon: MessageCircle },
@@ -37,9 +39,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "series", label: "Séries", icon: Sparkles },
   { id: "plans", label: "Planos WA", icon: Library },
   { id: "alerts", label: "Alertas", icon: AlertTriangle },
-  { id: "logs", label: "Logs", icon: ListTree },
-  { id: "automations", label: "Automações", icon: Settings2 },
-  { id: "config", label: "Global", icon: Settings },
+  { id: "config", label: "Configurações", icon: Settings },
 ];
 
 const MOBILE_BOTTOM: TabId[] = ["dashboard", "contacts", "groups", "individuals", "broadcasts", "birthdays", "studies", "series", "plans", "alerts", "logs", "config"];

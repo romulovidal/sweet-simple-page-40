@@ -18,32 +18,47 @@ const AtisDailyDevotional = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: setting }, { data: gs }] = await Promise.all([
-      atisDb.from("admin_settings").select("value").eq("key", "atis_daily_devotional").maybeSingle(),
-      atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
-    ]);
-    setCfg({ ...DEFAULT, ...(setting?.value ?? {}) });
-    setGroups((gs ?? []) as Group[]);
-    setLoading(false);
+    try {
+      const [{ data: config }, { data: gs }] = await Promise.all([
+        atisDb.from("atis_notification_configs").select("*").eq("source_key", "system:devotional").maybeSingle(),
+        atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
+      ]);
+
+      if (config) {
+        setCfg({
+          enabled: config.enabled,
+          time: config.send_times?.[0] || "06:30",
+          group_ids: [],
+        });
+      }
+      setGroups((gs ?? []) as Group[]);
+    } catch (e) {
+      console.error("Error loading devotional config", e);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => { load(); }, []);
 
   const toggleGroup = (jid: string) => {
-    setCfg((c) => ({
-      ...c,
-      group_ids: c.group_ids.includes(jid) ? c.group_ids.filter((g) => g !== jid) : [...c.group_ids, jid],
-    }));
+    toast.error("Para gerenciar alvos de sistema, utilize a aba de Automações V2.");
   };
 
   const save = async () => {
     setSaving(true);
-    const { error } = await atisDb.from("admin_settings").upsert(
-      { key: "atis_daily_devotional", value: cfg },
-      { onConflict: "key" },
-    );
-    setSaving(false);
-    if (error) toast.error("Erro ao salvar: " + error.message);
-    else toast.success("Devocional diário salvo");
+    try {
+      const { error } = await atisDb.from("atis_notification_configs").update({
+        enabled: cfg.enabled,
+        send_times: [cfg.time],
+      }).eq("source_key", "system:devotional");
+
+      if (error) throw error;
+      toast.success("Devocional diário (V2) salvo");
+    } catch (e: any) {
+      toast.error("Erro ao salvar: " + e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const sendNow = async () => {

@@ -25,6 +25,10 @@ supabase link --project-ref $ProjectRef
 Pop-Location
 
 Step "Trocando temporariamente supabase/config.toml pelo config.target.toml"
+if (Test-Path $BackupCfg) {
+  Write-Host "Restaurando backup anterior do config.toml..." -ForegroundColor Yellow
+  Copy-Item $BackupCfg $ConfigPath -Force
+}
 Copy-Item $ConfigPath $BackupCfg -Force
 Copy-Item $TargetCfg $ConfigPath -Force
 

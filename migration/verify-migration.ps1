@@ -75,7 +75,7 @@ foreach ($ep in @("og","atis-webhook")) {
 Write-Host "`n=== 8. Referências ao projeto antigo no repositório ===" -ForegroundColor Cyan
 $hits = Get-ChildItem -Path $RepoRoot -Recurse -File `
   -Exclude "*.log" `
-  | Where-Object { $_.FullName -notmatch "\\(node_modules|dist|\.git|\.lovable)\\" } `
+  | Where-Object { $_.FullName -notmatch "\\(node_modules|dist|\.git|\.lovable|migration)\\" } `
   | Select-String -Pattern $OldRef -SimpleMatch -ErrorAction SilentlyContinue
 if ($hits) {
   Write-Host "  Ocorrências encontradas (avalie: .env e migrations antigas são esperadas):" -ForegroundColor Yellow

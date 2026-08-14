@@ -18,8 +18,8 @@ Write-Host "Migração -> $ProjectRef" -ForegroundColor White
 
 # --- 0. Pré-requisitos ------------------------------------------------------
 Step "0/5 Pré-requisitos"
-supabase --version | Out-Null; Ok "Supabase CLI"
-psql --version     | Out-Null; Ok "psql"
+supabase --version | Out-Null; if ($LASTEXITCODE -ne 0) { throw "Supabase CLI não encontrado no PATH" }
+psql --version     | Out-Null; if ($LASTEXITCODE -ne 0) { throw "psql não encontrado no PATH" }
 if (-not $env:TARGET_SUPABASE_DB_URL) {
   throw "Defina a connection string do NOVO projeto (banco direto, ex: postgresql://...): `$env:TARGET_SUPABASE_DB_URL = '...'`"
 }
@@ -27,12 +27,17 @@ Ok "TARGET_SUPABASE_DB_URL presente"
 if (-not (Test-Path $SecretsFile)) {
   throw "Crie $SecretsFile a partir de secrets.example.env e preencha os valores."
 }
-Ok "$SecretsFile encontrado"
+$mandatory = @("EVOLUTION_API_URL", "EVOLUTION_API_KEY", "ATIS_WEBHOOK_SECRET")
+foreach ($m in $mandatory) {
+  $val = (Get-Content $SecretsFile | Select-String "^$m=(.+)$").Matches.Groups[1].Value
+  if (-not $val) { throw "Secret obrigatório vazio em $SecretsFile: $m" }
+}
+Ok "$SecretsFile validado"
 
 # --- 1. Secrets -------------------------------------------------------------
 Step "1/5 Publicando secrets das Edge Functions (valores nunca são exibidos)"
 Push-Location $RepoRoot
-supabase secrets set --env-file $SecretsFile --project-ref $ProjectRef
+supabase secrets set --env-file $SecretsFile --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro ao aplicar secrets" }
 Pop-Location
 Ok "Secrets aplicados"
 

@@ -53,7 +53,7 @@ export class AtisEngine {
   /**
    * Processa uma configuração de automação para todos os seus targets.
    */
-  async runConfig(configId: string, occurrenceKey?: string) {
+  async runConfig(configId: string | null, occurrenceKey?: string) {
     if (!(await this.isGlobalEnabled())) {
       console.log(`[AtisEngine] Global disabled. Skipping config ${configId}`);
       return;
@@ -180,11 +180,29 @@ export class AtisEngine {
 
       // 6. Atualizar Log Final
       const status = sendResult.ok ? 'sent' : (sendResult.skipped ? 'skipped' : 'failed');
+      
+      // Se for automático e falhou por quiet_hours, agendar retry para o fim do horário de silêncio
+      let nextRetryAt = null;
+      let finalStatus = status;
+      
+      if (sendResult.skipped && sendResult.reason === 'quiet_hours' && config.automation_mode === 'automatic') {
+        finalStatus = 'retrying';
+        const { data: settings } = await this.supabase.from('atis_automation_settings').select('quiet_hours_end').eq('id', 1).single();
+        const endStr = settings?.quiet_hours_end || '07:00';
+        const [h, m] = endStr.split(':').map(Number);
+        const retryDate = new Date();
+        retryDate.setHours(h, m, 0, 0);
+        if (retryDate <= new Date()) retryDate.setDate(retryDate.getDate() + 1);
+        nextRetryAt = retryDate.toISOString();
+      }
+
       await this.supabase.from('atis_automation_logs').update({
-        status,
+        status: finalStatus,
         processed_at: sendResult.ok ? new Date().toISOString() : null,
         message_sent_id: sendResult.jid,
-        last_error: sendResult.ok ? null : (sendResult.reason || String(sendResult.body))
+        last_error: sendResult.ok ? null : (sendResult.reason || String(sendResult.body)),
+        next_retry_at: nextRetryAt,
+        attempts: (log.attempts ?? 0) + 1
       }).eq('id', log.id);
 
       return { 

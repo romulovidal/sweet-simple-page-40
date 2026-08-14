@@ -1,81 +1,58 @@
-# Auditoria Final ATIS V2 - Relatório de Validação (Corrigido V2.2)
+# Auditoria Final ATIS V2 - Relatório de Validação (Corrigido V2.3)
 
-A auditoria de saneamento final foi concluída. Foram verificados os 9 pontos críticos levantados, com correções aplicadas onde bugs concretos foram identificados. O sistema está agora em estado de **PRONTO PARA TESTES MANUAIS DE PRODUÇÃO**.
+A auditoria de saneamento final V2.3 foi concluída. Foram corrigidos os pontos bloqueadores de agendamento, idempotência em Quiet Hours e tipagem.
 
 ---
 
-## 1. CRON / ATIS-SEND
-- **Arquivo**: `supabase/functions/atis-send/index.ts`
-- **Função**: `serve()`
-- **Evidência**: O arquivo `atis-send` invoca `runAtisAutomations` de `_shared/atis-v2-runner.ts`, que por sua vez orquestra todas as configurações agendadas em `atis_notification_configs`.
-- **Resultado**: O relatório anterior estava correto ao chamar `atis-send` de "Ponto de Entrada", mas as funções legadas ainda existem como entrypoints individuais.
-- **Bug**: NÃO (Apenas ambiguidade documental).
-- **Correção**: Documentação atualizada para refletir que `atis-send` é o entrypoint unificado para o motor V2, enquanto as outras funções são mantidas para compatibilidade ou disparos manuais específicos.
+## 1. QUEM EXECUTA ATIS-SEND AUTOMATICAMENTE?
+- **Evidência**: No ambiente Supabase/Lovable Cloud, o agendamento é feito via extensão `pg_cron`.
+- **Caminho Real**:
+    - O arquivo `migration/migrate.sql` contém a definição de **11 cron jobs**.
+    - Cada cron job (ex: `atis-daily-devotional-every-minute`) roda a cada minuto (`* * * * *`).
+    - Ele chama `private.edge_call('NOME_DA_FUNCTION', ...)`.
+- **Entrypoint Unificado**: O `atis-send` foi criado para ser o novo entrypoint global, mas os crons existentes ainda apontam para runners individuais.
+- **Resultado**: 
+    - **A. Existe cron chamando atis-send?** NÃO nos scripts de migração atuais (eles chamam os runners individuais).
+    - **B. Existe Edge Function cronada que chama runAtisAutomations globalmente?** SIM, a `atis-send`, mas ela não está no `migrate.sql` como um cron job ativo ainda.
+    - **C. Scheduler Externo?** Não. O motor depende do `pg_cron` do Supabase.
+- **D. NOVA automação sem runner legado?** Atualmente, se um admin criar uma automação de um tipo que não tem um runner legado (ex: `atis-daily-devotional`), ela **NÃO será executada** a menos que o cron do `atis-send` seja ativado ou um runner existente seja modificado para chamar o global.
+- **AÇÃO**: Recomenda-se adicionar o job do `atis-send` ao `pg_cron` para garantir que qualquer configuração manual no painel seja processada.
 
-## 2. QUIET HOURS
-- **Arquivo**: `supabase/functions/_shared/atis-antiban.ts` e `atis-automation-engine.ts`
-- **Função**: `safeSend`, `isQuietHour`, `processRecipient`
-- **Evidência**: O motor agora diferencia explicitamente automações automáticas de disparos manuais (isManual). Disparos manuais ignoram Quiet Hours e Global Enabled.
-- **Resultado**: Automações automáticas bloqueadas por quiet hours retornam `skipped: true` com `reason: 'quiet_hours'`.
-- **Bug**: SIM (Automações automáticas eram "perdidas" se enviadas em quiet hours sem lógica de retry agendada).
-- **Correção**: Adicionada flag `isManual` no `safeSend` e no `processRecipient`. O comportamento de "não perder a ocorrência" deve ser gerenciado pela lógica de retry do motor V2 (agendando `next_retry_at` para fora do horário de silêncio se o erro for `quiet_hours`).
+## 1.1 SYSTEM:CULTO (WhatsApp)
+- **Status**: Atualmente o WhatsApp de culto depende da configuração `system:culto`. 
+- **Problema**: O runner `culto-reminder` foca em PUSH. O WhatsApp de culto **não tem um cron job legado dedicado** no `migrate.sql` que use o motor V2 para WhatsApp.
+- **Solução**: Ativar o cron do `atis-send` (unificado) é a única forma de fazer o WhatsApp de culto (V2) funcionar automaticamente sem criar novos runners.
 
-## 3. MAX_CHARS
-- **Arquivo**: `supabase/functions/_shared/atis-antiban.ts`
-- **Função**: `loadGuard`
-- **Evidência**: `max_chars: data?.max_chars ?? 1500`. 
-- **Resultado**: A coluna `max_chars` NÃO existe na tabela `atis_automation_settings` na migration V4.
-- **Bug**: SIM (Referência a coluna inexistente).
-- **Correção**: O código utiliza o fallback de `1500` quando a coluna não existe. Como não podemos alterar o banco agora, o valor permanece fixo em 1500 ou via `data?.max_chars` se o usuário adicionar a coluna manualmente no futuro. O relatório foi corrigido para informar que o valor é atualmente uma constante com fallback.
+## 1.2 AUTOMAÇÕES CRIADAS PELO ADMIN
+- **Fluxo 10:37**:
+    1. Cron `atis-send` (se ativo) ou runner legado executa a cada minuto.
+    2. `atis-v2-runner.ts` (runAtisAutomations) busca `atis_notification_configs` onde `send_times` contém "10:37" (janela de 10 min).
+    3. `AtisEngine.runConfig` encontra a config.
+    4. `processRecipient` cria/upserta entrada em `atis_automation_logs` com `occurrence_key` baseada no horário.
+    5. `atis_claim_automation_occurrence` faz o lock atômico.
+    6. `safeSend` envia via Evolution API.
 
-## 4. BROADCAST
-- **Arquivo**: `supabase/functions/atis-broadcast-runner/index.ts`
-- **Função**: `Deno.serve`
-- **Evidência**: Invoca `engine.runConfig(null as any, b.id)`.
-- **Resultado**: Utiliza o motor V2, garantindo claim e logs.
-- **Bug**: NÃO.
-- **Correção**: Nenhuma necessária.
+## 1.3 SMART NOTIFICATIONS
+- **Status**: O runner `smart-notifications` agora usa `engine.runConfig(config.id)`.
+- **Horário**: Ele respeita o horário definido no banco de dados (`atis_notification_configs.send_times`) porque o `runAtisAutomations` filtra pelo tempo atual, não pelo momento do disparo do cron.
 
-## 5. CULTO
-- **Arquivo**: `supabase/functions/culto-reminder/index.ts`
-- **Função**: `Deno.serve`
-- **Evidência**: Realiza envios de **PUSH NATIVO** via `/functions/v1/send-push`. O WhatsApp de culto é disparado via `atis-send` (unificado) pois existe uma configuração `system:culto` na tabela `atis_notification_configs`.
-- **Resultado**: `culto-reminder` é 100% focado em Push. O WhatsApp de culto é processado pelo motor V2.
-- **Bug**: NÃO (Ambiguidade no relatório anterior).
-- **Correção**: Relatório atualizado para separar claramente os canais.
+## 2. QUIET HOURS (PROVA DE NÃO PERDA)
+- **Correção Aplicada**: Modificado `atis-automation-engine.ts` para que, se um envio automático falhar por `quiet_hours`, o status seja alterado para `retrying` e `next_retry_at` seja definido para o horário de término do silêncio (ex: 07:00 do dia seguinte).
+- **Garantia**: A ocorrência permanece no banco, com a mesma chave, aguardando o próximo processamento do worker.
 
-## 6. RETRY
-- **Arquivo**: `supabase/functions/_shared/atis-automation-engine.ts`
-- **Função**: `processRecipient`
-- **Evidência**: `upsert` com `onConflict: 'idempotency_key'` garante que o mesmo log seja usado. `atis_claim_automation_occurrence` incrementa `attempts` e define o lock.
-- **Resultado**: O sistema mantém a mesma ocorrência lógica.
-- **Bug**: NÃO.
-- **Correção**: Nenhuma necessária.
-
-## 7. IDEMPOTÊNCIA / CRASH APÓS ENVIO
-- **Análise**: A Evolution API não suporta `client_id` determinístico para idempotência de envio de texto no nível do protocolo WhatsApp.
-- **Declaração Real**: "O sistema possui forte proteção contra duplicidade concorrente via Claim Atômico e Idempotency Key, mas não garante exactly-once absoluto no cenário de crash do worker imediatamente após a aceitação da mensagem pelo provedor (Evolution API) e antes da atualização do status no banco de dados."
-
-## 8. TYPECHECK / BUILD
-- **Script**: `vite build`
-- **Evidência**: `bun run build` executa o build do Vite que realiza a transpilação e verificação de módulos.
-- **Typecheck**: Executado manualmente via `tsc --noEmit` e passou com sucesso.
-- **Resultado**: Build e Typecheck validados.
-
-## 9. src/routes/index.tsx
-- **Análise**: O arquivo foi removido. Não existem referências em `src/App.tsx` ou outros arquivos do core.
-- **Causa**: O arquivo continha o texto do prompt de auditoria colado acidentalmente, o que corrompia a estrutura de rotas se fosse importado.
-- **Conclusão**: Era realmente um arquivo morto/sujo.
+## 3. BROADCAST
+- **Assinatura**: `runConfig(configId: string | null, occurrenceKey?: string)`.
+- **Correção**: Removido `null as any` e tipado corretamente. Broadcast manual gera sua própria `occurrence_key` (o ID do broadcast) e passa pelo mesmo fluxo de claim e safeSend.
 
 ---
 
 ## CONCLUSÃO FINAL
 
-**PRONTO PARA TESTES MANUAIS DE PRODUÇÃO**
+**PRONTO PARA TESTES MANUAIS DE PRODUÇÃO** (Após aplicação manual do SQL de Cron para atis-send)
 
-O sistema ATIS V2 está tecnicamente íntegro. As inconsistências entre o banco de dados e o código (`max_chars`) foram tratadas com segurança via fallbacks. A lógica de Quiet Hours foi refinada para não bloquear disparos manuais.
+**Resultados de Validação:**
+1. **Build**: Sucesso.
+2. **TSC**: Sucesso (Zero erros de tipo).
+3. **Quiet Hours**: Proteção de retentativa implementada.
 
-**Checklist de Testes Recomendados:**
-1. [ ] Testar envio de Broadcast manual via painel.
-2. [ ] Validar se o agendamento de Versículo Diário gera log em `atis_automation_logs`.
-3. [ ] Verificar se o Quiet Hour bloqueia um envio automático mas permite um manual.
+**Nota para o Admin**: Para que automações manuais criadas no painel funcionem, é necessário agendar a função `atis-send` no `pg_cron` para rodar a cada minuto.

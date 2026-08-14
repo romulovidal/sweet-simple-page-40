@@ -256,6 +256,194 @@ export type Database = {
         }
         Relationships: []
       }
+      atis_automation_attempts: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          error_message: string | null
+          id: string
+          log_id: string
+          response_payload: Json | null
+          status: string
+        }
+        Insert: {
+          attempt_number: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          log_id: string
+          response_payload?: Json | null
+          status: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          log_id?: string
+          response_payload?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_automation_attempts_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "atis_automation_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atis_automation_logs: {
+        Row: {
+          attempts: number
+          claim_expires_at: string | null
+          claimed_at: string | null
+          config_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_attempt_at: string | null
+          last_error: string | null
+          message_sent_id: string | null
+          next_retry_at: string | null
+          occurrence_key: string
+          processed_at: string | null
+          recipient_key: string
+          recipient_type: string
+          scheduled_for: string
+          source_target_id: string | null
+          status: string
+          updated_at: string
+          worker_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          config_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_sent_id?: string | null
+          next_retry_at?: string | null
+          occurrence_key: string
+          processed_at?: string | null
+          recipient_key: string
+          recipient_type: string
+          scheduled_for: string
+          source_target_id?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          config_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_sent_id?: string | null
+          next_retry_at?: string | null
+          occurrence_key?: string
+          processed_at?: string | null
+          recipient_key?: string
+          recipient_type?: string
+          scheduled_for?: string
+          source_target_id?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_automation_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "atis_notification_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atis_automation_logs_source_target_id_fkey"
+            columns: ["source_target_id"]
+            isOneToOne: false
+            referencedRelation: "atis_notification_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atis_automation_settings: {
+        Row: {
+          created_at: string
+          daily_global_cap: number | null
+          daily_group_cap: number | null
+          daily_recipient_cap: number | null
+          delay_between_messages_ms: number
+          global_enabled: boolean
+          hourly_cap: number | null
+          id: number
+          jitter_max_ms: number | null
+          max_gap_ms: number | null
+          max_messages_per_minute: number
+          min_gap_ms: number | null
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          retry_interval_minutes: number
+          retry_max: number
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_global_cap?: number | null
+          daily_group_cap?: number | null
+          daily_recipient_cap?: number | null
+          delay_between_messages_ms?: number
+          global_enabled?: boolean
+          hourly_cap?: number | null
+          id?: number
+          jitter_max_ms?: number | null
+          max_gap_ms?: number | null
+          max_messages_per_minute?: number
+          min_gap_ms?: number | null
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          retry_interval_minutes?: number
+          retry_max?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_global_cap?: number | null
+          daily_group_cap?: number | null
+          daily_recipient_cap?: number | null
+          delay_between_messages_ms?: number
+          global_enabled?: boolean
+          hourly_cap?: number | null
+          id?: number
+          jitter_max_ms?: number | null
+          max_gap_ms?: number | null
+          max_messages_per_minute?: number
+          min_gap_ms?: number | null
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          retry_interval_minutes?: number
+          retry_max?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       atis_birthdays: {
         Row: {
           active: boolean
@@ -581,6 +769,107 @@ export type Database = {
           wa_to?: string | null
         }
         Relationships: []
+      }
+      atis_notification_configs: {
+        Row: {
+          ai_prompt: string | null
+          automation_mode: string
+          created_at: string
+          days_of_week: number[]
+          delay_between_messages_ms: number | null
+          enabled: boolean
+          id: string
+          message_template: string | null
+          metadata: Json | null
+          name: string
+          notification_type: string
+          retry_enabled: boolean
+          retry_max: number
+          send_times: string[]
+          source_key: string | null
+          timezone: string | null
+          updated_at: string
+          use_ai: boolean
+        }
+        Insert: {
+          ai_prompt?: string | null
+          automation_mode?: string
+          created_at?: string
+          days_of_week?: number[]
+          delay_between_messages_ms?: number | null
+          enabled?: boolean
+          id?: string
+          message_template?: string | null
+          metadata?: Json | null
+          name: string
+          notification_type: string
+          retry_enabled?: boolean
+          retry_max?: number
+          send_times?: string[]
+          source_key?: string | null
+          timezone?: string | null
+          updated_at?: string
+          use_ai?: boolean
+        }
+        Update: {
+          ai_prompt?: string | null
+          automation_mode?: string
+          created_at?: string
+          days_of_week?: number[]
+          delay_between_messages_ms?: number | null
+          enabled?: boolean
+          id?: string
+          message_template?: string | null
+          metadata?: Json | null
+          name?: string
+          notification_type?: string
+          retry_enabled?: boolean
+          retry_max?: number
+          send_times?: string[]
+          source_key?: string | null
+          timezone?: string | null
+          updated_at?: string
+          use_ai?: boolean
+        }
+        Relationships: []
+      }
+      atis_notification_targets: {
+        Row: {
+          active: boolean
+          config_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          active?: boolean
+          config_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          active?: boolean
+          config_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atis_notification_targets_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "atis_notification_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       atis_optouts: {
         Row: {
@@ -1892,6 +2181,37 @@ export type Database = {
       }
     }
     Functions: {
+      atis_claim_automation_occurrence: {
+        Args: { _lease_minutes?: number; _log_id: string; _worker_id: string }
+        Returns: {
+          attempts: number
+          claim_expires_at: string | null
+          claimed_at: string | null
+          config_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_attempt_at: string | null
+          last_error: string | null
+          message_sent_id: string | null
+          next_retry_at: string | null
+          occurrence_key: string
+          processed_at: string | null
+          recipient_key: string
+          recipient_type: string
+          scheduled_for: string
+          source_target_id: string | null
+          status: string
+          updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "atis_automation_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       atis_guard_check: {
         Args: {
           _body_hash: string

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
+import { atisTargetDb, AtisTarget } from "./atisTargetDb";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AtisTargetSelector } from "./AtisTargetSelector";
 import { 
   Plus, 
   Trash2, 
@@ -16,7 +18,8 @@ import {
   Save,
   X,
   AlertTriangle,
-  Clock
+  Clock,
+  Users
 } from "lucide-react";
 import { 
   Dialog, 
@@ -81,6 +84,9 @@ const AtisAutomations = () => {
   const [form, setForm] = useState<Partial<Automation>>({});
   const [saving, setSaving] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [targets, setTargets] = useState<AtisTarget[]>([]);
+  const [originalTargets, setOriginalTargets] = useState<AtisTarget[]>([]);
+  const [loadingTargets, setLoadingTargets] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -127,15 +133,66 @@ const AtisAutomations = () => {
     }
   };
 
-  const openEdit = (item: Automation) => {
+  const openEdit = async (item: Automation) => {
     setIsNew(false);
     setEditing(item);
     setForm({ ...item });
+    
+    // Carregar targets
+    setLoadingTargets(true);
+    setTargets([]);
+    setOriginalTargets([]);
+    try {
+      const res = await atisTargetDb.getByConfig(item.id);
+      
+      // Tentar resolver nomes amigáveis para exibir na UI
+      const enriched = await Promise.all(res.map(async (t) => {
+        let displayName = t.target_id;
+        let secondaryInfo = "";
+        
+        try {
+          if (t.target_type === 'profile') {
+            const { data } = await atisDb.from("profiles").select("display_name, whatsapp").eq("id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.display_name;
+              secondaryInfo = data.whatsapp;
+            }
+          } else if (t.target_type === 'contact') {
+            const { data } = await atisDb.from("atis_contacts").select("name, phone").eq("id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.name;
+              secondaryInfo = data.phone;
+            }
+          } else if (t.target_type === 'group') {
+            const { data } = await atisDb.from("atis_groups").select("name, wa_group_id").eq("wa_group_id", t.target_id).maybeSingle();
+            if (data) {
+              displayName = data.name;
+              secondaryInfo = data.wa_group_id;
+            }
+          } else if (t.target_type === 'all_authenticated') {
+            displayName = "Todos os autenticados";
+          }
+        } catch (e) {
+          console.warn("Failed to resolve target name", t);
+        }
+        
+        return { ...t, display_name: displayName, secondary_info: secondaryInfo };
+      }));
+      
+      setTargets(enriched);
+      setOriginalTargets(enriched.map(t => ({ ...t })));
+    } catch (e: any) {
+      toast.error("Erro ao carregar destinatários: " + e.message);
+    } finally {
+      setLoadingTargets(false);
+    }
   };
 
   const openNew = () => {
     setIsNew(true);
     setEditing(null);
+    setTargets([]);
+    setOriginalTargets([]);
     setForm({
       name: "",
       notification_type: "custom",
@@ -163,29 +220,39 @@ const AtisAutomations = () => {
           .replace(/[^a-z0-9]+/g, "_");
         const source_key = `custom:${slug}_${Date.now()}`;
         
-        const { error } = await atisDb.from("atis_notification_configs").insert({
+        const { data: newConfig, error } = await atisDb.from("atis_notification_configs").insert({
           ...form,
           source_key
-        });
+        }).select("id").single();
+        
         if (error) throw error;
+        
+        // Salvar targets para nova automação
+        if (targets.length > 0) {
+          await atisTargetDb.insert(targets.map(t => ({
+            config_id: newConfig.id,
+            target_type: t.target_type,
+            target_id: t.target_id,
+            active: t.active,
+            metadata: t.metadata || {}
+          })));
+        }
+        
         toast.success("Automação criada");
       } else {
         if (!editing) return;
         
-        // Update parcial: enviar apenas o que mudou
+        // Update parcial da config
         const changes: any = {};
         const keys = Object.keys(form) as (keyof Automation)[];
         
         for (const key of keys) {
-          // Não permitir mudar source_key ou notification_type de sistema
           if (editing.source_key?.startsWith("system:") && (key === "source_key" || key === "notification_type")) {
             continue;
           }
 
-          // Comparação profunda simples para arrays e objetos
           if (JSON.stringify(form[key]) !== JSON.stringify(editing[key])) {
             if (key === "metadata") {
-              // Mesclar metadados se necessário (preservar chaves desconhecidas)
               changes[key] = {
                 ...(editing.metadata || {}),
                 ...(form.metadata || {})
@@ -201,10 +268,41 @@ const AtisAutomations = () => {
             .update(changes)
             .eq("id", editing.id);
           if (error) throw error;
-          toast.success("Configurações salvas");
-        } else {
-          toast.info("Nenhuma alteração detectada");
         }
+
+        // Salvar alterações nos targets (Diff explícito)
+        const toAdd = targets.filter(t => !t.id);
+        const toRemove = originalTargets
+          .filter(ot => !targets.some(t => t.id === ot.id))
+          .map(ot => ot.id as string);
+        const toUpdate = targets.filter(t => {
+          if (!t.id) return false;
+          const orig = originalTargets.find(ot => ot.id === t.id);
+          return orig && (orig.active !== t.active || JSON.stringify(orig.metadata) !== JSON.stringify(t.metadata));
+        });
+
+        if (toAdd.length > 0) {
+          await atisTargetDb.insert(toAdd.map(t => ({
+            config_id: editing.id,
+            target_type: t.target_type,
+            target_id: t.target_id,
+            active: t.active,
+            metadata: t.metadata || {}
+          })));
+        }
+
+        if (toRemove.length > 0) {
+          await atisTargetDb.delete(toRemove);
+        }
+
+        for (const t of toUpdate) {
+          await atisTargetDb.update(t.id!, { 
+            active: t.active, 
+            metadata: t.metadata 
+          });
+        }
+
+        toast.success("Configurações salvas");
       }
       setEditing(null);
       setIsNew(false);
@@ -321,17 +419,17 @@ const AtisAutomations = () => {
       )}
 
       <Dialog open={!!editing || isNew} onOpenChange={(open) => !open && (setEditing(null), setIsNew(false))}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] border-[hsl(var(--dark-card-hover))]">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] border-[hsl(var(--dark-card-hover))]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isNew ? <Plus className="w-5 h-5 text-primary" /> : <Settings2 className="w-5 h-5 text-primary" />}
               {isNew ? "Nova Automação" : "Configurar Automação"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               {isNew 
                 ? "Crie uma nova regra de disparo personalizado para o motor ATIS." 
                 : isSystem(editing!) 
-                  ? "Esta é uma automação de sistema. Alguns campos técnicos estão protegidos." 
+                  ? `Configurando automação de sistema: ${editing?.source_key}` 
                   : "Edite as configurações da automação personalizada."}
             </DialogDescription>
           </DialogHeader>
@@ -441,7 +539,27 @@ const AtisAutomations = () => {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-[hsl(var(--dark-card-hover))]">
+            <div className="space-y-4 pt-4 border-t border-[hsl(var(--dark-card-hover))]">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-primary" />
+                <h4 className="text-sm font-bold">Destinatários / Targets</h4>
+              </div>
+              
+              {loadingTargets ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <AtisTargetSelector 
+                  configId={isNew ? "temp" : editing?.id || ""} 
+                  targets={targets} 
+                  onChange={setTargets}
+                  disabled={saving}
+                />
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-[hsl(var(--dark-card-hover))]">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Conteúdo via Inteligência Artificial</Label>
@@ -483,11 +601,12 @@ const AtisAutomations = () => {
             {!isNew && isSystem(editing!) && (
               <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 text-[10px] leading-relaxed">
                 <AlertTriangle className="w-4 h-4 text-primary shrink-0" />
-                <p>
-                  <strong className="text-primary block mb-0.5 uppercase tracking-wide">Atenção</strong>
-                  Configurações de Destinatários (Targets) não são editáveis nesta interface. 
-                  O motor preservará os JIDs e grupos vinculados a esta automação (`{editing?.source_key}`).
-                </p>
+                <div>
+                  <strong className="text-primary block mb-0.5 uppercase tracking-wide">Automação de Sistema</strong>
+                  <p className="text-[hsl(var(--dark-muted))]">
+                    Você está editando uma automação protegida. Campos como <code className="bg-primary/10 px-1 rounded">source_key</code> e <code className="bg-primary/10 px-1 rounded">notification_type</code> não podem ser alterados para manter a compatibilidade com o backend.
+                  </p>
+                </div>
               </div>
             )}
           </div>

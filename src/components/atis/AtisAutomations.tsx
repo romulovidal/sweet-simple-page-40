@@ -419,17 +419,17 @@ const AtisAutomations = () => {
       )}
 
       <Dialog open={!!editing || isNew} onOpenChange={(open) => !open && (setEditing(null), setIsNew(false))}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] border-[hsl(var(--dark-card-hover))]">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-text))] border-[hsl(var(--dark-card-hover))]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isNew ? <Plus className="w-5 h-5 text-primary" /> : <Settings2 className="w-5 h-5 text-primary" />}
               {isNew ? "Nova Automação" : "Configurar Automação"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               {isNew 
                 ? "Crie uma nova regra de disparo personalizado para o motor ATIS." 
                 : isSystem(editing!) 
-                  ? "Esta é uma automação de sistema. Alguns campos técnicos estão protegidos." 
+                  ? `Configurando automação de sistema: ${editing?.source_key}` 
                   : "Edite as configurações da automação personalizada."}
             </DialogDescription>
           </DialogHeader>

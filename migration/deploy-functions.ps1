@@ -51,7 +51,7 @@ try {
   foreach ($f in $functions) {
     $i++
     Step "[$i/$($functions.Count)] Deploy $f"
-    try   { supabase functions deploy $f --project-ref $ProjectRef }
+    try   { supabase functions deploy $f --project-ref $ProjectRef; if ($LASTEXITCODE -ne 0) { throw "Erro CLI $LASTEXITCODE" } }
     catch { Write-Host "FALHOU: $f" -ForegroundColor Red; $failed += $f }
   }
   Pop-Location

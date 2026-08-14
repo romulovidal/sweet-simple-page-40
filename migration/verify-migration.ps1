@@ -66,7 +66,7 @@ if ($missing.Count -gt 0) { Write-Host "  faltando: $($missing -join ', ')" -For
 Write-Host "`n=== 7. Endpoints públicos ===" -ForegroundColor Cyan
 foreach ($ep in @("og","atis-webhook")) {
   try {
-    $r = Invoke-WebRequest -Uri "$FnBase/$ep" -Method Options -SkipHttpErrorCheck -TimeoutSec 20
+    $r = Invoke-WebRequest -Uri "$FnBase/$ep" -Method Options -TimeoutSec 20 -ErrorAction SilentlyContinue
     if ($r.StatusCode -eq 401) { Write-Host "  FALHA $ep respondeu 401 (verify_jwt ligado indevidamente)" -ForegroundColor Red; $fail++ }
     else { Write-Host "  OK   $ep -> HTTP $($r.StatusCode)" -ForegroundColor Green }
   } catch { Write-Host "  FALHA $ep inacessível: $_" -ForegroundColor Red; $fail++ }

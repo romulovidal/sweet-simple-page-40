@@ -20,11 +20,15 @@ begin;
 -- ----------------------------------------------------------------------------
 create extension if not exists pg_cron with schema pg_catalog;
 create extension if not exists pg_net  with schema extensions;
-create extension if not exists pg_trgm with schema public;   -- usado pelas buscas
+create extension if not exists pg_trgm with schema public;
 create extension if not exists pgcrypto with schema extensions;
 
-grant usage on schema cron to postgres;
-grant usage on schema net  to postgres;
+do $$
+begin
+  if exists (select 1 from pg_namespace where nspname = 'net') then
+    grant usage on schema net to postgres;
+  end if;
+end $$;
 
 -- ----------------------------------------------------------------------------
 -- 2. Configuração central do projeto (sem segredos em texto puro)
@@ -105,7 +109,12 @@ begin
 end $$;
 
 -- Evita perfis duplicados quando o usuário já foi migrado com perfil.
--- (índice único idempotente; a função usa INSERT simples)
+do $$
+begin
+  if exists (select 1 from public.profiles group by user_id having count(*) > 1) then
+    raise exception 'Perfis duplicados encontrados em public.profiles: abortando para revisão manual.';
+  end if;
+end $$;
 create unique index if not exists profiles_user_id_key on public.profiles (user_id);
 
 create or replace function public.handle_new_user()
@@ -129,7 +138,7 @@ begin
     _wa,
     case when _wa is not null then _opt else false end
   )
-  on conflict (user_id) do nothing;   -- <== não duplica perfis já migrados
+  on conflict (user_id) do nothing;
   return new;
 end;
 $$;

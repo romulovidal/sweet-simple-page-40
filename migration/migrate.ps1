@@ -21,7 +21,7 @@ Step "0/5 Pré-requisitos"
 supabase --version | Out-Null; Ok "Supabase CLI"
 psql --version     | Out-Null; Ok "psql"
 if (-not $env:TARGET_SUPABASE_DB_URL) {
-  throw "Defina a connection string do NOVO projeto antes de rodar: `$env:TARGET_SUPABASE_DB_URL = '<postgresql://...>'"
+  throw "Defina a connection string do NOVO projeto (banco direto, ex: postgresql://...): `$env:TARGET_SUPABASE_DB_URL = '...'`"
 }
 Ok "TARGET_SUPABASE_DB_URL presente"
 if (-not (Test-Path $SecretsFile)) {
@@ -52,7 +52,9 @@ if ($hasSecret -eq "0") {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
   $tmp = New-TemporaryFile
   "select vault.create_secret(:'k', 'service_role_key');" | Set-Content $tmp -Encoding utf8
-  psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -v k="$plain" -f $tmp | Out-Null
+  psql $env:TARGET_SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f $tmp << "EOF"
+$plain
+EOF
   Remove-Item $tmp -Force
   $plain = $null
   Ok "Segredo gravado no Vault"

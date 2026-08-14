@@ -177,7 +177,10 @@ const AtisConfig = () => {
       </button>
 
       <div className="pt-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))] mb-2 px-1">Envios automáticos e pastoral</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-[hsl(var(--dark-muted))] mb-4 px-1 flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          Configurações Avançadas do Motor ATIS V2
+        </p>
         <AtisAdvancedSettings />
       </div>
 

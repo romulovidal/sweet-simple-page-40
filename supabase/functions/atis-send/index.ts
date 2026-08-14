@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { runAtisAutomations } from "./_shared/atis-v2-runner.ts";
+import { runAtisAutomations } from "../_shared/atis-v2-runner.ts";
 
 /**
  * Ponto de entrada unificado para o Cron Job

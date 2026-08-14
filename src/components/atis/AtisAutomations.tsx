@@ -84,6 +84,9 @@ const AtisAutomations = () => {
   const [form, setForm] = useState<Partial<Automation>>({});
   const [saving, setSaving] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [targets, setTargets] = useState<AtisTarget[]>([]);
+  const [originalTargets, setOriginalTargets] = useState<AtisTarget[]>([]);
+  const [loadingTargets, setLoadingTargets] = useState(false);
 
   const load = async () => {
     setLoading(true);

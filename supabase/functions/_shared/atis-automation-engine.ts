@@ -164,9 +164,9 @@ export class AtisEngine {
         {
           kind: config.notification_type === 'welcome' ? 'transactional' : 'bulk',
           noFooter: config.metadata?.no_footer === true,
-          mentionsEveryOne: metadata?.mentionsEveryOne ?? false
+          mentionsEveryOne: metadata?.mentionsEveryOne ?? false,
+          isManual: config.automation_mode === 'manual'
         }
-
       );
 
       // 5. Registrar Tentativa

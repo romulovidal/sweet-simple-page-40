@@ -1,9 +1,47 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const GEMINI_MODEL = "gemini-1.5-flash-8b"; // Note: gemini-3.1-flash-tts-preview is the target but currently Gemini TTS is often invoked via generateContent with specific speech config or a dedicated endpoint. 
-// However, the user explicitly asked for gemini-3.1-flash-tts-preview. 
-// The official Google AI SDK or REST API for "text-to-speech" in Gemini is part of the newer multimodal capabilities.
-// As of my latest knowledge, the specific model name "gemini-3.1-flash-tts-preview" refers to the experimental TTS capability.
+/**
+ * Encapsulates raw PCM (16-bit, 24kHz, mono) into a WAV container.
+ */
+function createWavHeader(dataLength: number): Uint8Array {
+  const sampleRate = 24000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+
+  /* RIFF identifier */
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  /* file length */
+  view.setUint32(4, 36 + dataLength, true);
+  /* RIFF type */
+  view.setUint32(8, 0x57415645, false); // "WAVE"
+  
+  /* format chunk identifier */
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  /* format chunk length */
+  view.setUint32(16, 16, true);
+  /* sample format (raw PCM = 1) */
+  view.setUint16(20, 1, true);
+  /* channel count */
+  view.setUint16(22, numChannels, true);
+  /* sample rate */
+  view.setUint32(24, sampleRate, true);
+  /* byte rate (sampleRate * numChannels * bitsPerSample/8) */
+  view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+  /* block align (numChannels * bitsPerSample/8) */
+  view.setUint16(32, numChannels * (bitsPerSample / 8), true);
+  /* bits per sample */
+  view.setUint16(34, bitsPerSample, true);
+  
+  /* data chunk identifier */
+  view.setUint32(36, 0x64617461, false); // "data"
+  /* data chunk length */
+  view.setUint32(40, dataLength, true);
+
+  return new Uint8Array(header);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -29,8 +67,7 @@ Deno.serve(async (req) => {
 
     const trimmed = text.slice(0, 4000);
 
-    // API Reference for Gemini TTS (Experimental/Preview):
-    // POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:synthesizeSpeech?key=API_KEY
+    // Endpoint for Gemini 1.5/3.1 Multimodal TTS (Preview)
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:synthesizeSpeech?key=${apiKey}`;
 
     let lastError: any = null;
@@ -38,17 +75,13 @@ Deno.serve(async (req) => {
       try {
         const response = await fetch(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: trimmed,
-            // Configuration for natural, clear, reverent narration in PT-BR
             speechConfig: {
               voiceConfig: {
-                predefinedVoice: "Pessoa", // Using a placeholder for a natural PT-BR voice if specific ones aren't listed, 
-                // but usually, it's auto-selected or provided in the voice name.
-                // For PT-BR, Gemini usually supports specific voice identifiers.
+                // Using Gemini's auto-selection for a natural PT-BR narration
+                // 'Pessoa' was a placeholder, we let it default or use generic natural specs if available.
               }
             }
           }),
@@ -56,22 +89,29 @@ Deno.serve(async (req) => {
 
         if (response.ok) {
           const data = await response.json();
-          // Gemini synthesizeSpeech returns { audioData: "base64..." }
           if (!data.audioData) {
             throw new Error("No audioData returned from Gemini");
           }
 
+          // Gemini synthesizeSpeech returns raw PCM bytes encoded in Base64.
+          // Format is typically 16-bit PCM, 24kHz, Mono.
           const binaryString = atob(data.audioData);
-          const bytes = new Uint8Array(binaryString.length);
+          const pcmData = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+            pcmData[i] = binaryString.charCodeAt(i);
           }
 
-          return new Response(bytes, {
+          // Encapsulate PCM in a WAV container so the browser/frontend can play it.
+          const wavHeader = createWavHeader(pcmData.length);
+          const wavFile = new Uint8Array(wavHeader.length + pcmData.length);
+          wavFile.set(wavHeader, 0);
+          wavFile.set(pcmData, wavHeader.length);
+
+          return new Response(wavFile, {
             status: 200,
             headers: {
               ...corsHeaders,
-              "Content-Type": "audio/mpeg", // Frontend expects mp3/mpeg
+              "Content-Type": "audio/wav",
               "Cache-Control": "public, max-age=31536000, immutable",
             },
           });
@@ -81,15 +121,13 @@ Deno.serve(async (req) => {
         const errBody = await response.text();
         lastError = new Error(`Status ${status}: ${errBody}`);
 
-        // Retry on 429 (Rate Limit) or 5xx (Server Error)
         if (status === 429 || status >= 500) {
           if (attempt < 3) {
-            console.log(`TTS attempt ${attempt} failed, retrying in ${attempt * 500}ms...`);
             await new Promise(r => setTimeout(r, attempt * 500));
             continue;
           }
         }
-        break; // Don't retry for 400, 401, 403 etc.
+        break;
       } catch (err) {
         lastError = err;
         if (attempt < 3) continue;

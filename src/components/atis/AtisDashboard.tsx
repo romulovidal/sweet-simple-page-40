@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
-import { Users, Cake, CalendarClock, BookOpen, MessageCircle, Bot, WifiOff, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { Users, Cake, CalendarClock, BookOpen, MessageCircle, Bot, WifiOff, Wifi, CheckCircle2, Clock, Loader2, Settings2 } from "lucide-react";
 import { useAtisStatus } from "./useAtisStatus";
 import atisAvatarAsset from "@/assets/atis-avatar.png.asset.json";
 
@@ -61,6 +61,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
     { label: "Envios pendentes", value: stats.pending, icon: CalendarClock, tab: "broadcasts" },
     { label: "Estudos", value: stats.studies, icon: BookOpen, tab: "studies" },
     { label: "Mensagens 24h", value: stats.messages24h, icon: MessageCircle, tab: "logs" },
+    { label: "Automações", value: "V2", icon: Settings2, tab: "automations" },
   ];
 
   const online = status.connected;

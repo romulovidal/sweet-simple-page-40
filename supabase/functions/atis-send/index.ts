@@ -1,93 +1,12 @@
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { runAtisAutomations } from "./_shared/atis-v2-runner.ts";
 
-const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
-const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
-const INSTANCE = 'atis'
-
-function phoneVariants(to: string): string[] {
-  if (to.includes('@')) return [to]
-  const digits = to.replace(/\D/g, '')
-  const withCountry = digits.startsWith('55') ? digits : `55${digits}`
-  const ddd = withCountry.slice(2, 4)
-  const rest = withCountry.slice(4)
-  const variants = new Set<string>()
-  variants.add(withCountry)
-  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`)
-  else if (rest.length === 8) variants.add(`55${ddd}9${rest}`)
-  return [...variants].map((n) => `${n}@s.whatsapp.net`)
-}
-
-export async function sendText(to: string, text: string) {
-  if (!EVO_URL || !EVO_KEY) {
-    return { ok: false, status: 0, json: { error: 'evolution-not-configured' } }
-  }
-  const attempts = phoneVariants(to)
-  let last: { ok: boolean; status: number; json: any } = { ok: false, status: 0, json: null }
-  for (const jid of attempts) {
-    const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-      body: JSON.stringify({ number: jid, text }),
-    })
-    const raw = await res.text()
-    let json: any = null
-    try { json = raw ? JSON.parse(raw) : null } catch { json = { raw } }
-    last = { ok: res.ok, status: res.status, json }
-    if (res.ok) return last
-    const notExists = JSON.stringify(json ?? '').includes('"exists":false')
-    if (!notExists) return last
-  }
-  return last
-}
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-
-  try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claims } = await supabase.auth.getClaims(token)
-    if (!claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: claims.claims.sub, _role: 'admin' })
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
-    const body = await req.json().catch(() => ({}))
-    const to = String(body.to ?? '').trim()
-    const text = String(body.text ?? '').trim()
-    if (!to || !text) {
-      return new Response(JSON.stringify({ error: 'to and text required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-
-    const out = await sendText(to, text)
-
-    // Log
-    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    await admin.from('atis_messages_log').insert({
-      direction: 'outbound',
-      wa_to: to,
-      body: text,
-      status: out.ok ? 'sent' : 'error',
-      raw: out.json,
-    })
-
-    return new Response(JSON.stringify({ ok: out.ok, status: out.status, response: out.json }), {
-      status: out.ok ? 200 : 502,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-  }
-})
+/**
+ * Ponto de entrada unificado para o Cron Job
+ * Chama o runner V2 que orquestra as automações agendadas.
+ */
+serve(async (req) => {
+  console.log("[AtisSend] Execution started.");
+  const result = await runAtisAutomations("cron-atis-send");
+  return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json" } });
+});

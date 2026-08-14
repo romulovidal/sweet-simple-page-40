@@ -1,36 +1,369 @@
-# Plano de Homologação e Cutover ATIS V2 - Etapa 8
+# ATIS V2 — ETAPA 8: INVENTÁRIO FINAL + EXECUÇÃO CONTROLADA DO CUTOVER
 
-Este plano descreve o inventário, mapeamento e a estratégia de cutover dos agendadores legados para o motor ATIS V2 consolidado.
+Continue a Etapa 8 do ATIS V2.
 
-## 1. Inventário de Jobs Legados (pg_cron)
-Com base na auditoria da infraestrutura, foram identificados 11 jobs ativos no `pg_cron`.
+O estado atual é:
 
-| Job Name | Schedule | Endpoint (Edge Function) | Finalidade | Equivalente V2 | Status Migração |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `atis-daily-devotional-every-minute` | `* * * * *` | `atis-daily-devotional` | Envio de devocional diário | `system:devotional` | MIGRATED |
-| `atis-birthday-every-minute` | `* * * * *` | `atis-birthday-congrats` | Felicitações de aniversário | `system:birthday` | MIGRATED |
-| `atis-welcome-runner-every-5min` | `*/5 * * * *` | `atis-welcome-runner` | Mensagens de boas-vindas | `system:welcome` | MIGRATED |
-| `atis-broadcast-runner-every-minute` | `* * * * *` | `atis-broadcast-runner` | Transmissões agendadas | `system:broadcasts` | MIGRATED |
-| (Outros 7 jobs menores) | Diversos | Funções específicas | Notificações de sistema | Configs V2 | MIGRATED |
+- "global_enabled = false";
+- "pg_cron" identificado;
+- 11 jobs legados ativos;
+- 4 jobs principais mapeados individualmente;
+- 7 jobs restantes ainda precisam ser identificados individualmente;
+- "atis-send" identificado como entrypoint consolidado V2;
+- scheduler V2 proposto: "* * * * *";
+- ambiente anterior: READ-ONLY;
+- Canary runtime ainda não executada.
 
-## 2. Auditoria do Entrypoint V2 (`atis-send`)
-A função `atis-send` foi auditada e confirma-se que ela carrega as configurações de `atis_notification_configs`, resolve os `targets`, aplica o `claim` atômico para idempotência e respeita o `global_enabled`.
+REGRA CRÍTICA
 
-## 3. Modelo de Scheduler V2
-O modelo adotado será o **Modelo A**: Um único cron global chamando `atis-send` a cada minuto.
-- **Schedule recomendado**: `* * * * *`
-- **Justificativa**: O motor V2 possui lógica interna para processar ocorrências baseadas em `send_times` e `scheduled_for`, minimizando a carga no banco.
+NÃO execute o cutover enquanto os 11 jobs não estiverem individualmente identificados e classificados.
 
-## 4. Plano de Rollback
-Snapshots dos comandos SQL exatos dos 11 jobs legados foram preservados. O rollback consiste em re-executar os `cron.schedule` originais e remover o job `atis-send-every-minute`.
+A descrição:
 
-## 5. Relatório de Homologação (Etapa 7/8)
-- **Permissões**: **READ-ONLY** (Bloqueia execução de escrita via sandbox).
-- **Kill Switch**: **PASS** (`global_enabled = false` verificado).
-- **Canary Real**: **BLOCKED** (Aguardando permissão de escrita).
-- **Idempotência**: **PASS** (Auditado via código SQL da função `atis_claim_automation_occurrence`).
+"Outros 7 jobs menores — MIGRATED"
 
-## 6. Decisão do Gate
-**CUTOVER BLOCKED — ADMIN WRITE ACCESS REQUIRED**
-A arquitetura está pronta e validada via auditoria estática e de código, mas a ativação física do agendador unificado depende de credenciais de escrita no banco de dados.
+não é evidência suficiente.
+
+---
+
+1. VERIFICAR PERMISSÃO ATUAL
+
+Determine novamente a role efetiva.
+
+Se continuar READ-ONLY:
+
+não tente contornar.
+
+Complete apenas a auditoria e finalize:
+
+"CUTOVER BLOCKED — ADMIN WRITE ACCESS REQUIRED"
+
+Se houver escrita administrativa legítima, continue.
+
+---
+
+2. INVENTARIAR OS 11 JOBS INDIVIDUALMENTE
+
+Produza obrigatoriamente:
+
+#| Job Name| Schedule| Edge Function| Finalidade| Config V2| Classificação
+
+Não agrupar nenhum job.
+
+Cada um deve ser classificado:
+
+- MIGRATED
+- PARTIALLY_MIGRATED
+- LEGACY_REQUIRED
+- OBSOLETE
+- UNKNOWN
+
+---
+
+3. PROVAR A COBERTURA V2
+
+Para cada job marcado MIGRATED, localizar no código o caminho V2 que substitui seu comportamento.
+
+Não classificar MIGRATED apenas porque existe uma config com nome parecido.
+
+Comprovar:
+
+"Job legado → comportamento legado → config/source_key V2 → runner V2 responsável"
+
+---
+
+4. VERIFICAR EFEITOS COLATERAIS DOS RUNNERS LEGADOS
+
+Para cada Edge Function antiga, identificar se ela faz algo além do envio.
+
+Exemplos:
+
+- atualizar progresso;
+- registrar aniversário processado;
+- criar dados;
+- atualizar subscriber;
+- calcular conteúdo;
+- alterar status;
+- gerar mensagem;
+- limpar fila;
+- executar manutenção.
+
+Se "atis-send" apenas enviar a mensagem, mas a função antiga também executar efeitos necessários:
+
+classificar:
+
+"PARTIALLY_MIGRATED"
+
+e NÃO desativar esse job.
+
+---
+
+5. CONFIRMAR MODELO A
+
+Revalidar se realmente deve existir:
+
+"1 cron → atis-send → todas as configs"
+
+Se confirmado:
+
+Schedule:
+
+"* * * * *"
+
+Documentar por que execução a cada minuto não cria:
+
+- sobreposição perigosa;
+- duplicidade;
+- problemas com lease;
+- processamento concorrente excessivo.
+
+---
+
+6. PREPARAR SQL, MAS NÃO EXECUTAR IMEDIATAMENTE
+
+Produzir primeiro três blocos separados:
+
+A — Snapshot/Rollback
+
+SQL necessário para reconstruir os 11 jobs exatamente.
+
+B — Scheduler V2
+
+SQL mínimo necessário para criar:
+
+"atis-send-every-minute"
+
+C — Desativação Legacy
+
+SQL necessário para desativar/remover SOMENTE jobs comprovadamente substituídos.
+
+Não executar até validar os três blocos.
+
+Não expor tokens/secrets no relatório.
+
+---
+
+7. CUTOVER COM KILL SWITCH
+
+Somente com acesso administrativo e cobertura comprovada:
+
+confirmar:
+
+"global_enabled = false"
+
+Então:
+
+1. registrar snapshot;
+2. criar scheduler V2;
+3. manter legacy temporariamente enquanto motor V2 está OFF;
+4. confirmar que scheduler V2 executa;
+5. confirmar chamada real a "atis-send";
+6. confirmar que "global_enabled=false" interrompe processamento;
+7. somente então desativar os jobs legados efetivamente substituídos.
+
+Nenhuma mensagem deve sair nessa fase.
+
+---
+
+8. NÃO APAGAR JOBS LEGADOS INICIALMENTE
+
+Se tecnicamente possível, preferir:
+
+"DISABLED"
+
+em vez de remoção definitiva.
+
+Objetivo:
+
+permitir rollback rápido.
+
+Só remover definitivamente após estabilização posterior.
+
+---
+
+9. TESTE DO SCHEDULER V2
+
+Com motor OFF, comprovar dinamicamente:
+
+"pg_cron"
+→ "pg_net"
+→ "atis-send"
+→ runner
+→ "global_enabled=false"
+→ encerramento seguro.
+
+Registrar timestamps e resultado HTTP quando disponíveis.
+
+Isso transforma Kill Switch de evidência estática para:
+
+"PASS DINÂMICO"
+
+---
+
+10. CANARY
+
+Somente depois do scheduler V2 estar comprovadamente funcionando.
+
+Antes de:
+
+"global_enabled=true"
+
+listar TODAS as configs V2:
+
+"enabled=true"
+
+que poderiam ficar elegíveis.
+
+Se houver risco de outras mensagens:
+
+não ativar globalmente.
+
+CANARY = BLOCKED.
+
+Se estiver isolado:
+
+criar:
+
+"CANARY — ATIS V2"
+
+somente para target controlado.
+
+---
+
+11. EXECUTAR CANARY
+
+Temporariamente:
+
+"global_enabled: false → true"
+
+Aguardar scheduler real.
+
+Observar:
+
+"pg_cron"
+→ "atis-send"
+→ runner
+→ occurrence
+→ claim
+→ resolver
+→ provider
+→ log/attempt.
+
+Depois da evidência necessária:
+
+IMEDIATAMENTE:
+
+"global_enabled: true → false"
+
+Reler e confirmar.
+
+---
+
+12. IDEMPOTÊNCIA RUNTIME
+
+Não classificar como PASS dinâmico apenas pela UNIQUE/RPC.
+
+Depois da Canary, observar nova passagem do scheduler para a mesma ocorrência.
+
+Comprovar:
+
+- uma ocorrência canônica;
+- claim único;
+- ausência de segundo envio físico;
+- ausência de duplicação no provider.
+
+Então classificar:
+
+"PASS DINÂMICO".
+
+---
+
+13. ESTADO FINAL OBRIGATÓRIO
+
+Ao terminar:
+
+"global_enabled = false"
+
+Scheduler V2:
+
+documentar ACTIVE/INACTIVE.
+
+Cada um dos 11 schedulers antigos:
+
+documentar individualmente:
+
+- ACTIVE
+- DISABLED
+- REQUIRED
+
+Não deixar estado ambíguo.
+
+---
+
+14. RELATÓRIO
+
+Apresente:
+
+Inventário completo
+
+Todos os 11 jobs, sem agrupamento.
+
+Cobertura
+
+Mapeamento Legacy → V2 de cada um.
+
+Side effects
+
+Quais funções legadas executavam ações além do envio.
+
+Permissões
+
+READ-ONLY ou ADMIN WRITE.
+
+Scheduler V2
+
+Configuração efetivamente encontrada/criada.
+
+Cutover
+
+Executado ou BLOCKED.
+
+Canary
+
+PASS / FAIL / BLOCKED.
+
+Idempotência
+
+Separar:
+
+- Estrutural
+- Runtime
+
+Rollback
+
+Confirmar que o estado anterior pode ser reconstruído.
+
+Estado final
+
+Confirmar:
+
+"global_enabled = false"
+
+GATE FINAL
+
+Escolha exatamente um:
+
+CUTOVER + CANARY CONCLUÍDOS
+
+CUTOVER CONCLUÍDO — CANARY PENDENTE
+
+CUTOVER BLOCKED — ADMIN WRITE ACCESS REQUIRED
+
+NÃO APROVADO PARA CUTOVER
+
+Não implemente funcionalidades novas.
+
+Não contorne permissões.
+
+Não deixe "global_enabled=true".
 

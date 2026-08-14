@@ -85,35 +85,48 @@ Deno.serve(async (req) => {
       body = {};
     }
 
-    if (body.schedule_id) {
-      // Verify caller is admin
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) {
+    if (body.schedule_id || req.headers.get("Authorization")) {
+      // Verify caller is admin or service_role
+      const authHeader = req.headers.get("Authorization") || "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+
+      if (!token) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: userData } = await userClient.auth.getUser();
-      if (!userData?.user) {
+
+      let authorized = false;
+      if (token === serviceKey) {
+        authorized = true;
+      } else {
+        const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: userData, error: userError } = await userClient.auth.getUser();
+        if (userData?.user && !userError) {
+          const { data: isAdmin } = await userClient.rpc("has_role", {
+            _user_id: userData.user.id,
+            _role: "admin",
+          });
+          if (isAdmin) {
+            authorized = true;
+          }
+        }
+      }
+
+      if (!authorized) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const { data: isAdmin } = await userClient.rpc("has_role", {
-        _user_id: userData.user.id,
-        _role: "admin",
-      });
-      if (!isAdmin) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+
+      // If it's a manual trigger without schedule_id in body, we might be here just for auth check before cron logic
+      // But based on the code structure, the cron logic follows below.
+      // If schedule_id is present, it's a manual trigger.
+      if (body.schedule_id) {
 
       const { data: schedule, error: schedErr } = await supabase
         .from("culto_schedules")
@@ -176,6 +189,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+  }
 
     // ===== SCHEDULED CRON CHECK =====
     // Look at ALL active schedules — cross-day reminders (e.g. "night before") must fire too.

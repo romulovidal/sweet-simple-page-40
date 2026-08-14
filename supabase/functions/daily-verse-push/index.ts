@@ -56,25 +56,36 @@ async function isAuthorizedTrigger(
   serviceKey: string,
 ): Promise<{ ok: boolean; manual: boolean }> {
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) return { ok: false, manual: false };
-  const token = authHeader.slice(7).trim();
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+
+  if (!token) return { ok: false, manual: false };
 
   // Internal cron / server-to-server: exact service-role key match.
-  if (token === serviceKey) return { ok: true, manual: true };
+  if (token === serviceKey) {
+    console.log("Authorized as service_role");
+    return { ok: true, manual: true };
+  }
 
   // Otherwise require an authenticated admin user.
   try {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: userData } = await userClient.auth.getUser();
-    if (!userData?.user) return { ok: false, manual: false };
+    const { data: userData, error: userError } = await userClient.auth.getUser();
+    if (userError || !userData?.user) {
+      console.log("User authentication failed");
+      return { ok: false, manual: false };
+    }
     const { data: isAdmin } = await userClient.rpc("has_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
-    if (isAdmin === true) return { ok: true, manual: true };
-  } catch {
+    if (isAdmin === true) {
+      console.log("Authorized as admin user");
+      return { ok: true, manual: true };
+    }
+  } catch (e) {
+    console.error("Authorization check failed", e);
     return { ok: false, manual: false };
   }
   return { ok: false, manual: false };

@@ -1,21 +1,24 @@
 -- ========================================================================================
--- SISTEMA ATIS V2 — MIGRATION DE INFRAESTRUTURA (CORRIGIDA V2)
+-- SISTEMA ATIS V2 — MIGRATION DE INFRAESTRUTURA (CORRIGIDA V3)
 -- ========================================================================================
--- Este script define a infraestrutura centralizada de automação e notificações do ATIS.
--- FOCO: Segurança (RPC), Idempotência (DB Constraints), Claim Atômico (Lease) e Backfill Robusto.
+-- FOCO: Segurança (RPC), Idempotência (DB Constraints), Claim Atômico (Lease) e Backfill.
 -- ========================================================================================
 
 BEGIN;
 
--- 0. PREFLIGHT: VALIDAR DEPENDÊNCIAS
+-- 0. PREFLIGHT: VALIDAR ASSINATURA EXATA DE HAS_ROLE
 DO $$
 BEGIN
+    -- Verifica se a função public.has_role(uuid, public.app_role) existe
     IF NOT EXISTS (
-        SELECT 1 FROM pg_proc p 
+        SELECT 1 
+        FROM pg_proc p 
         JOIN pg_namespace n ON p.pronamespace = n.oid 
-        WHERE n.nspname = 'public' AND p.proname = 'has_role'
+        WHERE n.nspname = 'public' 
+          AND p.proname = 'has_role'
+          AND oidvectortypes(p.proargtypes) = 'uuid, app_role'
     ) THEN
-        RAISE EXCEPTION 'ERRO: Função public.has_role(uuid, app_role) não encontrada. Execute a migração de roles primeiro.';
+        RAISE EXCEPTION 'ERRO: Função public.has_role(uuid, public.app_role) não encontrada. A migration exige a assinatura exata para prosseguir.';
     END IF;
 END $$;
 
@@ -32,16 +35,16 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS public.atis_automation_settings (
     id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     timezone text NOT NULL DEFAULT 'America/Fortaleza',
+    global_enabled boolean NOT NULL DEFAULT true, -- Representa atis_antiban.enabled legado
     quiet_hours_enabled boolean NOT NULL DEFAULT true,
     quiet_hours_start time NOT NULL DEFAULT '21:00',
     quiet_hours_end time NOT NULL DEFAULT '07:00',
-    global_enabled boolean NOT NULL DEFAULT true,
     delay_between_messages_ms integer NOT NULL DEFAULT 5000 CHECK (delay_between_messages_ms >= 0),
     max_messages_per_minute integer NOT NULL DEFAULT 20 CHECK (max_messages_per_minute > 0),
     retry_max integer NOT NULL DEFAULT 3 CHECK (retry_max >= 0),
     retry_interval_minutes integer NOT NULL DEFAULT 15 CHECK (retry_interval_minutes > 0),
     
-    -- Campos Adicionais do Antiban Legado
+    -- Antiban Legado
     daily_global_cap integer DEFAULT 120 CHECK (daily_global_cap >= 0),
     daily_recipient_cap integer DEFAULT 2 CHECK (daily_recipient_cap >= 0),
     daily_group_cap integer DEFAULT 3 CHECK (daily_group_cap >= 0),
@@ -57,40 +60,30 @@ CREATE TABLE IF NOT EXISTS public.atis_automation_settings (
 -- 3. CONFIGURAÇÕES DE AUTOMAÇÃO (V2)
 CREATE TABLE IF NOT EXISTS public.atis_notification_configs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_key text UNIQUE, -- Chave determinística (ex: 'system:devotional')
+    source_key text UNIQUE, 
     name text NOT NULL,
-    notification_type text NOT NULL, -- 'devotional', 'birthday', 'plan-reading', 'series', 'broadcast', 'welcome', 'smart-notif', 'daily-verse'
+    notification_type text NOT NULL, 
     enabled boolean NOT NULL DEFAULT true,
     automation_mode text NOT NULL DEFAULT 'automatic' CHECK (automation_mode IN ('automatic', 'manual')),
     send_times time[] NOT NULL DEFAULT '{ "07:00" }',
-    timezone text, -- Override (NULL = usa global)
-    days_of_week integer[] NOT NULL DEFAULT '{0,1,2,3,4,5,6}', -- 0=domingo, 6=sábado
+    timezone text, 
+    days_of_week integer[] NOT NULL DEFAULT '{0,1,2,3,4,5,6}',
     message_template text,
     use_ai boolean NOT NULL DEFAULT false,
     ai_prompt text,
     retry_enabled boolean NOT NULL DEFAULT true,
     retry_max integer NOT NULL DEFAULT 3 CHECK (retry_max >= 0),
-    delay_between_messages_ms integer CHECK (delay_between_messages_ms >= 0), -- NULL = usa global
+    delay_between_messages_ms integer CHECK (delay_between_messages_ms >= 0),
     metadata jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Constraint para dias da semana
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_days_of_week_v2') THEN
-        ALTER TABLE public.atis_notification_configs 
-        ADD CONSTRAINT check_days_of_week_v2 
-        CHECK (days_of_week <@ ARRAY[0,1,2,3,4,5,6]);
-    END IF;
-END $$;
-
 -- 4. DESTINATÁRIOS (TARGETS)
 CREATE TABLE IF NOT EXISTS public.atis_notification_targets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     config_id uuid NOT NULL REFERENCES public.atis_notification_configs(id) ON DELETE CASCADE,
-    target_id text NOT NULL, -- UUID, telefone, JID, tag
+    target_id text NOT NULL, 
     target_type text NOT NULL CHECK (target_type IN ('profile', 'contact', 'group', 'tag', 'jid_individual', 'all_authenticated')),
     active boolean NOT NULL DEFAULT true,
     metadata jsonb DEFAULT '{}'::jsonb,
@@ -104,13 +97,12 @@ CREATE TABLE IF NOT EXISTS public.atis_automation_logs (
     config_id uuid NOT NULL REFERENCES public.atis_notification_configs(id) ON DELETE CASCADE,
     source_target_id uuid REFERENCES public.atis_notification_targets(id) ON DELETE SET NULL,
     recipient_type text NOT NULL CHECK (recipient_type IN ('individual', 'group')), 
-    recipient_key text NOT NULL, -- JID FINAL (@s.whatsapp.net ou @g.us)
-    occurrence_key text NOT NULL, -- Identidade da ocorrência (ex: 2026-08-14:07:00)
-    idempotency_key text UNIQUE NOT NULL, -- config_id:recipient_key:occurrence_key
+    recipient_key text NOT NULL, 
+    occurrence_key text NOT NULL, 
+    idempotency_key text UNIQUE NOT NULL, 
     status text NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'pending', 'processing', 'retrying', 'sent', 'failed', 'skipped', 'postponed')),
     scheduled_for timestamptz NOT NULL,
     
-    -- Controle de Claim/Worker
     worker_id text,
     claimed_at timestamptz,
     claim_expires_at timestamptz,
@@ -124,7 +116,6 @@ CREATE TABLE IF NOT EXISTS public.atis_automation_logs (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
 
-    -- Proteção de Idempotência Canônica no DB
     CONSTRAINT uq_atis_logs_canonical UNIQUE(config_id, recipient_key, occurrence_key)
 );
 
@@ -154,7 +145,7 @@ BEGIN
     END IF;
 END $$;
 
--- 8. FUNÇÃO DE CLAIM ATÔMICO (RPC) - SEGURA
+-- 8. FUNÇÃO DE CLAIM ATÔMICO (RPC) - SEGURA E VALIDADA
 CREATE OR REPLACE FUNCTION public.atis_claim_automation_occurrence(
     _log_id uuid,
     _worker_id text,
@@ -163,11 +154,22 @@ CREATE OR REPLACE FUNCTION public.atis_claim_automation_occurrence(
 RETURNS public.atis_automation_logs
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
     _result public.atis_automation_logs;
 BEGIN
+    -- Validações de entrada
+    IF _worker_id IS NULL OR _worker_id = '' THEN
+        RAISE EXCEPTION '_worker_id cannot be null or empty';
+    END IF;
+    IF _lease_minutes IS NULL OR _lease_minutes <= 0 THEN
+        RAISE EXCEPTION '_lease_minutes must be positive';
+    END IF;
+    IF _lease_minutes > 60 THEN
+        RAISE EXCEPTION '_lease_minutes cannot exceed 60 minutes';
+    END IF;
+
     UPDATE public.atis_automation_logs
     SET 
         status = 'processing',
@@ -183,8 +185,8 @@ BEGIN
           -- Nunca processado ou pronto para retry
           (status IN ('scheduled', 'pending', 'retrying') AND (next_retry_at IS NULL OR next_retry_at <= now()))
           OR
-          -- Recuperar processamento abandonado (timeout do lease)
-          (status = 'processing' AND claim_expires_at < now())
+          -- Recuperar processamento abandonado
+          (status = 'processing' AND (claim_expires_at IS NULL OR claim_expires_at < now()))
       )
     RETURNING * INTO _result;
 
@@ -192,7 +194,6 @@ BEGIN
 END;
 $$;
 
--- Restringir execução da RPC
 REVOKE EXECUTE ON FUNCTION public.atis_claim_automation_occurrence(uuid, text, integer) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.atis_claim_automation_occurrence(uuid, text, integer) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.atis_claim_automation_occurrence(uuid, text, integer) FROM authenticated;
@@ -203,26 +204,39 @@ DO $$
 DECLARE
     t text;
 BEGIN
-    FOR t IN SELECT unnest(ARRAY['atis_automation_settings', 'atis_notification_configs', 'atis_notification_targets', 'atis_automation_logs', 'atis_automation_attempts']) LOOP
+    -- Tabelas editáveis pelo painel admin
+    FOR t IN SELECT unnest(ARRAY['atis_automation_settings', 'atis_notification_configs', 'atis_notification_targets']) LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
-        
         EXECUTE format('DROP POLICY IF EXISTS "Admins can do everything on %I" ON public.%I', t, t);
         EXECUTE format('CREATE POLICY "Admins can do everything on %I" ON public.%I FOR ALL TO authenticated USING (public.has_role(auth.uid(), ''admin''))', t, t);
     END LOOP;
+
+    -- Tabelas de log (Apenas leitura para admin)
+    FOR t IN SELECT unnest(ARRAY['atis_automation_logs', 'atis_automation_attempts']) LOOP
+        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+        EXECUTE format('DROP POLICY IF EXISTS "Admins can select logs on %I" ON public.%I', t, t);
+        EXECUTE format('CREATE POLICY "Admins can select logs on %I" ON public.%I FOR SELECT TO authenticated USING (public.has_role(auth.uid(), ''admin''))', t, t);
+    END LOOP;
 END $$;
 
--- Grants explícitos para authenticated (painel admin) e service_role (edge functions)
-GRANT ALL ON public.atis_automation_settings TO authenticated, service_role;
-GRANT ALL ON public.atis_notification_configs TO authenticated, service_role;
-GRANT ALL ON public.atis_notification_targets TO authenticated, service_role;
-GRANT ALL ON public.atis_automation_logs TO authenticated, service_role;
-GRANT ALL ON public.atis_automation_attempts TO authenticated, service_role;
+-- Privilégios Authenticated (Painel)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_automation_settings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_notification_configs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.atis_notification_targets TO authenticated;
+GRANT SELECT ON public.atis_automation_logs TO authenticated;
+GRANT SELECT ON public.atis_automation_attempts TO authenticated;
 
--- 10. ÍNDICES DE PERFORMANCE
+-- Privilégios Service Role (Edge Functions / Backend)
+GRANT ALL ON public.atis_automation_settings TO service_role;
+GRANT ALL ON public.atis_notification_configs TO service_role;
+GRANT ALL ON public.atis_notification_targets TO service_role;
+GRANT ALL ON public.atis_automation_logs TO service_role;
+GRANT ALL ON public.atis_automation_attempts TO service_role;
+
+-- 10. ÍNDICES
 CREATE INDEX IF NOT EXISTS idx_atis_logs_processing_queue ON public.atis_automation_logs(status, scheduled_for) WHERE status IN ('scheduled', 'pending', 'retrying', 'processing');
-CREATE INDEX IF NOT EXISTS idx_atis_logs_idempotency ON public.atis_automation_logs(idempotency_key);
 
--- 11. HELPER: PARSE TIME SEGURO
+-- 11. HELPER: PARSE TIME (TEMPORÁRIO)
 CREATE OR REPLACE FUNCTION public.atis_v2_parse_time(v text, fallback time) 
 RETURNS time AS $$
 BEGIN
@@ -240,9 +254,9 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql;
 
--- 12. SEEDS E BACKFILL (IDEMPOTENTE E SEGURO)
+-- 12. SEEDS E BACKFILL
 
--- Seed Global Settings (Antiban)
+-- Global Settings (Antiban Legado)
 DO $$
 DECLARE
     v_antiban jsonb;
@@ -252,14 +266,15 @@ BEGIN
     SELECT timezone INTO v_tz FROM public.atis_config WHERE id = 1;
     
     INSERT INTO public.atis_automation_settings (
-        id, timezone, quiet_hours_enabled, quiet_hours_start, quiet_hours_end,
+        id, timezone, global_enabled, quiet_hours_enabled, quiet_hours_start, quiet_hours_end,
         daily_global_cap, daily_recipient_cap, daily_group_cap, hourly_cap,
         min_gap_ms, max_gap_ms, jitter_max_ms
     )
     VALUES (
         1, 
         COALESCE(v_tz, 'America/Fortaleza'),
-        COALESCE((v_antiban->>'enabled')::boolean, true),
+        COALESCE((v_antiban->>'enabled')::boolean, true), -- Preserva semântica global
+        true, -- quiet_hours_enabled default
         public.atis_v2_parse_time(v_antiban->>'quiet_start', '21:00'),
         public.atis_v2_parse_time(v_antiban->>'quiet_end', '07:00'),
         COALESCE((v_antiban->>'daily_global_cap')::int, 120),
@@ -270,10 +285,22 @@ BEGIN
         COALESCE((v_antiban->>'max_gap_ms')::int, 95000),
         COALESCE((v_antiban->>'jitter_max_ms')::int, 9000)
     )
-    ON CONFLICT (id) DO NOTHING; -- Preserva configurações V2 se já existirem
+    ON CONFLICT (id) DO NOTHING;
 END $$;
 
--- Backfill: Devocional
+-- Seeds e Backfills de Configs
+INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode)
+VALUES 
+    ('system:welcome', 'Mensagem de Boas-vindas', 'welcome', 'automatic'),
+    ('system:smart_notifications', 'Lembretes de Inatividade/Metas', 'smart-notif', 'automatic'),
+    ('system:daily_verse', 'Versículo do Dia (WhatsApp)', 'daily-verse', 'automatic'),
+    ('system:plans', 'Orquestração de Planos de Leitura', 'plan-reading', 'automatic'),
+    ('system:series', 'Orquestração de Séries Temáticas', 'series', 'automatic'),
+    ('system:broadcasts', 'Envios de Transmissão', 'broadcast', 'manual'),
+    ('system:culto', 'Lembretes de Culto/Eventos', 'smart-notif', 'automatic')
+ON CONFLICT (source_key) DO NOTHING;
+
+-- Backfill: Devocional Legado
 DO $$
 DECLARE
     v_config_id uuid;
@@ -290,7 +317,7 @@ BEGIN
             COALESCE((v_val->>'enabled')::boolean, true), 
             ARRAY[public.atis_v2_parse_time(v_val->>'time', '06:30')]
         )
-        ON CONFLICT (source_key) DO NOTHING; -- Preserva V2
+        ON CONFLICT (source_key) DO NOTHING;
         
         SELECT id INTO v_config_id FROM public.atis_notification_configs WHERE source_key = 'legacy:atis_daily_devotional';
         IF v_config_id IS NOT NULL AND v_val->'group_ids' IS NOT NULL THEN
@@ -303,7 +330,7 @@ BEGIN
     END IF;
 END $$;
 
--- Backfill: Aniversariantes
+-- Backfill: Aniversariantes Legado
 DO $$
 DECLARE
     v_config_id uuid;
@@ -335,21 +362,7 @@ BEGIN
     END IF;
 END $$;
 
--- Seeds de Sistema
-INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode)
-VALUES ('system:welcome', 'Mensagem de Boas-vindas', 'welcome', 'automatic')
-ON CONFLICT (source_key) DO NOTHING;
-
-INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode, send_times)
-VALUES ('system:smart_notifications', 'Lembretes de Inatividade/Metas', 'smart-notif', 'automatic', '{ "09:00" }')
-ON CONFLICT (source_key) DO NOTHING;
-
-INSERT INTO public.atis_notification_configs (source_key, name, notification_type, automation_mode, send_times)
-VALUES ('system:daily_verse', 'Versículo do Dia (WhatsApp)', 'daily-verse', 'automatic', '{ "07:00" }')
-ON CONFLICT (source_key) DO NOTHING;
-
--- Nota: Planos (plans), Séries (series) e Broadcasts (broadcasts) possuem tabelas especializadas.
--- O motor V2 será agnóstico e poderá operar sobre essas tabelas ou via configs.
--- Cultos e outros fluxos serão integrados via Smart Notifications ou novas configs na FASE 2.
+-- Limpeza
+DROP FUNCTION IF EXISTS public.atis_v2_parse_time(text, time);
 
 COMMIT;

@@ -1,73 +1,54 @@
-# ATIS V2 — Etapa 8: Plano de Cutover (Pacote Final)
+# ATIS V2 — Etapa 8: Pacote Administrativo Final (Cutover Controlado)
 
-Este documento contém os blocos de execução administrativa para a migração segura do scheduler legada para o motor ATIS V2.
+Este pacote define a estratégia de transição em duas fases para o motor ATIS V2, priorizando a segurança e a validação dinâmica.
 
-## Status da Infraestrutura
-- **pg_cron:** Disponível (`cron.schedule`, `cron.unschedule`, `cron.alter_job`).
-- **Vault:** Disponível (`vault.secrets`).
-- **Permissões:** BLOQUEADO (Read-Only).
+## 1. Classificação Operacional de Jobs
 
-## 1. Classificação e Inventário de Jobs
-
-| Job Name | Status Final | Ação no Cutover | ID Detectado |
-| :--- | :--- | :--- | :--- |
-| `daily-verse-push-final` | **MIGRATED** | Desativar | 11 |
-| `atis-daily-devotional-every-minute` | **MIGRATED** | Desativar | 18 |
-| `atis-birthday-greeting-every-minute` | **MIGRATED** | Desativar | 19 |
-| `atis-daily-verse-dm-every-minute` | **MIGRATED** | Desativar | 21 |
-| `culto-reminder-every-minute` | **MIGRATED** | Desativar | 17 |
-| `smart-notifications-daily` | **REQUIRED** | **Manter Ativo** | 15 |
-| `atis-broadcast-runner-every-minute` | **REQUIRED** | **Manter Ativo** | 20 |
-| `cleanup-old-data-daily` | **MAINTENANCE**| **Manter Ativo** | 16 |
-| `atis-series-runner-every-minute` | **LEGACY_REQ** | **Manter Ativo** | 22 |
-| `atis-plans-runner-every-minute` | **LEGACY_REQ** | **Manter Ativo** | 23 |
-| `atis-welcome-runner-every-5min` | **LEGACY_REQ** | **Manter Ativo** | 24 |
+| Job Name | Categoria | Ação |
+| :--- | :--- | :--- |
+| `daily-verse-push-final` (ID: 11) | **MIGRATED** | Desativar (Fase C2) |
+| `atis-daily-devotional-...` (ID: 18) | **MIGRATED** | Desativar (Fase C2) |
+| `atis-birthday-greeting-...` (ID: 19) | **MIGRATED** | Desativar (Fase C2) |
+| `atis-daily-verse-dm-...` (ID: 21) | **MIGRATED** | Desativar (Fase C2) |
+| `culto-reminder-...` (ID: 17) | **MIGRATED** | Desativar (Fase C2) |
+| **Outros 6 jobs** (IDs: 15, 16, 20, 22, 23, 24) | **REQUIRED** | **MANTER ATIVOS** |
 
 ---
 
 ## BLOCO A — PRE-CHECK READ-ONLY
-Executar estas queries para validar o estado antes de qualquer alteração:
 ```sql
--- 1. Verificar permissões e Kill Switch
+-- 1. Estado da Transação e Kill Switch
 SELECT current_user, current_setting('default_transaction_read_only') as is_read_only;
 SELECT global_enabled FROM public.atis_automation_settings WHERE id = 1;
 
--- 2. Confirmar jobs candidatos à migração (Devem estar ativos e com os IDs abaixo)
+-- 2. Validar Existência de Segredos
+SELECT name, description FROM vault.secrets WHERE name = 'ATIS_SERVICE_ROLE_TOKEN';
+
+-- 3. Snapshot dos Jobs Migrados (Confirmar IDs 11, 18, 19, 21, 17)
 SELECT jobid, jobname, active FROM cron.job 
-WHERE jobname IN (
-    'daily-verse-push-final', 
-    'atis-daily-devotional-every-minute', 
-    'atis-birthday-greeting-every-minute', 
-    'atis-daily-verse-dm-every-minute', 
-    'culto-reminder-every-minute'
-);
+WHERE jobname IN ('daily-verse-push-final', 'atis-daily-devotional-every-minute', 'atis-birthday-greeting-every-minute', 'atis-daily-verse-dm-every-minute', 'culto-reminder-every-minute');
 
--- 3. Confirmar se o novo scheduler já existe (Deve retornar falso)
+-- 4. Confirmar Ausência do Scheduler V2
 SELECT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'atis-send-every-minute') as v2_exists;
-
--- 4. Verificar disponibilidade do segredo no Vault (Pelo nome/descrição)
-SELECT id, name, description FROM vault.secrets WHERE name = 'ATIS_SERVICE_ROLE_TOKEN';
 ```
 
 ---
 
 ## BLOCO B — SECRET CONFIGURATION
-O administrador deve provisionar o token de acesso (Service Role) no Supabase Vault para evitar exposição em logs do `pg_cron`.
-
-**Ação:** Criar um secret chamado `ATIS_SERVICE_ROLE_TOKEN` no Vault contendo a chave de serviço do projeto.
-*Nota: Não imprimir o token em texto claro.*
+O administrador deve garantir que a Service Role do projeto está provisionada no Vault.
+- **Secret Name:** `ATIS_SERVICE_ROLE_TOKEN`
+- **Tabela:** `vault.secrets`
 
 ---
 
-## BLOCO C — CUTOVER
-Executar a sequência abaixo somente após sucesso no Bloco A.
+## BLOCO C1 — INSTALAÇÃO DO SCHEDULER V2
+*Nota: Esta fase não altera os jobs legados.*
 
 ```sql
--- 1. Garantir que o motor V2 está em repouso (Segurança)
+-- 1. Confirmar motor OFF (Obrigatório para a fase de instalação)
 -- UPDATE public.atis_automation_settings SET global_enabled = false WHERE id = 1;
 
--- 2. Criação Idempotente do Scheduler V2 (Tick Global)
--- O comando utiliza uma subquery para buscar o segredo do Vault dinamicamente.
+-- 2. Criação Idempotente do Tick Global
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'atis-send-every-minute') THEN
@@ -92,43 +73,65 @@ BEGIN
         );
     END IF;
 END $$;
+```
 
--- 3. Desativação Controlada dos Jobs MIGRATED (Via API Oficial)
--- Executar após validar que o atis-send está sendo chamado corretamente.
+---
+
+## BLOCO C1-VERIFY — VALIDAÇÃO DINÂMICA
+Aguardar 2-5 minutos e executar:
+```sql
+-- 1. Verificar histórico de execução do pg_cron
+SELECT runid, jobid, start_time, end_time, status, return_message 
+FROM cron.job_run_details 
+WHERE command LIKE '%atis-send%' 
+ORDER BY start_time DESC 
+LIMIT 5;
+
+-- 2. Verificar fila do pg_net (Respostas HTTP)
+-- Nota: Caso a tabela net.http_response não esteja acessível, validar via logs da Edge Function.
+-- SELECT * FROM net.http_request_queue WHERE url LIKE '%atis-send%' ORDER BY created_at DESC LIMIT 5;
+```
+**CRITÉRIO DE SUCESSO:** `status = 'succeeded'` no `job_run_details` e resposta `200 OK` na Edge Function (conferir via dashboard/logs).
+
+---
+
+## BLOCO C2 — CUTOVER (DESATIVAÇÃO DOS LEGADOS)
+*Executar apenas se C1-VERIFY for bem-sucedido.*
+
+```sql
+-- Desativar SOMENTE os 5 jobs classificados como MIGRATED
 SELECT cron.alter_job(job_id := 11, active := false); -- daily-verse-push-final
 SELECT cron.alter_job(job_id := 18, active := false); -- atis-daily-devotional-every-minute
 SELECT cron.alter_job(job_id := 19, active := false); -- atis-birthday-greeting-every-minute
 SELECT cron.alter_job(job_id := 21, active := false); -- atis-daily-verse-dm-every-minute
 SELECT cron.alter_job(job_id := 17, active := false); -- culto-reminder-every-minute
+
+-- Manter os outros 6 jobs ATIVOS conforme classificação final.
 ```
 
 ---
 
-## BLOCO D — ROLLBACK
-Executar caso ocorram anomalias no tick global.
-
+## BLOCO D1 — ROLLBACK (ANTES DO CUTOVER)
+*Se o scheduler V2 falhar na instalação ou validação.*
 ```sql
--- 1. Remover o Scheduler V2
 SELECT cron.unschedule('atis-send-every-minute');
+-- Nenhum legado a reativar, pois C2 não foi executado.
+```
 
--- 2. Reativar Jobs Originais
+## BLOCO D2 — ROLLBACK (PÓS-CUTOVER)
+*Se anomalias surgirem após desligar os legados.*
+```sql
+-- 1. Reativar Jobs Originais
 SELECT cron.alter_job(job_id := 11, active := true);
 SELECT cron.alter_job(job_id := 18, active := true);
 SELECT cron.alter_job(job_id := 19, active := true);
 SELECT cron.alter_job(job_id := 21, active := true);
 SELECT cron.alter_job(job_id := 17, active := true);
 
--- Nota: Os outros 6 jobs nunca foram alterados, permanecendo ativos.
+-- 2. Remover V2 (Opcional, dependendo da investigação)
+-- SELECT cron.unschedule('atis-send-every-minute');
 ```
 
 ---
-
-## Checklist Administrativa de Execução
-1. [ ] Provisionar `ATIS_SERVICE_ROLE_TOKEN` no Vault.
-2. [ ] Validar Bloco A (Snapshot atual).
-3. [ ] Aplicar Item 2 do Bloco C (Criar tick).
-4. [ ] Monitorar logs da Edge Function `atis-send` por 5 minutos.
-5. [ ] Se a chamada `pg_net` → `atis-send` retornar 200, aplicar Item 3 do Bloco C (Desativar legados).
-6. [ ] Reativar o motor global (`global_enabled = true`) conforme necessidade da Canary.
-
-**PACOTE DE CUTOVER PRONTO — AGUARDANDO ADMIN WRITE**
+**PACOTE ADMINISTRATIVO FINAL PRONTO — AGUARDANDO ADMIN WRITE**
+*(Execução bloqueada por ambiente Read-Only)*

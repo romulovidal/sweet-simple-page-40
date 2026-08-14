@@ -70,12 +70,15 @@ export async function runAtisAutomations(workerName: string) {
     const config = log.atis_notification_configs;
     if (!config || !config.enabled) continue;
 
-    // Se o worker global encontrar um retry de um runner especializado, ele deve respeitar?
-    // Para segurança, o global Tick processa QUALQUER retry vencido, pois o log já existe
-    // e o claim atômico garante que não haverá duplicidade.
+    // A FASE B GLOBAL deve excluir logs pertencentes a runners especializados.
+    // Isso garante que a regra de negócio completa (ex: incremento de current_day nos planos)
+    // seja executada pelo runner dono da regra.
+    if (config.source_key && SPECIALIZED_SOURCE_KEYS.has(config.source_key)) {
+      continue;
+    }
+
     console.log(`[AtisRunner] Processing retry for log ${log.id} (Config: ${config.name})`);
     
-    // Simula o recipient para o motor V2
     const recipient = {
       recipientType: log.recipient_type,
       recipientKey: log.recipient_key

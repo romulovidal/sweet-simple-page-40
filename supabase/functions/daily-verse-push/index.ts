@@ -84,13 +84,21 @@ async function isAuthorizedTrigger(
     });
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData?.user) {
-      console.log("User authentication failed");
+      console.log("User authentication failed", userError);
       return { ok: false, manual: false };
     }
-    const { data: isAdmin } = await userClient.rpc("has_role", {
+    
+    // We use the service client to check role to avoid RLS issues on user_roles
+    const serviceClient = createClient(supabaseUrl, serviceKey);
+    const { data: isAdmin, error: roleError } = await serviceClient.rpc("has_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
+    
+    if (roleError) {
+      console.error("Role check RPC failed", roleError);
+    }
+
     if (isAdmin === true) {
       console.log("Authorized as admin user");
       // Authenticated admin users ARE manual triggers.

@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
- import webpush from "https://esm.sh/web-push@3.6.7";
+import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 import { safeSend } from "../_shared/atis-antiban.ts";
 
@@ -29,7 +29,7 @@ function isSafeRelativeUrl(value: string) {
 async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) {
-    return { error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+    return { error: new Response(JSON.stringify({ error: "Unauthorized", details: "Missing Bearer token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   const token = authHeader.replace(/^Bearer\s+/, "");
@@ -47,27 +47,30 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
 
   const { data: { user }, error: userError } = await userClient.auth.getUser();
   if (userError || !user) {
-    return { error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+    return { error: new Response(JSON.stringify({ error: "Unauthorized", details: userError?.message || "Invalid user" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
-  const { data: isAdmin, error: roleError } = await userClient.rpc("has_role", {
+  // We use the service client to check role to avoid RLS issues on user_roles
+  const serviceClient = createClient(supabaseUrl, serviceKey);
+  const { data: isAdmin, error: roleError } = await serviceClient.rpc("has_role", {
     _user_id: user.id,
     _role: "admin",
   });
 
   if (roleError || !isAdmin) {
-    return { error: new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+    console.error(`[send-push] Role check failed for user ${user.id}:`, roleError);
+    return { error: new Response(JSON.stringify({ error: "Forbidden", details: roleError?.message || "User is not an admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   return { userId: user.id };
 }
 
- async function sendToSubscription(
-   supabase: any,
-   sub: { id: string; endpoint: string; p256dh: string; auth: string },
-   payload: string,
-   options: any,
- ) {
+async function sendToSubscription(
+  supabase: any,
+  sub: { id: string; endpoint: string; p256dh: string; auth: string },
+  payload: string,
+  options: any,
+) {
   try {
     console.log(`[send-push] Sending to endpoint: ${sub.endpoint.slice(0, 50)}...`);
     await webpush.sendNotification(
@@ -330,7 +333,7 @@ Deno.serve(async (req) => {
     );
   } catch (e) {
     console.error("Error:", e);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
+    return new Response(JSON.stringify({ error: "Internal error", details: e instanceof Error ? e.message : String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -113,8 +113,10 @@ const AtisAutomations = () => {
       load();
     } catch (e: any) {
       console.error("[ATIS AUTOMATIONS] Toggle error:", e);
-      toast.error(`Erro ao atualizar: ${e.message} ${e.details || ''}`);
+      const isPermError = e.code === '42501' || e.message?.includes('42501');
+      toast.error(`Erro ao atualizar: ${e.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
     }
+
   };
 
   const handleDelete = async (automation: Automation) => {

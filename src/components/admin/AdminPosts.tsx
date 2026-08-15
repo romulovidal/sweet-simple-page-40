@@ -74,17 +74,21 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
       const { error } = await supabase.from("admin_posts").update(data).eq("id", editingPost.id);
       if (error) {
         console.error("[ADMIN POSTS] Update error:", error);
-        toast.error(`Erro ao salvar: ${error.message} ${error.details || ''}`);
+        const isPermError = error.code === '42501' || error.message?.includes('42501');
+        toast.error(`Erro ao salvar: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
         return;
       }
+
       toast.success("Postagem atualizada!");
     } else {
       const { error } = await supabase.from("admin_posts").insert(data);
       if (error) {
         console.error("[ADMIN POSTS] Insert error:", error);
-        toast.error(`Erro ao criar: ${error.message} ${error.details || ''}`);
+        const isPermError = error.code === '42501' || error.message?.includes('42501');
+        toast.error(`Erro ao criar: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
         return;
       }
+
       toast.success("Postagem criada!");
     }
     if (isNew && data.is_active) {
@@ -104,12 +108,11 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     const { error } = await supabase.from("admin_posts").delete().eq("id", id);
     if (error) {
       console.error("[ADMIN POSTS] Delete error:", error);
-      if (error.code === '42501') {
-        console.warn("[ADMIN] Permission denied on admin_posts delete.");
-      }
-      toast.error(`Erro ao excluir: ${error.message}`);
+      const isPermError = error.code === '42501' || error.message?.includes('42501');
+      toast.error(`Erro ao excluir: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
       return;
     }
+
     toast.success("Postagem excluída");
     fetchData();
   };
@@ -119,12 +122,11 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     const { error } = await supabase.from("admin_posts").update({ is_active: nextIsActive }).eq("id", post.id);
     if (error) {
       console.error("[ADMIN POSTS] Toggle error:", error);
-      if (error.code === '42501') {
-        console.warn("[ADMIN] Permission denied on admin_posts update.");
-      }
-      toast.error(`Erro ao atualizar visibilidade: ${error.message}`);
+      const isPermError = error.code === '42501' || error.message?.includes('42501');
+      toast.error(`Erro ao atualizar visibilidade: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
       return;
     }
+
     if (!post.is_active && nextIsActive) {
       try {
         await sendPostPush(post);

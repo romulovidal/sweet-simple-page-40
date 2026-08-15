@@ -65,17 +65,30 @@ const AdminPushSender = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Tenta extrair mensagem de erro detalhada da Edge Function
+        const errorMsg = error.message || "Erro desconhecido ao enviar";
+        throw new Error(errorMsg);
+      }
 
-      // O histórico é registrado no servidor (send-push), evitando duplicidade.
-      toast.success(`Push enviado! ${data?.sent || 0} entregues, ${data?.failed || 0} falhas`);
+      const sentCount = data?.sent || 0;
+      const failedCount = data?.failed || 0;
+      
+      if (sentCount === 0 && failedCount > 0) {
+        toast.error(`Falha total no envio: ${failedCount} erros. Verifique os logs.`);
+      } else if (failedCount > 0) {
+        toast.warning(`Push enviado com falhas parciais: ${sentCount} sucessos, ${failedCount} falhas.`);
+      } else {
+        toast.success(`Push enviado com sucesso para ${sentCount} dispositivos!`);
+      }
+      
       setTitle("");
       setBody("");
       setUrl("/");
       loadLog();
-    } catch (e) {
-      toast.error("Erro ao enviar notificação");
-      console.error(e);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao conectar com o servidor de notificações");
+      console.error("[AdminPushSender] error:", e);
     } finally {
       setSending(false);
     }

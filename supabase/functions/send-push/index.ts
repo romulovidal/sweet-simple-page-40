@@ -69,6 +69,7 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
    options: any,
  ) {
   try {
+    console.log(`[send-push] Sending to endpoint: ${sub.endpoint.slice(0, 50)}...`);
     await webpush.sendNotification(
       {
         endpoint: sub.endpoint,
@@ -77,13 +78,20 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
       payload,
       options,
     );
+    console.log(`[send-push] Success for ${sub.id}`);
     return { sent: 1, failed: 0 };
   } catch (e: unknown) {
     const statusCode = typeof e === "object" && e !== null && "statusCode" in e ? Reflect.get(e, "statusCode") : undefined;
     const errorBody = typeof e === "object" && e !== null && "body" in e ? Reflect.get(e, "body") : undefined;
 
-    console.error(`Push failed for ${sub.endpoint}:`, statusCode, errorBody);
+    console.error(`[send-push] Push failed for ${sub.id} (${sub.endpoint.slice(0, 40)}...):`, {
+      statusCode,
+      errorBody,
+      message: e instanceof Error ? e.message : String(e)
+    });
+
     if (statusCode === 410 || statusCode === 404) {
+      console.warn(`[send-push] Subscription ${sub.id} is expired or gone. Deleting.`);
       await supabase.from("push_subscriptions").delete().eq("id", sub.id);
     }
     return { sent: 0, failed: 1 };

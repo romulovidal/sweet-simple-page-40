@@ -42,7 +42,7 @@ export function useIsAdmin() {
           
           if (!cancelled) {
             // Check if user is the hardcoded super admin as secondary fallback
-            const isSA = user.id === '4e30d00e-622d-4c38-b9e8-7fb253f2244e';
+            const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
             
             // If RPC check fails due to schema permissions, we might still have data from a successful .from() query
             // but since error is truthy here, we use the isSA check.
@@ -55,7 +55,7 @@ export function useIsAdmin() {
 
         // We cast role to string to avoid TS errors with the generated enum which doesn't know about super_admin yet
         const roles = data?.map(r => String(r.role)) || [];
-        const isSA = roles.includes("super_admin") || user.id === '4e30d00e-622d-4c38-b9e8-7fb253f2244e';
+        const isSA = roles.includes("super_admin") || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
         const isA = isSA || roles.includes("admin");
 
         console.log("[ADMIN AUTH] Result:", { 

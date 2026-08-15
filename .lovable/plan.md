@@ -1,32 +1,21 @@
-# Plano de Refatoração Definitiva do Painel Administrativo ATIS
+# Plano de Refatoração ATIS V2 — Painel Administrativo
 
-Este plano visa alinhar 100% o frontend administrativo do ATIS com a arquitetura backend V2, garantindo consistência, integridade de dados e eliminação de fluxos legados redundantes.
+Este plano visa alinhar o frontend do ATIS com o backend real no projeto `karyuuhxeismshhxuokg`, eliminando inconsistências e consolidando a arquitetura V2.
 
-## 1. Padronização do Motor V2 (Automations & Groups)
-- **AtisAutomations.tsx**: 
-    - Corrigir o salvamento de `metadata` para garantir que o motor global do backend receba as configurações específicas de cada automação (ex: prompts de IA, configurações de retry).
-    - Validar o fluxo de `atis_notification_targets` para que a adição/remoção de destinatários seja atômica.
-- **AtisGroups.tsx**:
-    - Garantir que `notification_times` e `notification_types` sejam salvos corretamente como JSON no banco, respeitando o contrato esperado pelas Edge Functions.
-    - Unificar a listagem de tipos de notificação com as chaves reais utilizadas no backend.
+## Etapa 1: Sincronização de Componentes Legados (Devocional e Aniversário)
+- **Arquivo:** `src/components/atis/AtisDailyDevotional.tsx` e `src/components/atis/AtisBirthdayAuto.tsx`.
+- **Mudança:** Remover o gerenciamento local de grupos e utilizar a interface de `atis_notification_targets` por baixo dos panos (ou redirecionar o usuário para a aba de automações).
+- **Objetivo:** Garantir que a fonte de verdade para alvos seja sempre a tabela `atis_notification_targets`.
 
-## 2. Refatoração de Componentes "Sistema" (Legados)
-- **AtisDailyDevotional.tsx** & **AtisBirthdayAuto.tsx**:
-    - Remover a lógica de gestão local de grupos. Estes componentes passarão a ser atalhos de configuração para as automações `legacy:atis_daily_devotional` e `legacy:atis_birthday_greeting`.
-    - Redirecionar a gestão de "quem recebe" para a aba de Automações V2 (Targets), mantendo na UI apenas o switch de habilitar/desabilitar e o horário.
+## Etapa 2: Consolidação do AtisAutomations
+- **Mudança:** Garantir que o salvamento de `metadata` em `AtisAutomations.tsx` não sobrescreva chaves essenciais do backend.
+- **Melhoria:** Adicionar aviso visual claro quando uma automação `system:*` ou `legacy:*` está sendo editada, indicando que ela possui regras específicas no motor V2.
 
-## 3. Sincronização de Status e Logs
-- **AtisLogs.tsx** & **AtisLogDetails.tsx**:
-    - Garantir que todos os status do runner (`processing`, `retrying`, `skipped`, etc.) sejam visualmente mapeados e detalhados.
-    - Sanitização rigorosa de secrets nos payloads de log para evitar vazamento de chaves de API.
-- **AtisDashboard.tsx**:
-    - Atualizar métricas para refletir o estado das tabelas V2 (`atis_automation_logs` em vez de lógicas dispersas).
+## Etapa 3: Auditoria de Disparo Manual
+- **Mudança:** Revisar o botão "Enviar agora" nos componentes para garantir que eles chamem a Edge Function correta passando o `config_id` correto, permitindo que o log de execução seja registrado no histórico central.
 
-## 4. Segurança e Permissões
-- Reforçar o uso de `useIsAdmin` em todas as rotas de mutação.
-- Garantir que campos de identidade e chaves de sistema (`source_key`) permaneçam bloqueados para edição manual, evitando quebra da integração com o cron.
+## Etapa 4: Dashboard Centralizado
+- **Mudança:** Atualizar `AtisDashboard.tsx` para buscar métricas de `atis_automation_logs` em vez de contar apenas mensagens brutas em `atis_messages_log`, refletindo melhor o status das automações.
 
-## Detalhes Técnicos
-- Uso extensivo de `atisDb` para centralizar o acesso ao Supabase.
-- Migração de lógicas de "Send Now" para invocar as Edge Functions corretas com parâmetros de override (ex: `force: true`).
-- Padronização de datas para o timezone "America/Fortaleza" em toda a interface.
+## Etapa 5: Validação de Build e Tipagem
+- Garantir que todas as alterações respeitem os tipos definidos no `atisDb` e `supabase/types.ts`.

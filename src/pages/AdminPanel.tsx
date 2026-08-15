@@ -232,7 +232,7 @@ const AdminPanel = () => {
         <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Categorias</p>
         <h2 className="text-xl font-bold text-[hsl(var(--dark-text))]">Escolha uma área</h2>
       </div>
-      {ADMIN_SECTIONS.map((section) => {
+      {getVisibleSections(isSuperAdmin).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <button

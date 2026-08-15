@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const engine = new AtisEngine(admin, 'atis-daily-devotional')
   const { dateKey, period } = brNow()
+  const body = await req.json().catch(() => ({}))
+  const isManual = body?.is_manual === true || body?.force === true;
 
   const { data: config } = await admin
     .from('atis_notification_configs')
@@ -49,7 +51,9 @@ Deno.serve(async (req) => {
     .eq('source_key', 'legacy:atis_daily_devotional')
     .maybeSingle()
 
-  if (!config?.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
+  if (!config?.enabled && !isManual) {
+    return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
+  }
 
   const { data: queueVerse } = await admin.from('daily_verse_queue').select('verse_text, verse_ref').eq('scheduled_date', dateKey).order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!queueVerse) return new Response(JSON.stringify({ skipped: true, reason: 'no-verse-scheduled' }), { headers: corsHeaders })
@@ -58,7 +62,8 @@ Deno.serve(async (req) => {
   const text = `${titleByPeriod(period)}\n\n📖 *${queueVerse.verse_ref}*\n"${queueVerse.verse_text}"\n\n💜 *Reflexão Devocional*\n${devotional || '_Reflita hoje sobre este versículo._'}\n\n— Bíblia Atalaia`
 
   // O motor V2 cuida dos targets, idempotência e envio
-  const result = await engine.runConfig(config.id, `${dateKey}Tdevotional`)
+  // Passamos o texto gerado como override para o motor processar
+  const result = await engine.runConfig(config.id, `${dateKey}Tdevotional`, text)
 
   return new Response(JSON.stringify({ ok: true, engineResult: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })

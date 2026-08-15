@@ -90,11 +90,11 @@ export async function safeSend(
   const isManual = opts.isManual === true;
 
   // 1. Verificações Básicas
-  if (!cfg.enabled && kind !== 'reply' && !isManual) {
+  if (!cfg.enabled && kind !== 'reply' && !isManual && !opts.isManual) {
     return { ok: false, status: 0, body: 'bot-disabled', jid: key, skipped: true, reason: 'global_disabled' };
   }
 
-  if (kind !== 'reply' && !isManual && isQuietHour(cfg)) {
+  if (kind !== 'reply' && !isManual && !opts.isManual && isQuietHour(cfg)) {
     return { ok: false, status: 0, body: 'quiet-hours', jid: key, skipped: true, reason: 'quiet_hours' };
   }
 

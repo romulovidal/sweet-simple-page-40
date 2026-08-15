@@ -12,6 +12,7 @@ const VerseShareRedirect = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [shareData, setShareData] = useState<any>(null);
 
   useEffect(() => {
     if (!slug) {
@@ -34,6 +35,8 @@ const VerseShareRedirect = () => {
         return;
       }
 
+      setShareData(data);
+
       const verses = (data.verses ?? []) as number[];
       const versesParam = verses.join(",");
       const firstVerse = verses.length ? Math.min(...verses) : null;
@@ -43,10 +46,19 @@ const VerseShareRedirect = () => {
       });
       if (firstVerse) params.set("verse", String(firstVerse));
       if (versesParam) params.set("verses", versesParam);
-      navigate(
-        `/biblia?${params.toString()}`,
-        { replace: true },
-      );
+
+      // Delay redirect to allow meta tags to be read by simple crawlers
+      // though Helmet works best for JS-enabled ones.
+      const timer = setTimeout(() => {
+        if (!cancelled) {
+          navigate(
+            `/biblia?${params.toString()}`,
+            { replace: true },
+          );
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
     })();
 
     return () => {
@@ -57,11 +69,11 @@ const VerseShareRedirect = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <PageHead
-        title={data ? `${data.book_name} ${data.chapter}:${(data.verses as number[]).join(",")} — A Bíblia do Atalaia` : "Abrindo versículo — A Bíblia do Atalaia"}
-        description={data?.text_snippet || "Carregando versículo compartilhado."}
-        image={`https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/og/${slug}.png`}
+        title={shareData ? `${shareData.book_name} ${shareData.chapter}:${(shareData.verses as number[]).join(",")} — A Bíblia do Atalaia` : "Abrindo versículo — A Bíblia do Atalaia"}
+        description={shareData?.text_snippet || "Carregando versículo compartilhado."}
+        image={slug ? `https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/og/${slug}.png` : undefined}
         path={`/v/${slug ?? ""}`}
-        noindex={!data}
+        noindex={!shareData}
       />
       {error ? (
         <>

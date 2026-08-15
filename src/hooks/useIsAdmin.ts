@@ -36,13 +36,13 @@ export function useIsAdmin() {
         if (error) {
           console.error("[ADMIN AUTH] Error fetching roles:", error);
           
-          // Secondary fallback using direct table query (redundant if .from failed, but good for clarity)
-          // or checking the hardcoded super admin
+          // Secondary fallback using hardcoded super admin UUID
           const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
           
           if (!cancelled) {
             setIsSuperAdmin(isSA);
             setIsAdmin(isSA);
+            setRole(isSA ? "super_admin" : null);
             setLoading(false);
           }
           return;

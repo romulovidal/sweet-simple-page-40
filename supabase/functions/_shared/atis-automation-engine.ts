@@ -157,6 +157,7 @@ export class AtisEngine {
     
     // 4. Envio Seguro (Antiban + Evolution)
     try {
+      console.log(`[AtisEngine] Attempting send to ${recipient.recipientKey} for config ${config.name}`);
       const sendResult = await legacySafeSend(
         this.supabase,
         recipient.recipientKey,
@@ -168,6 +169,9 @@ export class AtisEngine {
           isManual: config.automation_mode === 'manual'
         }
       );
+
+      console.log(`[AtisEngine] Send result for ${recipient.recipientKey}:`, sendResult.ok ? 'SUCCESS' : 'FAILED', sendResult.reason || '');
+
 
       // 5. Registrar Tentativa
       await this.supabase.from('atis_automation_attempts').insert({

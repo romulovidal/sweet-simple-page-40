@@ -6,19 +6,7 @@ import { AtisEngine } from "./atis-automation-engine.ts";
  */
 export async function runAtisAutomations(workerName: string) {
   const { dateKey, timeKey, weekday } = brNow();
-  console.log("[AtisRunner] Initializing engine...");
   const engine = new AtisEngine(supabaseAdmin, workerName);
-
-  // Debug log entry
-  await supabaseAdmin.from("atis_automation_logs").upsert({
-    config_id: "a9db9d6f-e1bb-47c2-921f-6e5b269a05ce",
-    recipient_type: "individual",
-    recipient_key: "debug",
-    occurrence_key: `debug-${new Date().toISOString()}`,
-    idempotency_key: `debug-${workerName}-${new Date().toISOString().substring(0, 16)}`,
-    status: "skipped",
-    last_error: `Worker ${workerName} tick at ${timeKey} (weekday ${weekday})`
-  }, { onConflict: "idempotency_key" });
 
   if (!(await engine.isGlobalEnabled())) {
     console.log("[AtisRunner] Global disabled.");

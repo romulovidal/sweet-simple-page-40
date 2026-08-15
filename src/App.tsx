@@ -43,6 +43,8 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
+import RootRoute from "@/routes/index";
+
 
 
 
@@ -76,6 +78,7 @@ const AppContent = () => {
         <ScrollToTop />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname + resetKey}>
+            <Route path="/setup-status" element={<RootRoute />} />
             <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
             <Route path="/biblia" element={<PageTransition><BiblePage /></PageTransition>} />
             <Route path="/planos" element={<PageTransition><PlansPage /></PageTransition>} />

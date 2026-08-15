@@ -9,10 +9,11 @@ Este plano visa diagnosticar e corrigir falhas sistêmicas de salvamento no Pain
   - Verificar se a falha `42501` ocorre por falta de `EXECUTE` na função `has_role` ou falta de privilégios (`GRANT`) nas tabelas.
 - **Investigação de Hierarquia**: Confirmar via logs se o `super_admin` está sendo reconhecido tanto no frontend (`useIsAdmin`) quanto nas políticas RLS do backend.
 
-## 2. Correções de Infraestrutura (se necessário)
-- **Permissões Globais**: Garantir que o papel `authenticated` tenha `USAGE` no schema `public` e as permissões necessárias (`SELECT, INSERT, UPDATE, DELETE`) em todas as tabelas administrativas.
-- **Sincronização de Schema**: Corrigir discrepâncias entre o payload enviado pelo frontend e as colunas reais no banco (ex: campos obrigatórios ausentes ou colunas renomeadas).
-- **Reparo de Políticas RLS**: Ajustar políticas que possam estar bloqueando mutações legítimas, garantindo que a hierarquia `super_admin -> admin` seja respeitada no backend.
+## 2. Correções de Infraestrutura (Sob Demanda)
+- **Identificação e Reparo Pontual**:
+  - Capturar erro real → Identificar objeto afetado → Verificar GRANT/RLS/Função → Corrigir somente a permissão necessária.
+  - Não conceder permissões globais indiscriminadamente ao papel `authenticated`.
+  - Manter RLS ativo em tabelas administrativas com `has_role` validando admin/super_admin.
 
 ## 3. Estabilização dos Painéis
 - **Admin**: Validar fluxos de Usuários, Posts, Planos e Configurações.
@@ -23,3 +24,4 @@ Este plano visa diagnosticar e corrigir falhas sistêmicas de salvamento no Pain
 - Testes de CRUD reais contra o projeto `karyuuhxeismshhxuokg`.
 - Verificação de persistência e refetch.
 - Auditoria final de console e build.
+

@@ -86,6 +86,7 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
       toast.success("Instância configurada. Escaneie o QR Code se necessário.");
       refresh();
     } catch (e: any) {
+      console.error("[ATIS EVO] Create instance error:", e);
       toast.error(e.message ?? "Erro ao criar instância");
     } finally {
       setBusy(false);

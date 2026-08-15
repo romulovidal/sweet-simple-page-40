@@ -125,8 +125,8 @@ const AtisConfig = () => {
     }, { onConflict: "id" });
     setSaving(false);
     if (error) {
-      console.error("[AtisConfig] save error", error);
-      toast.error(`Erro ao salvar: ${error.message}`);
+      console.error("[ATIS CONFIG] Save error:", error);
+      toast.error(`Erro ao salvar: ${error.message} ${error.details || ''}`);
     } else {
       toast.success("Configuração salva");
     }

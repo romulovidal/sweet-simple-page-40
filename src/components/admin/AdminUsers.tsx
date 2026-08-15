@@ -74,7 +74,11 @@ const AdminUsers = ({ users, fetchData }: AdminUsersProps) => {
                 <div className="flex gap-2">
                   <Button size="sm" onClick={async () => {
                     const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
-                    if (error) { toast.error("Erro ao salvar"); return; }
+                    if (error) { 
+                      console.error("[ADMIN USERS] Profile update error:", error);
+                      toast.error(`Erro ao salvar: ${error.message}`); 
+                      return; 
+                    }
                     toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
                   }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
                   <Button size="sm" variant="outline" onClick={() => setEditingUser(null)} className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">Cancelar</Button>

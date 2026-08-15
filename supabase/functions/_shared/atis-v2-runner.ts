@@ -31,6 +31,8 @@ export async function runAtisAutomations(workerName: string) {
     "system:series",
     "system:welcome",
     "system:broadcasts",
+    "legacy:atis_daily_devotional",
+    "legacy:atis_birthday_greeting",
   ]);
 
   // Filtra configs que não são gerenciadas por runners especializados

@@ -61,11 +61,15 @@ const AtisDailyDevotional = () => {
     try {
       const { data, error } = await supabase.functions.invoke("atis-daily-devotional", {
         method: "POST",
-        body: { force: true },
+        body: { force: true, is_manual: true },
       });
       if (error) throw error;
-      const sent = (data as any)?.sent ?? 0;
-      toast.success(`Devocional enviado para ${sent} grupo(s)`);
+      
+      if (data?.engineResult?.ok === false) {
+        toast.error(`Falha no motor: ${data.engineResult.reason || data.engineResult.error}`);
+      } else {
+        toast.success("Devocional enviado com sucesso para todos os alvos ativos");
+      }
     } catch (e: any) {
       toast.error("Erro ao enviar: " + (e?.message ?? e));
     } finally {

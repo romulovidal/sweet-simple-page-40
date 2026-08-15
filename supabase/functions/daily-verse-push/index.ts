@@ -140,7 +140,8 @@ serve(async (req) => {
      const auth = await isAuthorizedTrigger(req, supabaseUrl, anonKey, serviceKey);
      const hasAuthHeader = !!req.headers.get("Authorization");
      if (hasAuthHeader && !auth.ok) {
-       return new Response(JSON.stringify({ error: "Unauthorized" }), {
+       console.error("[daily-verse-push] Unauthorized manual trigger attempt");
+       return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {
          status: 401,
          headers: { ...corsHeaders, "Content-Type": "application/json" },
        });

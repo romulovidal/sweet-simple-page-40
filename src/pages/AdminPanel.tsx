@@ -104,6 +104,19 @@ const ADMIN_SECTIONS = [
 const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
   s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title }))
 );
+
+const getVisibleSections = (isSA: boolean) => {
+  return ADMIN_SECTIONS.map(section => {
+    if (section.id !== 'system') return section;
+    return {
+      ...section,
+      tabs: section.tabs.filter(tab => {
+        if (tab.id === 'roles') return isSA;
+        return true;
+      })
+    };
+  });
+};
 const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
 const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 

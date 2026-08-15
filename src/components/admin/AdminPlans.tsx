@@ -57,7 +57,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
       const { data: newPlan, error } = await supabase.from("admin_plans").insert(data).select().single();
       if (error || !newPlan) { 
         console.error("[ADMIN PLANS] Insert error:", error);
-        toast.error(`Erro ao criar: ${error?.message || 'Erro desconhecido'}`); 
+        toast.error(`Erro ao criar: ${error?.message || 'Erro desconhecido'}${error?.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
         return; 
       }
       planId = newPlan.id;

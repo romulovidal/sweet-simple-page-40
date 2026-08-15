@@ -124,10 +124,12 @@ Deno.serve(async (req) => {
 
     const authResult = await requireAdminUser(req, supabaseUrl, anonKey, serviceKey);
     if (authResult.error) {
+      console.error("[send-push] Auth failed:", authResult.error);
       return authResult.error;
     }
 
     const rawBody = await req.json();
+    console.log("[send-push] Received request body:", JSON.stringify(rawBody));
     const parsed = PushPayloadSchema.safeParse(rawBody);
 
     if (!parsed.success) {

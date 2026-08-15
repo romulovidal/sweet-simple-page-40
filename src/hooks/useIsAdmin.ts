@@ -5,56 +5,68 @@ import { useAuth } from "@/hooks/useAuth";
 export function useIsAdmin() {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
+    
     if (!user) {
       setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setRole(null);
       setLoading(false);
       return;
     }
+
     let cancelled = false;
 
     const checkAdmin = async () => {
       try {
-        // Try direct query first (more reliable for PostgREST cache)
+        console.log("[ADMIN AUTH] Validating roles for:", user.id);
+        
         const { data, error } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle();
+          .eq("user_id", user.id);
 
-        if (!cancelled) {
-          if (data) {
-            console.log("[AUTH DEBUG] useIsAdmin direct match:", data);
-            setIsAdmin(true);
-            setLoading(false);
-            return;
-          }
+        if (cancelled) return;
 
-          if (error) {
-            console.error("[AUTH DEBUG] useIsAdmin direct error:", error);
-          }
-
-          // Fallback to RPC
-          const { data: rpcData, error: rpcError } = await supabase.rpc("has_role", {
+        if (error) {
+          console.error("[ADMIN AUTH] Error fetching roles:", error);
+          const { data: hasAdmin } = await supabase.rpc("has_role", {
             _user_id: user.id,
             _role: "admin"
           });
-
+          
           if (!cancelled) {
-            if (rpcError) {
-              console.error("[AUTH DEBUG] useIsAdmin RPC error:", rpcError);
-            }
-            console.log("[AUTH DEBUG] useIsAdmin RPC result:", rpcData);
-            setIsAdmin(!!rpcData);
+            const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+            setIsAdmin(!!hasAdmin || isSA);
+            setIsSuperAdmin(isSA);
             setLoading(false);
           }
+          return;
         }
+
+        // We cast role to string to avoid TS errors with the generated enum which doesn't know about super_admin yet
+        const roles = data?.map(r => String(r.role)) || [];
+        const isSA = roles.includes("super_admin") || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+        const isA = isSA || roles.includes("admin");
+
+        console.log("[ADMIN AUTH] Result:", { 
+          userId: user.id, 
+          roles, 
+          isAdmin: isA, 
+          isSuperAdmin: isSA 
+        });
+
+        setIsSuperAdmin(isSA);
+        setIsAdmin(isA);
+        setRole(isSA ? "super_admin" : (isA ? "admin" : null));
+        setLoading(false);
       } catch (err) {
-        console.error("[AUTH DEBUG] useIsAdmin catch block:", err);
+        console.error("[ADMIN AUTH] Catch block:", err);
         if (!cancelled) setLoading(false);
       }
     };
@@ -66,5 +78,5 @@ export function useIsAdmin() {
     };
   }, [user, authLoading]);
 
-  return { isAdmin, loading };
+  return { isAdmin, isSuperAdmin, role, loading };
 }

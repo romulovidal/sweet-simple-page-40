@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
@@ -103,13 +104,26 @@ const ADMIN_SECTIONS = [
 const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
   s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title }))
 );
+
+const getVisibleSections = (isSA: boolean) => {
+  return ADMIN_SECTIONS.map(section => {
+    if (section.id !== 'system') return section;
+    return {
+      ...section,
+      tabs: section.tabs.filter(tab => {
+        if (tab.id === 'roles') return isSA;
+        return true;
+      })
+    };
+  });
+};
 const findTool = (id: string) => ALL_TOOLS.find(t => t.id === id);
 const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 
 const isSameView = (a: View, b: View) =>
   a.kind === b.kind && (a.kind === "home" || ("id" in a && "id" in b && a.id === b.id));
 
-const isAdminView = (value: unknown): value is View => {
+const isAdminView = (value: unknown) => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<View>;
   if (candidate.kind === "home") return true;
@@ -130,6 +144,7 @@ const writeAdminHistory = (view: View, mode: "push" | "replace") => {
 const AdminPanel = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isSuperAdmin } = useIsAdmin();
   const [view, setView] = useState<View>({ kind: "home" });
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -217,7 +232,7 @@ const AdminPanel = () => {
         <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Categorias</p>
         <h2 className="text-xl font-bold text-[hsl(var(--dark-text))]">Escolha uma área</h2>
       </div>
-      {ADMIN_SECTIONS.map((section) => {
+      {getVisibleSections(isSuperAdmin).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <button
@@ -361,7 +376,7 @@ const AdminPanel = () => {
         </p>
       </div>
 
-      {ADMIN_SECTIONS.map((section) => {
+      {getVisibleSections(isSuperAdmin).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <div key={section.id} className="space-y-2">
@@ -453,11 +468,11 @@ const AdminPanel = () => {
                   );
                 })}
                 {filteredTools.length === 0 && (
-                  <p className="px-3 text-xs text-[hsl(var(--dark-muted))]">Nada encontrado.</p>
-                )}
-              </div>
-            ) : (
-              ADMIN_SECTIONS.map((section) => (
+              <p className="px-3 text-xs text-[hsl(var(--dark-muted))]">Nada encontrado.</p>
+            )}
+          </div>
+        ) : (
+          getVisibleSections(isSuperAdmin).map((section) => (
                 <div key={section.id} className="flex flex-col gap-0.5">
                   <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] flex items-center gap-1.5">
                     <section.sectionIcon className="w-3 h-3" />

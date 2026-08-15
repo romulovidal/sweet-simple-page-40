@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 const AdminPage = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
 
@@ -17,41 +19,54 @@ const AdminPage = () => {
 
     if (!nextSession?.user) {
       setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setRole(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
 
-    console.log("[AUTH DEBUG] AdminPage starting validation for:", nextSession.user.id);
+    try {
+      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
 
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", nextSession.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", nextSession.user.id);
 
-    if (error) {
-      console.error("[AUTH DEBUG] AdminPage validation error:", error);
-      
-      // Fallback to RPC if direct query fails
-      const { data: rpcData, error: rpcError } = await supabase.rpc("has_role", {
-        _user_id: nextSession.user.id,
-        _role: "admin"
-      });
-      
-      if (rpcError) {
-        console.error("[AUTH DEBUG] AdminPage RPC fallback error:", rpcError);
-        setIsAdmin(false);
-        setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Unknown"));
+      if (error) {
+        console.error("[ADMIN AUTH] AdminPage validation error:", error);
+        
+        const { data: hasAdmin, error: rpcError } = await supabase.rpc("has_role", {
+          _user_id: nextSession.user.id,
+          _role: "admin"
+        });
+        
+        if (rpcError) {
+          console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
+          setIsAdmin(false);
+          setIsSuperAdmin(false);
+          setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Unknown"));
+        } else {
+          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          setIsAdmin(!!hasAdmin || isSA);
+          setIsSuperAdmin(isSA);
+        }
       } else {
-        console.log("[AUTH DEBUG] AdminPage RPC fallback result:", rpcData);
-        setIsAdmin(!!rpcData);
+        const roles = data?.map(r => String(r.role)) || [];
+        const isSA = roles.includes("super_admin") || nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+        const isA = isSA || roles.includes("admin");
+
+        console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });
+        
+        setIsAdmin(isA);
+        setIsSuperAdmin(isSA);
+        setRole(isSA ? "super_admin" : (isA ? "admin" : null));
       }
-    } else {
-      console.log("[AUTH DEBUG] AdminPage validation result:", data);
-      setIsAdmin(!!data);
+    } catch (err) {
+      console.error("[ADMIN AUTH] AdminPage catch block:", err);
+      setAccessError("Erro inesperado ao validar acesso.");
     }
 
     setLoading(false);

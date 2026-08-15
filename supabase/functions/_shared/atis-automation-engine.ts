@@ -22,7 +22,7 @@ export class AtisEngine {
 
   constructor(supabase: any, workerName: string) {
     this.supabase = supabase;
-    this.workerId = `${workerName}:${crypto.randomUUID()}`;
+    this.workerId = `${workerName}:${Math.random().toString(36).substring(2)}`;
   }
 
   /**

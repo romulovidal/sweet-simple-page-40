@@ -73,16 +73,16 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     if (editingPost.id) {
       const { error } = await supabase.from("admin_posts").update(data).eq("id", editingPost.id);
       if (error) {
-        console.error("Erro ao salvar post:", error);
-        toast.error(`Erro ao salvar: ${error.message}`);
+        console.error("[ADMIN POSTS] Update error:", error);
+        toast.error(`Erro ao salvar: ${error.message} ${error.details || ''}`);
         return;
       }
       toast.success("Postagem atualizada!");
     } else {
       const { error } = await supabase.from("admin_posts").insert(data);
       if (error) {
-        console.error("Erro ao criar post:", error);
-        toast.error(`Erro ao criar: ${error.message}`);
+        console.error("[ADMIN POSTS] Insert error:", error);
+        toast.error(`Erro ao criar: ${error.message} ${error.details || ''}`);
         return;
       }
       toast.success("Postagem criada!");
@@ -103,7 +103,8 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
   const deletePost = async (id: string) => {
     const { error } = await supabase.from("admin_posts").delete().eq("id", id);
     if (error) {
-      toast.error("Erro ao excluir");
+      console.error("[ADMIN POSTS] Delete error:", error);
+      toast.error(`Erro ao excluir: ${error.message}`);
       return;
     }
     toast.success("Postagem excluída");
@@ -114,7 +115,8 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     const nextIsActive = !post.is_active;
     const { error } = await supabase.from("admin_posts").update({ is_active: nextIsActive }).eq("id", post.id);
     if (error) {
-      toast.error("Erro ao atualizar visibilidade");
+      console.error("[ADMIN POSTS] Toggle error:", error);
+      toast.error(`Erro ao atualizar visibilidade: ${error.message}`);
       return;
     }
     if (!post.is_active && nextIsActive) {

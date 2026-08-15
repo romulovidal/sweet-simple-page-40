@@ -112,7 +112,8 @@ const AtisAutomations = () => {
       if (error) throw error;
       load();
     } catch (e: any) {
-      toast.error(e.message);
+      console.error("[ATIS AUTOMATIONS] Toggle error:", e);
+      toast.error(`Erro ao atualizar: ${e.message} ${e.details || ''}`);
     }
   };
 
@@ -130,7 +131,8 @@ const AtisAutomations = () => {
       toast.success("Automação excluída");
       load();
     } catch (e: any) {
-      toast.error(e.message);
+      console.error("[ATIS AUTOMATIONS] Delete error:", e);
+      toast.error(`Erro ao excluir: ${e.message} ${e.details || ''}`);
     }
   };
 

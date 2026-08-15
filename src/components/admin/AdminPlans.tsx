@@ -47,11 +47,19 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
     let planId = editingPlan.id;
     if (planId) {
       const { error } = await supabase.from("admin_plans").update(data).eq("id", planId);
-      if (error) { toast.error("Erro ao salvar"); return; }
+      if (error) { 
+        console.error("[ADMIN PLANS] Update error:", error);
+        toast.error(`Erro ao salvar: ${error.message}`); 
+        return; 
+      }
       toast.success("Plano atualizado!");
     } else {
       const { data: newPlan, error } = await supabase.from("admin_plans").insert(data).select().single();
-      if (error || !newPlan) { toast.error("Erro ao criar"); return; }
+      if (error || !newPlan) { 
+        console.error("[ADMIN PLANS] Insert error:", error);
+        toast.error(`Erro ao criar: ${error?.message || 'Erro desconhecido'}`); 
+        return; 
+      }
       planId = newPlan.id;
       toast.success("Plano criado! Agora adicione as leituras.");
     }
@@ -62,7 +70,11 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
 
   const deletePlan = async (id: string) => {
     const { error } = await supabase.from("admin_plans").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir"); return; }
+    if (error) { 
+      console.error("[ADMIN PLANS] Delete error:", error);
+      toast.error(`Erro ao excluir: ${error.message}`); 
+      return; 
+    }
     toast.success("Plano excluído"); fetchData();
   };
 
@@ -76,13 +88,22 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
       verse_start: reading.verseStart || null,
       verse_end: reading.verseEnd || null,
     });
-    if (error) { toast.error("Erro ao adicionar leitura"); return; }
+    if (error) { 
+      console.error("[ADMIN PLANS] Add reading error:", error);
+      toast.error(`Erro ao adicionar leitura: ${error.message}`); 
+      return; 
+    }
     toast.success(`Leitura adicionada ao Dia ${reading.dayNumber}`);
     fetchReadings(planId);
   };
 
   const deleteReading = async (id: string) => {
-    await supabase.from("admin_plan_readings").delete().eq("id", id);
+    const { error } = await supabase.from("admin_plan_readings").delete().eq("id", id);
+    if (error) {
+      console.error("[ADMIN PLANS] Delete reading error:", error);
+      toast.error(`Erro ao excluir leitura: ${error.message}`);
+      return;
+    }
     if (viewingPlanId) fetchReadings(viewingPlanId);
   };
 

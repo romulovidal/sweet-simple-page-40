@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, QrCode, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
-import AtisConnect from "./AtisConnect";
+import { Save, Loader2, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
 import AtisAdvancedSettings from "./AtisAdvancedSettings";
+import AtisEvolutionConfig from "./AtisEvolutionConfig";
 
 type Config = {
   id: number;

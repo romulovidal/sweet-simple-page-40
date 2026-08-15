@@ -49,7 +49,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
       const { error } = await supabase.from("admin_plans").update(data).eq("id", planId);
       if (error) { 
         console.error("[ADMIN PLANS] Update error:", error);
-        toast.error(`Erro ao salvar: ${error.message}`); 
+        toast.error(`Erro ao salvar: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
         return; 
       }
       toast.success("Plano atualizado!");

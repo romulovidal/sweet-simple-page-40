@@ -36,30 +36,41 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
   const refresh = async () => {
     setLoading(true);
     try {
-      const { data: config } = await supabase
+      const { data: config, error: configError } = await supabase
         .from("atis_config")
         .select("evolution_url, evolution_instance")
         .eq("id", 1)
         .maybeSingle();
+
+      if (configError) {
+        console.error("[AtisEvolutionConfig] config fetch error", configError);
+      }
 
       if (config) {
         setEvoUrl(config.evolution_url || "");
         setInstanceName(config.evolution_instance || "atis");
       }
 
-      const st = await call("status");
-      setWebhookUrl(st.webhookUrl || "");
-      
-      if (st.state !== "open" && st.state !== "connected") {
-        const q = await call("qr");
-        setQr(q.qr ?? null);
-        setCode(q.code ?? null);
-      } else {
-        setQr(null);
+      try {
+        const st = await call("status");
+        setWebhookUrl(st?.webhookUrl || "");
+        
+        if (st?.state !== "open" && st?.state !== "connected") {
+          const q = await call("qr");
+          setQr(q?.qr ?? null);
+          setCode(q?.code ?? null);
+        } else {
+          setQr(null);
+        }
+      } catch (callErr) {
+        console.warn("[AtisEvolutionConfig] instance call error (non-fatal)", callErr);
+        // We don't throw here to allow basic config to be shown even if Edge Function fails
       }
+      
       status.refresh();
     } catch (e: any) {
-      console.error("[AtisEvolutionConfig] error", e);
+      console.error("[AtisEvolutionConfig] fatal error", e);
+      toast.error("Erro ao carregar status da Evolution API");
     } finally {
       setLoading(false);
     }

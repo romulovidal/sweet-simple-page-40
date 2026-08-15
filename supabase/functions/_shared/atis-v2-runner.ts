@@ -84,8 +84,18 @@ export async function runAtisAutomations(workerName: string) {
       recipientKey: log.recipient_key
     };
 
-    await engine.processRecipient(config, recipient, log.occurrence_key);
-    results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+    try {
+      const result = await engine.processRecipient(config, recipient, log.occurrence_key);
+      if (!result.ok) {
+        console.warn(`[AtisRunner] Engine skipped/failed log ${log.id}:`, result.reason || result.error);
+        results.push({ id: config.id, logId: log.id, status: "retry_failed", reason: result.reason || result.error });
+      } else {
+        results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+      }
+    } catch (err) {
+      console.error(`[AtisRunner] Critical error processing log ${log.id}:`, err);
+      results.push({ id: config.id, logId: log.id, status: "error", error: err.message });
+    }
   }
 
   return { ok: true, processed: results };

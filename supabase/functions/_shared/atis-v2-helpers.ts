@@ -3,7 +3,15 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+export const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  {
+    auth: {
+      persistSession: false,
+    },
+  }
+);
 
 export function brNow(tz = "America/Fortaleza") {
   const now = new Date();

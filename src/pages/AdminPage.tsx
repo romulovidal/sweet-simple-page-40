@@ -46,7 +46,7 @@ const AdminPage = () => {
         if (rpcError) {
           console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
           // Special handling for the owner UUID even if the database is currently restricted
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          const isSA = nextSession.user.id === '4e30d00e-622d-4c38-b9e8-7fb253f2244e';
           if (isSA) {
             setIsAdmin(true);
             setIsSuperAdmin(true);
@@ -58,7 +58,7 @@ const AdminPage = () => {
             setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Acesso negado ao esquema de segurança."));
           }
         } else {
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          const isSA = nextSession.user.id === '4e30d00e-622d-4c38-b9e8-7fb253f2244e';
           setIsAdmin(!!hasAdmin || isSA);
           setIsSuperAdmin(isSA);
           if (isSA) setRole("super_admin");
@@ -66,7 +66,7 @@ const AdminPage = () => {
         }
       } else {
         const roles = data?.map(r => String(r.role)) || [];
-        const isSA = roles.includes("super_admin") || nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+        const isSA = roles.includes("super_admin") || nextSession.user.id === '4e30d00e-622d-4c38-b9e8-7fb253f2244e';
         const isA = isSA || roles.includes("admin");
 
         console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });

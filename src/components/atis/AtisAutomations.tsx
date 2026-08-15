@@ -20,7 +20,8 @@ import {
   X,
   AlertTriangle,
   Clock,
-  Users
+  Users,
+  Zap
 } from "lucide-react";
 import { 
   Dialog, 
@@ -88,6 +89,7 @@ const AtisAutomations = () => {
   const [targets, setTargets] = useState<AtisTarget[]>([]);
   const [originalTargets, setOriginalTargets] = useState<AtisTarget[]>([]);
   const [loadingTargets, setLoadingTargets] = useState(false);
+  const [runningNow, setRunningNow] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -190,6 +192,36 @@ const AtisAutomations = () => {
       toast.error("Erro ao carregar destinatários: " + e.message);
     } finally {
       setLoadingTargets(false);
+    }
+  };
+
+  const handleRunNow = async (item: Automation) => {
+    if (!confirm(`Deseja disparar a automação "${item.name}" agora para todos os seus alvos ativos?`)) return;
+    
+    setRunningNow(item.id);
+    try {
+      // Usamos a função genérica atis-send que agora suporta o runner V2
+      const { data, error } = await supabase.functions.invoke("atis-send", {
+        method: "POST",
+        body: { 
+          config_id: item.id,
+          is_manual: true,
+          force: true 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.ok === false) {
+        toast.error(`Falha ao disparar: ${data.reason || 'Erro desconhecido'}`);
+      } else {
+        toast.success(`Automação disparada com sucesso!`);
+      }
+    } catch (e: any) {
+      console.error("[ATIS] Run now error:", e);
+      toast.error(`Erro ao disparar: ${e.message}`);
+    } finally {
+      setRunningNow(null);
     }
   };
 
@@ -418,6 +450,19 @@ const AtisAutomations = () => {
                   className="flex-1 h-9 rounded-lg bg-[hsl(var(--dark-bg))] text-xs font-semibold gap-1.5 border-[hsl(var(--dark-card-hover))]"
                 >
                   <Settings2 className="w-3.5 h-3.5" /> Configurar
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={runningNow === i.id}
+                  onClick={() => handleRunNow(i)}
+                  className="h-9 w-12 rounded-lg bg-[hsl(var(--dark-bg))] border-[hsl(var(--dark-card-hover))] text-primary hover:text-primary-foreground hover:bg-primary"
+                >
+                  {runningNow === i.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5" />
+                  )}
                 </Button>
                 <Button 
                   variant="outline" 

@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
   const text = `${titleByPeriod(period)}\n\n📖 *${queueVerse.verse_ref}*\n"${queueVerse.verse_text}"\n\n💜 *Reflexão Devocional*\n${devotional || '_Reflita hoje sobre este versículo._'}\n\n— Bíblia Atalaia`
 
   // O motor V2 cuida dos targets, idempotência e envio
-  await engine.runConfig(config.id, `${dateKey}Tdevotional`)
+  const result = await engine.runConfig(config.id, `${dateKey}Tdevotional`)
 
-  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify({ ok: true, engineResult: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })

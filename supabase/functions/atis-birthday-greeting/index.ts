@@ -66,6 +66,5 @@ Deno.serve(async (req) => {
     }
   }
 
-
-  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify({ ok: true, todays: todays.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })

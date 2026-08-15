@@ -53,10 +53,10 @@ export class AtisEngine {
   /**
    * Processa uma configuração de automação para todos os seus targets.
    */
-  async runConfig(configId: string | null, occurrenceKey?: string) {
+  async runConfig(configId: string | null, occurrenceKey?: string, messageOverride?: string) {
     if (!(await this.isGlobalEnabled())) {
       console.log(`[AtisEngine] Global disabled. Skipping config ${configId}`);
-      return;
+      return { ok: false, reason: 'global_disabled' };
     }
 
     const { data: config, error } = await this.supabase
@@ -68,11 +68,12 @@ export class AtisEngine {
 
     if (error || !config) {
       console.log(`[AtisEngine] Config ${configId} not found or disabled.`);
-      return;
+      return { ok: false, reason: 'not_found_or_disabled' };
     }
 
     const tz = await this.getTimezone(config.timezone);
     const now = new Date();
+    const finalResults = [];
     
     for (const target of config.atis_notification_targets) {
       if (!target.active) continue;
@@ -85,9 +86,12 @@ export class AtisEngine {
       );
 
       for (const recipient of recipients) {
-        await this.processRecipient(config, recipient, occurrenceKey ?? this.generateOccurrenceKey(now, tz));
+        const result = await this.processRecipient(config, recipient, occurrenceKey ?? this.generateOccurrenceKey(now, tz), messageOverride);
+        finalResults.push(result);
       }
     }
+
+    return { ok: true, processed: finalResults.length, results: finalResults };
   }
 
   private generateOccurrenceKey(date: Date, tz: string): string {

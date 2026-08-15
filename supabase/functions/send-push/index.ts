@@ -69,6 +69,7 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
    options: any,
  ) {
   try {
+    console.log(`[send-push] Sending to endpoint: ${sub.endpoint.slice(0, 50)}...`);
     await webpush.sendNotification(
       {
         endpoint: sub.endpoint,
@@ -77,13 +78,20 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
       payload,
       options,
     );
+    console.log(`[send-push] Success for ${sub.id}`);
     return { sent: 1, failed: 0 };
   } catch (e: unknown) {
     const statusCode = typeof e === "object" && e !== null && "statusCode" in e ? Reflect.get(e, "statusCode") : undefined;
     const errorBody = typeof e === "object" && e !== null && "body" in e ? Reflect.get(e, "body") : undefined;
 
-    console.error(`Push failed for ${sub.endpoint}:`, statusCode, errorBody);
+    console.error(`[send-push] Push failed for ${sub.id} (${sub.endpoint.slice(0, 40)}...):`, {
+      statusCode,
+      errorBody,
+      message: e instanceof Error ? e.message : String(e)
+    });
+
     if (statusCode === 410 || statusCode === 404) {
+      console.warn(`[send-push] Subscription ${sub.id} is expired or gone. Deleting.`);
       await supabase.from("push_subscriptions").delete().eq("id", sub.id);
     }
     return { sent: 0, failed: 1 };
@@ -101,7 +109,15 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;
+    const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@atalaias.online";
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.error("[send-push] CRITICAL: VAPID keys not configured in Edge Function secrets.");
+      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const authResult = await requireAdminUser(req, supabaseUrl, anonKey, serviceKey);
     if (authResult.error) {

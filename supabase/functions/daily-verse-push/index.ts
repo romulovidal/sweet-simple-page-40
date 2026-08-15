@@ -174,29 +174,39 @@ serve(async (req) => {
        if ((!types.length || types.includes("motivational")) && times.motivational === brTimeStr && brTimeStr !== motivationalTime) dueGroupTypes.add("motivational");
      }
  
-     // 1. Check Daily Verse Push
-       const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR) || dueGroupTypes.has("verse"));
+      // 1. Check Daily Verse Push
+      const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR) || dueGroupTypes.has("verse"));
+      
+      console.log("[daily-verse-push] Verse check:", { 
+        runVerse, brTimeStr, verseTime, lastVerseDate, todayBR, isManual 
+      });
+
       if (runVerse) {
-       let baseVerse: { text: string; ref: string } | null = null;
-        const { data: queueVerse } = await supabase
+        let baseVerse: { text: string; ref: string } | null = null;
+        const { data: queueVerse, error: qErr } = await supabase
           .from("daily_verse_queue")
           .select("verse_text, verse_ref")
           .eq("scheduled_date", todayBR)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-       
-       if (queueVerse) {
-         baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
-       } else {
+        
+        if (qErr) console.error("[daily-verse-push] Queue error:", qErr);
+
+        if (queueVerse) {
+          console.log("[daily-verse-push] Found verse in queue:", queueVerse.verse_ref);
+          baseVerse = { text: queueVerse.verse_text, ref: queueVerse.verse_ref };
+        } else {
+          console.log("[daily-verse-push] No verse found for date:", todayBR);
           results.verse = { skipped: true, reason: "Nenhum versículo manual agendado" };
           if (!isManual) {
             await supabase.from("admin_settings").upsert({ key: "last_daily_verse_push_date", value: JSON.stringify(todayBR) });
           }
           baseVerse = null;
-       }
+        }
 
         if (baseVerse) {
+          console.log("[daily-verse-push] Triggering send-push for verse...");
           const finalVerse = { ref: baseVerse.ref, text: baseVerse.text };
 
           const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
@@ -207,17 +217,20 @@ serve(async (req) => {
               body: limitNotificationBody(finalVerse.text),
               url: "/",
               type: "daily-verse",
-               ttl: 86400,
-               groupsOnly: !isManual && brTimeStr !== verseTime,
+              ttl: 86400,
+              groupsOnly: !isManual && brTimeStr !== verseTime,
             }),
           });
-          results.verse = await response.json();
+          
+          const pushResp = await response.json();
+          console.log("[daily-verse-push] send-push response:", pushResp);
+          results.verse = pushResp;
           
           if (!isManual) {
             await supabase.from("admin_settings").upsert({ key: "last_daily_verse_push_date", value: JSON.stringify(todayBR) });
           }
         }
-     }
+      }
  
      // 2. Check Motivational Push (AI Generated)
       const runMotivational = onlyType

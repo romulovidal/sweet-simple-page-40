@@ -45,16 +45,23 @@ const AdminDailyVerse = () => {
         method: "POST",
         body: { only: "verse" },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || "Erro ao conectar com o serviço de notificações");
+      }
+      
       const v = (data as any)?.verse;
       if (v?.skipped) {
         toast.warning(v.reason || "Nenhum versículo agendado para hoje");
+      } else if (v?.failed > 0 && v?.sent === 0) {
+        toast.error(`Falha ao reenviar: ${v.failed} erros. Verifique os logs de push.`);
+      } else if (v?.failed > 0) {
+        toast.warning(`Reenviado com falhas parciais: ${v.sent} sucessos, ${v.failed} falhas.`);
       } else {
-        toast.success(`Versículo do dia reenviado! ${v?.sent ?? 0} entregues${v?.failed ? `, ${v.failed} falhas` : ""}`);
+        toast.success(`Versículo do dia reenviado com sucesso para ${v?.sent ?? 0} dispositivos!`);
       }
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao reenviar versículo do dia");
+    } catch (e: any) {
+      console.error("[AdminDailyVerse] resend error:", e);
+      toast.error(e?.message || "Erro ao reenviar versículo do dia");
     } finally {
       setResending(false);
     }

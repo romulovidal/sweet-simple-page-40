@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, QrCode, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
-import AtisConnect from "./AtisConnect";
+import { Save, Loader2, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check, QrCode } from "lucide-react";
 import AtisAdvancedSettings from "./AtisAdvancedSettings";
+import AtisEvolutionConfig from "./AtisEvolutionConfig";
 
 type Config = {
   id: number;
@@ -185,7 +185,6 @@ const AtisConfig = () => {
       </div>
 
       <style>{`.input{width:100%;height:42px;padding:0 12px;border-radius:12px;background:hsl(var(--dark-bg));color:hsl(var(--dark-text));border:1px solid hsl(var(--dark-card-hover));font-size:14px}`}</style>
-      {showConnect && <AtisConnect onClose={() => setShowConnect(false)} />}
     </div>
   );
 };

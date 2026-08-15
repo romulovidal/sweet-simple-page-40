@@ -123,7 +123,7 @@ const findSection = (id: string) => ADMIN_SECTIONS.find(s => s.id === id);
 const isSameView = (a: View, b: View) =>
   a.kind === b.kind && (a.kind === "home" || ("id" in a && "id" in b && a.id === b.id));
 
-const isAdminView = (value: unknown): value is View => {
+const isAdminView = (value: unknown) => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<View>;
   if (candidate.kind === "home") return true;

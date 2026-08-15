@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { AtisEngine } from '../_shared/atis-automation-engine.ts';
 import { runAtisAutomations } from "../_shared/atis-v2-runner.ts";
 
 /**

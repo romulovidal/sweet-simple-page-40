@@ -35,19 +35,14 @@ export function useIsAdmin() {
 
         if (error) {
           console.error("[ADMIN AUTH] Error fetching roles:", error);
-          const { data: hasAdmin } = await supabase.rpc("has_role", {
-            _user_id: user.id,
-            _role: "admin"
-          });
+          
+          // Secondary fallback using direct table query (redundant if .from failed, but good for clarity)
+          // or checking the hardcoded super admin
+          const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
           
           if (!cancelled) {
-            // Check if user is the hardcoded super admin as secondary fallback
-            const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-            
-            // If RPC check fails due to schema permissions, we might still have data from a successful .from() query
-            // but since error is truthy here, we use the isSA check.
-            setIsAdmin(!!hasAdmin || isSA);
             setIsSuperAdmin(isSA);
+            setIsAdmin(isSA);
             setLoading(false);
           }
           return;

@@ -82,7 +82,7 @@ const AtisAdvancedSettings = () => {
       toast.success("Configurações globais salvas com sucesso");
     } catch (e: any) {
       console.error("[AtisAdvancedSettings] Error saving settings:", e);
-      toast.error("Erro ao salvar: " + e.message);
+      toast.error(`Erro ao salvar: ${e.message}${e.code === '42501' ? ' (Sem permissão de escrita)' : ''}`);
     } finally {
       setSaving(false);
     }

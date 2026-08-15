@@ -126,7 +126,7 @@ const AtisConfig = () => {
     setSaving(false);
     if (error) {
       console.error("[ATIS CONFIG] Save error:", error);
-      toast.error(`Erro ao salvar: ${error.message} ${error.details || ''}`);
+      toast.error(`Erro ao salvar: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`);
     } else {
       toast.success("Configuração salva");
     }

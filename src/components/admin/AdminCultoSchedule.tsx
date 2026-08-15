@@ -98,10 +98,18 @@ const AdminCultoSchedule = () => {
 
     if (editing.id) {
       const { error } = await supabase.from("culto_schedules").update(payload).eq("id", editing.id);
-      if (error) { toast.error("Erro ao salvar"); return; }
+      if (error) { 
+        console.error("Save error:", error);
+        toast.error(`Erro ao salvar: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
+        return; 
+      }
     } else {
       const { data, error } = await supabase.from("culto_schedules").insert(payload).select().single();
-      if (error || !data) { toast.error("Erro ao criar"); return; }
+      if (error || !data) { 
+        console.error("Create error:", error);
+        toast.error(`Erro ao criar: ${error?.message || 'Dados não retornados'}${error?.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
+        return; 
+      }
       scheduleId = data.id;
     }
 

@@ -316,8 +316,10 @@ const AtisAutomations = () => {
       // Log extra information to help diagnose 42501 errors
       if (e.code === '42501') {
         console.warn("[ATIS] Permission denied. Check if 'authenticated' role has GRANT SELECT, INSERT, UPDATE, DELETE on atis_notification_configs and atis_notification_targets.");
+        toast.error(`Erro de Permissão (42501): Seu usuário não tem autorização para salvar no banco de dados. Contate o suporte.`);
+      } else {
+        toast.error(`Erro ao salvar: ${e.message} ${e.details || ''}`);
       }
-      toast.error(`Erro ao salvar: ${e.message} ${e.details || ''} ${e.hint || ''}`);
     } finally {
       setSaving(false);
     }

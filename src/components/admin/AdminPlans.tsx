@@ -49,7 +49,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
       const { error } = await supabase.from("admin_plans").update(data).eq("id", planId);
       if (error) { 
         console.error("[ADMIN PLANS] Update error:", error);
-        toast.error(`Erro ao salvar: ${error.message}`); 
+        toast.error(`Erro ao salvar: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
         return; 
       }
       toast.success("Plano atualizado!");
@@ -57,7 +57,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
       const { data: newPlan, error } = await supabase.from("admin_plans").insert(data).select().single();
       if (error || !newPlan) { 
         console.error("[ADMIN PLANS] Insert error:", error);
-        toast.error(`Erro ao criar: ${error?.message || 'Erro desconhecido'}`); 
+        toast.error(`Erro ao criar: ${error?.message || 'Erro desconhecido'}${error?.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
         return; 
       }
       planId = newPlan.id;
@@ -72,7 +72,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
     const { error } = await supabase.from("admin_plans").delete().eq("id", id);
     if (error) { 
       console.error("[ADMIN PLANS] Delete error:", error);
-      toast.error(`Erro ao excluir: ${error.message}`); 
+      toast.error(`Erro ao excluir: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
       return; 
     }
     toast.success("Plano excluído"); fetchData();

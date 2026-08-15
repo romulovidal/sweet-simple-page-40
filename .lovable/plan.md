@@ -1,31 +1,34 @@
-# Plan: Correção Definitiva Admin e ATIS
+# Plano de Estabilização Definitiva - ATIS & Admin
 
-## Problema
-O sistema administrativo e o motor de notificações ATIS estão bloqueados por:
-1.  **Bloqueio de Escrita no Banco:** O papel `authenticated` não possui privilégios `GRANT` básicos nas tabelas administrativas, resultando em erro `42501`.
-2.  **Motor ATIS V2 Paralisado:** A configuração `global_enabled` está como `false` e a hierarquia de `super_admin` não está totalmente reconhecida no enum `app_role`.
-3.  **Falha de Notificações:** O runner central aborta devido ao desligamento global e a ausência de privilégios para processar claims de tarefas.
+Este plano corrige as falhas funcionais no Painel Administrativo e no motor de automação ATIS, garantindo que o sistema real persista dados e envie notificações conforme esperado.
 
-## Ações
+## Diagnóstico Técnico
 
-### 1. Backend (Supabase Migrations)
-Criar e aplicar uma migração definitiva para:
--   Adicionar `super_admin` ao enum `app_role`.
--   Conceder privilégios `SELECT, INSERT, UPDATE, DELETE` para o papel `authenticated` em: `atis_notification_configs`, `atis_notification_targets`, `atis_automation_settings`, `atis_config`, `profiles`, `admin_posts`, `admin_settings`, `admin_plans`, `culto_schedules`, `culto_reminders`.
--   Recriar `public.has_role` como `SECURITY DEFINER` com suporte a hierarquia.
--   Ativar o motor global: `UPDATE atis_automation_settings SET global_enabled = true WHERE id = 1;`.
--   Garantir privilégios em funções e sequências.
+1.  **ATIS V2 Inativo:** O motor global está desligado (`global_enabled = false`), bloqueando todas as automações, apesar dos cron jobs estarem ativos.
+2.  **Permissões (GRANTs):** O papel `authenticated` carece de privilégios de escrita em tabelas essenciais (Cultos, Planos, Posts, Configurações), resultando em erros `42501` mesmo com RLS configurado.
+3.  **Hierarquia Admin:** A função `has_role` não processa corretamente a superioridade de `super_admin` e `admin`, impedindo o acesso ou a mutação em fluxos protegidos.
+4.  **Feedback Visual:** Erros de permissão no frontend são genéricos, dificultando a identificação de falhas de escrita pelo usuário.
 
-### 2. Frontend (Resiliência)
--   Refatorar `useIsAdmin.ts` para não depender apenas da RPC se ela falhar por permissão, usando a consulta direta à tabela `user_roles`.
--   Atualizar `AtisAutomations.tsx` e `AdminCultoSchedule.tsx` para garantir que o payload de salvamento esteja alinhado com o esquema real e que erros de permissão sejam tratados visualmente.
--   Forçar um "Refresh Status" na Evolution API para validar conectividade.
+## Ações de Correção
 
-### 3. Validação
--   Executar disparo manual de uma notificação e verificar `atis_automation_logs`.
--   Salvar um novo Culto e verificar persistência.
--   Alterar uma configuração global do ATIS e verificar atualização.
+### 1. Backend (Infraestrutura e Dados)
+*   **Ativar Motor ATIS:** Forçar `global_enabled = true` na tabela `atis_automation_settings`.
+*   **Privilégios PostgreSQL:** Aplicar `GRANT` massivo para o papel `authenticated` em todas as tabelas administrativas e de cultos.
+*   **Hierarquia de Papéis:** Atualizar a RPC `has_role` para ser `SECURITY DEFINER` e considerar que um `super_admin` possui todos os privilégios de `admin` e `user`.
+*   **Provisionamento Admin:** Garantir que o UUID do proprietário (`5850679f-697b-4ec2-a47c-47b88a96bffa`) possua o papel `super_admin`.
 
-## Detalhes Técnicos
--   O gateway de banco de dados do sandbox é read-only, portanto, as alterações de `GRANT` e `ALTER` serão entregues via arquivo de migração na pasta `supabase/migrations/` para que o sistema as processe no deploy/build.
--   A hierarquia de roles será: `super_admin` > `admin` > `user`.
+### 2. Frontend (Resiliência e Persistência)
+*   **Cultos:** Corrigir o tratamento de erro em `AdminCultoSchedule.tsx` para expor falhas de permissão e garantir que o payload de salvamento corresponda ao schema (removendo campos virtuais se necessário).
+*   **Planos e Leituras:** Atualizar `AdminPlans.tsx` com logs detalhados e alertas específicos para erros `42501`.
+*   **Posts:** Refatorar `AdminPosts.tsx` para garantir que exclusões e atualizações de visibilidade não falhem silenciosamente.
+*   **ATIS Config:** Ajustar `AtisConfig.tsx` e `AtisAdvancedSettings.tsx` para lidar com a ausência de privilégios de escrita de forma elegante, sugerindo a correção via console quando detectada.
+
+### 3. Notificações e Scheduler
+*   **Validação de Cron:** Auditar os jobs `pg_cron` para garantir que chamam as Edge Functions corretas com o `anon key` atualizado.
+*   **Fluxo de Envio:** Testar o disparo manual em `AtisAutomations.tsx` para validar a comunicação com a Evolution API.
+
+## Critérios de Sucesso
+*   Alterações em "Cultos" persistem após refresh da página.
+*   O motor global do ATIS aparece como "Ativo" no painel.
+*   Notificações de teste chegam ao WhatsApp de destino.
+*   Nenhum erro `42501` é retornado para o Super Admin ao salvar configurações.

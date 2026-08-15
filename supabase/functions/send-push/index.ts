@@ -52,7 +52,7 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
 
   // We use the service client to check role to avoid RLS issues on user_roles
   const serviceClient = createClient(supabaseUrl, serviceKey);
-  const { data: isAdmin, error: roleError } = await serviceClient.rpc("has_role", {
+  const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
     _user_id: user.id,
     _role: "admin",
   });

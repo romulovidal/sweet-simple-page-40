@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { atisDb } from "./atisDb";
 import { toast } from "sonner";
-import { Save, Loader2, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check } from "lucide-react";
+import { Save, Loader2, BookOpen, Search, Music2, Sparkles, HandHeart, GraduationCap, Cake, Check, QrCode } from "lucide-react";
 import AtisAdvancedSettings from "./AtisAdvancedSettings";
 import AtisEvolutionConfig from "./AtisEvolutionConfig";
 

@@ -152,15 +152,27 @@ const AdminCultoSchedule = () => {
 
   const remove = async (id: string) => {
     if (!window.confirm("Excluir este horário de culto?")) return;
-    await supabase.from("culto_schedules").delete().eq("id", id);
+    const { error } = await supabase.from("culto_schedules").delete().eq("id", id);
+    if (error) {
+      console.error("Delete error:", error);
+      toast.error(`Erro ao excluir: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`);
+      return;
+    }
     toast.success("Culto removido");
     loadSchedules();
   };
 
+
   const toggleActive = async (schedule: CultoSchedule) => {
-    await supabase.from("culto_schedules").update({ is_active: !schedule.is_active }).eq("id", schedule.id);
+    const { error } = await supabase.from("culto_schedules").update({ is_active: !schedule.is_active }).eq("id", schedule.id);
+    if (error) {
+      console.error("Toggle active error:", error);
+      toast.error(`Erro ao mudar status: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`);
+      return;
+    }
     loadSchedules();
   };
+
 
   const [sendingId, setSendingId] = useState<string | null>(null);
   const sendManualReminder = async (schedule: CultoSchedule) => {

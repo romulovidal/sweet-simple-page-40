@@ -76,9 +76,11 @@ const AdminUsers = ({ users, fetchData }: AdminUsersProps) => {
                     const { error } = await supabase.from("profiles").update({ display_name: editUserName }).eq("id", u.id);
                     if (error) { 
                       console.error("[ADMIN USERS] Profile update error:", error);
-                      toast.error(`Erro ao salvar: ${error.message}`); 
+                      const isPermError = error.code === '42501' || error.message?.includes('42501');
+                      toast.error(`Erro ao salvar: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`); 
                       return; 
                     }
+
                     toast.success("Nome atualizado!"); setEditingUser(null); fetchData();
                   }}><Save className="w-3 h-3 mr-1" /> Salvar</Button>
                   <Button size="sm" variant="outline" onClick={() => setEditingUser(null)} className="bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">Cancelar</Button>
@@ -92,12 +94,22 @@ const AdminUsers = ({ users, fetchData }: AdminUsersProps) => {
                 </button>
                 <button onClick={async () => {
                   if (!window.confirm("Excluir este usuário e todos os dados dele?")) return;
-                  await supabase.from("user_plan_progress").delete().eq("user_id", u.user_id);
-                  await supabase.from("user_saved_verses").delete().eq("user_id", u.user_id);
-                  await supabase.from("user_streaks").delete().eq("user_id", u.user_id);
-                  await supabase.from("profiles").delete().eq("id", u.id);
+                  const results = await Promise.all([
+                    supabase.from("user_plan_progress").delete().eq("user_id", u.user_id),
+                    supabase.from("user_saved_verses").delete().eq("user_id", u.user_id),
+                    supabase.from("user_streaks").delete().eq("user_id", u.user_id),
+                    supabase.from("profiles").delete().eq("id", u.id)
+                  ]);
+                  const error = results.find(r => r.error)?.error;
+                  if (error) {
+                    console.error("[ADMIN USERS] Delete error:", error);
+                    const isPermError = error.code === '42501' || error.message?.includes('42501');
+                    toast.error(`Erro ao excluir: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
+                    return;
+                  }
                   toast.success("Usuário removido"); fetchData();
                 }} className="text-xs text-destructive font-medium flex items-center gap-1 ml-auto">
+
                   <Trash2 className="w-3 h-3" /> Excluir
                 </button>
               </div>

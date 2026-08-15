@@ -113,8 +113,10 @@ const AtisAutomations = () => {
       load();
     } catch (e: any) {
       console.error("[ATIS AUTOMATIONS] Toggle error:", e);
-      toast.error(`Erro ao atualizar: ${e.message} ${e.details || ''}`);
+      const isPermError = e.code === '42501' || e.message?.includes('42501');
+      toast.error(`Erro ao atualizar: ${e.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
     }
+
   };
 
   const handleDelete = async (automation: Automation) => {
@@ -314,7 +316,7 @@ const AtisAutomations = () => {
     } catch (e: any) {
       console.error("[ATIS AUTOMATIONS] Save error:", e);
       // Log extra information to help diagnose 42501 errors
-      if (e.code === '42501') {
+      if (e.code === '42501' || (e.message && e.message.includes('42501'))) {
         console.warn("[ATIS] Permission denied. Check if 'authenticated' role has GRANT SELECT, INSERT, UPDATE, DELETE on atis_notification_configs and atis_notification_targets.");
         toast.error(`Erro de Permissão (42501): Seu usuário não tem autorização para salvar no banco de dados. Contate o suporte.`);
       } else {
@@ -323,6 +325,7 @@ const AtisAutomations = () => {
     } finally {
       setSaving(false);
     }
+
   };
 
   const isSystem = (item: Automation | null) => isProtectedAutomation(item?.source_key);

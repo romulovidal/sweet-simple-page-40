@@ -13,10 +13,16 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react()].filter(Boolean),
+  define: {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify("https://karyuuhxeismshhxuokg.supabase.co"),
+    'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify("karyuuhxeismshhxuokg"),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify("sb_publishable_25BwU4iAs32JWOuQOZLm3A_ZZE3uClG"),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+
 }));

@@ -9,13 +9,15 @@ interface UserWithRole {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
-  isAdmin: boolean;
+  role: "super_admin" | "admin" | "user";
+  email?: string;
 }
 
 const AdminRoles = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,36 +34,55 @@ const AdminRoles = () => {
       supabase.from("user_roles").select("user_id, role"),
     ]);
 
-    const adminUserIds = new Set(
-      (rolesRes.data || []).filter(r => r.role === "admin").map(r => r.user_id)
-    );
+    const userRolesMap = new Map<string, string>();
+    (rolesRes.data || []).forEach(r => {
+      userRolesMap.set(r.user_id, String(r.role));
+    });
+
+    const myRole = user?.id ? userRolesMap.get(user.id) : null;
+    setCurrentUserRole(myRole || null);
 
     const usersWithRoles: UserWithRole[] = (profilesRes.data || []).map(p => ({
       id: p.id,
       user_id: p.user_id,
       display_name: p.display_name,
       avatar_url: p.avatar_url,
-      isAdmin: adminUserIds.has(p.user_id),
+      role: (userRolesMap.get(p.user_id) as any) || "user",
     }));
 
-    // Admins first
-    usersWithRoles.sort((a, b) => (b.isAdmin ? 1 : 0) - (a.isAdmin ? 1 : 0));
+    // Super Admins first, then Admins
+    usersWithRoles.sort((a, b) => {
+      const score = (r: string) => r === "super_admin" ? 2 : r === "admin" ? 1 : 0;
+      return score(b.role) - score(a.role);
+    });
+
     setUsers(usersWithRoles);
     setLoading(false);
   };
 
   const promoteToAdmin = async (userId: string) => {
+    if (currentUserRole !== "super_admin") {
+      toast.error("Apenas Super Admins podem gerenciar permissões");
+      return;
+    }
+
     setActionLoading(userId);
-    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "admin" as const });
+    // Use direct insert, RLS/Trigger/Hierarchy will handle if we implement a backend check
+    // For now we assume Super Admin has bypass or we'll rely on the upcoming RPC if needed
+    const { error } = await supabase.from("user_roles").insert({ 
+      user_id: userId, 
+      role: "admin" as any 
+    });
+
     if (error) {
-      if (error.code === "23505") toast.error("Usuário já é admin");
-      else toast.error("Erro ao promover");
+      if (error.code === "23505") toast.error("Usuário já possui privilégios");
+      else toast.error("Erro ao promover: " + error.message);
     } else {
       toast.success("Usuário promovido a admin!");
       await supabase.from("admin_activity_log").insert({
         user_id: currentUserId,
         action: "role_promoted",
-        details: { target_user_id: userId },
+        details: { target_user_id: userId, role: "admin" },
       });
     }
     setActionLoading(null);
@@ -69,17 +90,34 @@ const AdminRoles = () => {
   };
 
   const removeAdmin = async (userId: string) => {
+    if (currentUserRole !== "super_admin") {
+      toast.error("Apenas Super Admins podem remover privilégios");
+      return;
+    }
+
+    const targetUser = users.find(u => u.user_id === userId);
+    if (targetUser?.role === "super_admin") {
+      toast.error("Não é possível remover um Super Admin");
+      return;
+    }
+
     if (userId === currentUserId) {
       toast.error("Você não pode remover a si próprio!");
       return;
     }
-    if (!window.confirm("Remover privilégio de admin deste usuário?")) return;
+    
+    if (!window.confirm("Remover privilégio administrativo deste usuário?")) return;
 
     setActionLoading(userId);
-    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "admin" as const);
-    if (error) toast.error("Erro ao remover");
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "admin" as any);
+
+    if (error) toast.error("Erro ao remover: " + error.message);
     else {
-      toast.success("Privilégio de admin removido");
+      toast.success("Privilégio removido");
       await supabase.from("admin_activity_log").insert({
         user_id: currentUserId,
         action: "role_removed",

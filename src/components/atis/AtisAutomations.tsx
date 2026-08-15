@@ -310,7 +310,8 @@ const AtisAutomations = () => {
       setIsNew(false);
       load();
     } catch (e: any) {
-      toast.error(e.message);
+      console.error("[ATIS AUTOMATIONS] Save error:", e);
+      toast.error(`Erro ao salvar: ${e.message} ${e.details || ''}`);
     } finally {
       setSaving(false);
     }

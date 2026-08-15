@@ -18,6 +18,12 @@ const AtisPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (checked && !session) {
+      navigate("/admin");
+    }
+  }, [checked, session, navigate]);
+
   if (loading || !checked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--dark-bg))]">

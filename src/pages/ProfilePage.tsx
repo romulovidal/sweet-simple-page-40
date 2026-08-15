@@ -111,13 +111,13 @@ const ProfilePage = () => {
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) {
-          console.error("Error checking admin status:", error);
+          console.error("Error checking admin status:", error); console.log("[AUTH DEBUG] ProfilePage query error:", error);
           // Fallback to legacy check if public table fails
           supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data: rpcData }) => {
             setIsAdmin(!!rpcData);
           });
         } else {
-          setIsAdmin(!!data);
+          setIsAdmin(!!data); console.log("[AUTH DEBUG] ProfilePage query data:", data);
         }
       });
   }, [user]);

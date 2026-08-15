@@ -19,7 +19,7 @@ export function useIsAdmin() {
       .rpc("has_role", { _user_id: user.id, _role: "admin" as const })
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error) console.error("useIsAdmin has_role error:", error);
+        if (error) console.error("useIsAdmin has_role error:", error); console.log("[AUTH DEBUG] useIsAdmin result:", { data, userId: user.id });
         setIsAdmin(!!data);
         setLoading(false);
       });

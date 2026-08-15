@@ -313,7 +313,11 @@ const AtisAutomations = () => {
       load();
     } catch (e: any) {
       console.error("[ATIS AUTOMATIONS] Save error:", e);
-      toast.error(`Erro ao salvar: ${e.message} ${e.details || ''}`);
+      // Log extra information to help diagnose 42501 errors
+      if (e.code === '42501') {
+        console.warn("[ATIS] Permission denied. Check if 'authenticated' role has GRANT SELECT, INSERT, UPDATE, DELETE on atis_notification_configs and atis_notification_targets.");
+      }
+      toast.error(`Erro ao salvar: ${e.message} ${e.details || ''} ${e.hint || ''}`);
     } finally {
       setSaving(false);
     }

@@ -11,7 +11,6 @@ const DEFAULT: Cfg = { enabled: false, time: "06:30", group_ids: [] };
 
 const AtisDailyDevotional = () => {
   const [cfg, setCfg] = useState<Cfg>(DEFAULT);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
@@ -19,19 +18,19 @@ const AtisDailyDevotional = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [{ data: config }, { data: gs }] = await Promise.all([
-        atisDb.from("atis_notification_configs").select("*").eq("source_key", "legacy:atis_daily_devotional").maybeSingle(),
-        atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
-      ]);
+      const { data: config } = await atisDb
+        .from("atis_notification_configs")
+        .select("*")
+        .eq("source_key", "legacy:atis_daily_devotional")
+        .maybeSingle();
 
       if (config) {
         setCfg({
           enabled: config.enabled,
           time: config.send_times?.[0] || "06:30",
-          group_ids: [],
+          group_ids: [], // Not used in V2 model here anymore
         });
       }
-      setGroups((gs ?? []) as Group[]);
     } catch (e) {
       console.error("Error loading devotional config", e);
     } finally {
@@ -39,10 +38,6 @@ const AtisDailyDevotional = () => {
     }
   };
   useEffect(() => { load(); }, []);
-
-  const toggleGroup = (jid: string) => {
-    toast.error("Para gerenciar alvos de sistema, utilize a aba de Automações V2.");
-  };
 
   const save = async () => {
     setSaving(true);
@@ -53,7 +48,7 @@ const AtisDailyDevotional = () => {
       }).eq("source_key", "legacy:atis_daily_devotional");
 
       if (error) throw error;
-      toast.success("Devocional diário (V2) salvo");
+      toast.success("Configurações do Devocional salvas");
     } catch (e: any) {
       toast.error("Erro ao salvar: " + e.message);
     } finally {
@@ -62,7 +57,6 @@ const AtisDailyDevotional = () => {
   };
 
   const sendNow = async () => {
-    if (!cfg.group_ids.length) return toast.error("Selecione ao menos um grupo antes");
     setSendingNow(true);
     try {
       const { data, error } = await supabase.functions.invoke("atis-daily-devotional", {
@@ -87,9 +81,9 @@ const AtisDailyDevotional = () => {
         <div className="flex items-start gap-2">
           <Sparkles className="w-5 h-5 text-primary mt-0.5 animate-pulse" />
           <div>
-            <p className="text-sm font-bold">Devocional diário automático (grupos)</p>
+            <p className="text-sm font-bold">Devocional diário automático</p>
             <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">
-              Envia todo dia, no horário definido (Fortaleza-CE), o mesmo versículo do dia da Bíblia Atalaia + a frase motivacional gerada por IA, direto para os grupos escolhidos. Requer versículo agendado no painel admin.
+              Envia todo dia o versículo do dia da Bíblia Atalaia + frase motivacional via IA.
             </p>
           </div>
         </div>
@@ -104,6 +98,14 @@ const AtisDailyDevotional = () => {
         </label>
       </div>
 
+      <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-2">
+        <Users className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+        <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-relaxed">
+          Os destinatários (grupos/pessoas) deste devocional agora são gerenciados de forma centralizada. 
+          Vá em <strong>Automações V2</strong> e edite os <strong>Targets</strong> da configuração "Devocional Diário".
+        </p>
+      </div>
+
       <div>
         <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase flex items-center gap-1 mb-1"><Clock className="w-3 h-3" /> Horário (Fortaleza)</label>
         <input
@@ -113,40 +115,6 @@ const AtisDailyDevotional = () => {
           className="w-full h-10 px-3 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-sm"
         />
       </div>
-
-      <div>
-        <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase flex items-center gap-1 mb-2">
-          <Users className="w-3 h-3" /> Grupos que vão receber ({cfg.group_ids.length}/{groups.length})
-        </label>
-        {groups.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--dark-muted))] italic">
-            Nenhum grupo importado. Vá em Grupos → Buscar grupos do WhatsApp.
-          </p>
-        ) : (
-          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-            {groups.map((g) => {
-              const checked = cfg.group_ids.includes(g.wa_group_id);
-              return (
-                <label key={g.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${checked ? "bg-primary/10" : "bg-[hsl(var(--dark-bg))] hover:bg-[hsl(var(--dark-card-hover))]"}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleGroup(g.wa_group_id)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <span className="text-xs font-medium truncate">{g.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {cfg.last_sent_date && (
-        <p className="text-[10px] text-[hsl(var(--dark-muted))] italic">
-          Último envio automático: {cfg.last_sent_date}
-        </p>
-      )}
 
       <div className="flex gap-2">
         <button

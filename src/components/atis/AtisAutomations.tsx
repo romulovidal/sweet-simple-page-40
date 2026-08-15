@@ -254,6 +254,7 @@ const AtisAutomations = () => {
 
           if (JSON.stringify(form[key]) !== JSON.stringify(editing[key])) {
             if (key === "metadata") {
+              // Merge profundo para evitar perda de chaves internas do backend
               changes[key] = {
                 ...(editing.metadata || {}),
                 ...(form.metadata || {})

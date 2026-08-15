@@ -11,7 +11,6 @@ const DEFAULT: Cfg = { enabled: false, time: "08:00", group_ids: [], template: n
 
 const AtisBirthdayAuto = () => {
   const [cfg, setCfg] = useState<Cfg>(DEFAULT);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
@@ -19,21 +18,21 @@ const AtisBirthdayAuto = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [{ data: config }, { data: gs }] = await Promise.all([
-        atisDb.from("atis_notification_configs").select("*").eq("source_key", "legacy:atis_birthday_greeting").maybeSingle(),
-        atisDb.from("atis_groups").select("id,wa_group_id,name").eq("active", true).order("name"),
-      ]);
+      const { data: config } = await atisDb
+        .from("atis_notification_configs")
+        .select("*")
+        .eq("source_key", "legacy:atis_birthday_greeting")
+        .maybeSingle();
 
       if (config) {
         setCfg({
           enabled: config.enabled,
           time: config.send_times?.[0] || "08:00",
-          group_ids: [], // Targets serão carregados separadamente ou via V2
+          group_ids: [],
           template: config.message_template,
           use_ai: config.use_ai,
         });
       }
-      setGroups((gs ?? []) as Group[]);
     } catch (e) {
       console.error("Error loading birthday config", e);
     } finally {
@@ -41,10 +40,6 @@ const AtisBirthdayAuto = () => {
     }
   };
   useEffect(() => { load(); }, []);
-
-  const toggleGroup = (jid: string) => {
-    toast.error("Para gerenciar alvos de sistema, utilize a aba de Automações V2.");
-  };
 
   const save = async () => {
     setSaving(true);
@@ -57,7 +52,7 @@ const AtisBirthdayAuto = () => {
       }).eq("source_key", "legacy:atis_birthday_greeting");
 
       if (error) throw error;
-      toast.success("Aniversário automático (V2) salvo");
+      toast.success("Configuração de Aniversário salva");
     } catch (e: any) {
       toast.error("Erro ao salvar: " + e.message);
     } finally {
@@ -66,7 +61,6 @@ const AtisBirthdayAuto = () => {
   };
 
   const sendNow = async () => {
-    if (!cfg.group_ids.length) return toast.error("Selecione ao menos um grupo antes");
     setSendingNow(true);
     try {
       const { data, error } = await supabase.functions.invoke("atis-birthday-greeting", {
@@ -92,9 +86,9 @@ const AtisBirthdayAuto = () => {
         <div className="flex items-start gap-2">
           <Cake className="w-5 h-5 text-[hsl(var(--streak-orange))] mt-0.5" />
           <div>
-            <p className="text-sm font-bold">Parabéns automático (grupos)</p>
+            <p className="text-sm font-bold">Parabéns automático</p>
             <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">
-              Todo dia, no horário definido (Fortaleza), o Atis verifica se há aniversariantes e envia uma mensagem para os grupos selecionados.
+              Todo dia o Atis verifica se há aniversariantes e envia uma mensagem para os alvos configurados.
             </p>
           </div>
         </div>
@@ -102,6 +96,14 @@ const AtisBirthdayAuto = () => {
           <input type="checkbox" className="w-4 h-4 accent-[hsl(var(--streak-orange))]" checked={cfg.enabled} onChange={(e) => setCfg({ ...cfg, enabled: e.target.checked })} />
           <span className="text-xs font-semibold">{cfg.enabled ? "Ativo" : "Desativado"}</span>
         </label>
+      </div>
+
+      <div className="p-3 rounded-xl bg-[hsl(var(--streak-orange))]/5 border border-[hsl(var(--streak-orange))]/20 flex items-start gap-2">
+        <Users className="w-4 h-4 text-[hsl(var(--streak-orange))] shrink-0 mt-0.5" />
+        <p className="text-[10px] text-[hsl(var(--dark-muted))] leading-relaxed">
+          Os destinatários deste alerta agora são gerenciados de forma centralizada. 
+          Vá em <strong>Automações V2</strong> e edite os <strong>Targets</strong> da configuração "Aniversariantes".
+        </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-3">
@@ -135,33 +137,7 @@ const AtisBirthdayAuto = () => {
             placeholder={"🎂 {saudacao}, família!\n\nHoje é dia de festa! Parabéns a:\n{lista}\n\nQue Deus abençoe grandemente. 🙏"}
             className="w-full px-3 py-2 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-sm font-mono"
           />
-          <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">Deixe vazio para usar a IA. Com texto aqui, o modelo fixo tem prioridade.</p>
         </div>
-      )}
-
-      <div>
-        <label className="text-[10px] font-semibold text-[hsl(var(--dark-muted))] uppercase flex items-center gap-1 mb-2">
-          <Users className="w-3 h-3" /> Grupos que vão receber ({cfg.group_ids.length}/{groups.length})
-        </label>
-        {groups.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--dark-muted))] italic">Nenhum grupo importado. Vá em Grupos.</p>
-        ) : (
-          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-            {groups.map((g) => {
-              const checked = cfg.group_ids.includes(g.wa_group_id);
-              return (
-                <label key={g.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${checked ? "bg-[hsl(var(--streak-orange))/10]" : "bg-[hsl(var(--dark-bg))] hover:bg-[hsl(var(--dark-card-hover))]"}`}>
-                  <input type="checkbox" checked={checked} onChange={() => toggleGroup(g.wa_group_id)} className="w-4 h-4 accent-[hsl(var(--streak-orange))]" />
-                  <span className="text-xs font-medium truncate">{g.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {cfg.last_sent_date && (
-        <p className="text-[10px] text-[hsl(var(--dark-muted))] italic">Último envio automático: {cfg.last_sent_date}</p>
       )}
 
       <div className="flex gap-2">

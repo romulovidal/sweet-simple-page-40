@@ -26,13 +26,7 @@ const AtisPage = () => {
     );
   }
 
-  useEffect(() => {
-    if (checked && !session) {
-      navigate("/admin");
-    }
-  }, [checked, session, navigate]);
-
-  if (!session && checked) {
+  if (!session) {
     return null;
   }
 

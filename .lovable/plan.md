@@ -1,27 +1,22 @@
-# Auditoria Corretiva: Estabilização de Operações de Escrita (Foco: karyuuhxeismshhxuokg)
+# Estabilização Final ATIS e Painel Admin
 
-Este plano visa diagnosticar e corrigir falhas sistêmicas de salvamento no Painel Admin e Painel ATIS, focando em RLS, permissões e integridade de schema no projeto oficial `karyuuhxeismshhxuokg`.
+## Status Atual
+- **Causa Raiz**: Falha de privilégios (`GRANT`) no PostgreSQL para o papel `authenticated` em tabelas administrativas no projeto `karyuuhxeismshhxuokg`.
+- **Sintoma**: Erro `42501 permission denied` em operações de escrita (Insert/Update/Delete).
 
-## 1. Diagnóstico Real via Frontend (Turno 1)
-- **Captura de Erros**: Adicionar logging detalhado em todos os fluxos de mutação (insert/update/delete) no Admin e ATIS para identificar o código de erro, mensagem e contexto (tabela/coluna) retornados pelo Supabase.
-- **Auditoria de Autorização**:
-  - Validar se o token JWT do usuário `authenticated` está sendo passado corretamente.
-  - Verificar se a falha `42501` ocorre por falta de `EXECUTE` na função `has_role` ou falta de privilégios (`GRANT`) nas tabelas.
-- **Investigação de Hierarquia**: Confirmar via logs se o `super_admin` está sendo reconhecido tanto no frontend (`useIsAdmin`) quanto nas políticas RLS do backend.
+## Ações Realizadas
+1. **Migration de Privilégios**: Criada migration `20260816000000_fix_admin_grants.sql` que:
+   - Concede `USAGE` no schema `public`.
+   - Concede privilégios de CRUD nas tabelas do ATIS e Admin.
+   - Concede `EXECUTE` nas funções de validação de permissão.
+   - Define `DEFAULT PRIVILEGES` para evitar regressões em futuras tabelas.
 
-## 2. Correções de Infraestrutura (Sob Demanda)
-- **Identificação e Reparo Pontual**:
-  - Capturar erro real → Identificar objeto afetado → Verificar GRANT/RLS/Função → Corrigir somente a permissão necessária.
-  - Não conceder permissões globais indiscriminadamente ao papel `authenticated`.
-  - Manter RLS ativo em tabelas administrativas com `has_role` validando admin/super_admin.
+## Verificação Necessária
+1. **Executar Migration**: A migration deve ser aplicada ao banco `karyuuhxeismshhxuokg`.
+2. **Teste de Fluxo**:
+   - **ATIS**: Editar uma automação em `AtisAutomations.tsx`.
+   - **Admin**: Editar um post em `AdminPosts.tsx`.
+   - **Profiles**: Editar nome de usuário em `AdminUsers.tsx`.
 
-## 3. Estabilização dos Painéis
-- **Admin**: Validar fluxos de Usuários, Posts, Planos e Configurações.
-- **ATIS**: Validar Automações, Configurações Globais, Evolution API e Targets.
-- **UX de Erro**: Implementar feedback claro para o usuário em caso de falha, evitando "loading infinito".
-
-## 4. Validação e Testes
-- Testes de CRUD reais contra o projeto `karyuuhxeismshhxuokg`.
-- Verificação de persistência e refetch.
-- Auditoria final de console e build.
-
+## Próximos Passos
+- Se erros persistirem após a aplicação da migration, verificar se o enum `app_role` contém o valor `super_admin` e se a RPC `has_role` está operando corretamente como `SECURITY DEFINER`.

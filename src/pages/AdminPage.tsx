@@ -36,7 +36,7 @@ const AdminPage = () => {
         .eq("user_id", nextSession.user.id);
 
       if (error) {
-        console.error("[ADMIN AUTH] AdminPage validation error:", error);
+        console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
         
         const { data: hasAdmin, error: rpcError } = await supabase.rpc("has_role", {
           _user_id: nextSession.user.id,
@@ -45,13 +45,24 @@ const AdminPage = () => {
         
         if (rpcError) {
           console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-          setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Unknown"));
+          // Special handling for the owner UUID even if the database is currently restricted
+          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          if (isSA) {
+            setIsAdmin(true);
+            setIsSuperAdmin(true);
+            setRole("super_admin");
+            setAccessError(null);
+          } else {
+            setIsAdmin(false);
+            setIsSuperAdmin(false);
+            setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Acesso negado ao esquema de segurança."));
+          }
         } else {
           const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
           setIsAdmin(!!hasAdmin || isSA);
           setIsSuperAdmin(isSA);
+          if (isSA) setRole("super_admin");
+          else if (hasAdmin) setRole("admin");
         }
       } else {
         const roles = data?.map(r => String(r.role)) || [];

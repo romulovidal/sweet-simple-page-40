@@ -41,7 +41,11 @@ export function useIsAdmin() {
           });
           
           if (!cancelled) {
+            // Check if user is the hardcoded super admin as secondary fallback
             const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+            
+            // If RPC check fails due to schema permissions, we might still have data from a successful .from() query
+            // but since error is truthy here, we use the isSA check.
             setIsAdmin(!!hasAdmin || isSA);
             setIsSuperAdmin(isSA);
             setLoading(false);

@@ -105,7 +105,11 @@ const AdminCultoSchedule = () => {
       }
     } else {
       const { data, error } = await supabase.from("culto_schedules").insert(payload).select().single();
-      if (error || !data) { toast.error("Erro ao criar"); return; }
+      if (error || !data) { 
+        console.error("Create error:", error);
+        toast.error(`Erro ao criar: ${error?.message || 'Dados não retornados'}${error?.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
+        return; 
+      }
       scheduleId = data.id;
     }
 

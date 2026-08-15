@@ -32,7 +32,7 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
   const sendPostPush = async (postData: Pick<Post, "title" | "content" | "type">) => {
     const postTypeLabel = POST_TYPES.find((t) => t.value === postData.type)?.label || "Post";
 
-    await supabase.functions.invoke("send-push", {
+    const { data, error } = await supabase.functions.invoke("send-push", {
       body: {
         title: `📢 ${postTypeLabel}: ${postData.title.substring(0, 60)}`,
         body: postData.content.substring(0, 120) + (postData.content.length > 120 ? "..." : ""),
@@ -42,6 +42,13 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
         type: "post",
       },
     });
+
+    if (error) {
+      console.error("[AdminPosts] push error:", error);
+      const details = (error as any).details || error.message || "Erro ao enviar push";
+      throw new Error(details);
+    }
+    return data;
   };
 
   const savePost = async () => {

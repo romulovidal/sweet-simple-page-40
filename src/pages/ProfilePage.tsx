@@ -102,9 +102,24 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
-    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-      setIsAdmin(!!data);
-    });
+    // Attempting direct fetch instead of RPC to bypass schema permission issues
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error checking admin status:", error);
+          // Fallback to legacy check if public table fails
+          supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data: rpcData }) => {
+            setIsAdmin(!!rpcData);
+          });
+        } else {
+          setIsAdmin(!!data);
+        }
+      });
   }, [user]);
 
   const togglePush = async () => {

@@ -26,8 +26,6 @@ export function useIsAdmin() {
       try {
         console.log("[ADMIN AUTH] Validating roles for:", user.id);
         
-        // Single source of truth: user_roles table
-        // We query all roles for the user to determine highest privilege
         const { data, error } = await supabase
           .from("user_roles")
           .select("role")
@@ -37,21 +35,22 @@ export function useIsAdmin() {
 
         if (error) {
           console.error("[ADMIN AUTH] Error fetching roles:", error);
-          // Fallback to RPC if table read fails (RLS might be restrictive)
           const { data: hasAdmin } = await supabase.rpc("has_role", {
             _user_id: user.id,
             _role: "admin"
           });
           
           if (!cancelled) {
-            setIsAdmin(!!hasAdmin);
-            setIsSuperAdmin(user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa'); 
+            const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+            setIsAdmin(!!hasAdmin || isSA);
+            setIsSuperAdmin(isSA);
             setLoading(false);
           }
           return;
         }
 
-        const roles = data?.map(r => r.role) || [];
+        // We cast role to string to avoid TS errors with the generated enum which doesn't know about super_admin yet
+        const roles = data?.map(r => String(r.role)) || [];
         const isSA = roles.includes("super_admin") || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
         const isA = isSA || roles.includes("admin");
 

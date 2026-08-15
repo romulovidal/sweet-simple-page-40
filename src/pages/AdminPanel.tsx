@@ -131,6 +131,7 @@ const writeAdminHistory = (view: View, mode: "push" | "replace") => {
 const AdminPanel = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isSuperAdmin } = useIsAdmin();
   const [view, setView] = useState<View>({ kind: "home" });
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);

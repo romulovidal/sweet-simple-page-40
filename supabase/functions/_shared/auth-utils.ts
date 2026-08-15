@@ -25,7 +25,7 @@ export function getProjectRef(supabaseUrl: string): string {
 export async function hasRole(supabase: any, userId: string, requiredRole: 'super_admin' | 'admin' | 'user'): Promise<boolean> {
   if (requiredRole === 'user') return true;
 
-  const { data, error } = await supabase.rpc('has_role', {
+  const { data, error } = await supabase.rpc('check_user_role', {
     _user_id: userId,
     _role: requiredRole
   });

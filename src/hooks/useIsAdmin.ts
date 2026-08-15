@@ -26,10 +26,16 @@ export function useIsAdmin() {
       try {
         console.log("[ADMIN AUTH] Validating roles for:", user.id);
         
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
+        const { data: roleResult, error } = await supabase.rpc('check_user_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+
+        // Também precisamos saber se é super_admin para a UI
+        const { data: isSA_Result } = await supabase.rpc('check_user_role', {
+          _user_id: user.id,
+          _role: 'super_admin'
+        });
 
         if (cancelled) return;
 
@@ -48,14 +54,11 @@ export function useIsAdmin() {
           return;
         }
 
-        // We cast role to string to avoid TS errors with the generated enum which doesn't know about super_admin yet
-        const roles = data?.map(r => String(r.role)) || [];
-        const isSA = roles.includes("super_admin") || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-        const isA = isSA || roles.includes("admin");
+        const isA = !!roleResult;
+        const isSA = !!isSA_Result || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
 
         console.log("[ADMIN AUTH] Result:", { 
           userId: user.id, 
-          roles, 
           isAdmin: isA, 
           isSuperAdmin: isSA 
         });

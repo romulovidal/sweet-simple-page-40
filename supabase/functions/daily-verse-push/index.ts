@@ -90,7 +90,7 @@ async function isAuthorizedTrigger(
     
     // We use the service client to check role to avoid RLS issues on user_roles
     const serviceClient = createClient(supabaseUrl, serviceKey);
-    const { data: isAdmin, error: roleError } = await serviceClient.rpc("has_role", {
+    const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
@@ -139,6 +139,7 @@ serve(async (req) => {
      // Otherwise, the endpoint only runs on its scheduled time window.
      const auth = await isAuthorizedTrigger(req, supabaseUrl, anonKey, serviceKey);
      const hasAuthHeader = !!req.headers.get("Authorization");
+     
      if (hasAuthHeader && !auth.ok) {
        console.error("[daily-verse-push] Unauthorized manual trigger attempt");
        return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {

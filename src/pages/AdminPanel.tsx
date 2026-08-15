@@ -468,11 +468,11 @@ const AdminPanel = () => {
                   );
                 })}
                 {filteredTools.length === 0 && (
-                  <p className="px-3 text-xs text-[hsl(var(--dark-muted))]">Nada encontrado.</p>
-                )}
-              </div>
-            ) : (
-              ADMIN_SECTIONS.map((section) => (
+              <p className="px-3 text-xs text-[hsl(var(--dark-muted))]">Nada encontrado.</p>
+            )}
+          </div>
+        ) : (
+          getVisibleSections(isSuperAdmin).map((section) => (
                 <div key={section.id} className="flex flex-col gap-0.5">
                   <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] flex items-center gap-1.5">
                     <section.sectionIcon className="w-3 h-3" />

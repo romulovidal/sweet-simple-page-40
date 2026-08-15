@@ -186,7 +186,6 @@ const AtisConfig = () => {
 
       <style>{`.input{width:100%;height:42px;padding:0 12px;border-radius:12px;background:hsl(var(--dark-bg));color:hsl(var(--dark-text));border:1px solid hsl(var(--dark-card-hover));font-size:14px}`}</style>
     </div>
-    </div>
   );
 };
 

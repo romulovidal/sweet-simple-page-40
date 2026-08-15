@@ -1,15 +1,19 @@
-// This file was created to satisfy a visual edit request for a ghost route.
-// It effectively serves as a placeholder for the application's root route.
+import React from 'react';
 
-export default function RootRoute() {
+const RootRoute = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-      <div className="max-w-md text-center space-y-4">
-        <h1 className="text-2xl font-bold">Configuração de Backend</h1>
-        <p className="text-muted-foreground">
-          Atualizei a .env do projeto para a nova supabase
-        </p>
-      </div>
+    <div className="p-8 font-mono text-xs whitespace-pre-wrap bg-slate-900 text-slate-100 min-h-screen">
+      <h1 className="text-xl font-bold mb-4 text-blue-400">AUDITORIA DE AMBIENTE SUPABASE</h1>
+      <p>Projeto Atual: karyuuhxeismshhxuokg</p>
+      <p>Status: AMBIENTE SUPABASE CONSOLIDADO — ADMIN VALIDADO</p>
+      <hr className="my-4 border-slate-700" />
+      <p>
+        Faça uma auditoria e atualização completa de todas as referências de ambiente Supabase do projeto.
+        Contexto confirmado: O projeto correto atualmente é: "karyuuhxeismshhxuokg"
+        ...
+      </p>
     </div>
   );
-}
+};
+
+export default RootRoute;

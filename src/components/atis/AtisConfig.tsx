@@ -39,15 +39,70 @@ const AtisConfig = () => {
   const [showConnect, setShowConnect] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await atisDb.from("atis_config").select("*").eq("id", 1).maybeSingle();
-      if (error) toast.error(error.message);
-      setCfg(data as Config);
-      setLoading(false);
-    })();
+    const loadConfig = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await atisDb.from("atis_config").select("*").eq("id", 1).maybeSingle();
+        if (error) {
+          console.error("[AtisConfig] load error:", error);
+          toast.error(`Erro ao carregar configuração: ${error.message}`);
+        } else if (!data) {
+          console.warn("[AtisConfig] No config found for ID 1, initializing default state");
+          setCfg({
+            id: 1,
+            bot_name: "Atis",
+            avatar_url: null,
+            persona: null,
+            timezone: "America/Fortaleza",
+            active: true,
+            mention_only_default: true,
+            trigger_words: [],
+            commands: {},
+            evolution_url: null,
+            evolution_instance: null,
+            bot_number: null,
+          });
+        } else {
+          setCfg(data as Config);
+        }
+      } catch (err: any) {
+        console.error("[AtisConfig] critical load error:", err);
+        toast.error("Erro crítico ao carregar configurações");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadConfig();
   }, []);
 
-  if (loading || !cfg) return <Loader2 className="w-5 h-5 animate-spin mx-auto mt-10" />;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-[hsl(var(--dark-muted))]">Carregando configurações...</p>
+      </div>
+    );
+  }
+
+  if (!cfg) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+        <div className="bg-destructive/10 p-4 rounded-full">
+          <Loader2 className="w-8 h-8 text-destructive" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-bold">Falha ao carregar</p>
+          <p className="text-xs text-[hsl(var(--dark-muted))]">Não foi possível recuperar os dados do Atis.</p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
   const set = (patch: Partial<Config>) => setCfg({ ...cfg, ...patch });
 

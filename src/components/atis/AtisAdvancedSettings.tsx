@@ -90,14 +90,23 @@ const AtisAdvancedSettings = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]">
+      <div className="flex flex-col items-center justify-center p-8 space-y-4 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] min-h-[200px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-[hsl(var(--dark-muted))]">Carregando motor ATIS...</p>
+        <p className="text-sm text-[hsl(var(--dark-muted))] font-medium">Carregando motor ATIS...</p>
       </div>
     );
   }
 
-  if (!settings) return null;
+  if (!settings) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-3 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] min-h-[200px] text-center">
+        <AlertTriangle className="w-6 h-6 text-amber-500" />
+        <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed max-w-[200px]">
+          Não foi possível carregar as configurações do motor ATIS. Verifique as permissões.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

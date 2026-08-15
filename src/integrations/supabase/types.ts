@@ -2252,6 +2252,13 @@ export type Database = {
         }
         Returns: Json
       }
+      check_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       cleanup_old_data: { Args: never; Returns: Json }
       get_analytics_summary: { Args: { _days_back?: number }; Returns: Json }
       get_prayer_author_names: {
@@ -2276,7 +2283,7 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2404,7 +2411,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "super_admin"],
     },
   },
 } as const

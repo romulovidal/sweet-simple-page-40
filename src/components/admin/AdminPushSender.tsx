@@ -66,9 +66,10 @@ const AdminPushSender = () => {
       });
 
       if (error) {
+        console.error("[AdminPushSender] invoke error:", error);
         // Tenta extrair mensagem de erro detalhada da Edge Function
-        const errorMsg = error.message || "Erro desconhecido ao enviar";
-        throw new Error(errorMsg);
+        const details = (error as any).details || error.message || "Erro desconhecido ao enviar";
+        throw new Error(details);
       }
 
       const sentCount = data?.sent || 0;

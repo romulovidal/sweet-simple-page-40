@@ -2252,6 +2252,13 @@ export type Database = {
         }
         Returns: Json
       }
+      check_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       cleanup_old_data: { Args: never; Returns: Json }
       get_analytics_summary: { Args: { _days_back?: number }; Returns: Json }
       get_prayer_author_names: {

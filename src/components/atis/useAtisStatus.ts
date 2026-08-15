@@ -24,7 +24,8 @@ export function useAtisStatus(pollMs = 20000): AtisStatus {
       if (error) throw error;
       const s = (data as any)?.state ?? "unknown";
       setState((s === "open" || s === "connected") ? "open" : (s as AtisConnState));
-    } catch {
+    } catch (err: any) {
+      console.warn("[useAtisStatus] polling error:", err.message);
       setState("error");
     } finally {
       setLoading(false);

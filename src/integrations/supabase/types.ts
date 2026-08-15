@@ -2053,6 +2053,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles_new: {
+        Row: {
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_saved_verses: {
         Row: {
           book_abbrev: string | null
@@ -2224,6 +2242,7 @@ export type Database = {
         }
         Returns: Json
       }
+      check_admin: { Args: { _user_id: string }; Returns: boolean }
       check_and_increment_rate_limit: {
         Args: {
           _endpoint: string

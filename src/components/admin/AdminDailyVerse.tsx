@@ -41,26 +41,33 @@ const AdminDailyVerse = () => {
   const resendDailyVerse = async () => {
     setResending(true);
     try {
+      console.log("[AdminDailyVerse] invoking daily-verse-push...");
       const { data, error } = await supabase.functions.invoke("daily-verse-push", {
         method: "POST",
         body: { only: "verse" },
       });
+
       if (error) {
-        throw new Error(error.message || "Erro ao conectar com o serviço de notificações");
+        console.error("[AdminDailyVerse] invoke error:", error);
+        // Tenta extrair detalhes da resposta da função (definidos nas correções anteriores)
+        const details = (error as any).details || error.message || "Erro desconhecido ao conectar com o serviço";
+        throw new Error(details);
       }
       
       const v = (data as any)?.verse;
+      console.log("[AdminDailyVerse] success response:", data);
+
       if (v?.skipped) {
         toast.warning(v.reason || "Nenhum versículo agendado para hoje");
       } else if (v?.failed > 0 && v?.sent === 0) {
-        toast.error(`Falha ao reenviar: ${v.failed} erros. Verifique os logs de push.`);
+        toast.error(`Falha ao reenviar: ${v.failed} erros. Verifique os logs.`);
       } else if (v?.failed > 0) {
         toast.warning(`Reenviado com falhas parciais: ${v.sent} sucessos, ${v.failed} falhas.`);
       } else {
         toast.success(`Versículo do dia reenviado com sucesso para ${v?.sent ?? 0} dispositivos!`);
       }
     } catch (e: any) {
-      console.error("[AdminDailyVerse] resend error:", e);
+      console.error("[AdminDailyVerse] final catch:", e);
       toast.error(e?.message || "Erro ao reenviar versículo do dia");
     } finally {
       setResending(false);
@@ -74,12 +81,15 @@ const AdminDailyVerse = () => {
         method: "POST",
         body: { only: "motivational" },
       });
-      if (error) throw error;
+      if (error) {
+        const details = (error as any).details || error.message || "Erro ao enviar lembrete";
+        throw new Error(details);
+      }
       const m = (data as any)?.motivational;
       toast.success(`"Não deixe de ler" enviado! ${m?.sent ?? 0} entregues${m?.failed ? `, ${m.failed} falhas` : ""}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao enviar lembrete motivacional");
+      toast.error(e.message || "Erro ao enviar lembrete motivacional");
     } finally {
       setResendingMotivational(false);
     }

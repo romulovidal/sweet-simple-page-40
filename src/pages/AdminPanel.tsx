@@ -376,7 +376,7 @@ const AdminPanel = () => {
         </p>
       </div>
 
-      {ADMIN_SECTIONS.map((section) => {
+      {getVisibleSections(isSuperAdmin).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <div key={section.id} className="space-y-2">

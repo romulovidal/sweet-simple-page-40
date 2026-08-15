@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const engine = new AtisEngine(admin, 'atis-birthday-greeting')
   const { mmdd, dateKey, period } = brNow()
+  const body = await req.json().catch(() => ({}))
+  const isManual = body?.is_manual === true || body?.force === true;
 
   const { data: config } = await admin
     .from('atis_notification_configs')
@@ -42,7 +44,9 @@ Deno.serve(async (req) => {
     .eq('source_key', 'legacy:atis_birthday_greeting')
     .maybeSingle()
 
-  if (!config?.enabled) return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
+  if (!config?.enabled && !isManual) {
+    return new Response(JSON.stringify({ skipped: true, reason: 'disabled' }), { headers: corsHeaders })
+  }
 
   const { data: bdays } = await admin.from('atis_birthdays').select('name, birth_date, active, phone')
   const todays = (bdays ?? []).filter((b: any) => b.active !== false && String(b.birth_date ?? '').slice(5, 10) === mmdd)
@@ -53,7 +57,7 @@ Deno.serve(async (req) => {
   const groupText = await generateGreeting(names, config.message_template, period)
 
   // Envia para os targets configurados (Geralmente grupos)
-  await engine.runConfig(config.id, `${dateKey}Tbirthday`);
+  await engine.runConfig(config.id, `${dateKey}Tbirthday`, groupText);
 
   // Envio de DMs individuais
   for (const b of todays) {

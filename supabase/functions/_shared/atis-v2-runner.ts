@@ -96,8 +96,17 @@ export async function runAtisAutomations(workerName: string) {
       recipientKey: log.recipient_key
     };
 
-    await engine.processRecipient(config, recipient, log.occurrence_key);
-    results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+    try {
+      await engine.processRecipient(config, recipient, log.occurrence_key);
+      results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+    } catch (err) {
+      console.error(`[AtisRunner] Failed to process log ${log.id}:`, err);
+      await supabaseAdmin.from("atis_automation_logs").update({
+        status: "failed",
+        last_error: `Runner Error: ${err.message}`
+      }).eq("id", log.id);
+      results.push({ id: config.id, logId: log.id, status: "failed", error: err.message });
+    }
   }
 
   return { ok: true, processed: results };

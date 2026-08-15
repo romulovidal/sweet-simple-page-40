@@ -65,12 +65,17 @@ const AtisBirthdayAuto = () => {
     try {
       const { data, error } = await supabase.functions.invoke("atis-birthday-greeting", {
         method: "POST",
-        body: { force: true },
+        body: { force: true, is_manual: true },
       });
       if (error) throw error;
       const d = data as any;
-      if (d?.skipped) toast.message("Nenhum aniversariante hoje", { description: "Nada foi enviado." });
-      else toast.success(`Parabéns enviado para ${d?.sent ?? 0} grupo(s) — ${(d?.names ?? []).join(", ")}`);
+      if (d?.skipped || d?.reason === 'no-birthdays') {
+        toast.message("Nenhum aniversariante hoje", { description: "Nada foi enviado." });
+      } else if (d?.engineResult?.ok === false) {
+        toast.error(`Falha no motor: ${d.engineResult.reason || d.engineResult.error}`);
+      } else {
+        toast.success(`Parabéns enviado com sucesso para todos os alvos ativos`);
+      }
     } catch (e: any) {
       toast.error("Erro ao enviar: " + (e?.message ?? e));
     } finally {

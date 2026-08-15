@@ -97,15 +97,16 @@ export async function runAtisAutomations(workerName: string) {
     };
 
     try {
-      await engine.processRecipient(config, recipient, log.occurrence_key);
-      results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+      const result = await engine.processRecipient(config, recipient, log.occurrence_key);
+      if (!result.ok) {
+        console.warn(`[AtisRunner] Engine skipped/failed log ${log.id}:`, result.reason || result.error);
+        results.push({ id: config.id, logId: log.id, status: "retry_failed", reason: result.reason || result.error });
+      } else {
+        results.push({ id: config.id, logId: log.id, status: "retry_processed" });
+      }
     } catch (err) {
-      console.error(`[AtisRunner] Failed to process log ${log.id}:`, err);
-      await supabaseAdmin.from("atis_automation_logs").update({
-        status: "failed",
-        last_error: `Runner Error: ${err.message}`
-      }).eq("id", log.id);
-      results.push({ id: config.id, logId: log.id, status: "failed", error: err.message });
+      console.error(`[AtisRunner] Critical error processing log ${log.id}:`, err);
+      results.push({ id: config.id, logId: log.id, status: "error", error: err.message });
     }
   }
 

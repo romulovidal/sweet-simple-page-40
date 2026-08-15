@@ -15,14 +15,52 @@ export function useIsAdmin() {
       return;
     }
     let cancelled = false;
-    supabase
-      .rpc("has_role", { _user_id: user.id, _role: "admin" as const })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) console.error("useIsAdmin has_role error:", error); console.log("[AUTH DEBUG] useIsAdmin result:", { data, userId: user.id });
-        setIsAdmin(!!data);
-        setLoading(false);
-      });
+
+    const checkAdmin = async () => {
+      try {
+        // Try direct query first (more reliable for PostgREST cache)
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (!cancelled) {
+          if (data) {
+            console.log("[AUTH DEBUG] useIsAdmin direct match:", data);
+            setIsAdmin(true);
+            setLoading(false);
+            return;
+          }
+
+          if (error) {
+            console.error("[AUTH DEBUG] useIsAdmin direct error:", error);
+          }
+
+          // Fallback to RPC
+          const { data: rpcData, error: rpcError } = await supabase.rpc("has_role", {
+            _user_id: user.id,
+            _role: "admin"
+          });
+
+          if (!cancelled) {
+            if (rpcError) {
+              console.error("[AUTH DEBUG] useIsAdmin RPC error:", rpcError);
+            }
+            console.log("[AUTH DEBUG] useIsAdmin RPC result:", rpcData);
+            setIsAdmin(!!rpcData);
+            setLoading(false);
+          }
+        }
+      } catch (err) {
+        console.error("[AUTH DEBUG] useIsAdmin catch block:", err);
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    checkAdmin();
+
     return () => {
       cancelled = true;
     };

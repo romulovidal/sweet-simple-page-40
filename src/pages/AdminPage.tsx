@@ -23,6 +23,8 @@ const AdminPage = () => {
 
     setLoading(true);
 
+    console.log("[AUTH DEBUG] AdminPage starting validation for:", nextSession.user.id);
+
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -31,10 +33,24 @@ const AdminPage = () => {
       .maybeSingle();
 
     if (error) {
-      console.error("Erro ao validar acesso admin", error);
-      setIsAdmin(false);
-      setAccessError("Não foi possível validar seu acesso agora. Tente novamente.");
+      console.error("[AUTH DEBUG] AdminPage validation error:", error);
+      
+      // Fallback to RPC if direct query fails
+      const { data: rpcData, error: rpcError } = await supabase.rpc("has_role", {
+        _user_id: nextSession.user.id,
+        _role: "admin"
+      });
+      
+      if (rpcError) {
+        console.error("[AUTH DEBUG] AdminPage RPC fallback error:", rpcError);
+        setIsAdmin(false);
+        setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Unknown"));
+      } else {
+        console.log("[AUTH DEBUG] AdminPage RPC fallback result:", rpcData);
+        setIsAdmin(!!rpcData);
+      }
     } else {
+      console.log("[AUTH DEBUG] AdminPage validation result:", data);
       setIsAdmin(!!data);
     }
 

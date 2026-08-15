@@ -13,7 +13,7 @@ type UpcomingBroadcast = { id: string; title: string; scheduled_at: string | nul
 type Plan = { id: string; title: string; category: string | null; total_days: number | null; is_active: boolean };
 
 const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
-  const [stats, setStats] = useState<Stats>({ contacts: 0, groups: 0, birthdaysToday: 0, pending: 0, studies: 0, messages24h: 0 });
+  const [stats, setStats] = useState<Stats & { automations24h: number }>({ contacts: 0, groups: 0, birthdaysToday: 0, pending: 0, studies: 0, messages24h: 0, automations24h: 0 });
   const [loading, setLoading] = useState(true);
   const [upcoming, setUpcoming] = useState<UpcomingBroadcast[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -48,6 +48,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
         pending: br.count ?? 0,
         studies: st.count ?? 0,
         messages24h: ml.count ?? 0,
+        automations24h: al.count ?? 0,
       });
       setUpcoming((upc.data ?? []) as UpcomingBroadcast[]);
       setPlans((pl.data ?? []) as Plan[]);
@@ -61,7 +62,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
     { label: "Aniversários hoje", value: stats.birthdaysToday, icon: Cake, tab: "birthdays" },
     { label: "Envios pendentes", value: stats.pending, icon: CalendarClock, tab: "broadcasts" },
     { label: "Estudos", value: stats.studies, icon: BookOpen, tab: "studies" },
-    { label: "Automações 24h", value: al.count ?? 0, icon: MessageCircle, tab: "logs" },
+    { label: "Automações 24h", value: stats.automations24h, icon: MessageCircle, tab: "logs" },
     { label: "Automações", value: "V2", icon: Settings2, tab: "automations" },
   ];
 

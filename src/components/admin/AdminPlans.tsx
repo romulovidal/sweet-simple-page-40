@@ -72,7 +72,7 @@ const AdminPlans = ({ plans, fetchData }: AdminPlansProps) => {
     const { error } = await supabase.from("admin_plans").delete().eq("id", id);
     if (error) { 
       console.error("[ADMIN PLANS] Delete error:", error);
-      toast.error(`Erro ao excluir: ${error.message}`); 
+      toast.error(`Erro ao excluir: ${error.message}${error.code === '42501' ? ' (Sem permissão de escrita)' : ''}`); 
       return; 
     }
     toast.success("Plano excluído"); fetchData();

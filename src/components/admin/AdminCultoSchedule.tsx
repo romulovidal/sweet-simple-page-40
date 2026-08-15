@@ -179,17 +179,25 @@ const AdminCultoSchedule = () => {
     if (!window.confirm(`Enviar lembrete agora para todos os usuários sobre "${schedule.name}"?`)) return;
     setSendingId(schedule.id);
     try {
+      console.log("[AdminCultoSchedule] manual invoke for:", schedule.id);
       const { data, error } = await supabase.functions.invoke("culto-reminder", {
         body: { schedule_id: schedule.id },
       });
-      if (error) throw error;
+
+      if (error) {
+        console.error("[AdminCultoSchedule] invoke error:", error);
+        const details = (error as any).details || error.message || "Erro ao conectar com o serviço";
+        throw new Error(details);
+      }
+
       const pushResult = data?.push;
+      console.log("[AdminCultoSchedule] response:", data);
       const sent = pushResult?.sent ?? 0;
       const failed = pushResult?.failed ?? 0;
       toast.success(`Lembrete enviado! ${sent} entregue${sent !== 1 ? "s" : ""}${failed ? `, ${failed} falha${failed > 1 ? "s" : ""}` : ""}`);
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao enviar lembrete");
+    } catch (e: any) {
+      console.error("[AdminCultoSchedule] catch:", e);
+      toast.error(e.message || "Erro ao enviar lembrete");
     } finally {
       setSendingId(null);
     }

@@ -144,7 +144,8 @@ Deno.serve(async (req) => {
       });
 
       if (!authorized) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        console.error("[culto-reminder] Unauthorized manual trigger attempt:", { isAdmin, authorized });
+        return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

@@ -109,7 +109,15 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;
+    const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@atalaias.online";
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.error("[send-push] CRITICAL: VAPID keys not configured in Edge Function secrets.");
+      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const authResult = await requireAdminUser(req, supabaseUrl, anonKey, serviceKey);
     if (authResult.error) {

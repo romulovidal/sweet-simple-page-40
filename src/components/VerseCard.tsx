@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useLocalStorage, type HighlightedVerse, type SavedVerse } from "@/hooks/useLocalStorage";
 import VerseImageGenerator from "@/components/VerseImageGenerator";
 import { toast } from "sonner";
+import { createShortVerseLink } from "@/lib/verseShare";
+import { parseBibleReference } from "@/lib/bibleSearch";
+import { bibleBooks } from "@/data/bible";
 
 const HIGHLIGHT_COLORS = [
   { name: "Amarelo", value: "#fbbf24" },
@@ -107,7 +110,23 @@ const VerseCard = ({ text, reference, version }: VerseCardProps) => {
   };
 
   const handleShare = async () => {
-    const text_ = `${reference} (${version || 'ARC'})\n\n"${text}"\n\n📖 Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+    let text_ = `${reference} (${version || "ARC"})\n\n"${text}"\n\n📖 Bíblia do Atalaia\nhttps://biblia.atalaias.online`;
+
+    const parsed = parseBibleReference(reference);
+    if (parsed) {
+      const longUrl = `https://biblia.atalaias.online/biblia?book=${parsed.book.apiAbbrev}&chapter=${parsed.chapter}&verse=${parsed.verse || 1}`;
+      const shortUrl = await createShortVerseLink({
+        bookAbbrev: parsed.book.apiAbbrev,
+        chapter: parsed.chapter,
+        verses: parsed.verse ? [parsed.verse] : [1],
+        fallbackLong: longUrl,
+        textSnippet: text,
+        bookName: parsed.book.name,
+        version: version || "ARC",
+      });
+      text_ = `${reference} (${version || "ARC"})\n\n"${text}"\n\n📖 Bíblia do Atalaia\n${shortUrl}`;
+    }
+
     try {
       if (navigator.share) {
         await navigator.share({ title: reference, text: text_ });

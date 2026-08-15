@@ -23,7 +23,7 @@ const VerseShareRedirect = () => {
     (async () => {
       const { data, error: qerr } = await supabase
         .from("verse_shares")
-        .select("book_abbrev, chapter, verses")
+        .select("book_abbrev, chapter, verses, text_snippet, book_name, version")
         .eq("slug", slug)
         .maybeSingle();
 
@@ -57,10 +57,11 @@ const VerseShareRedirect = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <PageHead
-        title="Abrindo versículo — A Bíblia do Atalaia"
-        description="Carregando versículo compartilhado."
+        title={data ? `${data.book_name} ${data.chapter}:${(data.verses as number[]).join(",")} — A Bíblia do Atalaia` : "Abrindo versículo — A Bíblia do Atalaia"}
+        description={data?.text_snippet || "Carregando versículo compartilhado."}
+        image={`https://hvdmobypsqksgkfrzhzf.supabase.co/functions/v1/og/${slug}.png`}
         path={`/v/${slug ?? ""}`}
-        noindex
+        noindex={!data}
       />
       {error ? (
         <>

@@ -104,6 +104,9 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     const { error } = await supabase.from("admin_posts").delete().eq("id", id);
     if (error) {
       console.error("[ADMIN POSTS] Delete error:", error);
+      if (error.code === '42501') {
+        console.warn("[ADMIN] Permission denied on admin_posts delete.");
+      }
       toast.error(`Erro ao excluir: ${error.message}`);
       return;
     }
@@ -116,6 +119,9 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
     const { error } = await supabase.from("admin_posts").update({ is_active: nextIsActive }).eq("id", post.id);
     if (error) {
       console.error("[ADMIN POSTS] Toggle error:", error);
+      if (error.code === '42501') {
+        console.warn("[ADMIN] Permission denied on admin_posts update.");
+      }
       toast.error(`Erro ao atualizar visibilidade: ${error.message}`);
       return;
     }

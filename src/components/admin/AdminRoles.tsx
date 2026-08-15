@@ -132,8 +132,8 @@ const AdminRoles = () => {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   }
 
-  const admins = users.filter(u => u.isAdmin);
-  const regularUsers = users.filter(u => !u.isAdmin);
+  const admins = users.filter(u => u.role === "admin" || u.role === "super_admin");
+  const regularUsers = users.filter(u => u.role === "user");
 
   return (
     <div className="space-y-4">
@@ -149,17 +149,25 @@ const AdminRoles = () => {
               {u.avatar_url ? (
                 <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-amber-400" />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${u.role === "super_admin" ? "bg-primary/20" : "bg-amber-500/15"}`}>
+                  {u.role === "super_admin" ? <Shield className="w-5 h-5 text-primary" /> : <Crown className="w-5 h-5 text-amber-400" />}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
-                {u.user_id === currentUserId && (
-                  <p className="text-[10px] text-primary">Você</p>
-                )}
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
+                  {u.role === "super_admin" && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-bold uppercase tracking-wider">Super</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] text-[hsl(var(--dark-muted))] truncate max-w-[150px]">{u.user_id}</p>
+                  {u.user_id === currentUserId && (
+                    <p className="text-[10px] text-primary font-medium">Você</p>
+                  )}
+                </div>
               </div>
-              {u.user_id !== currentUserId && (
+              {currentUserRole === "super_admin" && u.role === "admin" && (
                 <Button size="sm" variant="outline" onClick={() => removeAdmin(u.user_id)}
                   disabled={actionLoading === u.user_id}
                   className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
@@ -190,17 +198,20 @@ const AdminRoles = () => {
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] truncate">{u.user_id}</p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
-                disabled={actionLoading === u.user_id}
-                className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
-                {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
-                Promover
-              </Button>
+              {currentUserRole === "super_admin" && (
+                <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
+                  disabled={actionLoading === u.user_id}
+                  className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
+                  {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
+                  Promover
+                </Button>
+              )}
             </div>
           ))}
           {regularUsers.length === 0 && (
-            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Todos os usuários já são admins</p>
+            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-6">Nenhum usuário comum encontrado</p>
           )}
         </div>
       </div>

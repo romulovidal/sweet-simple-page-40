@@ -118,11 +118,18 @@ Deno.serve(async (req) => {
         const { data: userData, error: userError } = await userClient.auth.getUser();
         
         if (userData?.user && !userError) {
-          const { data: hasAdminRole } = await userClient.rpc("has_role", {
+          // We use the service client to check role to avoid RLS issues on user_roles
+          const serviceClient = createClient(supabaseUrl, serviceKey);
+          const { data: isAdminRole, error: roleError } = await serviceClient.rpc("has_role", {
             _user_id: userData.user.id,
             _role: "admin",
           });
-          isAdmin = !!hasAdminRole;
+          
+          if (roleError) {
+            console.error("Role check RPC failed in culto-reminder", roleError);
+          }
+
+          isAdmin = !!isAdminRole;
           if (isAdmin) {
             authorized = true;
           }

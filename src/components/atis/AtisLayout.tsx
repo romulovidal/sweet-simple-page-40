@@ -146,16 +146,18 @@ const AtisLayout = () => {
                     ? "bg-green-500"
                     : status.state === "connecting"
                     ? "bg-yellow-500 animate-pulse"
-                    : "bg-red-500"
+                    : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                 }`}
               />
-              {status.loading
-                ? "Checando…"
-                : status.connected
-                ? "Evolution online"
-                : status.state === "connecting"
-                ? "Conectando…"
-                : "Evolution offline"}
+              <span className="max-w-[100px] truncate">
+                {status.loading
+                  ? "Checando…"
+                  : status.connected
+                  ? "Conectado"
+                  : status.state === "connecting"
+                  ? "Conectando…"
+                  : "Desconectado"}
+              </span>
             </button>
           </div>
         </header>

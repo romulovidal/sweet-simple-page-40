@@ -12,35 +12,17 @@ const AtisPage = () => {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        console.log("[ATIS] Session check:", !!data.session);
-        setSession(data.session);
-        setChecked(true);
-      }
+      setSession(data.session);
+      setChecked(true);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        console.log("[ATIS] Auth event:", _event, !!session);
-        setSession(session);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
   }, []);
 
   useEffect(() => {
-    if (checked && !session && !loading) {
-      const currentPath = window.location.pathname + window.location.search;
-      console.log("[ATIS] Redirect trigger", { checked, hasSession: !!session, loading });
-      navigate("/admin?redirect=" + encodeURIComponent(currentPath));
+    if (checked && !session) {
+      navigate("/admin");
     }
-  }, [checked, session, loading, navigate]);
+  }, [checked, session, navigate]);
 
   if (loading || !checked) {
     return (
@@ -67,11 +49,7 @@ const AtisPage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
-      <AtisLayout />
-    </div>
-  );
+  return <AtisLayout />;
 };
 
 export default AtisPage;

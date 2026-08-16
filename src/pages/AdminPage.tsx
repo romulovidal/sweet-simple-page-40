@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminLogin from "./AdminLogin";
 import AdminPanel from "./AdminPanel";
 import { Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const AdminPage = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -13,7 +12,6 @@ const AdminPage = () => {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const resolveAdminAccess = useCallback(async (nextSession: Session | null) => {
     setSession(nextSession);
@@ -32,7 +30,6 @@ const AdminPage = () => {
     try {
       console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
 
-      // 1. Direct table check
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -41,22 +38,16 @@ const AdminPage = () => {
       if (error) {
         console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
         
-        // 2. Fallback to RPC
-        const { data: roleResult, error: rpcError } = await supabase.rpc("check_user_role", {
+        const { data: hasAdmin, error: rpcError } = await supabase.rpc("has_role", {
           _user_id: nextSession.user.id,
           _role: "admin"
         });
         
-        const { data: isSA_Result } = await supabase.rpc("check_user_role", {
-          _user_id: nextSession.user.id,
-          _role: "super_admin"
-        });
-
-        const isOwner = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-
         if (rpcError) {
           console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
-          if (isOwner) {
+          // Special handling for the owner UUID even if the database is currently restricted
+          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          if (isSA) {
             setIsAdmin(true);
             setIsSuperAdmin(true);
             setRole("super_admin");
@@ -67,18 +58,18 @@ const AdminPage = () => {
             setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Acesso negado ao esquema de segurança."));
           }
         } else {
-          const isSA = !!isSA_Result || isOwner;
-          const isA = !!roleResult || isSA;
-          setIsAdmin(isA);
+          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          setIsAdmin(!!hasAdmin || isSA);
           setIsSuperAdmin(isSA);
-          setRole(isSA ? "super_admin" : (isA ? "admin" : null));
+          if (isSA) setRole("super_admin");
+          else if (hasAdmin) setRole("admin");
         }
       } else {
         const roles = data?.map(r => String(r.role)) || [];
         const isSA = roles.includes("super_admin") || nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
         const isA = isSA || roles.includes("admin");
 
-        // Remove log
+        console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });
         
         setIsAdmin(isA);
         setIsSuperAdmin(isSA);
@@ -103,13 +94,7 @@ const AdminPage = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (_event === 'SIGNED_OUT') {
-        setSession(null);
-        setIsAdmin(false);
-        setLoading(false);
-      } else {
-        syncAccess(nextSession);
-      }
+      syncAccess(nextSession);
     });
 
     supabase.auth
@@ -152,13 +137,13 @@ const AdminPage = () => {
           <p className="text-sm text-[hsl(var(--dark-muted))]">{accessError}</p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <button
-              onClick={() => { void resolveAdminAccess(session); }}
+              onClick={() => void resolveAdminAccess(session)}
               className="text-primary text-sm font-semibold"
             >
               Tentar novamente
             </button>
             <button
-              onClick={() => { void supabase.auth.signOut(); }}
+              onClick={() => void supabase.auth.signOut()}
               className="text-[hsl(var(--dark-muted))] text-sm font-semibold"
             >
               Sair
@@ -177,7 +162,7 @@ const AdminPage = () => {
           <h2 className="text-lg font-bold mb-2 text-[hsl(var(--dark-text))]">Acesso negado</h2>
           <p className="text-sm text-[hsl(var(--dark-muted))]">Você não tem permissão de administrador.</p>
           <button
-            onClick={() => { void supabase.auth.signOut(); }}
+            onClick={() => void supabase.auth.signOut()}
             className="text-primary text-sm font-semibold mt-4"
           >
             Sair
@@ -186,19 +171,6 @@ const AdminPage = () => {
       </div>
     );
   }
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const redirectPath = searchParams.get("redirect");
-  
-  useEffect(() => {
-    if (isAdmin && redirectPath) {
-      const decodedPath = decodeURIComponent(redirectPath);
-      if (decodedPath === "/atis" || decodedPath.startsWith("/atis?")) {
-        console.log("[ADMIN AUTH] Redirecting back to:", decodedPath);
-        setTimeout(() => navigate(decodedPath, { replace: true }), 100);
-      }
-    }
-  }, [isAdmin, redirectPath, navigate]);
 
   return <AdminPanel />;
 };

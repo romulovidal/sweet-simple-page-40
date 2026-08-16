@@ -154,9 +154,9 @@ const AtisConfig = () => {
             e.stopPropagation();
             setShowConnect(true);
           }} 
-          className="shrink-0 bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md rounded-xl px-4 py-2.5 text-xs font-bold inline-flex items-center gap-2 transition-all z-30 cursor-pointer border border-white/20 shadow-lg"
+          className="shrink-0 bg-white/15 hover:bg-white/25 active:bg-white/35 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 transition-all z-20 cursor-pointer border border-white/10"
         >
-          <QrCode className="w-4 h-4" /> Gerenciar Conexão
+          <QrCode className="w-4 h-4" /> Conectar
         </button>
       </div>
 

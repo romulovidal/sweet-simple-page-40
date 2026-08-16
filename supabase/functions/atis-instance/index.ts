@@ -120,18 +120,9 @@ Deno.serve(async (req) => {
 
     if (action === 'status') {
       const st = await evo(`/instance/connectionState/${INSTANCE}`)
-      const rawState = (st.json?.instance?.state ?? st.json?.state ?? 'disconnected').toLowerCase()
-      
-      // Mapeamento robusto de estados
-      let normalizedState = 'disconnected'
-      if (['open', 'connected', 'online'].includes(rawState)) normalizedState = 'open'
-      else if (['connecting', 'pairing'].includes(rawState)) normalizedState = 'connecting'
-      else if (['close', 'closed', 'offline'].includes(rawState)) normalizedState = 'close'
-      
       return new Response(JSON.stringify({
         success: true,
-        state: normalizedState,
-        rawState: rawState,
+        state: st.json?.instance?.state ?? st.json?.state ?? 'disconnected',
         exists: st.ok || st.status === 409,
         webhookUrl,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

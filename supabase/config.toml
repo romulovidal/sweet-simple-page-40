@@ -5,6 +5,11 @@ project_id = "karyuuhxeismshhxuokg"
 [functions.ai-tools]
 verify_jwt = false
 
+[functions.atis-webhook]
+# Evolution API cannot present a Supabase user JWT. This function authenticates
+# every request with the private x-webhook-secret stored in Supabase Vault.
+verify_jwt = false
+
 [functions.create-culto-share]
 verify_jwt = false
 

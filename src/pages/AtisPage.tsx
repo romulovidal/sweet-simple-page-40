@@ -10,6 +10,9 @@ const AtisPage = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  
+  // Stability fix: ensure we don't redirect too early if the user is the owner
+  const isOwner = session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -33,10 +36,7 @@ const AtisPage = () => {
   }, [authChecked, session, navigate, isOwner]);
 
   // Combined loading state - owner gets a fast track
-  const isInitializing = (roleLoading && !isAdmin && session?.user?.id !== '5850679f-697b-4ec2-a47c-47b88a96bffa') || !authChecked;
-
-  // Stability fix: ensure we don't redirect too early if the user is the owner
-  const isOwner = session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+  const isInitializing = (roleLoading && !isAdmin && !isOwner) || !authChecked;
 
   useEffect(() => {
     if (!isInitializing && session) {
@@ -57,11 +57,11 @@ const AtisPage = () => {
     );
   }
 
-  if (!session) {
+  if (!session && !isOwner) {
     return null;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isOwner) {
     return (
       <div className="min-h-screen flex items-center justify-center px-5 bg-[hsl(var(--dark-bg))]">
         <div className="text-center max-w-sm">
@@ -71,7 +71,7 @@ const AtisPage = () => {
           <div className="mt-4 flex flex-col gap-2">
             <button onClick={() => navigate("/admin")} className="text-primary text-sm font-semibold hover:underline">Ir para Admin</button>
             <p className="text-[10px] text-[hsl(var(--dark-muted))] font-mono opacity-50 mt-4">
-              UID: {session.user.id.substring(0, 8)}... | Role: {role || 'none'}
+              UID: {session?.user?.id?.substring(0, 8)}... | Role: {role || 'none'}
             </p>
           </div>
         </div>

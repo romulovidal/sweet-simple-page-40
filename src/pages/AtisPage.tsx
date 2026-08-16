@@ -41,14 +41,17 @@ const AtisPage = () => {
   // Anti-blue-screen: safety timeout to show access denied instead of hanging forever
   const [safetyTimeoutReached, setSafetyTimeoutReached] = useState(false);
   useEffect(() => {
+    // If we're on localhost or owner, we give it very little time to hang
+    const timeout = isOwner ? 2000 : 6000;
     const timer = setTimeout(() => {
       if (isInitializing) {
         console.warn("[ATIS_ACCESS] Safety timeout reached during initialization");
         setSafetyTimeoutReached(true);
       }
-    }, 6000);
+    }, timeout);
     return () => clearTimeout(timer);
-  }, [isInitializing]);
+  }, [isInitializing, isOwner]);
+
 
 
   useEffect(() => {

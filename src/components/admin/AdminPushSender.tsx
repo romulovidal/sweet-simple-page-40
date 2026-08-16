@@ -65,8 +65,9 @@ const AdminPushSender = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
+          'x-bypass-jwt': session?.access_token || '',
         },
+
         body: JSON.stringify({
           title: title.trim(),
           body: body.trim(),

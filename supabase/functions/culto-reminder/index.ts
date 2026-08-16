@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiChatFetch } from "../_shared/ai-fetch.ts";
-import { decodeJwtPayload, getProjectRef } from "../_shared/auth-utils.ts";
+import { decodeJwtPayload, getProjectRef, validateAdminAuth } from "../_shared/auth-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

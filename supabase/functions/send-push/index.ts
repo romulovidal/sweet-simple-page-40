@@ -8,7 +8,7 @@ const corsHeaders = {
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 // import { safeSend } from "../_shared/atis-antiban.ts"; // Removed ATIS helper
-import { decodeJwtPayload } from "../_shared/auth-utils.ts";
+import { decodeJwtPayload, validateAdminAuth } from "../_shared/auth-utils.ts";
 
 const PushPayloadSchema = z.object({
   title: z.string().trim().min(1).max(100),

@@ -13,11 +13,12 @@ const AtisPage = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      console.log("[ATIS_ACCESS] user_present:", !!data.session?.user);
-      if (data.session?.user) {
-        console.log("[ATIS_ACCESS] user_id:", data.session.user.id);
+      const currentSession = data.session;
+      console.log("[ATIS_ACCESS] user_present:", !!currentSession?.user);
+      if (currentSession?.user) {
+        console.log("[ATIS_ACCESS] user_id:", currentSession.user.id);
       }
-      setSession(data.session);
+      setSession(currentSession);
       setAuthChecked(true);
     });
   }, []);
@@ -32,9 +33,10 @@ const AtisPage = () => {
     // Only redirect if auth check is finished and NO session exists
     if (authChecked && !session) {
       console.log("[ATIS_ACCESS] No session, redirecting to /admin");
-      window.location.href = "/admin";
+      // Use navigate instead of window.location for better SPA handling
+      navigate("/admin");
     }
-  }, [authChecked, session]);
+  }, [authChecked, session, navigate]);
 
   // Combined loading state
   const isInitializing = (roleLoading && !isAdmin) || !authChecked;

@@ -67,6 +67,19 @@ async function generateInviteMessage(params: {
   }
 }
 
+function brasiliaNow(): Date {
+  const now = new Date();
+  const brasiliaOffset = -3 * 60;
+  return new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
+}
+
+function brasiliaDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -98,80 +111,71 @@ Deno.serve(async (req) => {
         });
       }
 
-      const isAdmin = auth.isAdmin;
-      const authorized = auth.authorized;
-
-
-      // If it's a manual trigger without schedule_id in body, we might be here just for auth check before cron logic
-      // But based on the code structure, the cron logic follows below.
-      // If schedule_id is present, it's a manual trigger.
+      // If it's a manual trigger with schedule_id in body
       if (body.schedule_id) {
+        const { data: schedule, error: schedErr } = await supabase
+          .from("culto_schedules")
+          .select("*")
+          .eq("id", body.schedule_id)
+          .single();
+          
+        if (schedErr || !schedule) {
+          return new Response(JSON.stringify({ error: "Schedule not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-      const { data: schedule, error: schedErr } = await supabase
-        .from("culto_schedules")
-        .select("*")
-        .eq("id", body.schedule_id)
-        .single();
-      if (schedErr || !schedule) {
-        return new Response(JSON.stringify({ error: "Schedule not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        const [h, m] = schedule.time.split(":").map(Number);
+        const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+        const nowB = brasiliaNow();
+        const currentDayM = nowB.getDay();
+        const currentMinM = nowB.getHours() * 60 + nowB.getMinutes();
+        const cultoTotalM = h * 60 + m;
+        let daysUntilM = (schedule.day_of_week - currentDayM + 7) % 7;
+        if (daysUntilM === 0 && cultoTotalM + 20 < currentMinM) daysUntilM = 7;
+        const minutesUntilM = daysUntilM * 1440 + (cultoTotalM - currentMinM);
+
+        let pushBody = body.custom_message?.trim() || "";
+        if (!pushBody) {
+          const ai = await generateInviteMessage({
+            cultoName: schedule.name,
+            timeStr,
+            daysUntil: daysUntilM,
+            minutesUntil: minutesUntilM,
+            cultoDay: schedule.day_of_week,
+          });
+          const whenTxt = describeWhen(daysUntilM, minutesUntilM, timeStr, schedule.day_of_week);
+          pushBody = ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
+        }
+
+        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            title: `⛪ ${schedule.name}`,
+            body: pushBody,
+            url: "/?tab=comunidade",
+            type: "culto-reminder",
+            urgency: "high",
+          }),
         });
+
+        const pushResult = await pushResponse.json();
+        console.log("Manual culto reminder sent:", pushResult);
+
+        return new Response(
+          JSON.stringify({ ok: true, manual: true, push: pushResult }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-
-      const [h, m] = schedule.time.split(":").map(Number);
-      const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-
-      // Determine day offset until the next occurrence of this schedule
-      const nowB = brasiliaNow();
-      const currentDayM = nowB.getDay();
-      const currentMinM = nowB.getHours() * 60 + nowB.getMinutes();
-      const cultoTotalM = h * 60 + m;
-      let daysUntilM = (schedule.day_of_week - currentDayM + 7) % 7;
-      if (daysUntilM === 0 && cultoTotalM + 20 < currentMinM) daysUntilM = 7;
-      const minutesUntilM = daysUntilM * 1440 + (cultoTotalM - currentMinM);
-
-      let pushBody = body.custom_message?.trim() || "";
-      if (!pushBody) {
-        const ai = await generateInviteMessage({
-          cultoName: schedule.name,
-          timeStr,
-          daysUntil: daysUntilM,
-          minutesUntil: minutesUntilM,
-          cultoDay: schedule.day_of_week,
-        });
-        const whenTxt = describeWhen(daysUntilM, minutesUntilM, timeStr, schedule.day_of_week);
-        pushBody =
-          ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
-      }
-
-      const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({
-          title: `⛪ ${schedule.name}`,
-          body: pushBody,
-          url: "/?tab=comunidade",
-          type: "culto-reminder",
-          urgency: "high",
-        }),
-      });
-
-      const pushResult = await pushResponse.json();
-      console.log("Manual culto reminder sent:", pushResult);
-
-      return new Response(
-        JSON.stringify({ ok: true, manual: true, push: pushResult }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
-  }
 
     // ===== SCHEDULED CRON CHECK =====
-    // Look at ALL active schedules — cross-day reminders (e.g. "night before") must fire too.
     const brasiliaTime = brasiliaNow();
     const currentDay = brasiliaTime.getDay();
     const currentTotalMinutes = brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
@@ -199,13 +203,11 @@ Deno.serve(async (req) => {
     if (remError) throw remError;
 
     let sent = 0;
-
     for (const schedule of schedules) {
       const [h, m] = schedule.time.split(":").map(Number);
       const cultoTotalMinutes = h * 60 + m;
       const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-      // Minutes from now until the next occurrence of this culto
       let daysUntilCulto = (schedule.day_of_week - currentDay + 7) % 7;
       if (daysUntilCulto === 0 && cultoTotalMinutes + 20 < currentTotalMinutes) {
         daysUntilCulto = 7;
@@ -213,7 +215,6 @@ Deno.serve(async (req) => {
       const minutesUntilCulto = daysUntilCulto * 1440 + (cultoTotalMinutes - currentTotalMinutes);
 
       const scheduleReminders = (allReminders || []).filter(r => r.schedule_id === schedule.id);
-
       const remindersToCheck = scheduleReminders.length > 0
         ? scheduleReminders
         : [{
@@ -227,12 +228,10 @@ Deno.serve(async (req) => {
           }];
 
       for (const reminder of remindersToCheck) {
-        // NEW: if reminder has an explicit scheduled_at, fire based on that.
-        // Otherwise fall back to the legacy "minutes_before" logic.
         const nowMs = Date.now();
         if (reminder.scheduled_at) {
           const trigger = new Date(reminder.scheduled_at).getTime();
-          const delta = nowMs - trigger; // >=0 means we've passed the trigger
+          const delta = nowMs - trigger;
           if (delta < 0 || delta >= 20 * 60 * 1000) continue;
           if (reminder.last_sent && new Date(reminder.last_sent).getTime() >= trigger) continue;
         } else {
@@ -245,60 +244,47 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Actual day/time of THIS reminder occurrence
-        const daysUntilThis = daysUntilCulto;
-        const whenTxt = describeWhen(daysUntilThis, minutesUntilCulto, timeStr, schedule.day_of_week);
-        const reminderLabel = reminder.scheduled_at
-          ? "agendado"
-          : (reminder.minutes_before ?? 0) >= 60
-          ? `${Math.round((reminder.minutes_before ?? 0) / 60)}h`
-          : `${reminder.minutes_before ?? 0}min`;
-
+        const whenTxt = describeWhen(daysUntilCulto, minutesUntilCulto, timeStr, schedule.day_of_week);
         let pushBody = reminder.message && reminder.message.trim() ? reminder.message.trim() : "";
         if (!pushBody) {
           const ai = await generateInviteMessage({
             cultoName: schedule.name,
             timeStr,
-            daysUntil: daysUntilThis,
+            daysUntil: daysUntilCulto,
             minutesUntil: minutesUntilCulto,
             cultoDay: schedule.day_of_week,
           });
-          pushBody =
-            ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
+          pushBody = ai || `Lembrete: o culto "${schedule.name}" ${whenTxt}. Prepare seu coração! 🙏`;
         }
 
-          const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({
-              title: `⛪ ${schedule.name}`,
-              body: pushBody,
-              url: "/?tab=comunidade",
-              type: "culto-reminder",
-              ttl: Math.max(60, (reminder.minutes_before ?? 60) * 60),
-              urgency: "high",
-            }),
-          });
+        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            title: `⛪ ${schedule.name}`,
+            body: pushBody,
+            url: "/?tab=comunidade",
+            type: "culto-reminder",
+            ttl: Math.max(60, (reminder.minutes_before ?? 60) * 60),
+            urgency: "high",
+          }),
+        });
 
-          const pushResult = await pushResponse.json();
-
-          if (reminder.id.startsWith("legacy_")) {
-            await supabase
-              .from("culto_schedules")
-              .update({ last_reminder_sent: new Date().toISOString() })
-              .eq("id", schedule.id);
-          } else {
-            await supabase
-              .from("culto_reminders")
-              .update({ last_sent: new Date().toISOString() })
-              .eq("id", reminder.id);
-          }
-
-          sent++;
-          console.log(`Sent reminder "${reminder.id}" for "${schedule.name}" (${reminderLabel} before):`, pushResult);
+        if (reminder.id.startsWith("legacy_")) {
+          await supabase
+            .from("culto_schedules")
+            .update({ last_reminder_sent: new Date().toISOString() })
+            .eq("id", schedule.id);
+        } else {
+          await supabase
+            .from("culto_reminders")
+            .update({ last_sent: new Date().toISOString() })
+            .eq("id", reminder.id);
+        }
+        sent++;
       }
     }
 
@@ -314,16 +300,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-function brasiliaNow(): Date {
-  const now = new Date();
-  const brasiliaOffset = -3 * 60;
-  return new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
-}
-
-function brasiliaDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}

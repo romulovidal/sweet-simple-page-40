@@ -24,8 +24,18 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        console.log("[ADMIN AUTH] Validating roles for:", user.id);
+        console.log("[ADMIN AUTH] useIsAdmin validating roles for:", user.id);
         
+        // Use a simpler query first to check if the table is even accessible
+        const { data: roles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        
+        if (rolesError) {
+          console.warn("[ADMIN AUTH] user_roles table query failed:", rolesError);
+        }
+
         const { data: roleResult, error } = await supabase.rpc('check_user_role', {
           _user_id: user.id,
           _role: 'admin'

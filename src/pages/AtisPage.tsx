@@ -12,10 +12,15 @@ const AtisPage = () => {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setChecked(true);
+      if (mounted) {
+        console.log("[ATIS] Session check:", !!data.session);
+        setSession(data.session);
+        setChecked(true);
+      }
     });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {

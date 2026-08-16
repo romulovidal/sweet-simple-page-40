@@ -2,10 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiChatFetch } from "../_shared/ai-fetch.ts";
 import { decodeJwtPayload, getProjectRef, validateAdminAuth } from "../_shared/auth-utils.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 const WEEKDAY_NAMES = [
   "domingo",
@@ -88,7 +85,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     // ===== MANUAL TRIGGER (admin button) =====
     // POST body: { schedule_id, reminder_id?, custom_message? }

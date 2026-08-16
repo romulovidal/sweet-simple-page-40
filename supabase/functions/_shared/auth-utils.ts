@@ -77,7 +77,12 @@ export async function validateAdminAuth(req: Request, supabaseUrl: string, servi
 
   // Query DB para outros usuários usando a service_role key para ignorar RLS na verificação de admin
   const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.1");
-  const serviceClient = createClient(supabaseUrl, serviceKey);
+  const serviceClient = createClient(supabaseUrl, serviceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
     _user_id: userId,
     _role: "admin",

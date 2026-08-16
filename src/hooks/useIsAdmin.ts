@@ -24,8 +24,6 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        // console.log("[AUTH DEBUG] role_check_start, user_id:", user.id);
-        
         // Owner bypass (standard admin role check applies to others)
         const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
         if (isSA) {
@@ -41,8 +39,7 @@ export function useIsAdmin() {
           setTimeout(() => reject(new Error("Timeout checking roles")), 4000)
         );
 
-
-        // 1. Direct query attempt (matches AdminPage.tsx pattern)
+        // 1. Direct query attempt
         const directQueryPromise = (async () => {
           const { data, error } = await supabase
             .from("user_roles")
@@ -59,24 +56,16 @@ export function useIsAdmin() {
         const directData = result.data;
         const directError = result.error;
 
-
-
         if (directError) {
-          // console.warn("Direct query failed, trying RPC:", directError);
-          
-          // 2. RPC fallback
+          // 2. RPC fallback - check_user_role is SECURITY DEFINER
           const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
             _user_id: user.id,
             _role: "admin"
           });
           
-          const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          const isA = !!hasAdmin || isSA;
-          
           if (cancelled) return;
-
-          // console.log("RPC Result:", { isA, isSA, rpcError });
           
+          const isA = !!hasAdmin || isSA;
           setIsAdmin(isA);
           setIsSuperAdmin(isSA);
           setRole(isSA ? "super_admin" : (isA ? "admin" : null));
@@ -88,15 +77,12 @@ export function useIsAdmin() {
 
           if (cancelled) return;
 
-          // console.log("Direct query Result:", { roles, isA, isSA });
-          
           setIsAdmin(isA);
           setIsSuperAdmin(isSA);
           setRole(isSA ? "super_admin" : (isA ? "admin" : null));
           setLoading(false);
         }
       } catch (err) {
-        // console.error("Critical catch block:", err);
         if (!cancelled) setLoading(false);
       }
     };

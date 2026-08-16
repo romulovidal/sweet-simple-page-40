@@ -38,7 +38,7 @@ const AdminPage = () => {
       if (error) {
         console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
         
-        const { data: hasAdmin, error: rpcError } = await supabase.rpc("has_role", {
+        const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
           _user_id: nextSession.user.id,
           _role: "admin"
         });

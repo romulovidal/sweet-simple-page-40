@@ -19,11 +19,11 @@ Deno.serve(async (req) => {
     );
     const { data: userData } = await userClient.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
-    const { data: isAdmin } = await userClient.rpc("has_role", {
+    const { data: isAdmin } = await userClient.rpc("check_user_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
-    if (!isAdmin) return json({ error: "Forbidden" }, 403);
+    if (!isAdmin) return json({ error: "Forbidden", details: "Apenas administradores podem gerar mensagens." }, 403);
 
     const { topic } = await req.json().catch(() => ({}));
     const theme = typeof topic === "string" && topic.trim()

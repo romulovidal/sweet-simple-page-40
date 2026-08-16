@@ -1,10 +1,39 @@
 project_id = "karyuuhxeismshhxuokg"
 
+# Authentication is required by default. Only functions that are intentionally
+# public or implement their own request-level protection are listed below.
+[functions.ai-tools]
+verify_jwt = false
 
+[functions.create-culto-share]
+verify_jwt = false
+
+[functions.create-verse-share]
 verify_jwt = false
 
 [functions.cs]
 verify_jwt = false
 
+[functions.exegetai]
+verify_jwt = false
+
+[functions.og]
+verify_jwt = false
+
 [functions.og-culto]
+verify_jwt = false
+
+[functions.push-subscription]
+verify_jwt = false
+
+[functions.s]
+verify_jwt = false
+
+[functions.track-device]
+verify_jwt = false
+
+[functions.track-event]
+verify_jwt = false
+
+[functions.tts-verse]
 verify_jwt = false

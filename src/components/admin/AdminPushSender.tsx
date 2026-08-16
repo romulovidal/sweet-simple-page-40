@@ -54,48 +54,41 @@ const AdminPushSender = () => {
 
     setSending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const functionUrl = `${supabaseUrl}/functions/v1/send-push?apikey=${import.meta.env.VITE_SUPABASE_ANON_KEY}`;
-
-      // Se estivermos em um ambiente onde o JWT é rejeitado pelo gateway do Supabase
-      // devido a migrações de projeto (UNAUTHORIZED_LEGACY_JWT), 
-      // o fetch direto também pode falhar se o API Gateway for o mesmo.
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-
-
-
-
-
-
-
-
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("send-push", {
+        body: {
           title: title.trim(),
           body: body.trim(),
           url: url.trim() || "/",
           ttl: DEFAULT_TTL_SECONDS,
           urgency: "high",
           type: "general",
-          bypass_token: session?.access_token || '', // Passando o token no corpo
-        }),
-
+        },
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error("[AdminPushSender] Direct fetch error:", result);
-        throw new Error(result.details || result.error || "Erro ao disparar notificação");
+      if (error) {
+        console.error("[AdminPushSender] invoke error object:", error);
+        
+        let details = "Erro desconhecido";
+        
+        if (typeof error === 'object' && error !== null) {
+          const context = (error as any).context;
+          if (context && typeof context.json === 'function') {
+            try {
+              const errorData = await context.json();
+              details = errorData.details || errorData.error || details;
+            } catch (e) {
+              details = context.statusText || details;
+            }
+          } else {
+            details = (error as any).message || details;
+          }
+        }
+        
+        throw new Error(details);
       }
 
-      const sentCount = result?.sent || 0;
-      const failedCount = result?.failed || 0;
+      const sentCount = data?.sent || 0;
+      const failedCount = data?.failed || 0;
       
       if (sentCount === 0 && failedCount > 0) {
         toast.error(`Falha total no envio: ${failedCount} erros. Verifique os logs.`);
@@ -146,6 +139,12 @@ const AdminPushSender = () => {
         <div className="flex items-center gap-2 mb-1">
           <Bell className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Enviar Notificação Push</span>
+        </div>
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-2">
+          <p className="text-[10px] text-yellow-500 font-medium">
+            ⚠️ O projeto foi migrado recentemente. Se você ver "Invalid JWT", 
+            por favor saia e entre novamente no aplicativo para atualizar suas chaves.
+          </p>
         </div>
         <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
           Agora o envio usa retenção de 24h para o aparelho receber quando voltar à internet.

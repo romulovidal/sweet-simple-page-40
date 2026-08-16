@@ -7,7 +7,7 @@ import {
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
   ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Search, X,
-  Church, AlertTriangle, Library
+  Church, AlertTriangle, Library, MessageCircle
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,11 +31,12 @@ import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import AdminRevistas from "@/components/admin/AdminRevistas";
+import AdminAtis from "@/components/admin/atis/AdminAtis";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports" | "atis";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -83,6 +84,7 @@ const ADMIN_SECTIONS = [
     sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
+      { id: "atis", label: "ATIS WhatsApp", desc: "Mensagens e automações", icon: MessageCircle },
       { id: "prayers", label: "Pedidos de Oração", desc: "Moderação", icon: HandHeart },
     ],
   },
@@ -322,6 +324,7 @@ const AdminPanel = () => {
       case "retention": return <AdminRetention />;
       case "verse": return <AdminDailyVerse />;
       case "push": return <AdminPushSender />;
+      case "atis": return <AdminAtis />;
       case "roles": return <AdminRoles />;
       case "log": return <AdminActivityLog />;
       case "cultos": return <AdminCultoSchedule />;

@@ -38,10 +38,11 @@ const AdminPage = () => {
       }
 
       // Resilient fallback to functions that actually exist in the current schema.
-      // Both roles remain database-backed; there is no hardcoded owner/admin UUID.
+      // Generated client types may lag behind migrations, so only this fallback is untyped.
+      const rpc = (supabase as any).rpc.bind(supabase);
       const [{ data: hasAdmin, error: adminError }, { data: hasSuperAdmin, error: superError }] = await Promise.all([
-        supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
-        supabase.rpc("is_super_admin", { _user_id: userId }),
+        rpc("has_role", { _user_id: userId, _role: "admin" }),
+        rpc("is_super_admin", { _user_id: userId }),
       ]);
 
       if (adminError || superError) throw adminError ?? superError;

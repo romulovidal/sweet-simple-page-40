@@ -98,10 +98,11 @@ serve(async (req) => {
      // Manual triggers must come from an admin user or the internal service role.
      // Otherwise, the endpoint only runs on its scheduled time window.
      const auth = await isAuthorizedTrigger(req, supabaseUrl, serviceKey);
-     const hasAuthHeader = !!req.headers.get("Authorization");
+     const authHeader = req.headers.get("Authorization");
+     const hasAuthHeader = !!authHeader && authHeader.length > 0;
      
      if (hasAuthHeader && !auth.ok) {
-       console.error("[daily-verse-push] Unauthorized manual trigger attempt");
+       console.error("[daily-verse-push] Unauthorized manual trigger attempt:", auth);
        return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {
          status: 401,
          headers: { ...corsHeaders, "Content-Type": "application/json" },

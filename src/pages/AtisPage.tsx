@@ -35,12 +35,12 @@ const AtisPage = () => {
   }, []);
 
   useEffect(() => {
-    if (checked && !session) {
+    if (checked && !session && !loading) {
       const currentPath = window.location.pathname + window.location.search;
-      console.log("[ATIS] No session, redirecting to /admin?redirect=" + encodeURIComponent(currentPath));
+      console.log("[ATIS] Redirect trigger", { checked, hasSession: !!session, loading });
       navigate("/admin?redirect=" + encodeURIComponent(currentPath));
     }
-  }, [checked, session, navigate]);
+  }, [checked, session, loading, navigate]);
 
   if (loading || !checked) {
     return (

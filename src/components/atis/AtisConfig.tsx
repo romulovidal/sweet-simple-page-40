@@ -141,8 +141,9 @@ const AtisConfig = () => {
           <p className="text-sm font-bold">Conexão WhatsApp</p>
           <p className="text-xs opacity-90">Escaneie o QR Code para conectar o número do Atis.</p>
         </div>
-        <button onClick={() => setShowConnect(true)} className="shrink-0 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5">
+        <button onClick={() => setShowConnect(true)} className="shrink-0 bg-white/15 hover:bg-white/25 active:bg-white/30 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 transition-all z-10">
           <QrCode className="w-4 h-4" /> Conectar
+        </button>
         </button>
       </div>
 

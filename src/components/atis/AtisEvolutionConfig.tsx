@@ -109,7 +109,7 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
 
   useEffect(() => { refresh(); }, []);
 
-  const connected = status.connected;
+  const connected = status.connected || status.state === "open" || status.state === "connected";
 
   return (
     <div className="space-y-4">

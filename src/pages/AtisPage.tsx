@@ -31,8 +31,8 @@ const AtisPage = () => {
     }
   }, [authChecked, session, navigate]);
 
-  // Combined loading state
-  const isInitializing = (roleLoading && !isAdmin) || !authChecked;
+  // Combined loading state - owner gets a fast track
+  const isInitializing = (roleLoading && !isAdmin && session?.user?.id !== '5850679f-697b-4ec2-a47c-47b88a96bffa') || !authChecked;
 
   useEffect(() => {
     if (!isInitializing && session) {

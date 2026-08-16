@@ -179,9 +179,12 @@ const AdminPage = () => {
   
   // Apenas redireciona se realmente for um admin validado
   useEffect(() => {
-    if (isAdmin && redirectPath && (redirectPath === "/atis" || redirectPath.startsWith("/atis?"))) {
-      console.log("[ADMIN AUTH] Redirecting back to:", redirectPath);
-      navigate(redirectPath, { replace: true });
+    if (isAdmin && redirectPath) {
+      const decodedPath = decodeURIComponent(redirectPath);
+      if (decodedPath === "/atis" || decodedPath.startsWith("/atis?")) {
+        console.log("[ADMIN AUTH] Redirecting back to:", decodedPath);
+        navigate(decodedPath, { replace: true });
+      }
     }
   }, [isAdmin, redirectPath, navigate]);
 

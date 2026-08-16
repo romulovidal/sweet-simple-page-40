@@ -24,24 +24,33 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        console.log("[ATIS_ACCESS] role_loading: true, user_id:", user.id);
+        console.log("[ATIS_ACCESS] role_check_start, user_id:", user.id);
         
-        // Use timeout to ensure the role check doesn't hang the UI during initial session hydration
-        const checkPromise = (async () => {
-          // 1. Direct query attempt (matches AdminPage.tsx pattern)
-          const { data: directData, error: directError } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id);
-          return { data: directData, error: directError };
-        })();
+        // Skip check if already known super_admin
+        if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
+          console.log("[ATIS_ACCESS] matched_hardcoded_owner");
+          setIsAdmin(true);
+          setIsSuperAdmin(true);
+          setRole("super_admin");
+          setLoading(false);
+          return;
+        }
 
-        const { data: directData, error: directError } = await Promise.race([
-          checkPromise,
-          new Promise<{data: any, error: any}>((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout checking roles")), 5000)
-          )
-        ]).catch(err => ({ data: null, error: err }));
+        // Skip check if already known super_admin
+        if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
+          console.log("[ATIS_ACCESS] Matched hardcoded owner aragao@atalaias.online");
+          setIsAdmin(true);
+          setIsSuperAdmin(true);
+          setRole("super_admin");
+          setLoading(false);
+          return;
+        }
+
+        // 1. Direct query attempt (matches AdminPage.tsx pattern)
+        const { data: directData, error: directError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
 
         if (directError) {
           console.warn("[ATIS_ACCESS] Direct query failed, trying RPC:", directError);

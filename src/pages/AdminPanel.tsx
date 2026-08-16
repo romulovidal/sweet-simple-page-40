@@ -31,12 +31,11 @@ import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import AdminRevistas from "@/components/admin/AdminRevistas";
-import AdminAtis from "@/components/admin/atis/AdminAtis";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports" | "atis";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -84,7 +83,6 @@ const ADMIN_SECTIONS = [
     sectionIcon: HandHeart,
     tabs: [
       { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },
-      { id: "atis", label: "ATIS WhatsApp", desc: "Mensagens e automações", icon: MessageCircle },
       { id: "prayers", label: "Pedidos de Oração", desc: "Moderação", icon: HandHeart },
     ],
   },
@@ -259,6 +257,23 @@ const AdminPanel = () => {
         );
       })}
 
+      <div className="pt-2 space-y-2">
+        <p className="px-1 text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Painel independente</p>
+        <button
+          onClick={() => navigate("/atis")}
+          className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-colors bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] active:scale-[0.99] border border-primary/15"
+        >
+          <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
+            <MessageCircle className="w-5 h-5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-[hsl(var(--dark-text))] truncate">ATIS WhatsApp</p>
+            <p className="text-xs text-[hsl(var(--dark-muted))] truncate">Abrir central de mensagens e automações</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))] shrink-0" />
+        </button>
+      </div>
+
       <div className="pt-2 grid grid-cols-2 gap-3">
         <button
           onClick={() => navigate("/")}
@@ -324,7 +339,6 @@ const AdminPanel = () => {
       case "retention": return <AdminRetention />;
       case "verse": return <AdminDailyVerse />;
       case "push": return <AdminPushSender />;
-      case "atis": return <AdminAtis />;
       case "roles": return <AdminRoles />;
       case "log": return <AdminActivityLog />;
       case "cultos": return <AdminCultoSchedule />;
@@ -365,6 +379,21 @@ const AdminPanel = () => {
           Gerencie o conteúdo, os cultos e a comunidade da Bíblia Atalaia
         </p>
       </div>
+
+      <button
+        onClick={() => navigate("/atis")}
+        className="w-full flex items-center gap-4 p-4 rounded-2xl text-left bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] transition-colors border border-primary/15"
+      >
+        <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-primary/15 text-primary">
+          <MessageCircle className="w-5 h-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[hsl(var(--dark-muted))]">Painel independente</p>
+          <p className="text-base font-bold text-[hsl(var(--dark-text))]">ATIS WhatsApp</p>
+          <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5">Mensagens, contatos, grupos e automações fora das categorias do Admin.</p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))] shrink-0" />
+      </button>
 
       {getVisibleSections(isSuperAdmin).map((section) => {
         const SIcon = section.sectionIcon;

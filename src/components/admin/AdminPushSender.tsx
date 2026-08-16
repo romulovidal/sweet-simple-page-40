@@ -56,7 +56,7 @@ const AdminPushSender = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const functionUrl = `${supabaseUrl}/functions/v1/send-push`;
+      const functionUrl = `${supabaseUrl}/functions/v1/send-push?apikey=${import.meta.env.VITE_SUPABASE_ANON_KEY}`;
 
       // Se estivermos em um ambiente onde o JWT é rejeitado pelo gateway do Supabase
       // devido a migrações de projeto (UNAUTHORIZED_LEGACY_JWT), 

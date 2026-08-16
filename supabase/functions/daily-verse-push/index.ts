@@ -3,10 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiGenerateText, hasAnyAiKey } from "../_shared/ai-fetch.ts";
 import { decodeJwtPayload, getProjectRef, validateAdminAuth } from "../_shared/auth-utils.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 function limitNotificationBody(text: string) {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -76,7 +73,12 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     const { data: settings } = await supabase.from("admin_settings").select("key, value");
     const getSetting = (k: string) => settings?.find(s => s.key === k)?.value;

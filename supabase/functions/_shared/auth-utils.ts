@@ -1,13 +1,33 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 /**
+ * Compatibility helper for older imports. It only derives the project ref from
+ * the configured URL and is not used as proof of authentication.
+ */
+export function getProjectRef(supabaseUrl: string) {
+  try {
+    return new URL(supabaseUrl).hostname.split(".")[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Deprecated compatibility export. Authorization must never trust decoded JWT
+ * claims. Returning null guarantees callers cannot use this as authentication.
+ */
+export function decodeJwtPayload(_token: string) {
+  return null;
+}
+
+/**
  * Secure server-side authorization helper for administrative Edge Functions.
  *
  * - Internal service-to-service calls are accepted only when the Bearer token
  *   exactly matches SUPABASE_SERVICE_ROLE_KEY.
  * - User Bearer tokens are validated by Supabase Auth with auth.getUser(token).
  * - Administrative access is resolved from public.user_roles with service_role.
- * - No manual JWT decoding, hard-coded user bypasses, or unverified claims.
+ * - No hard-coded user bypasses or trust in unverified JWT claims.
  */
 export async function validateAdminAuth(req: Request, supabaseUrl: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -22,7 +42,6 @@ export async function validateAdminAuth(req: Request, supabaseUrl: string, servi
     return { authorized: false, error: "Server authentication is not configured" };
   }
 
-  // Trusted internal call. Never expose this key to client-side code.
   if (token === serviceKey) {
     return { authorized: true, userId: "service-role", isAdmin: true, role: "service_role" };
   }
@@ -31,7 +50,6 @@ export async function validateAdminAuth(req: Request, supabaseUrl: string, servi
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Validate the user token with Supabase Auth instead of trusting decoded claims.
   const { data: userData, error: userError } = await serviceClient.auth.getUser(token);
   const user = userData?.user;
 

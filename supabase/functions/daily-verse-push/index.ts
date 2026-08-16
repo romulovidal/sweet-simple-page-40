@@ -168,21 +168,9 @@ serve(async (req) => {
  
      const results: any = { brTime: brTimeStr, date: todayBR };
 
-     // Horários personalizados dos grupos precisam disparar mesmo quando são
-     // diferentes do horário global do push do aplicativo.
-     const { data: waGroups } = await supabase
-       .from("atis_groups")
-       .select("wa_group_id, notification_types, notification_times")
-       .eq("active", true)
-       .eq("forward_notifications", true)
-       .not("wa_group_id", "is", null);
+     // ATIS groups logic removed. Native push only.
      const dueGroupTypes = new Set<string>();
-     for (const group of waGroups ?? []) {
-       const types = Array.isArray(group.notification_types) ? group.notification_types : [];
-       const times = group.notification_times && typeof group.notification_times === "object" ? group.notification_times as Record<string, string> : {};
-       if ((!types.length || types.includes("daily-verse")) && times["daily-verse"] === brTimeStr && brTimeStr !== verseTime) dueGroupTypes.add("verse");
-       if ((!types.length || types.includes("motivational")) && times.motivational === brTimeStr && brTimeStr !== motivationalTime) dueGroupTypes.add("motivational");
-     }
+
  
       // 1. Check Daily Verse Push
       const runVerse = onlyType ? onlyType === "verse" : (isManual || (brTimeStr === verseTime && lastVerseDate !== todayBR) || dueGroupTypes.has("verse"));

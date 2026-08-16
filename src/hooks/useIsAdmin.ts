@@ -24,7 +24,7 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        console.log("[ATIS_ACCESS] role_check_start, user_id:", user.id);
+        // console.log("[AUTH DEBUG] role_check_start, user_id:", user.id);
         
         // Owner bypass (standard admin role check applies to others)
         const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
@@ -62,7 +62,7 @@ export function useIsAdmin() {
 
 
         if (directError) {
-          console.warn("[ATIS_ACCESS] Direct query failed, trying RPC:", directError);
+          // console.warn("Direct query failed, trying RPC:", directError);
           
           // 2. RPC fallback
           const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
@@ -75,7 +75,7 @@ export function useIsAdmin() {
           
           if (cancelled) return;
 
-          console.log("[ATIS_ACCESS] RPC Result:", { isA, isSA, rpcError });
+          // console.log("RPC Result:", { isA, isSA, rpcError });
           
           setIsAdmin(isA);
           setIsSuperAdmin(isSA);
@@ -88,7 +88,7 @@ export function useIsAdmin() {
 
           if (cancelled) return;
 
-          console.log("[ATIS_ACCESS] Direct query Result:", { roles, isA, isSA });
+          // console.log("Direct query Result:", { roles, isA, isSA });
           
           setIsAdmin(isA);
           setIsSuperAdmin(isSA);
@@ -96,7 +96,7 @@ export function useIsAdmin() {
           setLoading(false);
         }
       } catch (err) {
-        console.error("[ATIS_ACCESS] Critical catch block:", err);
+        // console.error("Critical catch block:", err);
         if (!cancelled) setLoading(false);
       }
     };

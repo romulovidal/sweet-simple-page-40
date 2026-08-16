@@ -825,7 +825,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          atis_welcomed_at: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -836,7 +835,6 @@ export type Database = {
           whatsapp_opt_in: boolean
         }
         Insert: {
-          atis_welcomed_at?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -847,7 +845,6 @@ export type Database = {
           whatsapp_opt_in?: boolean
         }
         Update: {
-          atis_welcomed_at?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null

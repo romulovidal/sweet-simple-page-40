@@ -31,7 +31,7 @@ const AtisPage = () => {
   }, [authChecked, session]);
 
   // Combined loading state
-  const isInitializing = roleLoading || !authChecked;
+  const isInitializing = (roleLoading && !isAdmin) || !authChecked;
 
   useEffect(() => {
     if (!isInitializing && session) {

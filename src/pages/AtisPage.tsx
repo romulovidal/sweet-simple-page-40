@@ -20,7 +20,18 @@ const AtisPage = () => {
         setChecked(true);
       }
     });
-    return () => { mounted = false; };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        console.log("[ATIS] Auth event:", _event, !!session);
+        setSession(session);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -55,7 +66,11 @@ const AtisPage = () => {
     );
   }
 
-  return <AtisLayout />;
+  return (
+    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+      <AtisLayout />
+    </div>
+  );
 };
 
 export default AtisPage;

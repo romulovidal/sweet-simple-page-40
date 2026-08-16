@@ -75,7 +75,7 @@ const AtisDashboard = ({ onNavigate }: { onNavigate: (tab: any) => void }) => {
     : "from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)]";
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
+    <div className="space-y-4">
       <div className="rounded-3xl bg-gradient-to-br from-[hsl(var(--dark-card))] to-[hsl(var(--dark-card-hover))] p-5 flex items-center gap-4">
         <img
           src={atisAvatar}

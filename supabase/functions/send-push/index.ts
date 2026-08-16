@@ -28,14 +28,19 @@ function isSafeRelativeUrl(value: string) {
 
 async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
+  console.log(`[send-push] Authorization header present: ${!!authHeader}`);
+  
   if (!authHeader.startsWith("Bearer ")) {
+    console.error("[send-push] Missing or invalid Bearer token");
     return { error: new Response(JSON.stringify({ error: "Unauthorized", details: "Missing Bearer token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   const token = authHeader.replace(/^Bearer\s+/, "");
   if (token === serviceKey) {
+    console.log("[send-push] Authorized as service-role (Direct Key Match)");
     return { userId: "service-role" };
   }
+
 
   const userClient = createClient(supabaseUrl, anonKey, {
     global: {

@@ -3,7 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bypass-jwt",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 import { safeSend } from "../_shared/atis-antiban.ts";

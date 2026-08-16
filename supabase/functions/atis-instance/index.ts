@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { requireAdmin } from '../_shared/atis-auth.ts'
 
 const EVO_URL = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '')
 const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
@@ -27,28 +28,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // Auth: require logged-in admin
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claims } = await supabase.auth.getClaims(token)
-    if (!claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: claims.claims.sub, _role: 'admin' })
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const auth = await requireAdmin(req)
+    if (auth.error) return auth.error
 
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
     const action = body.action ?? 'status'
+
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.functions.supabase.co')}/atis-webhook`
     const webhookSecret = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 

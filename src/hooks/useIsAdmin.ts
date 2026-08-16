@@ -43,15 +43,22 @@ export function useIsAdmin() {
 
 
         // 1. Direct query attempt (matches AdminPage.tsx pattern)
-        const directQueryPromise = supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
+        const directQueryPromise = (async () => {
+          const { data, error } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+          return { data, error };
+        })();
 
-        const { data: directData, error: directError } = await Promise.race([
+        const result = await Promise.race([
           directQueryPromise,
           timeoutPromise as any
         ]).catch(err => ({ data: null, error: err }));
+
+        const directData = result.data;
+        const directError = result.error;
+
 
 
         if (directError) {

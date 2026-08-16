@@ -1,5 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { decodeJwtPayload, getProjectRef } from "./auth-utils.ts";
+
+export function getProjectRef(supabaseUrl: string) {
+  try {
+    const url = new URL(supabaseUrl);
+    return url.hostname.split(".")[0];
+  } catch {
+    return "";
+  }
+}
+
+export function decodeJwtPayload(token: string) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload;
+  } catch (e) {
+    console.error("[auth-utils] JWT Decode error:", e);
+    return null;
+  }
+}
 
 /**
  * Enhanced admin validation that uses a service role client to bypass RLS.

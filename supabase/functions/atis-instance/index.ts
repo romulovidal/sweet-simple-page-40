@@ -6,77 +6,110 @@ const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY') ?? ''
 const INSTANCE = 'atis'
 
 async function evo(path: string, init: RequestInit = {}) {
+  console.log(`[EVO] Requesting: ${path}`);
   if (!EVO_URL || !EVO_KEY) {
-    return { ok: false, status: 503, json: { error: 'evolution-not-configured' } }
+    console.error("[EVO] Configuration missing: URL or KEY is empty.");
+    return { ok: false, status: 503, json: { error: 'evolution-not-configured', details: { url: !!EVO_URL, key: !!EVO_KEY } } }
   }
-  const res = await fetch(`${EVO_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: EVO_KEY,
-      ...(init.headers ?? {}),
-    },
-  })
-  const text = await res.text()
-  let json: any = null
-  try { json = text ? JSON.parse(text) : null } catch { json = { raw: text } }
-  return { ok: res.ok, status: res.status, json }
+  
+  const url = `${EVO_URL}${path}`;
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: EVO_KEY,
+        ...(init.headers ?? {}),
+      },
+    })
+    const text = await res.text()
+    console.log(`[EVO] Response ${res.status} for ${path}: ${text.substring(0, 200)}`);
+    
+    let json: any = null
+    try { json = text ? JSON.parse(text) : null } catch { json = { raw: text } }
+    return { ok: res.ok, status: res.status, json }
+  } catch (err) {
+    console.error(`[EVO] Fetch error for ${url}:`, err);
+    return { ok: false, status: 500, json: { error: 'fetch-failed', message: err.message } }
+  }
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // Auth: require logged-in admin
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Unauthorized', code: 'NO_AUTH' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
     )
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claims } = await supabase.auth.getClaims(token)
-    if (!claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized', code: 'INVALID_TOKEN' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: claims.claims.sub, _role: 'admin' })
+
+    // Role check: supports hierarchy via public.has_role (security definer)
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Forbidden', code: 'NOT_ADMIN' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
     const action = body.action ?? 'status'
-    const webhookUrl = `${Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.functions.supabase.co')}/atis-webhook`
+    
+    // Webhook URL in current project
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const functionsUrl = supabaseUrl.replace('.supabase.co', '.functions.supabase.co');
+    const webhookUrl = `${functionsUrl}/atis-webhook`;
     const webhookSecret = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 
+    console.log(`[atis-instance] Action: ${action} for user: ${user.email}`);
+
     if (action === 'create') {
-      // Try to create; if exists, ignore
+      const payload = {
+        instanceName: INSTANCE,
+        token: '', // Evolution API generated
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+        webhook: {
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          headers: { 'x-webhook-secret': webhookSecret },
+          events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+        },
+      };
+      
+      console.log(`[atis-instance] Creating instance with payload:`, JSON.stringify(payload));
+      
       const created = await evo(`/instance/create`, {
         method: 'POST',
-        body: JSON.stringify({
-          instanceName: INSTANCE,
-          qrcode: true,
-          integration: 'WHATSAPP-BAILEYS',
-          webhook: {
-            url: webhookUrl,
-            byEvents: false,
-            base64: false,
-            headers: { 'x-webhook-secret': webhookSecret },
-            events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
-          },
-        }),
+        body: JSON.stringify(payload),
       })
+      
+      // If 409, it already exists, that's fine
+      if (!created.ok && created.status !== 409) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          code: 'EVO_CREATE_ERROR', 
+          status: created.status, 
+          details: created.json 
+        }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
       // Fetch QR
       const conn = await evo(`/instance/connect/${INSTANCE}`)
       return new Response(JSON.stringify({
+        success: true,
         created: created.ok,
-        createdStatus: created.status,
         qr: conn.json?.base64 ?? conn.json?.qrcode?.base64 ?? null,
         code: conn.json?.code ?? conn.json?.qrcode?.code ?? null,
-        raw: conn.json,
         webhookUrl,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -84,24 +117,23 @@ Deno.serve(async (req) => {
     if (action === 'qr') {
       const conn = await evo(`/instance/connect/${INSTANCE}`)
       return new Response(JSON.stringify({
+        success: true,
         qr: conn.json?.base64 ?? conn.json?.qrcode?.base64 ?? null,
         code: conn.json?.code ?? conn.json?.qrcode?.code ?? null,
-        raw: conn.json,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'logout') {
       const out = await evo(`/instance/logout/${INSTANCE}`, { method: 'DELETE' })
-      return new Response(JSON.stringify(out.json ?? { ok: out.ok }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ success: out.ok, details: out.json }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'delete') {
       const out = await evo(`/instance/delete/${INSTANCE}`, { method: 'DELETE' })
-      return new Response(JSON.stringify(out.json ?? { ok: out.ok }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ success: out.ok, details: out.json }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'listGroups') {
-      // Evolution API: GET /group/fetchAllGroups/{instance}?getParticipants=false
       const out = await evo(`/group/fetchAllGroups/${INSTANCE}?getParticipants=false`)
       const raw = out.json
       const arr: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.groups) ? raw.groups : [])
@@ -109,47 +141,29 @@ Deno.serve(async (req) => {
         wa_group_id: g?.id ?? g?.remoteJid ?? g?.groupJid ?? null,
         name: g?.subject ?? g?.name ?? g?.groupMetadata?.subject ?? '(sem nome)',
         size: g?.size ?? g?.participantsCount ?? g?.groupMetadata?.size ?? null,
-        owner: g?.owner ?? null,
       })).filter((g: any) => g.wa_group_id && String(g.wa_group_id).endsWith('@g.us'))
-      return new Response(JSON.stringify({ ok: out.ok, groups, count: groups.length, raw: groups.length ? undefined : raw }), {
+      
+      return new Response(JSON.stringify({ success: out.ok, groups, count: groups.length }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    if (action === 'importGroups') {
-      const selected: Array<{ wa_group_id: string; name: string; forward_notifications?: boolean; respond_mode?: 'mention_only' | 'always' | 'off' }> =
-        Array.isArray(body.groups) ? body.groups : []
-      if (!selected.length) {
-        return new Response(JSON.stringify({ error: 'groups required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      }
-      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-      const rows = selected
-        .filter((g) => g.wa_group_id && g.wa_group_id.endsWith('@g.us'))
-        .map((g) => ({
-          wa_group_id: g.wa_group_id,
-          name: (g.name ?? '').trim() || g.wa_group_id,
-          respond_mode: g.respond_mode ?? 'mention_only',
-          active: true,
-          forward_notifications: !!g.forward_notifications,
-        }))
-      const { error, data } = await admin.from('atis_groups').upsert(rows, { onConflict: 'wa_group_id' }).select('id')
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      }
-      return new Response(JSON.stringify({ ok: true, imported: data?.length ?? rows.length }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (action === 'status') {
+      const st = await evo(`/instance/connectionState/${INSTANCE}`)
+      return new Response(JSON.stringify({
+        success: true,
+        state: st.json?.instance?.state ?? st.json?.state ?? 'disconnected',
+        exists: st.ok || st.status === 409,
+        webhookUrl,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // default: status
-    const st = await evo(`/instance/connectionState/${INSTANCE}`)
-    return new Response(JSON.stringify({
-      state: st.json?.instance?.state ?? st.json?.state ?? 'unknown',
-      exists: st.ok,
-      raw: st.json,
-      webhookUrl,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    console.error(`[atis-instance] Critical error:`, e);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: String(e?.message ?? e) 
+    }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

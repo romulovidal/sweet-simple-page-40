@@ -20,7 +20,8 @@ const AtisPage = () => {
 
   useEffect(() => {
     if (checked && !session) {
-      navigate("/admin");
+      console.log("[ATIS] No session, redirecting to /admin");
+      navigate("/admin?redirect=/atis");
     }
   }, [checked, session, navigate]);
 

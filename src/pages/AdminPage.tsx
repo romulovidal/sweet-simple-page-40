@@ -172,6 +172,14 @@ const AdminPage = () => {
     );
   }
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const redirectPath = searchParams.get("redirect");
+  
+  if (isAdmin && redirectPath === "/atis") {
+    navigate("/atis", { replace: true });
+    return null;
+  }
+
   return <AdminPanel />;
 };
 

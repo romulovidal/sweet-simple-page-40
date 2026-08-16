@@ -29,14 +29,23 @@ async function generatePersonalGreeting(name: string, period: string): Promise<s
   return await aiGenerateText({ system, user: 'Gere a mensagem pessoal.', temperature: 1.1 })
 }
 
+import { requireAdmin } from '../_shared/atis-auth.ts'
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  const body = await req.json().catch(() => ({}))
+  const isManual = body?.is_manual === true || body?.force === true;
+
+  if (isManual) {
+    const auth = await requireAdmin(req)
+    if (auth.error) return auth.error
+  }
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const engine = new AtisEngine(admin, 'atis-birthday-greeting')
   const { mmdd, dateKey, period } = brNow()
-  const body = await req.json().catch(() => ({}))
-  const isManual = body?.is_manual === true || body?.force === true;
+
 
   const { data: config } = await admin
     .from('atis_notification_configs')

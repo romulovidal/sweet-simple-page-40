@@ -37,13 +37,23 @@ function titleByPeriod(period: string): string {
   return '✨ Devocional de hoje'
 }
 
+import { requireAdmin } from '../_shared/atis-auth.ts'
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  
+  const body = await req.json().catch(() => ({}))
+  const isManual = body?.is_manual === true || body?.force === true;
+
+  if (isManual) {
+    const auth = await requireAdmin(req)
+    if (auth.error) return auth.error
+  }
+
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const engine = new AtisEngine(admin, 'atis-daily-devotional')
   const { dateKey, period } = brNow()
-  const body = await req.json().catch(() => ({}))
-  const isManual = body?.is_manual === true || body?.force === true;
+
 
   const { data: config } = await admin
     .from('atis_notification_configs')

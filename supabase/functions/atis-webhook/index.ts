@@ -36,6 +36,19 @@ Deno.serve(async (req) => {
 
   try {
     const event = payload?.event ?? payload?.type ?? 'unknown'
+    console.log(`[AtisWebhook] Event received: ${event}`)
+
+    // Sincronização de Estado de Conexão
+    if (event === 'connection.update' || event === 'CONNECTION_UPDATE') {
+      const state = payload?.data?.state ?? payload?.state
+      if (state) {
+        console.log(`[AtisWebhook] Updating connection state to: ${state}`)
+        await admin.from('atis_config').update({ 
+          last_connection_state: state,
+          updated_at: new Date().toISOString() 
+        }).eq('id', 1)
+      }
+    }
 
     if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT') {
       const data = payload?.data ?? payload
@@ -95,8 +108,6 @@ Deno.serve(async (req) => {
           await safeSend(admin, jid, reply, { kind: 'reply' })
           continue
         }
-
-        // TODO: Detecção de Crise e Comandos de IA (Exegese, etc.)
       }
     }
   } catch (e) {
@@ -105,3 +116,4 @@ Deno.serve(async (req) => {
 
   return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })
+

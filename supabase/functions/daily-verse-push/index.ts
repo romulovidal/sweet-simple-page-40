@@ -50,7 +50,7 @@ function getBrazilPeriod(date = new Date()): { period: "manhã" | "tarde" | "noi
   return { period, hour };
 }
 
-import { validateAdminAuth } from "../_shared/auth-utils.ts";
+// Re-import removed due to duplicate in previous line range
 
 async function isAuthorizedTrigger(
   req: Request,

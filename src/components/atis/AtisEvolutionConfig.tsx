@@ -28,9 +28,18 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
   const [instanceName, setInstanceName] = useState<string>("atis");
 
   const call = async (action: string) => {
-    const { data, error } = await supabase.functions.invoke("atis-instance", { body: { action } });
-    if (error) throw error;
-    return data as any;
+    try {
+      const { data, error } = await supabase.functions.invoke("atis-instance", { body: { action } });
+      if (error) {
+        // Tenta ler o body do erro se for um erro de função do Supabase
+        const errorData = await error.context?.json().catch(() => null);
+        throw new Error(errorData?.details || errorData?.error || error.message || "Erro na Edge Function");
+      }
+      return data as any;
+    } catch (err: any) {
+      console.error(`[AtisEvolutionConfig] Call error for ${action}:`, err);
+      throw err;
+    }
   };
 
   const refresh = async () => {
@@ -83,7 +92,14 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
       setQr(r.qr ?? null);
       setCode(r.code ?? null);
       setWebhookUrl(r.webhookUrl ?? "");
-      toast.success("Instância configurada. Escaneie o QR Code se necessário.");
+      
+      if (r.qr) {
+        toast.info("Instância criada. Escaneie o QR Code.");
+      } else if (r.raw?.instance?.state === 'open') {
+        toast.success("Instância já está conectada.");
+      } else {
+        toast.success("Instância configurada.");
+      }
       refresh();
     } catch (e: any) {
       console.error("[ATIS EVO] Create instance error:", e);

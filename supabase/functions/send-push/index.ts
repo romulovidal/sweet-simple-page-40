@@ -41,41 +41,41 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
     return { userId: "service-role" };
   }
 
-
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) {
-    return { error: new Response(JSON.stringify({ error: "Unauthorized", details: userError?.message || "Invalid user" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
-  }
-
-  // We use the service client to check role to avoid RLS issues on user_roles
+  // Use the service client to get user data from the token, avoiding scope issues
   const serviceClient = createClient(supabaseUrl, serviceKey);
   
-  console.log(`[send-push] Checking role for user ${user.id} via check_user_role...`);
+  let userId = "";
+  try {
+    const { data: { user }, error: authError } = await serviceClient.auth.getUser(token);
+    if (authError || !user) {
+      console.error(`[send-push] Token validation failed: ${authError?.message || "User not found"}`);
+      return { error: new Response(JSON.stringify({ error: "Unauthorized", details: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+    }
+    userId = user.id;
+    console.log(`[send-push] Authorized as user: ${userId}`);
+  } catch (err) {
+    console.error("[send-push] Unexpected auth error:", err);
+    return { error: new Response(JSON.stringify({ error: "Internal Server Error", details: "Auth check failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  }
+  
+  console.log(`[send-push] Checking role for user ${userId} via check_user_role...`);
   // Use check_user_role RPC which handles hierarchy (super_admin > admin)
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
-    _user_id: user.id,
+    _user_id: userId,
     _role: "admin",
   });
 
   if (roleError) {
-    console.error(`[send-push] RPC error for user ${user.id}:`, roleError);
+    console.error(`[send-push] RPC error for user ${userId}:`, roleError);
     return { error: new Response(JSON.stringify({ error: "Internal Server Error", details: "Falha ao verificar permissões no banco." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   if (!isAdmin) {
-    console.warn(`[send-push] Forbidden: User ${user.id} is not an admin`);
+    console.warn(`[send-push] Forbidden: User ${userId} is not an admin`);
     return { error: new Response(JSON.stringify({ error: "Forbidden", details: "Você não tem permissão de administrador para enviar push manual." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
-  return { userId: user.id };
+  return { userId: userId };
 }
 
 async function sendToSubscription(

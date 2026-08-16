@@ -114,7 +114,7 @@ async function sendToSubscription(
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   console.log(`[send-push] Received ${req.method} request to ${req.url}`);
   
   if (req.method === "OPTIONS") {

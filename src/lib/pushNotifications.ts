@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const VAPID_PUBLIC_KEY = "BJxpu8kKuKKxO2wqtaR7TRcw2HpRXJc3F5I5ys6AYvNq064w04vNJyBAs3_Q6FoTGSv2CxOxRTnmBstTWS1KdQM";
+const VAPID_PUBLIC_KEY = "BKW4Qy2YhD01Y4N8B8r2D0yATpTKFgX3fLGf4eK0XblQLwpw2A0__86Gg7a7Z62UkWh0kSJz9xYxYtt37U";
 const PUSH_SYNC_STORAGE_KEY = "pending-push-registration";
 
 function isPreviewEnvironment() {

@@ -1,6 +1,6 @@
- import AskBibleFloat from "@/components/AskBibleFloat";
- import AskBible from "@/components/AskBible";
- import { useAppFeatures } from "@/hooks/useAppFeatures";
+import AskBibleFloat from "@/components/AskBibleFloat";
+import AskBible from "@/components/AskBible";
+import { useAppFeatures } from "@/hooks/useAppFeatures";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -31,7 +31,7 @@ import PlansPage from "@/pages/PlansPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
-
+import AtisPage from "@/pages/AtisPage";
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
 import HarpaPage from "@/pages/HarpaPage";
@@ -45,19 +45,16 @@ import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
 import RootRoute from "@/routes/index";
 
-
-
-
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-   const { features } = useAppFeatures();
-  const isAdmin = location.pathname.startsWith("/admin");
+  const { features } = useAppFeatures();
+  const isAdminSurface = location.pathname.startsWith("/admin") || location.pathname.startsWith("/atis");
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
   const isMobile = useIsMobile();
-  const showChrome = !isAdmin && !isLanding;
+  const showChrome = !isAdminSurface && !isLanding;
   // Wait for viewport detection so tour data-tour selectors resolve to only ONE nav
   const showSidebar = showChrome && isMobile === false;
   const showBottomNav = showChrome && isMobile !== false;
@@ -66,14 +63,14 @@ const AppContent = () => {
   useDailyOpenTracker();
 
   useEffect(() => {
-    if (location.pathname.startsWith("/admin")) return;
+    if (isAdminSurface) return;
     trackPageView(location.pathname);
-  }, [location.pathname]);
+  }, [location.pathname, isAdminSurface]);
 
   return (
-    <div className={isAdmin || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
+    <div className={isAdminSurface || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
       {showSidebar && <DesktopSidebar />}
-      <div className={isAdmin || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
+      <div className={isAdminSurface || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
         <ScrollToTop />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname + resetKey}>
@@ -93,7 +90,7 @@ const AppContent = () => {
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
-            
+            <Route path="/atis" element={<AtisPage />} />
             <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/estudos/revistas" element={<PageTransition><RevistasPage /></PageTransition>} />
             <Route path="/app" element={<AppLanding />} />
@@ -102,13 +99,13 @@ const AppContent = () => {
         </AnimatePresence>
       </div>
       {showChrome && !showSidebar && <ThemeToggleFloat />}
-      {isAdmin ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
+      {isAdminSurface ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
-      {!isAdmin && !isLanding && <PushPermissionPrompt />}
-       {!isAdmin && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
-       {!isAdmin && !isLanding && <AskBibleFloat />}
-       {showBottomNav && <BottomNav />}
-      {!isAdmin && !isLanding && <AppTour />}
+      {!isAdminSurface && !isLanding && <PushPermissionPrompt />}
+      {!isAdminSurface && !isLanding && <AskBible enabled={features.ask_bible} showButton={false} />}
+      {!isAdminSurface && !isLanding && <AskBibleFloat />}
+      {showBottomNav && <BottomNav />}
+      {!isAdminSurface && !isLanding && <AppTour />}
       <PushNotificationViewer />
       <Onboarding />
     </div>

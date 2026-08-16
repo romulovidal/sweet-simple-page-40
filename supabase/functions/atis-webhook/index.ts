@@ -43,10 +43,16 @@ Deno.serve(async (req) => {
       const state = payload?.data?.state ?? payload?.state
       if (state) {
         console.log(`[AtisWebhook] Updating connection state to: ${state}`)
-        await admin.from('atis_config').update({ 
+        const { error, data } = await admin.from('atis_config').update({ 
           last_connection_state: state,
           updated_at: new Date().toISOString() 
-        }).eq('id', 1)
+        }).eq('id', 1).select()
+        
+        if (error) {
+          console.error(`[AtisWebhook] Failed to update atis_config:`, error)
+        } else {
+          console.log(`[AtisWebhook] Table atis_config updated successfully.`)
+        }
       }
     }
 

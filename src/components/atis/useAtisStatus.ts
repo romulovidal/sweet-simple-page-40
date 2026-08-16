@@ -17,32 +17,35 @@ export function useAtisStatus(pollMs = 20000): AtisStatus {
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
 
   const load = async () => {
+    console.log("[useAtisStatus] [ATIS_UI] status_request_started");
     try {
       const { data, error } = await supabase.functions.invoke("atis-instance", {
         body: { action: "status" },
       });
       
       if (error) {
-        console.error("[useAtisStatus] invoke error:", error);
+        console.error("[useAtisStatus] [ATIS_UI] invoke error:", error);
         setState("error");
         return;
       }
 
+      console.log("[useAtisStatus] [ATIS_UI] status_response:", data);
       const s = (data as any)?.state;
-      console.log("[useAtisStatus] Evolution State:", s);
       
       // Mapeamento correto de estados da Evolution API
+      let normalized: AtisConnState = "unknown";
       if (s === "open" || s === "connected") {
-        setState("open");
+        normalized = "open";
       } else if (s === "connecting") {
-        setState("connecting");
+        normalized = "connecting";
       } else if (s === "close" || s === "disconnected") {
-        setState("close");
-      } else {
-        setState("unknown");
+        normalized = "close";
       }
+
+      console.log(`[useAtisStatus] [ATIS_UI] normalized_status: ${normalized}`);
+      setState(normalized);
     } catch (err: any) {
-      console.warn("[useAtisStatus] fetch error:", err.message);
+      console.warn("[useAtisStatus] [ATIS_UI] fetch error:", err.message);
       setState("error");
     } finally {
       setLoading(false);
@@ -52,8 +55,40 @@ export function useAtisStatus(pollMs = 20000): AtisStatus {
 
   useEffect(() => {
     load();
+
+    console.log("[useAtisStatus] [ATIS_REALTIME] subscribing to atis_config...");
+    const channel = supabase
+      .channel('atis_config_status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'atis_config',
+          filter: 'id=eq.1'
+        },
+        (payload) => {
+          const newState = payload.new.last_connection_state;
+          console.log(`[useAtisStatus] [ATIS_REALTIME] event_received: ${newState}`);
+          
+          if (newState === "open" || newState === "connected") {
+            setState("open");
+          } else if (newState === "connecting") {
+            setState("connecting");
+          } else if (newState === "close" || newState === "disconnected") {
+            setState("close");
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[useAtisStatus] [ATIS_REALTIME] subscription_status: ${status}`);
+      });
+
     const id = setInterval(load, pollMs);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      supabase.removeChannel(channel);
+    };
   }, [pollMs]);
 
   return {

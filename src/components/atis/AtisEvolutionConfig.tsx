@@ -29,12 +29,24 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
 
   const call = async (action: string) => {
     try {
+      console.log(`[AtisEvolutionConfig] Calling action: ${action}`);
       const { data, error } = await supabase.functions.invoke("atis-instance", { body: { action } });
       if (error) {
-        // Tenta ler o body do erro se for um erro de função do Supabase
-        const errorData = await error.context?.json().catch(() => null);
-        throw new Error(errorData?.details || errorData?.error || error.message || "Erro na Edge Function");
+        console.error(`[AtisEvolutionConfig] Edge Function Error (${action}):`, error);
+        // Tenta extrair o body real do erro da resposta da Edge Function
+        let details = error.message;
+        try {
+          const body = await error.context?.json();
+          if (body) {
+            console.error(`[AtisEvolutionConfig] Error Body:`, body);
+            details = body.details || body.error || details;
+          }
+        } catch (e) {
+          // ignore
+        }
+        throw new Error(details || "Erro na Edge Function");
       }
+      console.log(`[AtisEvolutionConfig] Response for ${action}:`, data);
       return data as any;
     } catch (err: any) {
       console.error(`[AtisEvolutionConfig] Call error for ${action}:`, err);
@@ -64,12 +76,17 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
         const st = await call("status");
         setWebhookUrl(st?.webhookUrl || "");
         
-        if (st?.state !== "open" && st?.state !== "connected") {
+        // Correção de precedência: se o status retornado pela API for conectado, 
+        // garantir que a UI reflita isso imediatamente, ignorando QR.
+        if (st?.state === "open" || st?.state === "connected") {
+          console.log("[AtisEvolutionConfig] Instance is connected. Clearing QR.");
+          setQr(null);
+          setCode(null);
+        } else {
+          console.log("[AtisEvolutionConfig] Instance is NOT connected. Fetching QR...");
           const q = await call("qr");
           setQr(q?.qr ?? null);
           setCode(q?.code ?? null);
-        } else {
-          setQr(null);
         }
       } catch (callErr) {
         console.warn("[AtisEvolutionConfig] instance call error (non-fatal)", callErr);

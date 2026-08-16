@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     const webhookSecret = Deno.env.get('ATIS_WEBHOOK_SECRET') ?? ''
 
     if (action === 'create') {
+      console.log(`[atis-instance] Action: create. Checking for existing instance...`);
       // Try to create; if exists, ignore
       const created = await evo(`/instance/create`, {
         method: 'POST',
@@ -54,11 +55,20 @@ Deno.serve(async (req) => {
           },
         }),
       })
+      
+      console.log(`[atis-instance] Create attempt result:`, { ok: created.ok, status: created.status });
+
       // Fetch QR
       const conn = await evo(`/instance/connect/${INSTANCE}`)
+      const raw = conn.json;
+      const state = raw?.instance?.state ?? raw?.state;
+      
+      console.log(`[atis-instance] Current connection status after create attempt:`, state);
+
       return new Response(JSON.stringify({
         created: created.ok,
         createdStatus: created.status,
+        state: state ?? 'unknown',
         qr: conn.json?.base64 ?? conn.json?.qrcode?.base64 ?? null,
         code: conn.json?.code ?? conn.json?.qrcode?.code ?? null,
         raw: conn.json,
@@ -127,9 +137,13 @@ Deno.serve(async (req) => {
     }
 
     // default: status
+    console.log(`[atis-instance] Action: status. Fetching from Evolution...`);
     const st = await evo(`/instance/connectionState/${INSTANCE}`)
+    const rawState = st.json?.instance?.state ?? st.json?.state ?? 'unknown';
+    console.log(`[atis-instance] Evolution raw state: ${rawState}`);
+    
     return new Response(JSON.stringify({
-      state: st.json?.instance?.state ?? st.json?.state ?? 'unknown',
+      state: rawState,
       exists: st.ok,
       raw: st.json,
       webhookUrl,

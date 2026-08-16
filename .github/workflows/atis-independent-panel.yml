@@ -21,8 +21,8 @@ jobs:
           cache: npm
 
       - name: Move ATIS to independent shortcut
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path('src/pages/AdminPanel.tsx')
@@ -95,6 +95,7 @@ jobs:
           text = before + desktop_marker + after
 
           path.write_text(text)
+          PY
 
       - name: Install dependencies
         run: npm install --package-lock=false --ignore-scripts

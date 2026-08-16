@@ -31,7 +31,7 @@ import PlansPage from "@/pages/PlansPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminPage from "@/pages/AdminPage";
-import AtisPage from "@/pages/AtisPage";
+
 import AppLanding from "@/pages/AppLanding";
 import ManualPage from "@/pages/ManualPage";
 import HarpaPage from "@/pages/HarpaPage";
@@ -54,7 +54,7 @@ const AppContent = () => {
   const location = useLocation();
    const { features } = useAppFeatures();
   const isAdmin = location.pathname.startsWith("/admin");
-  const isAtis = location.pathname.toLowerCase().startsWith("/atis");
+  const isAtis = false; // ATIS removed
   const isLanding = location.pathname === "/app" || location.pathname === "/manual";
   const resetKey = (location.state as any)?.reset || 0;
   const isMobile = useIsMobile();
@@ -94,7 +94,7 @@ const AppContent = () => {
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/atis" element={<AtisPage />} />
+            
             <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/estudos/revistas" element={<PageTransition><RevistasPage /></PageTransition>} />
             <Route path="/app" element={<AppLanding />} />

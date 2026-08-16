@@ -32,7 +32,7 @@ const Onboarding = () => {
     };
   }, []);
 
-  if (!show || window.location.pathname.toLowerCase().startsWith("/atis")) return null;
+  if (!show) return null;
 
   const handleInstall = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);

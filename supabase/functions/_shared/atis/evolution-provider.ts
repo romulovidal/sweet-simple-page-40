@@ -195,6 +195,32 @@ export class EvolutionProvider {
     return await this.request(`/instance/fetchInstances${suffix}`, { method: "GET" });
   }
 
+  async setWebhook(
+    instanceName: string,
+    url: string,
+    events: string[],
+    headers: Record<string, string> = {},
+  ) {
+    const body: any = await this.request(`/webhook/set/${encodeURIComponent(instanceName)}`, {
+      method: "POST",
+      body: JSON.stringify({
+        webhook: {
+          enabled: true,
+          url,
+          headers,
+          byEvents: false,
+          base64: false,
+          events,
+        },
+      }),
+    });
+    return { raw: body };
+  }
+
+  async findWebhook(instanceName: string) {
+    return await this.request(`/webhook/find/${encodeURIComponent(instanceName)}`, { method: "GET" });
+  }
+
   async restart(instanceName: string) {
     const body = await this.request(`/instance/restart/${encodeURIComponent(instanceName)}`, { method: "POST" });
     return { raw: body };

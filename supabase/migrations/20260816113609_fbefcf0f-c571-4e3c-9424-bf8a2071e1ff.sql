@@ -1,0 +1,24 @@
+GRANT SELECT ON public.atis_notification_configs TO authenticated;
+GRANT SELECT ON public.atis_notification_targets TO authenticated;
+GRANT SELECT ON public.atis_automation_logs TO authenticated;
+GRANT SELECT ON public.atis_automation_attempts TO authenticated;
+GRANT SELECT ON public.atis_automation_settings TO authenticated;
+GRANT SELECT ON public.atis_config TO authenticated;
+GRANT SELECT ON public.atis_contacts TO authenticated;
+GRANT SELECT ON public.atis_groups TO authenticated;
+GRANT SELECT ON public.atis_birthdays TO authenticated;
+GRANT SELECT ON public.atis_broadcasts TO authenticated;
+GRANT SELECT ON public.atis_studies TO authenticated;
+GRANT SELECT ON public.atis_messages_log TO authenticated;
+GRANT SELECT ON public.atis_series TO authenticated;
+GRANT SELECT ON public.atis_series_subscribers TO authenticated;
+
+GRANT INSERT, UPDATE, DELETE ON public.atis_notification_configs TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_notification_targets TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_automation_settings TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_config TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_contacts TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_groups TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_birthdays TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_broadcasts TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.atis_studies TO authenticated;

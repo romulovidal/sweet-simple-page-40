@@ -99,7 +99,11 @@ async function sendToSubscription(
 }
 
 Deno.serve(async (req) => {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  console.log(`[send-push] Request headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}`);
+
   if (req.method === "OPTIONS") {
+
     return new Response("ok", { headers: corsHeaders });
   }
 

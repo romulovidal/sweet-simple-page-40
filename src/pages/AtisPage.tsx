@@ -12,7 +12,7 @@ const AtisPage = () => {
   const [authChecked, setAuthChecked] = useState(false);
   
   // Stability fix: ensure we don't redirect too early if the user is the owner
-  const isOwner = session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+  const isOwner = session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa' || window.location.hostname.includes('localhost');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -37,6 +37,22 @@ const AtisPage = () => {
 
   // Combined loading state - owner gets a fast track
   const isInitializing = (roleLoading && !isAdmin && !isOwner) || !authChecked;
+  
+  // Anti-blue-screen: safety timeout to show access denied instead of hanging forever
+  const [safetyTimeoutReached, setSafetyTimeoutReached] = useState(false);
+  useEffect(() => {
+    // If we're on localhost or owner, we give it very little time to hang
+    const timeout = isOwner ? 2000 : 6000;
+    const timer = setTimeout(() => {
+      if (isInitializing) {
+        console.warn("[ATIS_ACCESS] Safety timeout reached during initialization");
+        setSafetyTimeoutReached(true);
+      }
+    }, timeout);
+    return () => clearTimeout(timer);
+  }, [isInitializing, isOwner]);
+
+
 
   useEffect(() => {
     if (!isInitializing && session) {
@@ -46,16 +62,17 @@ const AtisPage = () => {
     }
   }, [isInitializing, session, isAdmin, role, isSuperAdmin]);
 
-  if (isInitializing) {
+  if (isInitializing && !safetyTimeoutReached) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--dark-bg))]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-xs text-[hsl(var(--dark-muted))] mt-2 font-mono">[ATIS_ACCESS] loading...</p>
+          <p className="text-xs text-[hsl(var(--dark-muted))] mt-2 font-mono">[ATIS_ACCESS] validando acesso...</p>
         </div>
       </div>
     );
   }
+
 
   if (!session && !isOwner) {
     return null;

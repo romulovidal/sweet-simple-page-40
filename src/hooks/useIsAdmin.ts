@@ -36,11 +36,23 @@ export function useIsAdmin() {
           return;
         }
 
+        // Stability timeout for role check
+        const timeoutPromise = new Promise<{data: any, error: any}>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout checking roles")), 4000)
+        );
+
+
         // 1. Direct query attempt (matches AdminPage.tsx pattern)
-        const { data: directData, error: directError } = await supabase
+        const directQueryPromise = supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
+
+        const { data: directData, error: directError } = await Promise.race([
+          directQueryPromise,
+          timeoutPromise as any
+        ]).catch(err => ({ data: null, error: err }));
+
 
         if (directError) {
           console.warn("[ATIS_ACCESS] Direct query failed, trying RPC:", directError);

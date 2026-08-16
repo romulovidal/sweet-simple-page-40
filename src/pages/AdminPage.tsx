@@ -73,7 +73,7 @@ const AdminPage = () => {
 
         console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });
         
-        setIsAdmin(isA);
+        setIsAdmin(isA); console.log("isAdmin set to", isA);
         setIsSuperAdmin(isSA);
         setRole(isSA ? "super_admin" : (isA ? "admin" : null));
       }
@@ -139,13 +139,13 @@ const AdminPage = () => {
           <p className="text-sm text-[hsl(var(--dark-muted))]">{accessError}</p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <button
-              onClick={() => void resolveAdminAccess(session)}
+              onClick={() => console.log("Retry trigger"); void resolveAdminAccess(session)}
               className="text-primary text-sm font-semibold"
             >
               Tentar novamente
             </button>
             <button
-              onClick={() => void supabase.auth.signOut()}
+              onClick={() => console.log("SignOut trigger"); void supabase.auth.signOut()}
               className="text-[hsl(var(--dark-muted))] text-sm font-semibold"
             >
               Sair
@@ -164,7 +164,7 @@ const AdminPage = () => {
           <h2 className="text-lg font-bold mb-2 text-[hsl(var(--dark-text))]">Acesso negado</h2>
           <p className="text-sm text-[hsl(var(--dark-muted))]">Você não tem permissão de administrador.</p>
           <button
-            onClick={() => void supabase.auth.signOut()}
+            onClick={() => console.log("SignOut trigger"); void supabase.auth.signOut()}
             className="text-primary text-sm font-semibold mt-4"
           >
             Sair

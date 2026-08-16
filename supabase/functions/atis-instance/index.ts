@@ -10,6 +10,21 @@ import {
 
 type Json = Record<string, unknown>;
 
+const ATIS_WEBHOOK_EVENTS = [
+  "QRCODE_UPDATED",
+  "CONNECTION_UPDATE",
+  "STATUS_INSTANCE",
+  "LOGOUT_INSTANCE",
+  "MESSAGES_UPDATE",
+  "SEND_MESSAGE_UPDATE",
+  "SEND_MESSAGE",
+  "CONTACTS_UPSERT",
+  "CONTACTS_UPDATE",
+  "GROUPS_UPSERT",
+  "GROUP_UPDATE",
+  "GROUP_PARTICIPANTS_UPDATE",
+];
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -21,13 +36,9 @@ function safeError(error: unknown) {
   if (error instanceof EvolutionProviderError) {
     return {
       status: error.status >= 400 && error.status < 600 ? error.status : 500,
-      body: {
-        error: error.code,
-        message: error.message,
-      },
+      body: { error: error.code, message: error.message },
     };
   }
-
   return {
     status: 500,
     body: {
@@ -67,13 +78,8 @@ function firstString(...values: unknown[]) {
 function providerInstanceFields(item: any, fallbackName: string) {
   return {
     external_instance_id: firstString(item?.id, item?.instanceId, item?.instance?.instanceId),
-    external_instance_name:
-      firstString(item?.name, item?.instanceName, item?.instance?.instanceName) ?? fallbackName,
-    connected_number: firstString(
-      item?.ownerJid?.split?.("@")?.[0],
-      item?.number,
-      item?.instance?.number,
-    ),
+    external_instance_name: firstString(item?.name, item?.instanceName, item?.instance?.instanceName) ?? fallbackName,
+    connected_number: firstString(item?.ownerJid?.split?.("@")?.[0], item?.number, item?.instance?.number),
     connected_name: firstString(item?.profileName, item?.pushName, item?.instance?.profileName),
   };
 }
@@ -92,14 +98,9 @@ function stateFromProviderItem(item: any): AtisInstanceStatus {
 
 async function loadInstance(supabase: any, input: Json) {
   let query = supabase.from("atis_instances").select("*").limit(1);
-
-  if (typeof input.instance_id === "string" && input.instance_id) {
-    query = query.eq("id", input.instance_id);
-  } else if (typeof input.name === "string" && input.name) {
-    query = query.eq("name", input.name);
-  } else {
-    throw new EvolutionProviderError("instance_id or name is required", 400, "INSTANCE_REQUIRED");
-  }
+  if (typeof input.instance_id === "string" && input.instance_id) query = query.eq("id", input.instance_id);
+  else if (typeof input.name === "string" && input.name) query = query.eq("name", input.name);
+  else throw new EvolutionProviderError("instance_id or name is required", 400, "INSTANCE_REQUIRED");
 
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
@@ -125,18 +126,65 @@ async function persistProviderState(
     },
     ...extra,
   };
-
   if (status === "connected" && instance.status !== "connected") patch.last_connected_at = now;
   if (status === "disconnected" && instance.status === "connected") patch.last_disconnected_at = now;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase.from("atis_instances").update(patch).eq("id", instance.id).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
+async function configureWebhook(supabase: any, provider: EvolutionProvider, instance: any, supabaseUrl: string) {
+  const { data: webhookSecret, error: secretError } = await supabase.rpc("atis_get_webhook_secret");
+  if (secretError || typeof webhookSecret !== "string" || !webhookSecret) {
+    throw new EvolutionProviderError("ATIS webhook secret is not configured", 500, "WEBHOOK_SECRET_MISSING");
+  }
+
+  const webhookUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/atis-webhook`;
+  const providerName = instance.external_instance_name || instance.name;
+  await provider.setWebhook(providerName, webhookUrl, ATIS_WEBHOOK_EVENTS, {
+    "x-webhook-secret": webhookSecret,
+  });
+
+  const now = new Date().toISOString();
+  const { data: updated, error: updateError } = await supabase
     .from("atis_instances")
-    .update(patch)
+    .update({
+      metadata: {
+        ...(instance.metadata ?? {}),
+        webhook_configured_at: now,
+        webhook_url: webhookUrl,
+        webhook_events: ATIS_WEBHOOK_EVENTS,
+      },
+    })
     .eq("id", instance.id)
     .select("*")
     .single();
-  if (error) throw error;
-  return data;
+  if (updateError) throw updateError;
+
+  return {
+    instance: updated,
+    webhook: {
+      configured: true,
+      url: webhookUrl,
+      events: ATIS_WEBHOOK_EVENTS,
+      authentication: "x-webhook-secret",
+    },
+  };
+}
+
+function safeWebhookStatus(raw: any) {
+  const value = raw?.webhook ?? raw?.data?.webhook ?? raw?.data ?? raw ?? {};
+  const headers = value?.headers && typeof value.headers === "object" ? value.headers : {};
+  return {
+    configured: Boolean(value?.enabled),
+    enabled: Boolean(value?.enabled),
+    url: firstString(value?.url),
+    events: Array.isArray(value?.events) ? value.events : [],
+    by_events: Boolean(value?.webhookByEvents ?? value?.byEvents),
+    base64: Boolean(value?.webhookBase64 ?? value?.base64),
+    custom_secret_header_present: Object.keys(headers).some((key) => key.toLowerCase() === "x-webhook-secret"),
+  };
 }
 
 Deno.serve(async (req) => {
@@ -176,17 +224,14 @@ Deno.serve(async (req) => {
         key_source: evolutionConfig.keySource,
         provider: "evolution",
       };
-
       if (evolutionConfig.urlConfigured && evolutionConfig.keyConfigured) {
         try {
-          const provider = new EvolutionProvider(evolutionConfig);
-          result.health = await provider.health();
+          result.health = await new EvolutionProvider(evolutionConfig).health();
         } catch (error) {
           const safe = safeError(error);
           result.health = { ok: false, ...safe.body, http_status: safe.status };
         }
       }
-
       return json(result);
     }
 
@@ -200,25 +245,14 @@ Deno.serve(async (req) => {
 
     if (action === "create") {
       const name = cleanName(input.name ?? "atis-main");
-
-      const { data: localExisting, error: localError } = await supabase
-        .from("atis_instances")
-        .select("*")
-        .eq("name", name)
-        .maybeSingle();
+      const { data: localExisting, error: localError } = await supabase.from("atis_instances").select("*").eq("name", name).maybeSingle();
       if (localError) throw localError;
-
-      if (localExisting) {
-        return json({ created: false, attached: true, instance: localExisting });
-      }
+      if (localExisting) return json({ created: false, attached: true, instance: localExisting });
 
       let providerExisting: any = null;
       try {
         const fetched = await provider.fetchInstances(name);
-        providerExisting = asArray(fetched).find((item) => {
-          const providerName = firstString(item?.name, item?.instanceName, item?.instance?.instanceName);
-          return providerName === name;
-        }) ?? null;
+        providerExisting = asArray(fetched).find((item) => firstString(item?.name, item?.instanceName, item?.instance?.instanceName) === name) ?? null;
       } catch (error) {
         if (!(error instanceof EvolutionProviderError) || ![400, 404].includes(error.status)) throw error;
       }
@@ -226,57 +260,50 @@ Deno.serve(async (req) => {
       if (providerExisting) {
         const fields = providerInstanceFields(providerExisting, name);
         const status = stateFromProviderItem(providerExisting);
-        const { data, error } = await supabase
-          .from("atis_instances")
-          .insert({
-            name,
-            provider: "evolution",
-            ...fields,
-            status,
-            last_status_check_at: new Date().toISOString(),
-            metadata: { provider_state: providerExisting?.connectionStatus?.state ?? providerExisting?.state ?? null },
-            created_by: auth.userId === "service-role" ? null : auth.userId,
-          })
-          .select("*")
-          .single();
+        const { data, error } = await supabase.from("atis_instances").insert({
+          name,
+          provider: "evolution",
+          ...fields,
+          status,
+          last_status_check_at: new Date().toISOString(),
+          metadata: { provider_state: providerExisting?.connectionStatus?.state ?? providerExisting?.state ?? null },
+          created_by: auth.userId === "service-role" ? null : auth.userId,
+        }).select("*").single();
         if (error) throw error;
         return json({ created: false, attached: true, instance: data });
       }
 
       const created = await provider.createInstance(name);
-      const { data, error } = await supabase
-        .from("atis_instances")
-        .insert({
-          name,
-          provider: "evolution",
-          external_instance_id: created.instanceId,
-          external_instance_name: created.instanceName,
-          status: created.qr ? "qr_required" : created.status,
-          last_status_check_at: new Date().toISOString(),
-          metadata: {
-            provider_state: created.providerState,
-            integration: "WHATSAPP-BAILEYS",
-          },
-          created_by: auth.userId === "service-role" ? null : auth.userId,
-        })
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("atis_instances").insert({
+        name,
+        provider: "evolution",
+        external_instance_id: created.instanceId,
+        external_instance_name: created.instanceName,
+        status: created.qr ? "qr_required" : created.status,
+        last_status_check_at: new Date().toISOString(),
+        metadata: { provider_state: created.providerState, integration: "WHATSAPP-BAILEYS" },
+        created_by: auth.userId === "service-role" ? null : auth.userId,
+      }).select("*").single();
       if (error) throw error;
-
       return json({
         created: true,
         attached: false,
         instance: data,
-        connection: {
-          qr: created.qr,
-          pairing_code: created.pairingCode,
-          qr_count: created.qrCount,
-        },
+        connection: { qr: created.qr, pairing_code: created.pairingCode, qr_count: created.qrCount },
       }, 201);
     }
 
     const instance = await loadInstance(supabase, input);
     const providerName = instance.external_instance_name || instance.name;
+
+    if (action === "configure_webhook") {
+      return json(await configureWebhook(supabase, provider, instance, supabaseUrl));
+    }
+
+    if (action === "webhook_status") {
+      const raw = await provider.findWebhook(providerName);
+      return json({ webhook: safeWebhookStatus(raw) });
+    }
 
     if (action === "status") {
       const state = await provider.connectionState(providerName);
@@ -290,22 +317,14 @@ Deno.serve(async (req) => {
       const updated = await persistProviderState(supabase, instance, status, status);
       return json({
         instance: updated,
-        connection: {
-          qr: connection.qr,
-          pairing_code: connection.pairingCode,
-          qr_count: connection.qrCount,
-        },
+        connection: { qr: connection.qr, pairing_code: connection.pairingCode, qr_count: connection.qrCount },
       });
     }
 
     if (action === "restart") {
       await provider.restart(providerName);
       let state: any = null;
-      try {
-        state = await provider.connectionState(providerName);
-      } catch {
-        // A restart can briefly make status unavailable; keep it as connecting.
-      }
+      try { state = await provider.connectionState(providerName); } catch { /* transient restart */ }
       const status: AtisInstanceStatus = state?.status ?? "connecting";
       const updated = await persistProviderState(supabase, instance, status, state?.providerState ?? "restarting");
       return json({ instance: updated });

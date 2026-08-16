@@ -1,0 +1,82 @@
+name: Integrate ATIS into Admin Panel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/integrate-atis-admin-panel.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add ATIS tool to existing Admin Panel
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/pages/AdminPanel.tsx")
+          text = path.read_text()
+
+          original = text
+
+          text = text.replace(
+              "Church, AlertTriangle, Library\n} from \"lucide-react\";",
+              "Church, AlertTriangle, Library, MessageCircle\n} from \"lucide-react\";",
+          )
+
+          anchor = 'import AdminRevistas from "@/components/admin/AdminRevistas";'
+          if 'import AdminAtis from "@/components/admin/atis/AdminAtis";' not in text:
+              text = text.replace(
+                  anchor,
+                  anchor + '\nimport AdminAtis from "@/components/admin/atis/AdminAtis";',
+              )
+
+          text = text.replace(
+              '| "prayers" | "harpa-reports";',
+              '| "prayers" | "harpa-reports" | "atis";',
+          )
+
+          community_anchor = '      { id: "push", label: "Notificações Push", desc: "Envio manual", icon: Bell },\n'
+          atis_tab = '      { id: "atis", label: "ATIS WhatsApp", desc: "Mensagens e automações", icon: MessageCircle },\n'
+          if atis_tab not in text:
+              text = text.replace(community_anchor, community_anchor + atis_tab)
+
+          switch_anchor = '      case "push": return <AdminPushSender />;\n'
+          switch_line = '      case "atis": return <AdminAtis />;\n'
+          if switch_line not in text:
+              text = text.replace(switch_anchor, switch_anchor + switch_line)
+
+          if text == original:
+              print("AdminPanel already integrated; no changes required.")
+          else:
+              path.write_text(text)
+              print("AdminPanel integrated with ATIS.")
+
+      - name: Verify expected integration markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'AdminAtis' src/pages/AdminPanel.tsx
+          grep -q 'ATIS WhatsApp' src/pages/AdminPanel.tsx
+          grep -q 'case "atis"' src/pages/AdminPanel.tsx
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/pages/AdminPanel.tsx; then
+            echo "No AdminPanel changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminPanel.tsx
+          git commit -m "feat(atis): add ATIS entry to Admin Panel"
+          git push

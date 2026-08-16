@@ -20,14 +20,39 @@ export function decodeJwtPayload(_token: string) {
   return null;
 }
 
+async function isVerifiedInternalServiceToken(
+  token: string,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/is_internal_service_request`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+
+    if (!response.ok) return false;
+    return (await response.json().catch(() => false)) === true;
+  } catch (error) {
+    console.error("[auth-utils] Internal service token verification failed:", error);
+    return false;
+  }
+}
+
 /**
  * Secure server-side authorization helper for administrative Edge Functions.
  *
- * - Internal service-to-service calls are accepted only when the Bearer token
- *   exactly matches SUPABASE_SERVICE_ROLE_KEY.
+ * - Current service-to-service calls are accepted by exact secret match.
+ * - Rotated/legacy service_role JWTs used by pg_net cron are verified by
+ *   PostgREST before auth.jwt() is inspected by a server-only RPC.
  * - User Bearer tokens are validated by Supabase Auth with auth.getUser(token).
  * - Administrative access is resolved from public.user_roles with service_role.
- * - No hard-coded user bypasses or trust in unverified JWT claims.
+ * - No hard-coded user bypasses and no authorization based on unverified JWT decoding.
  */
 export async function validateAdminAuth(req: Request, supabaseUrl: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -43,6 +68,12 @@ export async function validateAdminAuth(req: Request, supabaseUrl: string, servi
   }
 
   if (token === serviceKey) {
+    return { authorized: true, userId: "service-role", isAdmin: true, role: "service_role" };
+  }
+
+  // pg_net may hold a still-valid service_role JWT in Vault that differs from
+  // the current runtime secret. Let PostgREST verify that JWT cryptographically.
+  if (await isVerifiedInternalServiceToken(token, supabaseUrl, serviceKey)) {
     return { authorized: true, userId: "service-role", isAdmin: true, role: "service_role" };
   }
 

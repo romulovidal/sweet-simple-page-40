@@ -1,0 +1,307 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { corsHeaders } from "../_shared/cors.ts";
+
+type Json = Record<string, any>;
+type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | "error" | "unknown";
+
+const MAX_BODY_BYTES = 1024 * 1024;
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return null;
+}
+
+function normalizeEvent(value: unknown) {
+  return String(value ?? "UNKNOWN")
+    .trim()
+    .replace(/[.-]/g, "_")
+    .toUpperCase();
+}
+
+function normalizeState(raw: unknown): AtisStatus {
+  const state = String(raw ?? "").trim().toLowerCase();
+  if (["open", "connected", "online", "ready"].includes(state)) return "connected";
+  if (["connecting", "opening"].includes(state)) return "connecting";
+  if (["qrcode", "qr", "qr_required", "pairing"].includes(state)) return "qr_required";
+  if (["close", "closed", "disconnected", "offline", "logout"].includes(state)) return "disconnected";
+  if (["error", "failed"].includes(state)) return "error";
+  return "unknown";
+}
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function secureEqual(left: string, right: string) {
+  const [a, b] = await Promise.all([sha256Hex(left), sha256Hex(right)]);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let index = 0; index < a.length; index++) diff |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  return diff === 0;
+}
+
+function qrCount(data: any): number | null {
+  const value = data?.count ?? data?.qrcode?.count;
+  return Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+function messageEntries(data: any) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.messages)) return data.messages;
+  if (Array.isArray(data?.updates)) return data.updates;
+  return data && typeof data === "object" ? [data] : [];
+}
+
+function messageId(item: any) {
+  return firstString(
+    item?.key?.id,
+    item?.id,
+    item?.messageId,
+    item?.update?.key?.id,
+    item?.message?.key?.id,
+  );
+}
+
+function messageProviderStatus(item: any) {
+  return firstString(
+    item?.status,
+    item?.ack,
+    item?.update?.status,
+    item?.update?.ack,
+    item?.message?.status,
+  );
+}
+
+function safePayload(event: string, body: Json) {
+  const data = body?.data;
+  const base: Json = {
+    event,
+    instance: firstString(body?.instance),
+    date_time: firstString(body?.date_time, body?.dateTime),
+  };
+
+  if (event === "QRCODE_UPDATED") {
+    return { ...base, data: { count: qrCount(data) } };
+  }
+
+  if (event === "CONNECTION_UPDATE" || event === "STATUS_INSTANCE" || event === "LOGOUT_INSTANCE") {
+    return {
+      ...base,
+      data: {
+        state: firstString(data?.state, data?.status, data?.connection, body?.state),
+        status_reason: firstString(data?.statusReason, data?.reason, data?.lastDisconnect?.error?.message),
+      },
+    };
+  }
+
+  if (["MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "SEND_MESSAGE"].includes(event)) {
+    return {
+      ...base,
+      data: messageEntries(data).slice(0, 50).map((item: any) => ({
+        message_id: messageId(item),
+        status: messageProviderStatus(item),
+        remote_jid: firstString(item?.key?.remoteJid, item?.remoteJid, item?.update?.key?.remoteJid),
+      })),
+    };
+  }
+
+  if (event.startsWith("CONTACTS_")) {
+    const items = Array.isArray(data) ? data : Array.isArray(data?.contacts) ? data.contacts : data ? [data] : [];
+    return {
+      ...base,
+      data: {
+        count: items.length,
+        ids: items.slice(0, 50).map((item: any) => firstString(item?.id, item?.remoteJid, item?.jid)).filter(Boolean),
+      },
+    };
+  }
+
+  if (event.startsWith("GROUP")) {
+    const items = Array.isArray(data) ? data : Array.isArray(data?.groups) ? data.groups : data ? [data] : [];
+    return {
+      ...base,
+      data: {
+        count: items.length,
+        ids: items.slice(0, 50).map((item: any) => firstString(item?.id, item?.jid, item?.remoteJid, item?.groupJid)).filter(Boolean),
+      },
+    };
+  }
+
+  return { ...base, data: { received: true } };
+}
+
+async function markDeliveryMetadata(supabase: any, event: string, data: any) {
+  let matched = 0;
+  for (const item of messageEntries(data).slice(0, 100)) {
+    const id = messageId(item);
+    if (!id) continue;
+    const providerStatus = messageProviderStatus(item);
+    const { data: targets, error } = await supabase
+      .from("atis_message_targets")
+      .select("id,metadata")
+      .eq("provider_message_id", id);
+    if (error) throw error;
+
+    for (const target of targets ?? []) {
+      const { error: updateError } = await supabase
+        .from("atis_message_targets")
+        .update({
+          metadata: {
+            ...(target.metadata ?? {}),
+            provider_delivery: {
+              event,
+              status: providerStatus,
+              updated_at: new Date().toISOString(),
+            },
+          },
+        })
+        .eq("id", target.id);
+      if (updateError) throw updateError;
+      matched++;
+    }
+  }
+  return matched;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405);
+
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (declaredLength > MAX_BODY_BYTES) return json({ error: "PAYLOAD_TOO_LARGE" }, 413);
+
+  const suppliedSecret = req.headers.get("x-webhook-secret")?.trim() ?? "";
+  if (!suppliedSecret) return json({ error: "UNAUTHORIZED" }, 401);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceKey) return json({ error: "SERVER_CONFIG_MISSING" }, 500);
+
+  const supabase = createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data: expectedSecret, error: secretError } = await supabase.rpc("atis_get_webhook_secret");
+  if (secretError || typeof expectedSecret !== "string" || !expectedSecret) {
+    console.error("[atis-webhook] webhook secret unavailable");
+    return json({ error: "SERVER_AUTH_CONFIG_ERROR" }, 500);
+  }
+
+  if (!(await secureEqual(suppliedSecret, expectedSecret))) return json({ error: "FORBIDDEN" }, 403);
+
+  const raw = await req.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json({ error: "PAYLOAD_TOO_LARGE" }, 413);
+
+  let body: Json;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return json({ error: "INVALID_JSON" }, 400);
+  }
+
+  const event = normalizeEvent(body?.event);
+  const instanceName = firstString(body?.instance);
+  if (!instanceName) return json({ error: "INSTANCE_REQUIRED" }, 400);
+
+  try {
+    const hash = await sha256Hex(raw);
+    const providerEventId = `sha256:${hash}`;
+    const { data: instance, error: instanceError } = await supabase
+      .from("atis_instances")
+      .select("*")
+      .or(`name.eq.${instanceName},external_instance_name.eq.${instanceName}`)
+      .limit(1)
+      .maybeSingle();
+    if (instanceError) throw instanceError;
+
+    const payload = safePayload(event, body);
+    const { data: inserted, error: insertError } = await supabase
+      .from("atis_webhook_events")
+      .insert({
+        instance_id: instance?.id ?? null,
+        provider_event_id: providerEventId,
+        event_type: event,
+        payload_hash: hash,
+        payload,
+        status: instance ? "received" : "ignored",
+        ...(instance ? {} : { processed_at: new Date().toISOString(), error: "UNKNOWN_INSTANCE" }),
+      })
+      .select("id")
+      .single();
+
+    if (insertError?.code === "23505") {
+      return json({ ok: true, duplicate: true });
+    }
+    if (insertError) throw insertError;
+
+    if (!instance) return json({ ok: true, ignored: true, reason: "UNKNOWN_INSTANCE" });
+
+    const now = new Date().toISOString();
+    let deliveryMatches = 0;
+
+    if (event === "QRCODE_UPDATED") {
+      const { error } = await supabase.from("atis_instances").update({
+        status: "qr_required",
+        last_status_check_at: now,
+        metadata: {
+          ...(instance.metadata ?? {}),
+          provider_state: "qr_required",
+          qr_updated_at: now,
+          qr_count: qrCount(body?.data),
+        },
+      }).eq("id", instance.id);
+      if (error) throw error;
+    } else if (["CONNECTION_UPDATE", "STATUS_INSTANCE", "LOGOUT_INSTANCE"].includes(event)) {
+      const providerState = firstString(body?.data?.state, body?.data?.status, body?.data?.connection, body?.state, event === "LOGOUT_INSTANCE" ? "logout" : null);
+      const status = normalizeState(providerState);
+      const patch: Json = {
+        status,
+        last_status_check_at: now,
+        metadata: {
+          ...(instance.metadata ?? {}),
+          provider_state: providerState,
+          last_provider_webhook_at: now,
+        },
+      };
+      if (status === "connected" && instance.status !== "connected") patch.last_connected_at = now;
+      if (status === "disconnected" && instance.status === "connected") patch.last_disconnected_at = now;
+      const { error } = await supabase.from("atis_instances").update(patch).eq("id", instance.id);
+      if (error) throw error;
+    } else if (["MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "SEND_MESSAGE"].includes(event)) {
+      deliveryMatches = await markDeliveryMetadata(supabase, event, body?.data);
+    } else if (event.startsWith("CONTACTS_") || event.startsWith("GROUP")) {
+      const marker = event.startsWith("CONTACTS_") ? "contacts_sync_needed_at" : "groups_sync_needed_at";
+      const { error } = await supabase.from("atis_instances").update({
+        metadata: {
+          ...(instance.metadata ?? {}),
+          [marker]: now,
+          last_provider_webhook_at: now,
+        },
+      }).eq("id", instance.id);
+      if (error) throw error;
+    }
+
+    const { error: processedError } = await supabase.from("atis_webhook_events").update({
+      status: "processed",
+      processed_at: now,
+      error: null,
+    }).eq("id", inserted.id);
+    if (processedError) throw processedError;
+
+    return json({ ok: true, event, delivery_matches: deliveryMatches });
+  } catch (error) {
+    console.error("[atis-webhook] processing failed", error instanceof Error ? error.message : error);
+    return json({ error: "WEBHOOK_PROCESSING_FAILED" }, 500);
+  }
+});

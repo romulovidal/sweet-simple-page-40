@@ -30,7 +30,7 @@ const AdminPage = () => {
     setLoading(true);
 
     try {
-      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
+      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id); console.log("[DEBUG] localStorage Token:", localStorage.getItem("sb-hvdmobypsqksgkfrzhzf-auth-token") ? "Present" : "Missing");
 
       // 1. Direct table check
       const { data, error } = await supabase
@@ -78,7 +78,7 @@ const AdminPage = () => {
         const isSA = roles.includes("super_admin") || nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
         const isA = isSA || roles.includes("admin");
 
-        console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });
+        console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA }); console.log("[ADMIN AUTH] isAdmin State:", isA);
         
         setIsAdmin(isA);
         setIsSuperAdmin(isSA);
@@ -95,9 +95,9 @@ const AdminPage = () => {
   useEffect(() => {
     let active = true;
 
-    const syncAccess = (nextSession: Session | null) => {
+    const syncAccess = (nextSession: Session | null) => { console.log("[ADMIN AUTH] syncAccess called", !!nextSession);
       if (!active) return;
-      void resolveAdminAccess(nextSession);
+      void resolveAdminAccess(nextSession).then(() => console.log("[ADMIN AUTH] resolveAdminAccess finished"));
     };
 
     const {
@@ -141,7 +141,7 @@ const AdminPage = () => {
     );
   }
 
-  if (!session) return <AdminLogin />;
+  if (!session) console.log("Rendering AdminLogin"); return <AdminLogin />;
 
   if (accessError) {
     return (
@@ -200,7 +200,7 @@ const AdminPage = () => {
     }
   }, [isAdmin, redirectPath, navigate]);
 
-  return <AdminPanel />;
+  console.log("Rendering AdminPanel"); return <AdminPanel />;
 };
 
 export default AdminPage;

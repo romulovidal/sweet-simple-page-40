@@ -44,6 +44,8 @@ export function useIsAdmin() {
 
         // 1. Direct query attempt (matches AdminPage.tsx pattern)
         const directQueryPromise = (async () => {
+          // Usamos order e limit para garantir que pegamos o primeiro role se houver mais de um,
+          // mas o check de inclusão abaixo lidará com múltiplos papéis.
           const { data, error } = await supabase
             .from("user_roles")
             .select("role")
@@ -59,11 +61,7 @@ export function useIsAdmin() {
         const directData = result.data;
         const directError = result.error;
 
-
-
         if (directError) {
-          // console.warn("Direct query failed, trying RPC:", directError);
-          
           // 2. RPC fallback
           const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
             _user_id: user.id,

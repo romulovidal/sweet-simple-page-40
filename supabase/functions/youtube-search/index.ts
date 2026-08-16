@@ -2,16 +2,16 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const API_KEY = Deno.env.get("YOUTUBE_API_KEY");
 
-// Simple in-memory cache per isolate
+// Cache best-effort por isolate. O resultado de busca não contém a API key.
 const cache = new Map<string, { videoId: string; title: string; channel: string; ts: number }>();
-const TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+const TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     if (!API_KEY) {
-      return json({ error: "YOUTUBE_API_KEY não configurada" }, 500);
+      return json({ error: "Busca do YouTube não configurada", code: "YOUTUBE_API_KEY_MISSING" }, 503);
     }
 
     const { number, title } = await req.json().catch(() => ({}));
@@ -27,7 +27,6 @@ Deno.serve(async (req) => {
       return json({ ...cached, cached: true });
     }
 
-    // Formato otimizado: "01 Título harpa cristã" (número com 2 dígitos)
     const padded = String(n).padStart(2, "0");
     const q = `${padded} ${t} harpa cristã`;
     const url = new URL("https://www.googleapis.com/youtube/v3/search");
@@ -39,16 +38,30 @@ Deno.serve(async (req) => {
     url.searchParams.set("key", API_KEY);
 
     const resp = await fetch(url);
+    const raw = await resp.text();
+    let data: any = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+
     if (!resp.ok) {
-      const body = await resp.text();
-      console.error("[youtube-search] YT error", resp.status, body);
-      return json({ error: "Falha ao consultar YouTube" }, 502);
+      const reason = String(data?.error?.errors?.[0]?.reason ?? data?.error?.status ?? "unknown");
+      const providerMessage = String(data?.error?.message ?? "");
+      const suspended = /suspend/i.test(providerMessage);
+      const quota = /quota/i.test(reason) || /quota/i.test(providerMessage);
+      const code = suspended
+        ? "YOUTUBE_API_KEY_SUSPENDED"
+        : quota
+        ? "YOUTUBE_QUOTA_EXCEEDED"
+        : `YOUTUBE_HTTP_${resp.status}`;
+
+      console.error("[youtube-search] provider failure", { status: resp.status, reason, code });
+      return json({ error: "Busca do YouTube temporariamente indisponível", code }, 503);
     }
-    const data = await resp.json();
-    const item = data.items?.[0];
+
+    const item = data?.items?.[0];
     if (!item?.id?.videoId) {
       return json({ error: "Nenhum vídeo encontrado" }, 404);
     }
+
     const result = {
       videoId: item.id.videoId as string,
       title: (item.snippet?.title as string) ?? q,

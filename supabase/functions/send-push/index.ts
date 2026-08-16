@@ -53,6 +53,7 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
   // We use the service client to check role to avoid RLS issues on user_roles
   const serviceClient = createClient(supabaseUrl, serviceKey);
   
+  console.log(`[send-push] Checking role for user ${user.id} via check_user_role...`);
   // Use check_user_role RPC which handles hierarchy (super_admin > admin)
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
     _user_id: user.id,
@@ -109,6 +110,8 @@ async function sendToSubscription(
 }
 
 Deno.serve(async (req) => {
+  console.log(`[send-push] Received ${req.method} request to ${req.url}`);
+  
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -117,24 +120,27 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    console.log("[send-push] Init: Function started");
+    
+    console.log("[send-push] Init: Function started. Checking VAPID keys...");
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@atalaias.online";
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.error("[send-push] CRITICAL: VAPID keys not configured in Edge Function secrets.");
-      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
+      return new Response(JSON.stringify({ error: "VAPID keys not configured", details: "VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY is missing in project secrets." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("[send-push] Authorizing user...");
     const authResult = await requireAdminUser(req, supabaseUrl, anonKey, serviceKey);
     if (authResult.error) {
-      console.error("[send-push] Auth failed:", authResult.error);
+      console.error("[send-push] Auth failed with status:", authResult.error.status);
       return authResult.error;
     }
+    console.log("[send-push] Auth success. User ID:", authResult.userId);
 
     const rawBody = await req.json();
     console.log("[send-push] Received request body:", JSON.stringify(rawBody));

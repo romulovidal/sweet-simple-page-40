@@ -55,7 +55,6 @@ const AppContent = () => {
   const resetKey = (location.state as any)?.reset || 0;
   const isMobile = useIsMobile();
   const showChrome = !isAdminSurface && !isLanding;
-  // Wait for viewport detection so tour data-tour selectors resolve to only ONE nav
   const showSidebar = showChrome && isMobile === false;
   const showBottomNav = showChrome && isMobile !== false;
 
@@ -91,6 +90,7 @@ const AppContent = () => {
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/atis" element={<AtisPage />} />
+            <Route path="/atis/destinatarios" element={<AtisPage />} />
             <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/estudos/revistas" element={<PageTransition><RevistasPage /></PageTransition>} />
             <Route path="/app" element={<AppLanding />} />

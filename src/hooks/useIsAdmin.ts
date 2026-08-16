@@ -24,51 +24,50 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        console.log("[ADMIN AUTH] Validating roles for:", user.id);
+        console.log("[ATIS_ACCESS] role_loading: true, user_id:", user.id);
         
-        const { data: roleResult, error } = await supabase.rpc('check_user_role', {
-          _user_id: user.id,
-          _role: 'admin'
-        });
+        // 1. Direct query attempt (matches AdminPage.tsx pattern)
+        const { data: directData, error: directError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
 
-        // Também precisamos saber se é super_admin para a UI
-        const { data: isSA_Result } = await supabase.rpc('check_user_role', {
-          _user_id: user.id,
-          _role: 'super_admin'
-        });
-
-        if (cancelled) return;
-
-        if (error) {
-          console.error("[ADMIN AUTH] Error fetching roles:", error);
+        if (directError) {
+          console.warn("[ATIS_ACCESS] Direct query failed, trying RPC:", directError);
           
-          // Secondary fallback using hardcoded super admin UUID
+          // 2. RPC fallback
+          const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
+            _user_id: user.id,
+            _role: "admin"
+          });
+          
           const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          const isA = !!hasAdmin || isSA;
           
-          if (!cancelled) {
-            setIsSuperAdmin(isSA);
-            setIsAdmin(isSA);
-            setRole(isSA ? "super_admin" : null);
-            setLoading(false);
-          }
-          return;
+          if (cancelled) return;
+
+          console.log("[ATIS_ACCESS] RPC Result:", { isA, isSA, rpcError });
+          
+          setIsAdmin(isA);
+          setIsSuperAdmin(isSA);
+          setRole(isSA ? "super_admin" : (isA ? "admin" : null));
+          setLoading(false);
+        } else {
+          const roles = directData?.map(r => String(r.role)) || [];
+          const isSA = roles.includes("super_admin") || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          const isA = isSA || roles.includes("admin");
+
+          if (cancelled) return;
+
+          console.log("[ATIS_ACCESS] Direct query Result:", { roles, isA, isSA });
+          
+          setIsAdmin(isA);
+          setIsSuperAdmin(isSA);
+          setRole(isSA ? "super_admin" : (isA ? "admin" : null));
+          setLoading(false);
         }
-
-        const isA = !!roleResult;
-        const isSA = !!isSA_Result || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-
-        console.log("[ADMIN AUTH] Result:", { 
-          userId: user.id, 
-          isAdmin: isA, 
-          isSuperAdmin: isSA 
-        });
-
-        setIsSuperAdmin(isSA);
-        setIsAdmin(isA);
-        setRole(isSA ? "super_admin" : (isA ? "admin" : null));
-        setLoading(false);
       } catch (err) {
-        console.error("[ADMIN AUTH] Catch block:", err);
+        console.error("[ATIS_ACCESS] Critical catch block:", err);
         if (!cancelled) setLoading(false);
       }
     };

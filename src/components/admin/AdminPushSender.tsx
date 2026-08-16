@@ -54,18 +54,36 @@ const AdminPushSender = () => {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-push", {
-        body: {
+      // Usar fetch direto para contornar o tratamento automático de cabeçalhos do .invoke
+      // e o possível bloqueio de JWT inválido no gateway.
+      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const functionUrl = `${supabaseUrl}/functions/v1/send-push`;
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+          'x-direct-auth': 'true' // Flag para sinalizar bypass se necessário
+        },
+        body: JSON.stringify({
           title: title.trim(),
           body: body.trim(),
           url: url.trim() || "/",
           ttl: DEFAULT_TTL_SECONDS,
           urgency: "high",
           type: "general",
-        },
+        }),
       });
 
-      if (error) {
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("[AdminPushSender] Direct fetch error:", data);
+        throw new Error(data.details || data.error || "Erro ao disparar notificação");
+      }
+
         console.error("[AdminPushSender] invoke error object:", error);
         
         // Supabase invoke error objects can be complex

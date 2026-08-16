@@ -6,7 +6,7 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot, Search, X,
+  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Search, X,
   Church, AlertTriangle, Library
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";

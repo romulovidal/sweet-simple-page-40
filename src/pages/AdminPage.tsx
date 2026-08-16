@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminLogin from "./AdminLogin";
 import AdminPanel from "./AdminPanel";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const AdminPage = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -12,6 +13,7 @@ const AdminPage = () => {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const resolveAdminAccess = useCallback(async (nextSession: Session | null) => {
     setSession(nextSession);
@@ -170,6 +172,14 @@ const AdminPage = () => {
         </div>
       </div>
     );
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const redirectPath = searchParams.get("redirect");
+  
+  if (isAdmin && redirectPath === "/atis") {
+    navigate("/atis", { replace: true });
+    return null;
   }
 
   return <AdminPanel />;

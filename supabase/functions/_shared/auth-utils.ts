@@ -29,6 +29,9 @@ export async function hasRole(supabase: any, userId: string, requiredRole: 'supe
   // Proprietário sempre tem acesso administrativo
   if (userId === '5850679f-697b-4ec2-a47c-47b88a96bffa') return true;
 
+  // Ao chamar RPC de dentro de uma Edge Function ou do cliente, o RLS será aplicado se usarmos a anon/user key.
+  // A função check_user_role é SECURITY DEFINER, então ela ignora RLS interno, mas a chamada à função em si
+  // deve ser permitida pelo GRANT que aplicamos.
   const { data, error } = await supabase.rpc('check_user_role', {
     _user_id: userId,
     _role: requiredRole
@@ -72,7 +75,7 @@ export async function validateAdminAuth(req: Request, supabaseUrl: string, servi
     return { authorized: true, userId, isAdmin: true };
   }
 
-  // Query DB para outros usuários
+  // Query DB para outros usuários usando a service_role key para ignorar RLS na verificação de admin
   const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.1");
   const serviceClient = createClient(supabaseUrl, serviceKey);
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {

@@ -228,7 +228,7 @@ export class EvolutionProvider {
       method: "POST",
       body: JSON.stringify({
         number: target,
-        textMessage: { text },
+        text,
         ...(delay > 0 ? { delay } : {}),
       }),
     }, 30000);

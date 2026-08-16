@@ -1,6 +1,6 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { decodeJwtPayload } from "./auth-utils.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,21 +32,23 @@ export async function requireAdmin(req: Request) {
     return { userId: "service-role", role: "service_role" };
   }
 
-  // Decodificação manual para contornar problemas de assinatura em projetos migrados
-  const payload = decodeJwtPayload(token);
-  const userId = payload?.sub;
+  // Autenticação real do token via Supabase Auth
+  const serviceClient = createClient(supabaseUrl, serviceKey);
+  const { data: { user }, error: authError } = await serviceClient.auth.getUser(token);
+  
+  const userId = user?.id;
 
-  if (!userId) {
+  if (authError || !userId) {
+    console.error(`[ATIS-Auth] JWT verification failed:`, authError);
     return { 
       error: new Response(
-        JSON.stringify({ error: "Unauthorized", details: "Invalid token payload" }), 
+        JSON.stringify({ error: "Unauthorized", details: "Invalid token" }), 
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       ) 
     };
   }
 
   console.log(`[ATIS-Auth] Validating role for user ${userId}...`);
-  const serviceClient = createClient(supabaseUrl, serviceKey);
   
   // Chamada à RPC que respeita a hierarquia
   const { data: role, error: roleError } = await serviceClient.rpc("check_user_role", {

@@ -26,17 +26,7 @@ export function useIsAdmin() {
       try {
         console.log("[ATIS_ACCESS] role_check_start, user_id:", user.id);
         
-        // Skip check if already known super_admin
-        if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
-          console.log("[ATIS_ACCESS] matched_hardcoded_owner");
-          setIsAdmin(true);
-          setIsSuperAdmin(true);
-          setRole("super_admin");
-          setLoading(false);
-          return;
-        }
-
-        // Skip check if already known super_admin
+        // Bypass for owner aragao@atalaias.online
         if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
           console.log("[ATIS_ACCESS] Matched hardcoded owner aragao@atalaias.online");
           setIsAdmin(true);

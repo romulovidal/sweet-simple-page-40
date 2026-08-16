@@ -40,7 +40,7 @@ const AdminPage = () => {
       if (error) {
         console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
         
-        const { data: hasAdmin, error: rpcError } = await supabase.rpc("has_role", {
+        const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
           _user_id: nextSession.user.id,
           _role: "admin"
         });
@@ -179,7 +179,7 @@ const AdminPage = () => {
   
   // Apenas redireciona se realmente for um admin validado
   useEffect(() => {
-    if (isAdmin && redirectPath && redirectPath.startsWith("/atis")) {
+    if (isAdmin && redirectPath && (redirectPath === "/atis" || redirectPath.startsWith("/atis?"))) {
       console.log("[ADMIN AUTH] Redirecting back to:", redirectPath);
       navigate(redirectPath, { replace: true });
     }

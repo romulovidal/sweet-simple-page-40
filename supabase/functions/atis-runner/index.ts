@@ -7,6 +7,7 @@ import {
   getEvolutionConfigFromEnv,
   type AtisInstanceStatus,
 } from "../_shared/atis/evolution-provider.ts";
+import { processScheduledAutomations } from "../_shared/atis/automation-engine.ts";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -23,16 +24,6 @@ function normalizeProviderTarget(target: any) {
   if (target.target_type === "group") return target.provider_target_id;
   if (typeof target.phone_e164 === "string") return target.phone_e164.replace(/\D/g, "");
   return null;
-}
-
-function normalizeState(raw: unknown): AtisInstanceStatus {
-  const state = String(raw ?? "").trim().toLowerCase();
-  if (["open", "connected", "online", "ready"].includes(state)) return "connected";
-  if (["connecting", "opening"].includes(state)) return "connecting";
-  if (["qrcode", "qr", "qr_required", "pairing"].includes(state)) return "qr_required";
-  if (["close", "closed", "disconnected", "offline"].includes(state)) return "disconnected";
-  if (["error", "failed"].includes(state)) return "error";
-  return "unknown";
 }
 
 async function readDeliverySettings(supabase: any) {
@@ -148,6 +139,10 @@ Deno.serve(async (req) => {
     const provider = new EvolutionProvider(getEvolutionConfigFromEnv());
     const settings = await readDeliverySettings(supabase);
     const instanceStates = await refreshInstanceStates(supabase, provider);
+    const automationResult = await processScheduledAutomations(supabase, {
+      dryRun: input.dry_run === true,
+      limit: 50,
+    });
 
     if (input.dry_run === true) {
       const { count, error: countError } = await supabase
@@ -158,6 +153,7 @@ Deno.serve(async (req) => {
       return json({
         dry_run: true,
         instances: instanceStates,
+        automations: automationResult,
         nonterminal_targets: count ?? 0,
         delivery: { max_messages_per_run: settings.maxPerMinute, min_delay_ms: settings.minDelayMs },
       });
@@ -176,7 +172,16 @@ Deno.serve(async (req) => {
     if (claimError) throw claimError;
 
     if (!claimed?.length) {
-      return json({ ok: true, idle: true, claimed: 0, sent: 0, retried: 0, failed: 0, instances: instanceStates });
+      return json({
+        ok: true,
+        idle: true,
+        claimed: 0,
+        sent: 0,
+        retried: 0,
+        failed: 0,
+        automations: automationResult,
+        instances: instanceStates,
+      });
     }
 
     let sent = 0;
@@ -343,6 +348,7 @@ Deno.serve(async (req) => {
       sent,
       retried,
       failed,
+      automations: automationResult,
       outcomes,
       instances: instanceStates,
     });

@@ -24,8 +24,18 @@ export function useIsAdmin() {
 
     const checkAdmin = async () => {
       try {
-        console.log("[ATIS_ACCESS] role_loading: true, user_id:", user.id);
+        console.log("[ATIS_ACCESS] role_check_start, user_id:", user.id);
         
+        // Skip check if already known super_admin
+        if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
+          console.log("[ATIS_ACCESS] matched_hardcoded_owner");
+          setIsAdmin(true);
+          setIsSuperAdmin(true);
+          setRole("super_admin");
+          setLoading(false);
+          return;
+        }
+
         // Use timeout to ensure the role check doesn't hang the UI during initial session hydration
         const checkPromise = (async () => {
           // 1. Direct query attempt (matches AdminPage.tsx pattern)

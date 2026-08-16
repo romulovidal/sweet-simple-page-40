@@ -36,8 +36,9 @@ const AtisPage = () => {
 
   useEffect(() => {
     if (checked && !session) {
-      console.log("[ATIS] No session, redirecting to /admin");
-      navigate("/admin?redirect=/atis");
+      const currentPath = window.location.pathname + window.location.search;
+      console.log("[ATIS] No session, redirecting to /admin?redirect=" + encodeURIComponent(currentPath));
+      navigate("/admin?redirect=" + encodeURIComponent(currentPath));
     }
   }, [checked, session, navigate]);
 

@@ -65,9 +65,9 @@ const AdminPushSender = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-bypass-jwt': session?.access_token || '',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY, // Re-adicionando se necessário, mas anon
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
+
 
 
         body: JSON.stringify({
@@ -77,7 +77,9 @@ const AdminPushSender = () => {
           ttl: DEFAULT_TTL_SECONDS,
           urgency: "high",
           type: "general",
+          bypass_token: session?.access_token || '', // Passando o token no corpo
         }),
+
       });
 
       const result = await response.json();

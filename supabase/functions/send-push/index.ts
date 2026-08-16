@@ -2,10 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bypass-jwt",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 import { safeSend } from "../_shared/atis-antiban.ts";
@@ -20,21 +19,20 @@ const PushPayloadSchema = z.object({
   urgency: z.enum(["very-low", "low", "normal", "high"]).optional().default("high"),
   groupsOnly: z.boolean().optional().default(false),
   user_id: z.string().uuid().optional(),
+  bypass_token: z.string().optional(),
 });
 
 type PushPayload = z.infer<typeof PushPayloadSchema>;
 
-async function requireAdminUser(req: Request, supabaseUrl: string, serviceKey: string) {
+async function requireAdminUser(req: Request, supabaseUrl: string, serviceKey: string, body?: any) {
   const authHeader = req.headers.get("Authorization") ?? "";
-  const bypassHeader = req.headers.get("x-bypass-jwt") ?? "";
-  
   let token = "";
   
   if (authHeader.startsWith("Bearer ")) {
     token = authHeader.replace(/^Bearer\s+/, "");
-  } else if (bypassHeader) {
-    token = bypassHeader;
-    console.log("[send-push] Using bypass JWT from x-bypass-jwt header");
+  } else if (body?.bypass_token) {
+    token = body.bypass_token;
+    console.log("[send-push] Using token from body bypass");
   }
 
   if (!token) {
@@ -109,12 +107,12 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "VAPID keys not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  const auth = await requireAdminUser(req, supabaseUrl, serviceKey);
-  if (auth.error) return auth.error;
-
   try {
-    const body = await req.json();
-    const validated = PushPayloadSchema.parse(body);
+    const rawBody = await req.json();
+    const auth = await requireAdminUser(req, supabaseUrl, serviceKey, rawBody);
+    if (auth.error) return auth.error;
+
+    const validated = PushPayloadSchema.parse(rawBody);
     const supabase = createClient(supabaseUrl, serviceKey);
 
     let query = supabase.from("push_subscriptions").select("id, endpoint, p256dh, auth");

@@ -54,18 +54,18 @@ const AdminPushSender = () => {
 
     setSending(true);
     try {
-      // Usar fetch direto para contornar o tratamento automático de cabeçalhos do .invoke
-      // e o possível bloqueio de JWT inválido no gateway.
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const functionUrl = `${supabaseUrl}/functions/v1/send-push`;
 
+      // Se estivermos em um ambiente onde o JWT é rejeitado pelo gateway do Supabase
+      // devido a migrações de projeto (UNAUTHORIZED_LEGACY_JWT), 
+      // o fetch direto também pode falhar se o API Gateway for o mesmo.
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
-          'x-direct-auth': 'true' // Flag para sinalizar bypass se necessário
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -77,38 +77,15 @@ const AdminPushSender = () => {
         }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        console.error("[AdminPushSender] Direct fetch error:", data);
-        throw new Error(data.details || data.error || "Erro ao disparar notificação");
+        console.error("[AdminPushSender] Direct fetch error:", result);
+        throw new Error(result.details || result.error || "Erro ao disparar notificação");
       }
 
-        console.error("[AdminPushSender] invoke error object:", error);
-        
-        // Supabase invoke error objects can be complex
-        let details = "Erro desconhecido";
-        
-        if (typeof error === 'object' && error !== null) {
-          // Attempt to extract message from response body if it's a non-2xx error
-          const context = (error as any).context;
-          if (context && typeof context.json === 'function') {
-            try {
-              const errorData = await context.json();
-              details = errorData.details || errorData.error || details;
-            } catch (e) {
-              details = context.statusText || details;
-            }
-          } else {
-            details = (error as any).message || details;
-          }
-        }
-        
-        throw new Error(details);
-      }
-
-      const sentCount = data?.sent || 0;
-      const failedCount = data?.failed || 0;
+      const sentCount = result?.sent || 0;
+      const failedCount = result?.failed || 0;
       
       if (sentCount === 0 && failedCount > 0) {
         toast.error(`Falha total no envio: ${failedCount} erros. Verifique os logs.`);

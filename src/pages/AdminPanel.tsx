@@ -6,7 +6,7 @@ import {
   LogOut, Loader2, Calendar, Users, LayoutDashboard, Bell, Shield,
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
-  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Bot, Search, X,
+  ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Search, X,
   Church, AlertTriangle, Library
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
@@ -488,12 +488,6 @@ const AdminPanel = () => {
           </nav>
 
           <div className="p-3 border-t border-[hsl(var(--dark-card-hover))] flex flex-col gap-1">
-            <button
-              onClick={() => navigate("/atis")}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold bg-gradient-to-br from-[hsl(220,70%,45%)] to-[hsl(260,60%,40%)] text-white hover:brightness-110 transition-all"
-            >
-              <Bot className="w-4 h-4" /> Painel Atis
-            </button>
             <button
               onClick={() => navigate("/")}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card-hover))]/60 hover:text-[hsl(var(--dark-text))]"

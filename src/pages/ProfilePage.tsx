@@ -619,7 +619,7 @@ const ProfilePage = () => {
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm">Notificações no WhatsApp</p>
               <p className="text-xs text-dark-muted mt-0.5 leading-relaxed">
-                Receba versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp pelo Atis.
+                Receba versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp.
               </p>
             </div>
           </div>
@@ -638,7 +638,7 @@ const ProfilePage = () => {
               className="mt-0.5"
             />
             <span className="text-xs text-dark-muted leading-relaxed">
-              Autorizo receber mensagens automáticas do Atis no meu WhatsApp. Posso desativar quando quiser.
+              Autorizo receber mensagens automáticas no meu WhatsApp. Posso desativar quando quiser.
             </span>
           </label>
           <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">

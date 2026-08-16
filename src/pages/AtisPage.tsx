@@ -24,16 +24,9 @@ const AtisPage = () => {
   }, []);
 
   useEffect(() => {
-    // Immediate owner check to bypass early redirects
-    if (session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
-      console.log("[ATIS_ACCESS] Owner detected, skipping session-only redirect");
-      return;
-    }
-
     // Only redirect if auth check is finished and NO session exists
     if (authChecked && !session) {
       console.log("[ATIS_ACCESS] No session, redirecting to /admin");
-      // Use navigate instead of window.location for better SPA handling
       navigate("/admin");
     }
   }, [authChecked, session, navigate]);

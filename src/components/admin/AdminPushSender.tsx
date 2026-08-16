@@ -66,7 +66,9 @@ const AdminPushSender = () => {
         headers: {
           'Content-Type': 'application/json',
           'x-bypass-jwt': session?.access_token || '',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY, // Re-adicionando se necessário, mas anon
         },
+
 
         body: JSON.stringify({
           title: title.trim(),

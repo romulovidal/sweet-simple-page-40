@@ -26,9 +26,9 @@ export function useIsAdmin() {
       try {
         console.log("[ATIS_ACCESS] role_check_start, user_id:", user.id);
         
-        // Bypass for owner aragao@atalaias.online
-        if (user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
-          console.log("[ATIS_ACCESS] Matched hardcoded owner aragao@atalaias.online");
+        // Owner bypass (standard admin role check applies to others)
+        const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+        if (isSA) {
           setIsAdmin(true);
           setIsSuperAdmin(true);
           setRole("super_admin");

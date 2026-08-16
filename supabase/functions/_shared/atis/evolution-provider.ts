@@ -26,7 +26,9 @@ export class EvolutionProviderError extends Error {
 }
 
 function cleanBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, "");
+  let normalized = value.trim().replace(/\/+$/, "");
+  if (normalized && !/^https?:\/\//i.test(normalized)) normalized = `https://${normalized}`;
+  return normalized;
 }
 
 function safeJson(value: string): unknown {

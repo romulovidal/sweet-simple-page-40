@@ -77,7 +77,7 @@ const AtisLayout = () => {
   const activeMeta = TABS.find((t) => t.id === tab)!;
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] overflow-x-hidden">
       {/* Desktop sidebar */}
       {!isMobile && (
         <aside className="fixed left-0 top-0 bottom-0 w-64 z-40 bg-[hsl(var(--dark-card))] border-r border-[hsl(var(--dark-card-hover))] flex flex-col">

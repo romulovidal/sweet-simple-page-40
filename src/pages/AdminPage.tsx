@@ -30,7 +30,7 @@ const AdminPage = () => {
     setLoading(true);
 
     try {
-      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
+      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id); console.log("[DEBUG] localStorage Token:", localStorage.getItem("sb-hvdmobypsqksgkfrzhzf-auth-token") ? "Present" : "Missing");
 
       // 1. Direct table check
       const { data, error } = await supabase

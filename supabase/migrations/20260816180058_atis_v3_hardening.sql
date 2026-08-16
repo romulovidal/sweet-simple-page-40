@@ -1,0 +1,27 @@
+create index if not exists atis_settings_updated_by_idx on public.atis_settings(updated_by) where updated_by is not null;
+create index if not exists atis_instances_created_by_idx on public.atis_instances(created_by) where created_by is not null;
+create index if not exists atis_contacts_created_by_idx on public.atis_contacts(created_by) where created_by is not null;
+create index if not exists atis_templates_created_by_idx on public.atis_templates(created_by) where created_by is not null;
+create index if not exists atis_templates_updated_by_idx on public.atis_templates(updated_by) where updated_by is not null;
+create index if not exists atis_automations_template_id_idx on public.atis_automations(template_id) where template_id is not null;
+create index if not exists atis_automations_created_by_idx on public.atis_automations(created_by) where created_by is not null;
+create index if not exists atis_automations_updated_by_idx on public.atis_automations(updated_by) where updated_by is not null;
+create index if not exists atis_messages_instance_id_idx on public.atis_messages(instance_id);
+create index if not exists atis_messages_automation_run_id_idx on public.atis_messages(automation_run_id) where automation_run_id is not null;
+create index if not exists atis_messages_created_by_idx on public.atis_messages(created_by) where created_by is not null;
+create index if not exists atis_message_targets_contact_id_idx on public.atis_message_targets(contact_id) where contact_id is not null;
+create index if not exists atis_message_targets_group_id_idx on public.atis_message_targets(group_id) where group_id is not null;
+create index if not exists atis_webhook_events_instance_id_idx on public.atis_webhook_events(instance_id) where instance_id is not null;
+
+alter policy atis_settings_admin_select on public.atis_settings using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_instances_admin_select on public.atis_instances using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_contacts_admin_select on public.atis_contacts using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_groups_admin_select on public.atis_groups using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_group_members_admin_select on public.atis_group_members using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_templates_admin_select on public.atis_templates using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_automations_admin_select on public.atis_automations using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_automation_runs_admin_select on public.atis_automation_runs using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_messages_admin_select on public.atis_messages using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_message_targets_admin_select on public.atis_message_targets using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_message_attempts_admin_select on public.atis_message_attempts using (public.has_role((select auth.uid()), 'admin'));
+alter policy atis_webhook_events_admin_select on public.atis_webhook_events using (public.has_role((select auth.uid()), 'admin'));

@@ -8,8 +8,6 @@ import { Loader2 } from "lucide-react";
 const AdminPage = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
 
@@ -19,8 +17,6 @@ const AdminPage = () => {
 
     if (!nextSession?.user) {
       setIsAdmin(false);
-      setIsSuperAdmin(false);
-      setRole(null);
       setLoading(false);
       return;
     }
@@ -28,59 +24,35 @@ const AdminPage = () => {
     setLoading(true);
 
     try {
-      console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
-
+      const userId = nextSession.user.id;
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", nextSession.user.id);
+        .eq("user_id", userId);
 
-      if (error) {
-        console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
-        
-        const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
-          _user_id: nextSession.user.id,
-          _role: "admin"
-        });
-        
-        if (rpcError) {
-          console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
-          // Special handling for the owner UUID even if the database is currently restricted
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          if (isSA) {
-            setIsAdmin(true);
-            setIsSuperAdmin(true);
-            setRole("super_admin");
-            setAccessError(null);
-          } else {
-            setIsAdmin(false);
-            setIsSuperAdmin(false);
-            setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Acesso negado ao esquema de segurança."));
-          }
-        } else {
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          setIsAdmin(!!hasAdmin || isSA);
-          setIsSuperAdmin(isSA);
-          if (isSA) setRole("super_admin");
-          else if (hasAdmin) setRole("admin");
-        }
-      } else {
-        const roles = data?.map(r => String(r.role)) || [];
-        const isSA = roles.includes("super_admin") || nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-        const isA = isSA || roles.includes("admin");
-
-        console.log("[ADMIN AUTH] AdminPage Result:", { roles, isAdmin: isA, isSuperAdmin: isSA });
-        
-        setIsAdmin(isA);
-        setIsSuperAdmin(isSA);
-        setRole(isSA ? "super_admin" : (isA ? "admin" : null));
+      if (!error) {
+        const roles = data?.map((row) => String(row.role)) ?? [];
+        setIsAdmin(roles.includes("admin") || roles.includes("super_admin"));
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error("[ADMIN AUTH] AdminPage catch block:", err);
-      setAccessError("Erro inesperado ao validar acesso.");
-    }
 
-    setLoading(false);
+      // Resilient fallback to functions that actually exist in the current schema.
+      // Both roles remain database-backed; there is no hardcoded owner/admin UUID.
+      const [{ data: hasAdmin, error: adminError }, { data: hasSuperAdmin, error: superError }] = await Promise.all([
+        supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+        supabase.rpc("is_super_admin", { _user_id: userId }),
+      ]);
+
+      if (adminError || superError) throw adminError ?? superError;
+      setIsAdmin(Boolean(hasAdmin) || Boolean(hasSuperAdmin));
+    } catch (error) {
+      console.error("Erro ao validar acesso administrativo", error);
+      setIsAdmin(false);
+      setAccessError("Não foi possível validar seu acesso administrativo. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

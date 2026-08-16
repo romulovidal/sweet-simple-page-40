@@ -21,11 +21,28 @@ export function useAtisStatus(pollMs = 20000): AtisStatus {
       const { data, error } = await supabase.functions.invoke("atis-instance", {
         body: { action: "status" },
       });
-      if (error) throw error;
-      const s = (data as any)?.state ?? "unknown";
-      setState((s === "open" || s === "connected") ? "open" : (s as AtisConnState));
+      
+      if (error) {
+        console.error("[useAtisStatus] invoke error:", error);
+        setState("error");
+        return;
+      }
+
+      const s = (data as any)?.state;
+      console.log("[useAtisStatus] Evolution State:", s);
+      
+      // Mapeamento correto de estados da Evolution API
+      if (s === "open" || s === "connected") {
+        setState("open");
+      } else if (s === "connecting") {
+        setState("connecting");
+      } else if (s === "close" || s === "disconnected") {
+        setState("close");
+      } else {
+        setState("unknown");
+      }
     } catch (err: any) {
-      console.warn("[useAtisStatus] polling error:", err.message);
+      console.warn("[useAtisStatus] fetch error:", err.message);
       setState("error");
     } finally {
       setLoading(false);

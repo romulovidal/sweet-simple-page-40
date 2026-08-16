@@ -111,12 +111,6 @@ async function isAuthorizedTrigger(
   return { ok: false, manual: false };
 }
 
-async function isLegacyAuth(authHeader: string): Promise<boolean> {
-  const token = authHeader.replace(/^Bearer\s+/, "");
-  const payload = decodeJwtPayload(token);
-  return payload?.sub === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -146,7 +140,7 @@ serve(async (req) => {
      const auth = await isAuthorizedTrigger(req, supabaseUrl, anonKey, serviceKey);
      const hasAuthHeader = !!req.headers.get("Authorization");
      
-     if (hasAuthHeader && !auth.ok && !(await isLegacyAuth(req.headers.get("Authorization") ?? ""))) {
+     if (hasAuthHeader && !auth.ok) {
        console.error("[daily-verse-push] Unauthorized manual trigger attempt");
        return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {
          status: 401,

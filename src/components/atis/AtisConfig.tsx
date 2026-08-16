@@ -128,34 +128,20 @@ const AtisConfig = () => {
       console.error("[ATIS CONFIG] Save error:", error);
       const isPermError = error.code === '42501' || error.message?.includes('42501');
       toast.error(`Erro ao salvar: ${error.message}${isPermError ? ' (Sem permissão de escrita)' : ''}`);
+
     } else {
       toast.success("Configuração salva");
     }
   };
 
   return (
-    <div className="space-y-4 relative">
-      {showConnect && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-[hsl(var(--dark-bg))] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-[hsl(var(--dark-card-hover))] shadow-2xl p-6 relative">
-            <AtisEvolutionConfig onClose={() => setShowConnect(false)} />
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] text-white p-4 flex items-center justify-between gap-3 relative overflow-hidden">
-        <div className="relative z-10">
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] text-white p-4 flex items-center justify-between gap-3">
+        <div>
           <p className="text-sm font-bold">Conexão WhatsApp</p>
           <p className="text-xs opacity-90">Escaneie o QR Code para conectar o número do Atis.</p>
         </div>
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowConnect(true);
-          }} 
-          className="shrink-0 bg-white/15 hover:bg-white/25 active:bg-white/35 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 transition-all z-20 cursor-pointer border border-white/10"
-        >
+        <button onClick={() => setShowConnect(true)} className="shrink-0 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5">
           <QrCode className="w-4 h-4" /> Conectar
         </button>
       </div>

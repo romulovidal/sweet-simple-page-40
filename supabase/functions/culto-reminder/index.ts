@@ -134,11 +134,6 @@ Deno.serve(async (req) => {
             authorized = true;
           }
         }
-
-        if (!authorized && payload?.sub === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
-          authorized = true;
-          isAdmin = true;
-        }
       }
 
       console.info("culto-reminder auth result", {

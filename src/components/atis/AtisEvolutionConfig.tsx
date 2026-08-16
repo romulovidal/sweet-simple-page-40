@@ -87,8 +87,7 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
       refresh();
     } catch (e: any) {
       console.error("[ATIS EVO] Create instance error:", e);
-      const msg = e.error || e.message || "Erro ao criar instância";
-      toast.error(`Falha: ${msg}`);
+      toast.error(e.message ?? "Erro ao criar instância");
     } finally {
       setBusy(false);
     }
@@ -110,7 +109,7 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
 
   useEffect(() => { refresh(); }, []);
 
-  const connected = status.connected || (status.state as string) === "open" || (status.state as string) === "connected";
+  const connected = status.connected;
 
   return (
     <div className="space-y-4">
@@ -259,7 +258,7 @@ const AtisEvolutionConfig = ({ onClose }: Props) => {
         </div>
         
         <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
-          As credenciais sensíveis (<b>API Key</b> e <b>Webhook Secret</b>) estão armazenadas de forma segura nas Edge Functions do seu backend. O frontend não tem acesso direto a esses tokens, garantindo a proteção dos seus dados.
+          As credenciais sensíveis (<b>API Key</b> e <b>Webhook Secret</b>) estão armazenadas de forma segura nas Edge Functions do Lovable Cloud. O frontend não tem acesso direto a esses tokens, garantindo a proteção dos seus dados.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { aiGenerateText, hasAnyAiKey } from "../_shared/ai-fetch.ts";
-import { decodeJwtPayload, getProjectRef } from "../_shared/auth-utils.ts";
+import { decodeJwtPayload, getProjectRef, validateAdminAuth } from "../_shared/auth-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,66 +50,24 @@ function getBrazilPeriod(date = new Date()): { period: "manhã" | "tarde" | "noi
   return { period, hour };
 }
 
+import { validateAdminAuth } from "../_shared/auth-utils.ts";
+
 async function isAuthorizedTrigger(
   req: Request,
   supabaseUrl: string,
-  anonKey: string,
   serviceKey: string,
 ): Promise<{ ok: boolean; manual: boolean }> {
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-
-  if (!token) return { ok: false, manual: false };
-
-  // 1. Exact service-role key match (fast-path).
-  const isExactServiceRoleMatch = token === serviceKey;
+  const auth = await validateAdminAuth(req, supabaseUrl, serviceKey);
   
-  // 2. JWT service_role claim check (for tokens minted by Supabase Gateway).
-  const payload = decodeJwtPayload(token);
-  const projectRef = getProjectRef(supabaseUrl);
-  const isVerifiedServiceRoleClaim = 
-    payload?.role === "service_role" && 
-    payload?.ref === projectRef;
-
-  if (isExactServiceRoleMatch || isVerifiedServiceRoleClaim) {
-    console.log("Authorized as service_role", { isExactServiceRoleMatch, isVerifiedServiceRoleClaim });
-    // IMPORTANT: service_role (Cron) is NOT a manual trigger.
-    return { ok: true, manual: false };
+  if (auth.authorized) {
+    const isManual = auth.userId !== "service-role";
+    console.log(`Authorized as ${auth.userId} (manual: ${isManual})`);
+    return { ok: true, manual: isManual };
   }
-
-  // 3. Authenticated admin user.
-  try {
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData?.user) {
-      console.log("User authentication failed", userError);
-      return { ok: false, manual: false };
-    }
-    
-    // We use the service client to check role to avoid RLS issues on user_roles
-    const serviceClient = createClient(supabaseUrl, serviceKey);
-    const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
-      _user_id: userData.user.id,
-      _role: "admin",
-    });
-    
-    if (roleError) {
-      console.error("Role check RPC failed", roleError);
-    }
-
-    if (isAdmin === true) {
-      console.log("Authorized as admin user");
-      // Authenticated admin users ARE manual triggers.
-      return { ok: true, manual: true };
-    }
-  } catch (e) {
-    console.error("Authorization check failed", e);
-    return { ok: false, manual: false };
-  }
+  
   return { ok: false, manual: false };
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -137,7 +95,7 @@ serve(async (req) => {
  
      // Manual triggers must come from an admin user or the internal service role.
      // Otherwise, the endpoint only runs on its scheduled time window.
-     const auth = await isAuthorizedTrigger(req, supabaseUrl, anonKey, serviceKey);
+     const auth = await isAuthorizedTrigger(req, supabaseUrl, serviceKey);
      const hasAuthHeader = !!req.headers.get("Authorization");
      
      if (hasAuthHeader && !auth.ok) {

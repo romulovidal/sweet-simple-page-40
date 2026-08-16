@@ -177,10 +177,13 @@ const AdminPage = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const redirectPath = searchParams.get("redirect");
   
-  if (isAdmin && redirectPath === "/atis") {
-    navigate("/atis", { replace: true });
-    return null;
-  }
+  // Apenas redireciona se realmente for um admin validado
+  useEffect(() => {
+    if (isAdmin && redirectPath === "/atis") {
+      console.log("[ADMIN AUTH] Redirecting back to /atis");
+      navigate("/atis", { replace: true });
+    }
+  }, [isAdmin, redirectPath, navigate]);
 
   return <AdminPanel />;
 };

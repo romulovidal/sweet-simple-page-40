@@ -30,7 +30,7 @@ const AtisPage = () => {
     }
   }, [checked, session, navigate]);
 
-  if (loading || !checked) {
+  if (loading || !checked || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--dark-bg))]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

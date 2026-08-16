@@ -273,7 +273,10 @@ const AdminPanel = () => {
       </div>
 
       <button
-        onClick={() => navigate("/atis")}
+        onClick={() => {
+          console.log("[ADMIN] Navigating to Atis");
+          navigate("/atis");
+        }}
         className="w-full flex items-center gap-4 p-4 rounded-2xl text-left bg-gradient-to-br from-[hsl(220,70%,45%)] to-[hsl(260,60%,40%)] text-white hover:brightness-110 transition-all"
       >
         <span className="w-12 h-12 shrink-0 rounded-xl grid place-items-center bg-white/15 backdrop-blur">

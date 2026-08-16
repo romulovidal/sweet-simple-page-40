@@ -52,14 +52,21 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
 
   // We use the service client to check role to avoid RLS issues on user_roles
   const serviceClient = createClient(supabaseUrl, serviceKey);
+  
+  // Use check_user_role RPC which handles hierarchy (super_admin > admin)
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
     _user_id: user.id,
     _role: "admin",
   });
 
-  if (roleError || !isAdmin) {
-    console.error(`[send-push] Role check failed for user ${user.id}:`, roleError);
-    return { error: new Response(JSON.stringify({ error: "Forbidden", details: roleError?.message || "User is not an admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  if (roleError) {
+    console.error(`[send-push] RPC error for user ${user.id}:`, roleError);
+    return { error: new Response(JSON.stringify({ error: "Internal Server Error", details: "Falha ao verificar permissões no banco." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  }
+
+  if (!isAdmin) {
+    console.warn(`[send-push] Forbidden: User ${user.id} is not an admin`);
+    return { error: new Response(JSON.stringify({ error: "Forbidden", details: "Você não tem permissão de administrador para enviar push manual." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   return { userId: user.id };
@@ -110,6 +117,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    console.log("[send-push] Init: Function started");
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@atalaias.online";
@@ -159,7 +167,12 @@ Deno.serve(async (req) => {
     if (body.user_id) subsQuery = subsQuery.eq("user_id", body.user_id);
     const { data: subs, error } = await subsQuery;
 
-    if (error) throw error;
+    if (error) {
+      console.error("[send-push] push_subscriptions query error:", error);
+      throw error;
+    }
+
+    console.log(`[send-push] Found ${subs?.length || 0} subscriptions`);
 
     const payload = JSON.stringify({
       title: body.title,

@@ -183,7 +183,8 @@ const AdminPage = () => {
       const decodedPath = decodeURIComponent(redirectPath);
       if (decodedPath === "/atis" || decodedPath.startsWith("/atis?")) {
         console.log("[ADMIN AUTH] Redirecting back to:", decodedPath);
-        navigate(decodedPath, { replace: true });
+        // Pequeno delay para garantir que o estado isAdmin seja propagado para o componente alvo
+        setTimeout(() => navigate(decodedPath, { replace: true }), 100);
       }
     }
   }, [isAdmin, redirectPath, navigate]);

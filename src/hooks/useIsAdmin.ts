@@ -50,11 +50,12 @@ export function useIsAdmin() {
           return;
         }
 
-        // Database-backed fallback. These are real functions in the current schema;
-        // no user UUID or role is hardcoded in the frontend.
+        // Database-backed fallback. The generated client types can lag behind
+        // migrations, so only this fallback uses the untyped client surface.
+        const rpc = (supabase as any).rpc.bind(supabase);
         const [{ data: hasAdmin, error: adminError }, { data: hasSuperAdmin, error: superError }] = await Promise.all([
-          supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
-          supabase.rpc("is_super_admin", { _user_id: user.id }),
+          rpc("has_role", { _user_id: user.id, _role: "admin" }),
+          rpc("is_super_admin", { _user_id: user.id }),
         ]);
 
         if (adminError || superError) throw adminError ?? superError;

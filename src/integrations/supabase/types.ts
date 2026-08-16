@@ -546,6 +546,7 @@ export type Database = {
           evolution_instance: string | null
           evolution_url: string | null
           id: number
+          last_connection_state: string | null
           mention_only_default: boolean
           persona: string | null
           timezone: string
@@ -561,6 +562,7 @@ export type Database = {
           evolution_instance?: string | null
           evolution_url?: string | null
           id?: number
+          last_connection_state?: string | null
           mention_only_default?: boolean
           persona?: string | null
           timezone?: string
@@ -576,6 +578,7 @@ export type Database = {
           evolution_instance?: string | null
           evolution_url?: string | null
           id?: number
+          last_connection_state?: string | null
           mention_only_default?: boolean
           persona?: string | null
           timezone?: string

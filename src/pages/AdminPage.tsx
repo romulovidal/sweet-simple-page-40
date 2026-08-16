@@ -32,6 +32,7 @@ const AdminPage = () => {
     try {
       console.log("[ADMIN AUTH] AdminPage starting validation for:", nextSession.user.id);
 
+      // 1. Direct table check
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -40,16 +41,22 @@ const AdminPage = () => {
       if (error) {
         console.warn("[ADMIN AUTH] AdminPage direct query failed, trying RPC:", error);
         
-        const { data: hasAdmin, error: rpcError } = await supabase.rpc("check_user_role", {
+        // 2. Fallback to RPC
+        const { data: roleResult, error: rpcError } = await supabase.rpc("check_user_role", {
           _user_id: nextSession.user.id,
           _role: "admin"
         });
         
+        const { data: isSA_Result } = await supabase.rpc("check_user_role", {
+          _user_id: nextSession.user.id,
+          _role: "super_admin"
+        });
+
+        const isOwner = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+
         if (rpcError) {
           console.error("[ADMIN AUTH] AdminPage RPC fallback error:", rpcError);
-          // Special handling for the owner UUID even if the database is currently restricted
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          if (isSA) {
+          if (isOwner) {
             setIsAdmin(true);
             setIsSuperAdmin(true);
             setRole("super_admin");
@@ -60,11 +67,11 @@ const AdminPage = () => {
             setAccessError("Não foi possível validar seu acesso. Erro: " + (rpcError.message || "Acesso negado ao esquema de segurança."));
           }
         } else {
-          const isSA = nextSession.user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          setIsAdmin(!!hasAdmin || isSA);
+          const isSA = !!isSA_Result || isOwner;
+          const isA = !!roleResult || isSA;
+          setIsAdmin(isA);
           setIsSuperAdmin(isSA);
-          if (isSA) setRole("super_admin");
-          else if (hasAdmin) setRole("admin");
+          setRole(isSA ? "super_admin" : (isA ? "admin" : null));
         }
       } else {
         const roles = data?.map(r => String(r.role)) || [];
@@ -96,7 +103,13 @@ const AdminPage = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      syncAccess(nextSession);
+      if (_event === 'SIGNED_OUT') {
+        setSession(null);
+        setIsAdmin(false);
+        setLoading(false);
+      } else {
+        syncAccess(nextSession);
+      }
     });
 
     supabase.auth
@@ -139,13 +152,13 @@ const AdminPage = () => {
           <p className="text-sm text-[hsl(var(--dark-muted))]">{accessError}</p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <button
-              onClick={() => void resolveAdminAccess(session)}
+              onClick={() => { void resolveAdminAccess(session); }}
               className="text-primary text-sm font-semibold"
             >
               Tentar novamente
             </button>
             <button
-              onClick={() => void supabase.auth.signOut()}
+              onClick={() => { void supabase.auth.signOut(); }}
               className="text-[hsl(var(--dark-muted))] text-sm font-semibold"
             >
               Sair
@@ -164,7 +177,7 @@ const AdminPage = () => {
           <h2 className="text-lg font-bold mb-2 text-[hsl(var(--dark-text))]">Acesso negado</h2>
           <p className="text-sm text-[hsl(var(--dark-muted))]">Você não tem permissão de administrador.</p>
           <button
-            onClick={() => void supabase.auth.signOut()}
+            onClick={() => { void supabase.auth.signOut(); }}
             className="text-primary text-sm font-semibold mt-4"
           >
             Sair
@@ -177,13 +190,11 @@ const AdminPage = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const redirectPath = searchParams.get("redirect");
   
-  // Apenas redireciona se realmente for um admin validado
   useEffect(() => {
     if (isAdmin && redirectPath) {
       const decodedPath = decodeURIComponent(redirectPath);
       if (decodedPath === "/atis" || decodedPath.startsWith("/atis?")) {
         console.log("[ADMIN AUTH] Redirecting back to:", decodedPath);
-        // Pequeno delay para garantir que o estado isAdmin seja propagado para o componente alvo
         setTimeout(() => navigate(decodedPath, { replace: true }), 100);
       }
     }

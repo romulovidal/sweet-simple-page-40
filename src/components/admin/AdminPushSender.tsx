@@ -66,9 +66,26 @@ const AdminPushSender = () => {
       });
 
       if (error) {
-        console.error("[AdminPushSender] invoke error:", error);
-        // Tenta extrair mensagem de erro detalhada da Edge Function
-        const details = (error as any).details || error.message || "Erro desconhecido ao enviar";
+        console.error("[AdminPushSender] invoke error object:", error);
+        
+        // Supabase invoke error objects can be complex
+        let details = "Erro desconhecido";
+        
+        if (typeof error === 'object' && error !== null) {
+          // Attempt to extract message from response body if it's a non-2xx error
+          const context = (error as any).context;
+          if (context && typeof context.json === 'function') {
+            try {
+              const errorData = await context.json();
+              details = errorData.details || errorData.error || details;
+            } catch (e) {
+              details = context.statusText || details;
+            }
+          } else {
+            details = (error as any).message || details;
+          }
+        }
+        
         throw new Error(details);
       }
 

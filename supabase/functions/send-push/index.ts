@@ -52,14 +52,21 @@ async function requireAdminUser(req: Request, supabaseUrl: string, anonKey: stri
 
   // We use the service client to check role to avoid RLS issues on user_roles
   const serviceClient = createClient(supabaseUrl, serviceKey);
+  
+  // Use check_user_role RPC which handles hierarchy (super_admin > admin)
   const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
     _user_id: user.id,
     _role: "admin",
   });
 
-  if (roleError || !isAdmin) {
-    console.error(`[send-push] Role check failed for user ${user.id}:`, roleError);
-    return { error: new Response(JSON.stringify({ error: "Forbidden", details: roleError?.message || "User is not an admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  if (roleError) {
+    console.error(`[send-push] RPC error for user ${user.id}:`, roleError);
+    return { error: new Response(JSON.stringify({ error: "Internal Server Error", details: "Falha ao verificar permissões no banco." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  }
+
+  if (!isAdmin) {
+    console.warn(`[send-push] Forbidden: User ${user.id} is not an admin`);
+    return { error: new Response(JSON.stringify({ error: "Forbidden", details: "Você não tem permissão de administrador para enviar push manual." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
   }
 
   return { userId: user.id };

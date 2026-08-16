@@ -88,68 +88,19 @@ Deno.serve(async (req) => {
 
     if (body.schedule_id || req.headers.get("Authorization")) {
       // Verify caller is admin or service_role
-      const authHeader = req.headers.get("Authorization") || "";
-      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+      const auth = await validateAdminAuth(req, supabaseUrl, serviceKey);
 
-      if (!token) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      if (!auth.authorized) {
+        console.error("[culto-reminder] Unauthorized manual trigger attempt:", auth.error);
+        return new Response(JSON.stringify({ error: "Unauthorized", details: auth.error }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const isExactServiceRoleMatch = token === serviceKey;
-      const payload = decodeJwtPayload(token);
-      const projectRef = getProjectRef(supabaseUrl);
-      const isVerifiedServiceRoleClaim = 
-        payload?.role === "service_role" && 
-        payload?.ref === projectRef;
+      const isAdmin = auth.isAdmin;
+      const authorized = auth.authorized;
 
-      let authorized = false;
-      let isAdmin = false;
-
-      if (isExactServiceRoleMatch || isVerifiedServiceRoleClaim) {
-        authorized = true;
-      } else {
-        console.info("culto-reminder entering user auth fallback");
-        const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-          global: { headers: { Authorization: authHeader } },
-        });
-        const { data: userData, error: userError } = await userClient.auth.getUser();
-        
-        if (userData?.user && !userError) {
-          // We use the service client to check role to avoid RLS issues on user_roles
-          const serviceClient = createClient(supabaseUrl, serviceKey);
-          const { data: isAdminRole, error: roleError } = await serviceClient.rpc("check_user_role", {
-            _user_id: userData.user.id,
-            _role: "admin",
-          });
-          
-          if (roleError) {
-            console.error("Role check RPC failed in culto-reminder", roleError);
-          }
-
-          isAdmin = !!isAdminRole;
-          if (isAdmin) {
-            authorized = true;
-          }
-        }
-      }
-
-      console.info("culto-reminder auth result", {
-        isExactServiceRoleMatch,
-        isVerifiedServiceRoleClaim,
-        isAdmin,
-        authorized
-      });
-
-      if (!authorized) {
-        console.error("[culto-reminder] Unauthorized manual trigger attempt:", { isAdmin, authorized });
-        return new Response(JSON.stringify({ error: "Unauthorized", details: "User is not authorized or not an admin" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
 
       // If it's a manual trigger without schedule_id in body, we might be here just for auth check before cron logic
       // But based on the code structure, the cron logic follows below.

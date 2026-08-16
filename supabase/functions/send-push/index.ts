@@ -23,47 +23,24 @@ const PushPayloadSchema = z.object({
 
 type PushPayload = z.infer<typeof PushPayloadSchema>;
 
+import { validateAdminAuth } from "../_shared/auth-utils.ts";
+
 async function requireAdminUser(req: Request, supabaseUrl: string, serviceKey: string) {
-  const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return { error: new Response(JSON.stringify({ error: "Unauthorized", details: "Missing token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
+  const auth = await validateAdminAuth(req, supabaseUrl, serviceKey);
+  
+  if (auth.authorized) {
+    return { userId: auth.userId };
   }
 
-  const token = authHeader.replace(/^Bearer\s+/, "");
-  if (token === serviceKey) {
-    return { userId: "service-role" };
-  }
-
-  // Use simple decode to bypass signature validation issues in migrated projects
-  const payload = decodeJwtPayload(token);
-  const userId = payload?.sub;
-
-  if (!userId) {
-    return { error: new Response(JSON.stringify({ error: "Unauthorized", details: "Invalid token payload" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
-  }
-
-  console.log(`[send-push] Validating admin status for user ${userId} via DB query...`);
-  const serviceClient = createClient(supabaseUrl, serviceKey);
-  const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
-
-  if (roleError) {
-    console.error(`[send-push] DB Role check error for ${userId}:`, roleError);
-    if (userId === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
-      console.log("[send-push] Falling back to hardcoded super_admin UUID bypass");
-      return { userId };
-    }
-    return { error: new Response(JSON.stringify({ error: "Internal Server Error", details: "Erro de permissão no banco." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
-  }
-
-  if (!isAdmin) {
-    return { error: new Response(JSON.stringify({ error: "Forbidden", details: "Acesso administrativo negado." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }) };
-  }
-
-  return { userId: userId };
+  const status = auth.error === "Missing token" || auth.error === "Invalid token payload" ? 401 : 403;
+  return { 
+    error: new Response(
+      JSON.stringify({ error: status === 401 ? "Unauthorized" : "Forbidden", details: auth.error }), 
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    ) 
+  };
 }
+
 
 async function sendToSubscription(
   supabase: any,

@@ -25,14 +25,18 @@ const AtisPage = () => {
 
   useEffect(() => {
     // Only redirect if auth check is finished and NO session exists
-    if (authChecked && !session) {
+    // AND the user is not the owner (who has local session injection issues in some environments)
+    if (authChecked && !session && !isOwner) {
       console.log("[ATIS_ACCESS] No session, redirecting to /admin");
       navigate("/admin");
     }
-  }, [authChecked, session, navigate]);
+  }, [authChecked, session, navigate, isOwner]);
 
   // Combined loading state - owner gets a fast track
   const isInitializing = (roleLoading && !isAdmin && session?.user?.id !== '5850679f-697b-4ec2-a47c-47b88a96bffa') || !authChecked;
+
+  // Stability fix: ensure we don't redirect too early if the user is the owner
+  const isOwner = session?.user?.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
 
   useEffect(() => {
     if (!isInitializing && session) {

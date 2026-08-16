@@ -210,10 +210,13 @@ const AtisAutomations = () => {
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        const errorData = await error.context?.json().catch(() => null);
+        throw new Error(errorData?.details || errorData?.error || error.message || "Erro na Edge Function");
+      }
       
       if (data?.ok === false) {
-        toast.error(`Falha ao disparar: ${data.reason || 'Erro desconhecido'}`);
+        toast.error(`Falha ao disparar: ${data.reason || data.error || 'Erro desconhecido'}`);
       } else {
         toast.success(`Automação disparada com sucesso!`);
       }

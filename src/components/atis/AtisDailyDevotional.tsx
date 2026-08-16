@@ -63,7 +63,10 @@ const AtisDailyDevotional = () => {
         method: "POST",
         body: { force: true, is_manual: true },
       });
-      if (error) throw error;
+      if (error) {
+        const errorData = await error.context?.json().catch(() => null);
+        throw new Error(errorData?.details || errorData?.error || error.message || "Erro na Edge Function");
+      }
       
       if (data?.engineResult?.ok === false) {
         toast.error(`Falha no motor: ${data.engineResult.reason || data.engineResult.error}`);

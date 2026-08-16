@@ -67,7 +67,10 @@ const AtisBirthdayAuto = () => {
         method: "POST",
         body: { force: true, is_manual: true },
       });
-      if (error) throw error;
+      if (error) {
+        const errorData = await error.context?.json().catch(() => null);
+        throw new Error(errorData?.details || errorData?.error || error.message || "Erro na Edge Function");
+      }
       const d = data as any;
       if (d?.skipped || d?.reason === 'no-birthdays') {
         toast.message("Nenhum aniversariante hoje", { description: "Nada foi enviado." });

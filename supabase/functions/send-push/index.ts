@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    console.log("[send-push] Init: Function started");
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@atalaias.online";
@@ -159,7 +160,12 @@ Deno.serve(async (req) => {
     if (body.user_id) subsQuery = subsQuery.eq("user_id", body.user_id);
     const { data: subs, error } = await subsQuery;
 
-    if (error) throw error;
+    if (error) {
+      console.error("[send-push] push_subscriptions query error:", error);
+      throw error;
+    }
+
+    console.log(`[send-push] Found ${subs?.length || 0} subscriptions`);
 
     const payload = JSON.stringify({
       title: body.title,

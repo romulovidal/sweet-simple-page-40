@@ -1,97 +1,74 @@
-export function decodeJwtPayload(token: string): any {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded);
-  } catch (e) {
-    return null;
-  }
-}
-
-export function getProjectRef(supabaseUrl: string): string {
-  try {
-    return new URL(supabaseUrl).hostname.split('.')[0];
-  } catch (e) {
-    return "";
-  }
-}
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { decodeJwtPayload, getProjectRef } from "./auth-utils.ts";
 
 /**
- * Verifica se um usuário possui um determinado role, respeitando a hierarquia:
- * super_admin > admin > user
- * Inclui bypass para o proprietário conhecido.
- */
-export async function hasRole(supabase: any, userId: string, requiredRole: 'super_admin' | 'admin' | 'user'): Promise<boolean> {
-  if (requiredRole === 'user') return true;
-
-  // Proprietário sempre tem acesso administrativo
-  if (userId === '5850679f-697b-4ec2-a47c-47b88a96bffa') return true;
-
-  // Ao chamar RPC de dentro de uma Edge Function ou do cliente, o RLS será aplicado se usarmos a anon/user key.
-  // A função check_user_role é SECURITY DEFINER, então ela ignora RLS interno, mas a chamada à função em si
-  // deve ser permitida pelo GRANT que aplicamos.
-  const { data, error } = await supabase.rpc('check_user_role', {
-    _user_id: userId,
-    _role: requiredRole
-  });
-
-  if (error) {
-    console.error(`[auth-utils] Error checking role ${requiredRole} for user ${userId}:`, error);
-    return false;
-  }
-
-  return !!data;
-}
-
-/**
- * Helper para validar autorização de admin/service_role em Edge Functions
+ * Enhanced admin validation that uses a service role client to bypass RLS.
+ * Essential for serverless environments where session context is not available.
  */
 export async function validateAdminAuth(req: Request, supabaseUrl: string, serviceKey: string) {
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
 
-  if (!token) return { authorized: false, error: "Missing token" };
+  console.log(`[auth-utils] Validating auth. Header present: ${!!authHeader}, Token present: ${!!token}`);
+
+  if (!token || token.length < 10) {
+    return { authorized: false, error: "Missing or invalid token" };
+  }
 
   // 1. service_role key match
   if (token === serviceKey) {
+    console.log("[auth-utils] Service role key match");
     return { authorized: true, userId: "service-role", isAdmin: true };
   }
 
-  // 2. JWT service_role claim check
+  // 2. JWT decode and checks
   const payload = decodeJwtPayload(token);
+  if (!payload) {
+    console.error("[auth-utils] Failed to decode JWT payload");
+    return { authorized: false, error: "Invalid JWT format" };
+  }
+
   const projectRef = getProjectRef(supabaseUrl);
-  if (payload?.role === "service_role" && payload?.ref === projectRef) {
+  
+  // Check if it's a service_role token via claims
+  if (payload.role === "service_role" && payload.ref === projectRef) {
+    console.log("[auth-utils] JWT service_role claim match");
     return { authorized: true, userId: "service-role", isAdmin: true };
   }
 
-  // 3. Authenticated user check
-  const userId = payload?.sub;
-  if (!userId) return { authorized: false, error: "Invalid token payload" };
+  const userId = payload.sub;
+  if (!userId) {
+    console.error("[auth-utils] JWT payload missing 'sub' claim");
+    return { authorized: false, error: "Invalid token sub" };
+  }
 
-  // Bypass para proprietário
+  // Bypass for owner
   if (userId === '5850679f-697b-4ec2-a47c-47b88a96bffa') {
+    console.log("[auth-utils] Owner bypass active for:", userId);
     return { authorized: true, userId, isAdmin: true };
   }
 
-  // Query DB para outros usuários usando a service_role key para ignorar RLS na verificação de admin
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.1");
-  const serviceClient = createClient(supabaseUrl, serviceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+  // Query database for roles using service client (bypassing RLS)
+  try {
+    const serviceClient = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    
+    console.log("[auth-utils] Checking role in DB for:", userId);
+    const { data: hasAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+
+    if (roleError) {
+      console.error(`[auth-utils] RPC check_user_role failed:`, roleError);
+      return { authorized: false, error: "Database verification failed" };
     }
-  });
-  const { data: isAdmin, error: roleError } = await serviceClient.rpc("check_user_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
 
-  if (roleError) {
-    console.error(`[auth-utils] Role check error for ${userId}:`, roleError);
-    return { authorized: false, error: "Database role check failed" };
+    console.log(`[auth-utils] Role check result for ${userId}: ${!!hasAdmin}`);
+    return { authorized: !!hasAdmin, userId, isAdmin: !!hasAdmin };
+  } catch (err) {
+    console.error("[auth-utils] Unexpected error during role check:", err);
+    return { authorized: false, error: "Internal auth error" };
   }
-
-  return { authorized: !!isAdmin, userId, isAdmin: !!isAdmin };
 }

@@ -26,9 +26,9 @@ const AtisPage = () => {
     // Only redirect if auth check is finished and NO session exists
     if (authChecked && !session) {
       console.log("[ATIS_ACCESS] No session, redirecting to /admin");
-      navigate("/admin");
+      window.location.href = "/admin";
     }
-  }, [authChecked, session, navigate]);
+  }, [authChecked, session]);
 
   // Combined loading state
   const isInitializing = roleLoading || !authChecked;

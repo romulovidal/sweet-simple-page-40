@@ -20,17 +20,29 @@ const AtisPage = () => {
         setChecked(true);
       }
     });
-    return () => { mounted = false; };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        console.log("[ATIS] Auth event:", _event, !!session);
+        setSession(session);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (checked && !session) {
-      console.log("[ATIS] No session, redirecting to /admin");
-      navigate("/admin?redirect=/atis");
+    if (checked && !session && !loading) {
+      const currentPath = window.location.pathname + window.location.search;
+      console.log("[ATIS] Redirect trigger", { checked, hasSession: !!session, loading });
+      navigate("/admin?redirect=" + encodeURIComponent(currentPath));
     }
-  }, [checked, session, navigate]);
+  }, [checked, session, loading, navigate]);
 
-  if (loading || !checked || !session) {
+  if (loading || !checked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--dark-bg))]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -55,7 +67,11 @@ const AtisPage = () => {
     );
   }
 
-  return <AtisLayout />;
+  return (
+    <div className="min-h-screen bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))]">
+      <AtisLayout />
+    </div>
+  );
 };
 
 export default AtisPage;

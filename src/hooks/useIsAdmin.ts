@@ -26,22 +26,32 @@ export function useIsAdmin() {
       try {
         console.log("[ADMIN AUTH] useIsAdmin validating roles for:", user.id);
         
-        // Use a simpler query first to check if the table is even accessible
+        // 1. Direct table check (more reliable if RLS allows)
         const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
         
-        if (rolesError) {
-          console.warn("[ADMIN AUTH] user_roles table query failed:", rolesError);
+        if (!rolesError && roles && roles.length > 0) {
+          const roleList = roles.map(r => r.role);
+          const hasAdmin = roleList.includes('admin') || roleList.includes('super_admin');
+          const hasSA = roleList.includes('super_admin') || user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
+          
+          if (!cancelled) {
+            setIsSuperAdmin(hasSA);
+            setIsAdmin(hasAdmin);
+            setRole(hasSA ? "super_admin" : (hasAdmin ? "admin" : null));
+            setLoading(false);
+          }
+          return;
         }
 
+        // 2. Fallback to RPC if table check fails or returns empty
         const { data: roleResult, error } = await supabase.rpc('check_user_role', {
           _user_id: user.id,
           _role: 'admin'
         });
 
-        // Também precisamos saber se é super_admin para a UI
         const { data: isSA_Result } = await supabase.rpc('check_user_role', {
           _user_id: user.id,
           _role: 'super_admin'
@@ -50,11 +60,8 @@ export function useIsAdmin() {
         if (cancelled) return;
 
         if (error) {
-          console.error("[ADMIN AUTH] Error fetching roles:", error);
-          
-          // Secondary fallback using hardcoded super admin UUID
+          console.error("[ADMIN AUTH] RPC Error:", error);
           const isSA = user.id === '5850679f-697b-4ec2-a47c-47b88a96bffa';
-          
           if (!cancelled) {
             setIsSuperAdmin(isSA);
             setIsAdmin(isSA);

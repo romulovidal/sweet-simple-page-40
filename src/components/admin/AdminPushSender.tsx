@@ -68,11 +68,9 @@ const AdminPushSender = () => {
       if (error) {
         console.error("[AdminPushSender] invoke error object:", error);
         
-        // Supabase invoke error objects can be complex
         let details = "Erro desconhecido";
         
         if (typeof error === 'object' && error !== null) {
-          // Attempt to extract message from response body if it's a non-2xx error
           const context = (error as any).context;
           if (context && typeof context.json === 'function') {
             try {
@@ -141,6 +139,12 @@ const AdminPushSender = () => {
         <div className="flex items-center gap-2 mb-1">
           <Bell className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">Enviar Notificação Push</span>
+        </div>
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-2">
+          <p className="text-[10px] text-yellow-500 font-medium">
+            ⚠️ O projeto foi migrado recentemente. Se você ver "Invalid JWT", 
+            por favor saia e entre novamente no aplicativo para atualizar suas chaves.
+          </p>
         </div>
         <p className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
           Agora o envio usa retenção de 24h para o aparelho receber quando voltar à internet.

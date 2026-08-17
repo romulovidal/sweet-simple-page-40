@@ -3,8 +3,8 @@ import { validateAdminAuth } from "../_shared/auth-utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 type DestinationType = "contact" | "individual" | "group";
-type FeatureKind = "ai" | "push";
-type ScheduleMode = "system" | "custom_time";
+type FeatureKind = "ai" | "push" | "automation";
+type ScheduleMode = "system" | "instant" | "custom_time";
 type Json = Record<string, any>;
 
 type CatalogItem = {
@@ -12,6 +12,8 @@ type CatalogItem = {
   key: string;
   label: string;
   description: string;
+  destinations?: DestinationType[];
+  systemBehavior?: string;
 };
 
 const AI_CATALOG: CatalogItem[] = [
@@ -25,19 +27,27 @@ const AI_CATALOG: CatalogItem[] = [
 ];
 
 const PUSH_CATALOG: CatalogItem[] = [
-  { kind: "push", key: "general", label: "Push geral / manual", description: "Replica no WhatsApp os pushes gerais executados pelo painel do app." },
-  { kind: "push", key: "daily-verse", label: "Versículo do dia", description: "Replica no WhatsApp o push nativo de versículo do dia." },
-  { kind: "push", key: "motivational", label: "Mensagem motivacional", description: "Replica no WhatsApp os pushes nativos do tipo motivacional." },
-  { kind: "push", key: "culto-reminder", label: "Lembrete de culto", description: "Replica no WhatsApp os lembretes nativos de culto." },
+  { kind: "push", key: "general", label: "Push geral / manual", description: "Replica no WhatsApp os pushes gerais executados pelo painel do app.", systemBehavior: "Segue o momento em que o push nativo é executado." },
+  { kind: "push", key: "daily-verse", label: "Versículo do dia", description: "Replica no WhatsApp o push nativo de versículo do dia.", systemBehavior: "Segue o momento em que o push nativo é executado." },
+  { kind: "push", key: "motivational", label: "Mensagem motivacional", description: "Replica no WhatsApp os pushes nativos do tipo motivacional.", systemBehavior: "Segue o momento em que o push nativo é executado." },
+  { kind: "push", key: "culto-reminder", label: "Lembrete de culto", description: "Replica no WhatsApp os lembretes nativos de culto.", systemBehavior: "Segue o momento em que o push nativo é executado." },
 ];
 
-const CATALOG = [...AI_CATALOG, ...PUSH_CATALOG];
+const AUTOMATION_CATALOG: CatalogItem[] = [
+  {
+    kind: "automation",
+    key: "birthdays",
+    label: "Aniversariantes do dia",
+    description: "Envia ao grupo a mensagem com os aniversariantes cadastrados para aquele dia.",
+    destinations: ["group"],
+    systemBehavior: "O padrão atual do ATIS é enviar assim que o aniversário do dia for detectado.",
+  },
+];
+
+const CATALOG = [...AI_CATALOG, ...PUSH_CATALOG, ...AUTOMATION_CATALOG];
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
 function firstString(...values: unknown[]) {
@@ -57,10 +67,12 @@ function targetTable(type: DestinationType) {
   return type === "contact" ? "atis_contacts" : type === "individual" ? "atis_individuals" : "atis_groups";
 }
 
+function applies(item: CatalogItem, type: DestinationType) {
+  return !item.destinations || item.destinations.includes(type);
+}
+
 function defaultEnabled(type: DestinationType, kind: FeatureKind) {
-  // Preserve the current direct-chat behavior for known direct destinations.
-  // Push mirroring remains opt-in everywhere, and group AI remains off by default.
-  if (kind === "push") return false;
+  if (kind === "push" || kind === "automation") return false;
   return type !== "group";
 }
 
@@ -86,13 +98,15 @@ async function loadSettings(supabase: any, type: DestinationType, id: string) {
     .eq(column, id);
   if (error) throw error;
   const byKey = new Map((data ?? []).map((row: any) => [`${row.feature_kind}:${row.feature_key}`, row]));
-  return CATALOG.map((item) => {
+
+  return CATALOG.filter((item) => applies(item, type)).map((item) => {
     const stored = byKey.get(`${item.kind}:${item.key}`) as any;
+    const schedulable = item.kind !== "ai";
     return {
       ...item,
       enabled: stored?.enabled ?? defaultEnabled(type, item.kind),
-      schedule_mode: item.kind === "push" ? (stored?.schedule_mode ?? "system") : "system",
-      custom_time: item.kind === "push" ? (stored?.custom_time?.slice?.(0, 5) ?? null) : null,
+      schedule_mode: schedulable ? (stored?.schedule_mode ?? "system") : "system",
+      custom_time: schedulable ? (stored?.custom_time?.slice?.(0, 5) ?? null) : null,
       timezone: stored?.timezone ?? "America/Fortaleza",
       configured: Boolean(stored),
     };
@@ -100,16 +114,16 @@ async function loadSettings(supabase: any, type: DestinationType, id: string) {
 }
 
 async function saveOne(supabase: any, type: DestinationType, id: string, raw: Json) {
-  const kind = raw.kind === "ai" || raw.kind === "push" ? raw.kind as FeatureKind : null;
+  const kind = raw.kind === "ai" || raw.kind === "push" || raw.kind === "automation" ? raw.kind as FeatureKind : null;
   const key = firstString(raw.key);
-  const catalog = CATALOG.find((item) => item.kind === kind && item.key === key);
+  const catalog = CATALOG.find((item) => item.kind === kind && item.key === key && applies(item, type));
   if (!catalog || !kind || !key) throw new Error("INVALID_FEATURE");
 
   const enabled = raw.enabled === true;
   let scheduleMode: ScheduleMode = "system";
   let customTime: string | null = null;
-  if (kind === "push") {
-    scheduleMode = raw.schedule_mode === "custom_time" ? "custom_time" : "system";
+  if (kind !== "ai") {
+    scheduleMode = raw.schedule_mode === "custom_time" ? "custom_time" : raw.schedule_mode === "instant" ? "instant" : "system";
     if (scheduleMode === "custom_time") {
       customTime = normalizeTime(raw.custom_time);
       if (!customTime) throw new Error("CUSTOM_TIME_REQUIRED");
@@ -178,24 +192,13 @@ Deno.serve(async (req) => {
     await ensureDestination(supabase, type, id);
 
     if (action === "get") {
-      return json({
-        destination_type: type,
-        destination_id: id,
-        timezone: "America/Fortaleza",
-        settings: await loadSettings(supabase, type, id),
-      });
+      return json({ destination_type: type, destination_id: id, timezone: "America/Fortaleza", settings: await loadSettings(supabase, type, id) });
     }
 
     if (action === "save") {
       if (!Array.isArray(data.settings)) return json({ error: "SETTINGS_REQUIRED" }, 400);
       for (const item of data.settings.slice(0, CATALOG.length)) await saveOne(supabase, type, id, item ?? {});
-      return json({
-        ok: true,
-        destination_type: type,
-        destination_id: id,
-        timezone: "America/Fortaleza",
-        settings: await loadSettings(supabase, type, id),
-      });
+      return json({ ok: true, destination_type: type, destination_id: id, timezone: "America/Fortaleza", settings: await loadSettings(supabase, type, id) });
     }
 
     return json({ error: "UNKNOWN_ACTION" }, 400);

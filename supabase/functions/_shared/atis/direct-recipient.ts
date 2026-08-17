@@ -27,7 +27,10 @@ export function directPhoneCandidates(remoteJid: string) {
   return [...candidates];
 }
 
-export function preferredPhoneMatch<T extends { phone_e164?: string | null }>(rows: T[] | null | undefined, candidates: string[]) {
+export function preferredPhoneMatch(
+  rows: Array<Record<string, any> & { phone_e164?: string | null }> | null | undefined,
+  candidates: string[],
+): (Record<string, any> & { phone_e164?: string | null }) | null {
   const list = Array.isArray(rows) ? rows : [];
   for (const candidate of candidates) {
     const found = list.find((row) => row?.phone_e164 === candidate);

@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ContactRound, LayoutDashboard, Loader2, MessageCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Cake, ContactRound, LayoutDashboard, Loader2, MessageCircle, ShieldAlert } from "lucide-react";
 import AdminAtis from "@/components/admin/atis/AdminAtis";
 import AtisRecipients from "@/components/admin/atis/AtisRecipients";
+import AtisBirthdays from "@/components/admin/atis/AtisBirthdays";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -12,6 +13,8 @@ const AtisPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useIsAdmin();
   const recipients = location.pathname.startsWith("/atis/destinatarios");
+  const birthdays = location.pathname.startsWith("/atis/aniversariantes");
+  const dashboard = !recipients && !birthdays;
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/admin", { replace: true });
@@ -58,11 +61,14 @@ const AtisPage = () => {
           <button onClick={() => navigate("/admin")} className="hidden sm:inline-flex h-9 items-center px-4 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] text-xs font-semibold transition-colors">Painel Admin</button>
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-3 flex gap-2 overflow-x-auto">
-          <button onClick={() => navigate("/atis")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${!recipients ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+          <button onClick={() => navigate("/atis")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${dashboard ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
             <LayoutDashboard className="w-4 h-4" /> Painel
           </button>
           <button onClick={() => navigate("/atis/destinatarios")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${recipients ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
             <ContactRound className="w-4 h-4" /> Destinatários
+          </button>
+          <button onClick={() => navigate("/atis/aniversariantes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${birthdays ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>
+            <Cake className="w-4 h-4" /> Aniversariantes
           </button>
           <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Enviar</span>
           <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Automações</span>
@@ -71,7 +77,7 @@ const AtisPage = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-7 pb-10">
-        {recipients ? <AtisRecipients /> : <AdminAtis />}
+        {recipients ? <AtisRecipients /> : birthdays ? <AtisBirthdays /> : <AdminAtis />}
       </main>
     </div>
   );

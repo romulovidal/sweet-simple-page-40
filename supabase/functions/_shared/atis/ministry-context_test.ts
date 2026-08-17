@@ -69,8 +69,14 @@ Deno.test("selected Cantico supports natural continuity", () => {
   assert(marker.content.includes("|s=c3]"), "selected Cantico should be encoded in the marker");
   const followup = resolveMinistryFollowup("Qual foi o último cântico que você mandou?", [{ role: "user", content: marker.content }]);
   assert(followup?.route === "canticos_info", "selected Cantico should route back to canticos_info");
-  assert(followup.message === "Cântico 3 letra", "natural last-Cantico request should resolve the selected item");
+  assert(followup.message === "Cântico 3", "natural last-Cantico question should identify the selected item without forcing a lyrics resend");
   assert(followup.carryReference === reference, "selected Cantico memory should survive the answer");
+
+  const repeatMarker = ministryContextMessage(reference, "Manda de novo");
+  assert(repeatMarker !== null, "selected Cantico should support repeat follow-up");
+  const repeatFollowup = resolveMinistryFollowup("Manda de novo", [{ role: "user", content: repeatMarker.content }]);
+  assert(repeatFollowup?.route === "canticos_info", "Cantico repeat should route to canticos_info");
+  assert(repeatFollowup.message === "Cântico 3 letra", "repeat should resend the selected Cantico lyrics");
 });
 
 Deno.test("first worship item resolves to exact Harpa chorus and becomes selected", () => {

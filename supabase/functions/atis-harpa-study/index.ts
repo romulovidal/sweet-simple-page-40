@@ -216,9 +216,9 @@ Deno.serve(async (req) => {
     const analysis = aiText ? parseJsonObject(aiText) : null;
     if (!analysis) return json({ error: "AI_INVALID_STRUCTURED_RESPONSE" }, 502);
 
-    const theme = compactField(analysis.theme, "Tema central não identificado com segurança.", 320);
-    const explanation = compactField(analysis.explanation, "A letra aponta para uma mensagem cristã que deve ser lida à luz das Escrituras.", conversationMode === "study" ? 1500 : 900);
-    const application = compactField(analysis.application, "Use a mensagem do hino como convite à reflexão e à prática da fé cristã.", 700);
+    const rawTheme = compactField(analysis.theme, "Tema central não identificado com segurança.", 320);
+    const rawExplanation = compactField(analysis.explanation, "A letra aponta para uma mensagem cristã que deve ser lida à luz das Escrituras.", conversationMode === "study" ? 1500 : 900);
+    const rawApplication = compactField(analysis.application, "Use a mensagem do hino como convite à reflexão e à prática da fé cristã.", 700);
 
     const rawReferences = Array.isArray(analysis.references) ? analysis.references.filter((item: unknown) => typeof item === "string").slice(0, 6) : [];
     let bible: BibleBook[] = [];
@@ -241,6 +241,23 @@ Deno.serve(async (req) => {
       verified.push(excerpt);
       if (verified.length >= 3) break;
     }
+
+    const verifiedKeys = new Set(verified.map((item) => normalize(item.label)));
+    const sanitizeNarrative = (value: string) => {
+      const withoutLongQuotes = value
+        .replace(/“([^”\n]{24,})”/g, "(trecho literal omitido; consulte as conexões verificadas abaixo)")
+        .replace(/"([^"\n]{24,})"/g, "(trecho literal omitido; consulte as conexões verificadas abaixo)");
+      return withoutLongQuotes.replace(/\b(?:[1-3]\s+)?[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,3}\s+\d{1,3}:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?/gu, (candidate) => {
+        const reference = resolveBibleReference(candidate, bible);
+        if (!reference) return candidate;
+        const canonical = bibleExcerpt(reference).label;
+        return verifiedKeys.has(normalize(canonical)) ? canonical : "uma passagem bíblica relacionada";
+      });
+    };
+
+    const theme = sanitizeNarrative(rawTheme);
+    const explanation = sanitizeNarrative(rawExplanation);
+    const application = sanitizeNarrative(rawApplication);
 
     const bibleBlock = verified.length
       ? `\n\n*Conexões bíblicas verificadas na Bíblia do Atalaia (${config.bibleVersion}):*\n${verified.map((item) => `📖 *${item.label}*\n${item.text}`).join("\n\n")}`

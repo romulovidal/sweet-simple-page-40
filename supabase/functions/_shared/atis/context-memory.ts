@@ -1,3 +1,5 @@
+import { ministryContextMessage, parseMinistryReference } from "./ministry-context.ts";
+
 export type AtisContextMessage = { role: "user" | "assistant"; content: string };
 
 export type AtisStructuredContext = {
@@ -5,10 +7,11 @@ export type AtisStructuredContext = {
   source: "memory" | "none";
   reference: string | null;
   age_seconds: number | null;
-  reason: "memory" | "no_reference" | "not_followup" | "expired";
+  reason: "memory" | "ministry_memory" | "no_reference" | "not_followup" | "expired" | "ministry_expired";
 };
 
 const BIBLE_CONTEXT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MINISTRY_CONTEXT_TTL_MS = 6 * 60 * 60 * 1000;
 const BIBLE_ROUTES = new Set([
   "bible_lookup",
   "ask_bible",
@@ -40,9 +43,6 @@ function isBibleFollowup(message: string) {
   const q = normalize(message).replace(/^atis[,:\s-]*/i, "");
   if (!q) return false;
 
-  // Explicitly switching to another app resource should not pull Bible context
-  // into the classifier. Cross-resource recommendations are handled by their
-  // own tools rather than by leaking prior state into unrelated requests.
   if (/\b(culto|cultos|cantico|canticos|louvor|louvores|harpa|hino|hinos|aniversario|aniversarios|oracao|pedido de oracao|agenda|programacao)\b/.test(q)) {
     return false;
   }
@@ -51,9 +51,41 @@ function isBibleFollowup(message: string) {
     || /^(?:e\s+)?(?:o\s+)?\d{1,3}(?:\s*[-–]\s*\d{1,3})?$/.test(q);
 }
 
+function ageOf(timestamp: string | null, now: Date) {
+  const parsedAt = timestamp ? Date.parse(timestamp) : NaN;
+  const ageMs = Number.isFinite(parsedAt) ? Math.max(0, now.getTime() - parsedAt) : 0;
+  return {
+    parsed: Number.isFinite(parsedAt),
+    ageMs,
+    ageSeconds: Number.isFinite(parsedAt) ? Math.floor(ageMs / 1000) : null,
+  };
+}
+
 export function structuredConversationContext(state: any, message: string, now = new Date()): AtisStructuredContext {
   const memory = state?.memory && typeof state.memory === "object" ? state.memory : {};
   const route = firstString(state?.last_route, memory?.last_route);
+
+  const ministryReference = firstString(
+    memory?.last_ministry_reference,
+    route && ["culto_info", "canticos_info", "harpa_lookup"].includes(route) ? memory?.last_reference : null,
+  );
+  if (ministryReference && parseMinistryReference(ministryReference)) {
+    const ministry = ministryContextMessage(ministryReference, message);
+    if (ministry) {
+      const age = ageOf(firstString(memory?.last_ministry_reference_at, memory?.updated_at), now);
+      if (age.parsed && age.ageMs > MINISTRY_CONTEXT_TTL_MS) {
+        return { messages: [], source: "none", reference: ministry.label, age_seconds: age.ageSeconds, reason: "ministry_expired" };
+      }
+      return {
+        messages: [{ role: "user", content: ministry.content }],
+        source: "memory",
+        reference: ministry.label,
+        age_seconds: age.ageSeconds,
+        reason: "ministry_memory",
+      };
+    }
+  }
+
   const reference = firstString(
     memory?.last_bible_reference,
     route && BIBLE_ROUTES.has(route) ? memory?.last_reference : null,
@@ -66,24 +98,16 @@ export function structuredConversationContext(state: any, message: string, now =
     return { messages: [], source: "none", reference, age_seconds: null, reason: "not_followup" };
   }
 
-  const timestamp = firstString(memory?.last_bible_reference_at);
-  const parsedAt = timestamp ? Date.parse(timestamp) : NaN;
-  const ageMs = Number.isFinite(parsedAt) ? Math.max(0, now.getTime() - parsedAt) : 0;
-  const ageSeconds = Number.isFinite(parsedAt) ? Math.floor(ageMs / 1000) : null;
-
-  if (Number.isFinite(parsedAt) && ageMs > BIBLE_CONTEXT_TTL_MS) {
-    return { messages: [], source: "none", reference, age_seconds: ageSeconds, reason: "expired" };
+  const age = ageOf(firstString(memory?.last_bible_reference_at), now);
+  if (age.parsed && age.ageMs > BIBLE_CONTEXT_TTL_MS) {
+    return { messages: [], source: "none", reference, age_seconds: age.ageSeconds, reason: "expired" };
   }
 
-  // This message is intentionally appended after the ordinary history. The
-  // Bible parser scans user messages from newest to oldest, so structured
-  // memory wins over an older textual reference while the full history remains
-  // available to the classifier and specialist response.
   return {
     messages: [{ role: "user", content: `Contexto bíblico atual: ${reference}` }],
     source: "memory",
     reference,
-    age_seconds: ageSeconds,
+    age_seconds: age.ageSeconds,
     reason: "memory",
   };
 }

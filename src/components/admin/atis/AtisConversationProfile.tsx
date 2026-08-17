@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bot, Clock3, Loader2, Save, ShieldCheck, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AtisDestinationType } from "./AtisDestinationSettings";
+import AtisDestinationInsights from "./AtisDestinationInsights";
 
 type Profile = {
   conversation_mode: "normal" | "study" | "concise";
@@ -78,6 +79,9 @@ export default function AtisConversationProfile({ destinationType, destinationId
     <div className="p-4 space-y-4">
       {error && <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-[10px] text-destructive">{error}</div>}
       {saved && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-[10px] text-emerald-400">Comportamento salvo.</div>}
+
+      <AtisDestinationInsights destinationType={destinationType} destinationId={destinationId} />
+
       <div className="grid sm:grid-cols-2 gap-3"><Field label="Modo padrão"><select value={profile.conversation_mode} onChange={(e) => patch({ conversation_mode: e.target.value as Profile["conversation_mode"] })} className="profile-field"><option value="normal">Normal</option><option value="study">Modo Estudo</option><option value="concise">Conciso</option></select></Field><Field label="Estilo das respostas"><select value={profile.response_style} onChange={(e) => patch({ response_style: e.target.value as Profile["response_style"] })} className="profile-field"><option value="concise">Curto</option><option value="balanced">Equilibrado</option><option value="detailed">Detalhado</option></select></Field></div>
       <Field label="Instrução de estilo deste destino"><textarea value={profile.custom_instruction ?? ""} onChange={(e) => patch({ custom_instruction: e.target.value })} maxLength={1000} rows={3} placeholder="Ex.: responder com linguagem simples para jovens. Não altera regras de segurança do ATIS." className="profile-field h-auto py-3 resize-y" /></Field>
 

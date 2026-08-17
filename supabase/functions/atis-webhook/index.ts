@@ -33,7 +33,7 @@ type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | 
 type DestinationType = "contact" | "individual" | "group";
 
 const MAX_BODY_BYTES = 1024 * 1024;
-const AI_FEATURE_KEYS = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "ministry_relation"];
+const AI_FEATURE_KEYS = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "harpa_study", "ministry_relation"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -446,8 +446,11 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
   if (error) throw error;
 
   const stored = new Map((rows ?? []).map((row: any) => [row.feature_key, row.enabled === true]));
-  const defaultEnabled = true;
-  const allowedAiRoutes = AI_FEATURE_KEYS.filter((key) => stored.has(key) ? stored.get(key) === true : defaultEnabled);
+  const allowedAiRoutes = AI_FEATURE_KEYS.filter((key) => {
+    if (stored.has(key)) return stored.get(key) === true;
+    if (key === "harpa_study") return type !== "group";
+    return true;
+  });
   return { destinationType: type, destinationId: id, blocked: false, allowedAiRoutes, transientDirect: false, matchedPhone };
 }
 

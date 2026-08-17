@@ -17,6 +17,7 @@ export type AtisAssistantRoute =
   | "birthdays"
   | "bible_lookup"
   | "harpa_lookup"
+  | "harpa_study"
   | "culto_info"
   | "canticos_info"
   | "ministry_relation";
@@ -51,7 +52,7 @@ const IMMUTABLE_ATIS_POLICY = `REGRAS TÉCNICAS FIXAS DO ATIS (não editáveis p
 - Texto bíblico literal só pode ser transcrito quando recuperado do acervo bíblico do app nesta solicitação.
 - Use apenas as rotas e ferramentas disponibilizadas pelo backend do ATIS.
 - Para IA do ATIS, mantenha Groq como primário e Gemini como fallback.`;
-const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "ministry_relation"]);
+const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "harpa_study", "ministry_relation"]);
 const CANONICAL_BOOKS = [
   "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios", "Eclesiastes", "Cantares", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oséias", "Joel", "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias", "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse",
 ];
@@ -147,8 +148,17 @@ async function loadSpecialistPrompts(supabase: any) {
   };
 }
 
-function deterministicIntent(message: string): AtisAssistantRoute | null {
+export function isHarpaStudyIntent(message: string, history: AtisConversationMessage[] = []) {
   const q = normalize(message);
+  const studyCue = /\b(tema|explique|explicacao|significado|mensagem|estudo|teolog|aplicacao|relacione|relacao|conex|passagens|biblic)\b/.test(q);
+  if (!studyCue) return false;
+  if (/\b(harpa|hino)\b/.test(q)) return true;
+  return [...history].reverse().some((item) => item.role === "assistant" && /Harpa Cristã\s+\d{1,3}\s+—/i.test(item.content));
+}
+
+function deterministicIntent(message: string, history: AtisConversationMessage[] = []): AtisAssistantRoute | null {
+  const q = normalize(message);
+  if (isHarpaStudyIntent(message, history)) return "harpa_study";
   if (isMinistryRelationIntent(message)) return "ministry_relation";
   if (isCanticosIntent(message)) return "canticos_info";
   if (isCultoIntent(message)) return "culto_info";
@@ -166,7 +176,7 @@ function deterministicIntent(message: string): AtisAssistantRoute | null {
 }
 
 async function classifyWithAi(systemPrompt: string, message: string, history: AtisConversationMessage[] = []): Promise<AtisAssistantRoute> {
-  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "culto_info", "canticos_info", "ministry_relation"];
+  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "harpa_study", "culto_info", "canticos_info", "ministry_relation"];
   const response = await aiChatFetchWithProviders({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -564,7 +574,7 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
 
   const ministryFollowup = resolveMinistryFollowup(input, history);
   const effectiveInput = ministryFollowup?.message ?? input;
-  let route = ministryFollowup?.route ?? deterministicIntent(effectiveInput);
+  let route = ministryFollowup?.route ?? deterministicIntent(effectiveInput, history);
   if (!route) route = await classifyWithAi(config.systemPrompt, effectiveInput, history);
 
   if (AI_ROUTES.has(route) && Array.isArray(options.allowedAiRoutes) && !options.allowedAiRoutes.includes(route)) {
@@ -590,6 +600,35 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   }
   if (route === "daily_verse") {
     return { text: await dailyVerseLookup(supabase), route, source: "database" };
+  }
+  if (route === "harpa_study") {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+    if (!supabaseUrl || !serviceKey) throw new Error("HARPA_STUDY_SERVER_CONFIG_MISSING");
+    const response = await fetch(`${supabaseUrl}/functions/v1/atis-harpa-study`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        message: effectiveInput,
+        history,
+        conversation_mode: options.conversationMode ?? "normal",
+      }),
+    });
+    const result = await response.json().catch(() => null) as any;
+    if (!response.ok || !firstString(result?.answer)) {
+      const code = firstString(result?.error) ?? "HARPA_STUDY_UNAVAILABLE";
+      throw new Error(code);
+    }
+    return {
+      text: clampText(result.answer),
+      route,
+      source: "ai",
+      reference: ministryFollowup?.carryReference ?? firstString(result.reference),
+    };
   }
   if (route === "harpa_lookup") {
     const result = await harpaLookup(supabase, config, effectiveInput, history);

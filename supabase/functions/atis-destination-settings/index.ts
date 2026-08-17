@@ -24,6 +24,7 @@ const AI_CATALOG: CatalogItem[] = [
   { kind: "ai", key: "connections", label: "Conexões bíblicas", description: "Referências cruzadas, temas e profecia/cumprimento." },
   { kind: "ai", key: "timeline", label: "Linha do tempo / contexto histórico", description: "Cronologia, costumes, impérios e contexto histórico." },
   { kind: "ai", key: "devotional", label: "Devocional", description: "Reflexões devocionais fundamentadas no conteúdo do app." },
+  { kind: "ai", key: "harpa_study", label: "Estudo contextual da Harpa", description: "Interpreta a letra real da Harpa e mostra conexões bíblicas somente depois de validá-las no acervo do app." },
 ];
 
 const PUSH_CATALOG: CatalogItem[] = [

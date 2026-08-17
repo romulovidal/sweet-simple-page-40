@@ -60,14 +60,21 @@ function audioFromInteraction(body: any): GeminiAudioContent | null {
   return null;
 }
 
+function numberFromMimeParameter(mimeType: string, name: string) {
+  const match = mimeType.match(new RegExp(`(?:^|;)\\s*${name}=(\\d+)`, "i"));
+  const value = Number(match?.[1]);
+  return Number.isFinite(value) ? value : null;
+}
+
 function responseFromAudio(audio: GeminiAudioContent) {
   if (!audio.data) throw new Error("GEMINI_TTS_AUDIO_EMPTY");
 
   const bytes = decodeBase64(audio.data);
   if (!bytes.length) throw new Error("GEMINI_TTS_AUDIO_EMPTY");
 
-  const mimeType = String(audio.mime_type ?? "").toLowerCase();
-  const rawPcm = !mimeType || mimeType === "audio/l16" || mimeType === "audio/pcm" || mimeType === "audio/raw";
+  const mimeType = String(audio.mime_type ?? "").toLowerCase().trim();
+  const mimeBase = mimeType.split(";", 1)[0]?.trim() ?? "";
+  const rawPcm = !mimeBase || ["audio/l16", "audio/pcm", "audio/raw"].includes(mimeBase);
 
   if (!rawPcm) {
     return new Response(bytes, {
@@ -80,8 +87,18 @@ function responseFromAudio(audio: GeminiAudioContent) {
     });
   }
 
-  const sampleRate = Number.isFinite(Number(audio.sample_rate)) ? Math.max(8000, Number(audio.sample_rate)) : 24000;
-  const channels = Number.isFinite(Number(audio.channels)) ? Math.max(1, Math.min(2, Number(audio.channels))) : 1;
+  const declaredRate = Number(audio.sample_rate);
+  const mimeRate = numberFromMimeParameter(mimeType, "rate");
+  const sampleRate = Number.isFinite(declaredRate) && declaredRate > 0
+    ? Math.max(8000, declaredRate)
+    : Math.max(8000, mimeRate ?? 24000);
+
+  const declaredChannels = Number(audio.channels);
+  const mimeChannels = numberFromMimeParameter(mimeType, "channels");
+  const channels = Number.isFinite(declaredChannels) && declaredChannels > 0
+    ? Math.max(1, Math.min(2, declaredChannels))
+    : Math.max(1, Math.min(2, mimeChannels ?? 1));
+
   const wavHeader = createWavHeader(bytes.length, sampleRate, channels, 16);
   const wavFile = new Uint8Array(wavHeader.length + bytes.length);
   wavFile.set(wavHeader, 0);

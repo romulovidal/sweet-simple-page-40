@@ -210,7 +210,6 @@ function parseBibleReference(message: string, bible: BibleBook[]): BibleReferenc
   return null;
 }
 
-
 function parseBibleFollowupReference(message: string, bible: BibleBook[], history: AtisConversationMessage[]): BibleReference | null {
   const q = normalize(message);
   const hasCue = /\b(versiculo|verso|capitulo|seguinte|proximo)\b/.test(q)
@@ -218,13 +217,27 @@ function parseBibleFollowupReference(message: string, bible: BibleBook[], histor
   if (!hasCue) return null;
 
   let base: BibleReference | null = null;
+
+  // Prefer the last explicit Bible reference typed by the user. This is more
+  // stable than depending on the assistant response format and preserves
+  // continuity for prompts such as "Mateus 24" -> "explique o verso 14".
   for (const item of [...history].reverse()) {
-    if (item.role !== "assistant") continue;
-    const match = item.content.match(/📖\s*\*([^*\n]+)\*/u);
-    if (!match) continue;
-    const candidate = match[1].replace(/\s+—.*$/u, "").trim();
-    base = parseBibleReference(candidate, bible);
+    if (item.role !== "user") continue;
+    base = parseBibleReference(item.content, bible);
     if (base) break;
+  }
+
+  // Backwards-compatible fallback for conversations whose prior assistant
+  // response already contains the standardized Bible header.
+  if (!base) {
+    for (const item of [...history].reverse()) {
+      if (item.role !== "assistant") continue;
+      const match = item.content.match(/📖\s*\*([^*\n]+)\*/u);
+      if (!match) continue;
+      const candidate = match[1].replace(/\s+—.*$/u, "").trim();
+      base = parseBibleReference(candidate, bible);
+      if (base) break;
+    }
   }
   if (!base) return null;
 
@@ -270,6 +283,7 @@ function parseBibleFollowupReference(message: string, bible: BibleBook[], histor
   }
   return null;
 }
+
 function bibleText(reference: BibleReference, wholeChapter = false) {
   const verses = reference.book.chapters[reference.chapter - 1] ?? [];
   const start = wholeChapter || !reference.verseStart ? 1 : reference.verseStart;
@@ -347,6 +361,7 @@ async function harpaLookup(supabase: any, config: any, message: string, history:
   }).filter(Boolean).join("\n\n");
   return { text: clampText(`🎵 *Harpa Cristã ${hymn.numero} — ${title}*\n\n${body}`), reference: `Harpa ${hymn.numero}` };
 }
+
 function requestedMonth(message: string, timezone = "America/Fortaleza") {
   const q = normalize(message);
   for (const [name, month] of Object.entries(MONTHS)) if (q.includes(normalize(name))) return month;
@@ -457,8 +472,6 @@ async function generateSpecialistAnswer(
     const trustedDailyVerse = `📖 *${bibleContext.label}*\n“${bibleContext.text}”`;
     const prayerHeading = /(?:^|\n)\s*(?:\*\*)?Ora[cç][aã]o(?:\*\*)?\s*:\s*/i;
 
-    // O texto bíblico confiável só pode ser restaurado antes da seção de oração.
-    // Nunca transformamos um placeholder dentro da oração no próprio versículo.
     let devotional = guarded;
     const headingMatch = prayerHeading.exec(devotional);
     if (headingMatch?.index !== undefined) {
@@ -578,8 +591,8 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   try {
     bible = await loadBible(config);
     const directReference = parseBibleReference(input, bible);
-    reference = directReference ?? parseBibleFollowupReference(input, bible, history);
-    if (!directReference && reference) route = "bible_lookup";
+    const followupReference = directReference ? null : parseBibleFollowupReference(input, bible, history);
+    reference = directReference ?? followupReference;
   } catch (error) {
     console.error("[atis-assistant] Bible asset lookup failed", error instanceof Error ? error.message : error);
   }

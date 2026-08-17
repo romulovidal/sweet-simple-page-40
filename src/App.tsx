@@ -93,6 +93,7 @@ const AppContent = () => {
             <Route path="/atis/destinatarios" element={<AtisPage />} />
             <Route path="/atis/aniversariantes" element={<AtisPage />} />
             <Route path="/atis/conexao" element={<AtisPage />} />
+            <Route path="/atis/configuracoes" element={<AtisPage />} />
             <Route path="/admin/cultos" element={<AdminCultoSelectionsPage />} />
             <Route path="/estudos/revistas" element={<PageTransition><RevistasPage /></PageTransition>} />
             <Route path="/app" element={<AppLanding />} />

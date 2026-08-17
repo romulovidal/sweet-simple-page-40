@@ -12,12 +12,14 @@ import {
   Send,
   ShieldAlert,
   Smartphone,
+  Settings2,
   WandSparkles,
   X,
 } from "lucide-react";
 import AdminAtis from "@/components/admin/atis/AdminAtis";
 import AtisRecipients from "@/components/admin/atis/AtisRecipients";
 import AtisBirthdays from "@/components/admin/atis/AtisBirthdays";
+import AtisSettings from "@/components/admin/atis/AtisSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -31,6 +33,7 @@ const AtisPage = () => {
   const recipients = location.pathname.startsWith("/atis/destinatarios");
   const birthdays = location.pathname.startsWith("/atis/aniversariantes");
   const connection = location.pathname.startsWith("/atis/conexao");
+  const settings = location.pathname.startsWith("/atis/configuracoes");
   const dashboard = location.pathname === "/atis";
 
   useEffect(() => {
@@ -89,6 +92,7 @@ const AtisPage = () => {
           <button onClick={() => navigate("/atis/destinatarios")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${recipients ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><ContactRound className="w-4 h-4" /> Destinatários</button>
           <button onClick={() => navigate("/atis/aniversariantes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${birthdays ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Cake className="w-4 h-4" /> Aniversariantes</button>
           <button onClick={() => navigate("/atis/conexao")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${connection ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Smartphone className="w-4 h-4" /> Conexão</button>
+          <button onClick={() => navigate("/atis/configuracoes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${settings ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Settings2 className="w-4 h-4" /> Configurações</button>
           <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Enviar</span>
           <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Automações</span>
           <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Histórico</span>
@@ -96,7 +100,7 @@ const AtisPage = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-7 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10">
-        {recipients ? <AtisRecipients /> : birthdays ? <AtisBirthdays /> : connection ? <AdminAtis initialView="connection" /> : <AdminAtis initialView="overview" />}
+        {recipients ? <AtisRecipients /> : birthdays ? <AtisBirthdays /> : settings ? <AtisSettings /> : connection ? <AdminAtis initialView="connection" /> : <AdminAtis initialView="overview" />}
       </main>
 
       {moreOpen && (
@@ -106,7 +110,8 @@ const AtisPage = () => {
               <div><p className="text-[10px] uppercase tracking-[0.18em] text-primary">ATIS</p><p className="text-sm font-bold mt-0.5">Mais opções</p></div>
               <button onClick={() => setMoreOpen(false)} className="w-9 h-9 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"><X className="w-4 h-4" /></button>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <button onClick={() => navigate("/atis/configuracoes")} className={`w-full mt-2 rounded-2xl p-3 flex items-center gap-3 text-left ${settings ? "bg-primary/15 border border-primary/20" : "bg-[hsl(var(--dark-bg))]"}`}><span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/15 text-primary"><Settings2 className="w-5 h-5" /></span><div><p className="text-xs font-bold">Configurações do ATIS</p><p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">Editar prompt e comportamento do assistente</p></div></button>
+            <div className="grid grid-cols-3 gap-2 mt-3">
               {[
                 ["Enviar", Send, "Em breve"],
                 ["Automações", WandSparkles, "Em breve"],
@@ -130,7 +135,7 @@ const AtisPage = () => {
           <button onClick={() => navigate("/atis/destinatarios")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(recipients)}`} aria-current={recipients ? "page" : undefined}><ContactRound className="w-5 h-5" /><span className="text-[9px] font-bold">Destinos</span></button>
           <button onClick={() => navigate("/atis/aniversariantes")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(birthdays)}`} aria-current={birthdays ? "page" : undefined}><Cake className="w-5 h-5" /><span className="text-[9px] font-bold">Anivers.</span></button>
           <button onClick={() => navigate("/atis/conexao")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(connection)}`} aria-current={connection ? "page" : undefined}><Smartphone className="w-5 h-5" /><span className="text-[9px] font-bold">Conexão</span></button>
-          <button onClick={() => setMoreOpen((value) => !value)} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${moreOpen ? "text-primary" : "text-[hsl(var(--dark-muted))]"}`} aria-expanded={moreOpen}><MoreHorizontal className="w-5 h-5" /><span className="text-[9px] font-bold">Mais</span></button>
+          <button onClick={() => setMoreOpen((value) => !value)} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${moreOpen || settings ? "text-primary" : "text-[hsl(var(--dark-muted))]"}`} aria-expanded={moreOpen}><MoreHorizontal className="w-5 h-5" /><span className="text-[9px] font-bold">Mais</span></button>
         </div>
       </nav>
     </div>

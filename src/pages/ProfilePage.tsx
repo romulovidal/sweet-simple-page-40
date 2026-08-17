@@ -351,7 +351,7 @@ const ProfilePage = () => {
                     />
                     <span className="text-xs text-[hsl(var(--dark-muted))] leading-relaxed">
                       <MessageCircle className="w-3.5 h-3.5 inline mr-1 text-primary" />
-                      Desejo receber notificações no WhatsApp (versículo do dia, devocional, lembretes de cultos e avisos da comunidade). Você pode desativar a qualquer momento.
+                      Autorizo o ATIS a falar comigo neste WhatsApp e receber conteúdos que eu habilitar, como versículo do dia, reflexão devocional, lembretes de cultos e avisos. Posso cancelar no app ou enviando “sair” no WhatsApp.
                     </span>
                   </label>
                 </>
@@ -619,7 +619,7 @@ const ProfilePage = () => {
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm">Notificações no WhatsApp</p>
               <p className="text-xs text-dark-muted mt-0.5 leading-relaxed">
-                Receba versículo do dia, devocional, lembretes de cultos e avisos direto no seu WhatsApp.
+                Controle a autorização do ATIS para versículo do dia, reflexão devocional, lembretes, avisos e atendimento bíblico no seu WhatsApp.
               </p>
             </div>
           </div>
@@ -638,7 +638,7 @@ const ProfilePage = () => {
               className="mt-0.5"
             />
             <span className="text-xs text-dark-muted leading-relaxed">
-              Autorizo receber mensagens automáticas no meu WhatsApp. Posso desativar quando quiser.
+              Autorizo o ATIS a enviar mensagens neste WhatsApp. Se eu enviar “sair” no WhatsApp, a autorização será cancelada e só poderá ser reativada novamente aqui no app.
             </span>
           </label>
           <Button onClick={saveWhatsappPrefs} disabled={waSaving} size="sm" className="w-full">

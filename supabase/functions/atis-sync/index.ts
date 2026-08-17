@@ -66,7 +66,7 @@ class Evolution {
     return { connected, raw };
   }
   async groups(name: string, participants = false) {
-    const body = await this.request(`/group/fetchAllGroups/${encodeURIComponent(name)}${participants ? "?getParticipants=true" : ""}`);
+    const body = await this.request(`/group/fetchAllGroups/${encodeURIComponent(name)}?getParticipants=${participants ? "true" : "false"}`);
     return Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
   }
 }
@@ -99,6 +99,9 @@ async function syncAppContacts(supabase: any, countryCode: string) {
       opt_in_source: profile.whatsapp_opt_in === true ? "app_profile" : current?.opt_in_source ?? null,
       opt_in_at: profile.whatsapp_opt_in === true ? current?.opt_in_at ?? now : current?.opt_in_at ?? null,
       opt_out_at: profile.whatsapp_opt_in === true ? null : current?.whatsapp_opt_in ? now : current?.opt_out_at ?? null,
+      opt_out_source: profile.whatsapp_opt_in === true ? null : current?.reactivation_requires_app ? (current?.opt_out_source ?? "whatsapp_keyword") : "app_profile",
+      reactivation_requires_app: profile.whatsapp_opt_in === true ? false : current?.reactivation_requires_app ?? false,
+      consent_updated_at: now,
       is_active: true,
       metadata: { ...(current?.metadata ?? {}), app_profile_synced_at: now },
     };

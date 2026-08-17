@@ -125,6 +125,14 @@ function remoteJidPhone(remoteJid: string) {
   return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
 }
 
+function normalizeInboundCommand(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/[.!?]+$/g, "").trim();
+}
+
+function isContactOptOutCommand(value: string) {
+  return normalizeInboundCommand(value) === "sair";
+}
+
 function safePayload(event: string, body: Json) {
   const data = body?.data;
   const base: Json = {
@@ -226,7 +234,30 @@ async function assistantRuntime(supabase: any) {
     autoReplyDirect: data?.value?.auto_reply_direct !== false,
     autoReplyGroups: data?.value?.auto_reply_groups === true,
     maxInboundChars: Math.max(100, Math.min(10000, Number(data?.value?.max_inbound_chars ?? 5000))),
+    historyInteractions: Math.max(20, Math.min(50, Number(data?.value?.history_messages ?? 20))),
   };
+}
+
+async function loadConversationHistory(supabase: any, instanceId: string, remoteJid: string, limit: number) {
+  const { data, error } = await supabase
+    .from("atis_inbound_messages")
+    .select("message_text,response_text,received_at")
+    .eq("instance_id", instanceId)
+    .eq("remote_jid", remoteJid)
+    .eq("status", "replied")
+    .not("response_text", "is", null)
+    .order("received_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (const row of [...(data ?? [])].reverse()) {
+    const userText = firstString(row.message_text);
+    const assistantText = firstString(row.response_text);
+    if (userText) history.push({ role: "user", content: userText.slice(0, 1800) });
+    if (assistantText) history.push({ role: "assistant", content: assistantText.slice(0, 2200) });
+  }
+  return history;
 }
 
 async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJid: string) {
@@ -253,7 +284,7 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
     if (phone) {
       const { data: contact, error: contactError } = await supabase
         .from("atis_contacts")
-        .select("id,blocked,is_active")
+        .select("id,blocked,is_active,whatsapp_opt_in,reactivation_requires_app")
         .eq("phone_e164", phone)
         .eq("is_active", true)
         .maybeSingle();
@@ -261,7 +292,7 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
       if (contact) {
         type = "contact";
         id = contact.id;
-        blocked = contact.blocked === true;
+        blocked = contact.blocked === true || contact.whatsapp_opt_in !== true || contact.reactivation_requires_app === true;
       } else {
         const { data: individual, error: individualError } = await supabase
           .from("atis_individuals")
@@ -279,9 +310,9 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
     }
   }
 
-  // Unknown direct numbers preserve the current ATIS behavior until they are explicitly
-  // registered as a Contact/Individual. Registered destinations receive granular policy.
-  if (!type || !id) return { destinationType: null, destinationId: null, blocked: false, allowedAiRoutes: null as string[] | null };
+  // Unknown numbers are never auto-enrolled. Only app contacts and admin-created individuals
+  // may use the assistant automatically.
+  if (!type || !id) return { destinationType: null, destinationId: null, blocked: true, allowedAiRoutes: [] as string[] };
   if (blocked) return { destinationType: type, destinationId: id, blocked: true, allowedAiRoutes: [] as string[] };
 
   const column = type === "contact" ? "contact_id" : type === "individual" ? "individual_id" : "group_id";
@@ -339,6 +370,74 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
     if (insertError) throw insertError;
     counts.received++;
 
+    // App contacts can revoke WhatsApp consent by sending exactly "sair". The profile is
+    // updated as the source of truth and the ATIS contact is locked until the user opts in
+    // again from the authenticated app profile.
+    if (!isGroup && isContactOptOutCommand(limitedText)) {
+      const phone = remoteJidPhone(remoteJid);
+      if (phone) {
+        const { data: contact, error: contactError } = await supabase
+          .from("atis_contacts")
+          .select("id,user_id,name,phone_e164")
+          .eq("source", "app")
+          .eq("phone_e164", phone)
+          .maybeSingle();
+        if (contactError) throw contactError;
+        if (contact) {
+          const now = new Date().toISOString();
+          if (contact.user_id) {
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .update({ whatsapp_opt_in: false })
+              .eq("user_id", contact.user_id);
+            if (profileError) throw profileError;
+          }
+          const { error: contactUpdateError } = await supabase.from("atis_contacts").update({
+            whatsapp_opt_in: false,
+            opt_out_at: now,
+            opt_out_source: "whatsapp_keyword",
+            reactivation_requires_app: true,
+            consent_updated_at: now,
+          }).eq("id", contact.id);
+          if (contactUpdateError) throw contactUpdateError;
+
+          await supabase.from("atis_message_targets").update({
+            status: "cancelled",
+            last_error_code: "CONTACT_OPTED_OUT",
+            last_error_message: "Recipient sent SAIR. Reactivation is allowed only from the app.",
+            updated_at: now,
+          }).eq("contact_id", contact.id).eq("status", "pending");
+
+          const confirmation = "✅ Pronto! Você não receberá mais mensagens do ATIS. Para reativar, abra o app *A Bíblia do Atalaia* → *Perfil* → *Notificações no WhatsApp* e autorize novamente. 🙏";
+          if (!evolution) {
+            const config = getEvolutionConfigFromEnv();
+            evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
+          }
+          const sent = await evolution.sendText(
+            instance.external_instance_name || instance.name,
+            directProviderTarget(remoteJid),
+            confirmation,
+          );
+          await supabase.from("atis_inbound_messages").update({
+            assistant_route: null,
+            response_text: confirmation,
+            status: "replied",
+            processed_at: now,
+            error: null,
+            metadata: {
+              truncated: text.length > limitedText.length,
+              action: "contact_opt_out",
+              reactivation_requires_app: true,
+              contact_id: contact.id,
+              provider_response_message_id: sent.providerMessageId ?? null,
+            },
+          }).eq("id", inbound.id);
+          counts.replied++;
+          continue;
+        }
+      }
+    }
+
     const autoReplyAllowed = isGroup ? runtime.autoReplyGroups : runtime.autoReplyDirect;
     if (!autoReplyAllowed) {
       await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString() }).eq("id", inbound.id);
@@ -364,7 +463,11 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       }
 
       await supabase.from("atis_inbound_messages").update({ status: "processing" }).eq("id", inbound.id);
-      const answer = await runAtisAssistant(supabase, limitedText, { allowedAiRoutes: policy.allowedAiRoutes });
+      const conversationHistory = await loadConversationHistory(supabase, instance.id, remoteJid, runtime.historyInteractions);
+      const answer = await runAtisAssistant(supabase, limitedText, {
+        allowedAiRoutes: policy.allowedAiRoutes,
+        conversationHistory,
+      });
       if (!evolution) {
         const config = getEvolutionConfigFromEnv();
         evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
@@ -388,6 +491,8 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
           destination_type: policy.destinationType,
           destination_id: policy.destinationId,
           ai_policy_applied: Array.isArray(policy.allowedAiRoutes),
+          history_interactions_used: Math.floor(conversationHistory.length / 2),
+          history_messages_used: conversationHistory.length,
         },
       }).eq("id", inbound.id);
       counts.replied++;

@@ -241,7 +241,7 @@ export class EvolutionProvider {
   }
 
   async fetchAllGroups(instanceName: string, getParticipants = true) {
-    const query = getParticipants ? "?getParticipants=true" : "";
+    const query = `?getParticipants=${getParticipants ? "true" : "false"}`;
     const body = await this.request(`/group/fetchAllGroups/${encodeURIComponent(instanceName)}${query}`, {
       method: "GET",
     }, 30000);

@@ -76,7 +76,7 @@ class Evolution {
     return { connected: ["open", "connected", "online", "ready"].includes(raw), raw };
   }
   async groups(name: string, participants = false) {
-    const body = await this.request(`/group/fetchAllGroups/${encodeURIComponent(name)}${participants ? "?getParticipants=true" : ""}`);
+    const body = await this.request(`/group/fetchAllGroups/${encodeURIComponent(name)}?getParticipants=${participants ? "true" : "false"}`);
     return Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
   }
 }
@@ -262,9 +262,13 @@ Deno.serve(async (req) => {
     }
     return json({ error: "UNKNOWN_ACTION" }, 400);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "ATIS_RECIPIENTS_ERROR";
-    const status = message === "INSTANCE_NOT_CONNECTED" ? 409 : message === "INSTANCE_NOT_FOUND" ? 404 : message.startsWith("INVALID_") ? 400 : 500;
+    const rawMessage = error instanceof Error ? error.message : "ATIS_RECIPIENTS_ERROR";
+    const message = rawMessage.startsWith("EVOLUTION_HTTP_") ? rawMessage.split(":")[0] : rawMessage;
+    const status = message === "INSTANCE_NOT_CONNECTED" ? 409 : message === "INSTANCE_NOT_FOUND" ? 404 : message.startsWith("INVALID_") ? 400 : message.startsWith("EVOLUTION_HTTP_") ? 502 : 500;
+    const friendly = message === "EVOLUTION_HTTP_400"
+      ? "A Evolution recusou a consulta de grupos. Atualize a conexão e tente novamente."
+      : message;
     console.error("[atis-recipients]", message);
-    return json({ error: message, message }, status);
+    return json({ error: message, message: friendly }, status);
   }
 });

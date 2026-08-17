@@ -6,6 +6,8 @@ on:
       - agent/atis-backend-hardening-context
     paths:
       - '.github/workflows/atis-ministry-context-tests.yml'
+      - 'supabase/functions/_shared/atis/ministry-context.ts'
+      - 'supabase/functions/_shared/atis/ministry-context_test.ts'
 
 permissions:
   contents: read

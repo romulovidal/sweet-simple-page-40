@@ -5,8 +5,10 @@ import { EvolutionProvider, getEvolutionConfigFromEnv } from "../_shared/atis/ev
 
 type Json = Record<string, any>;
 type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | "error" | "unknown";
+type DestinationType = "contact" | "individual" | "group";
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const AI_FEATURE_KEYS = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -117,6 +119,12 @@ function directProviderTarget(remoteJid: string) {
   return remoteJid;
 }
 
+function remoteJidPhone(remoteJid: string) {
+  if (remoteJid.endsWith("@g.us")) return null;
+  const digits = directProviderTarget(remoteJid).replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
+}
+
 function safePayload(event: string, body: Json) {
   const data = body?.data;
   const base: Json = {
@@ -221,6 +229,76 @@ async function assistantRuntime(supabase: any) {
   };
 }
 
+async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJid: string) {
+  let type: DestinationType | null = null;
+  let id: string | null = null;
+  let blocked = false;
+
+  if (remoteJid.endsWith("@g.us")) {
+    const { data, error } = await supabase
+      .from("atis_groups")
+      .select("id,is_active,provider_exists")
+      .eq("instance_id", instance.id)
+      .eq("provider_group_id", remoteJid)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data || data.provider_exists === false) {
+      return { destinationType: null, destinationId: null, blocked: true, allowedAiRoutes: [] as string[] };
+    }
+    type = "group";
+    id = data.id;
+  } else {
+    const phone = remoteJidPhone(remoteJid);
+    if (phone) {
+      const { data: contact, error: contactError } = await supabase
+        .from("atis_contacts")
+        .select("id,blocked,is_active")
+        .eq("phone_e164", phone)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (contactError) throw contactError;
+      if (contact) {
+        type = "contact";
+        id = contact.id;
+        blocked = contact.blocked === true;
+      } else {
+        const { data: individual, error: individualError } = await supabase
+          .from("atis_individuals")
+          .select("id,blocked,is_active,allow_messages")
+          .eq("phone_e164", phone)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (individualError) throw individualError;
+        if (individual) {
+          type = "individual";
+          id = individual.id;
+          blocked = individual.blocked === true || individual.allow_messages !== true;
+        }
+      }
+    }
+  }
+
+  // Unknown direct numbers preserve the current ATIS behavior until they are explicitly
+  // registered as a Contact/Individual. Registered destinations receive granular policy.
+  if (!type || !id) return { destinationType: null, destinationId: null, blocked: false, allowedAiRoutes: null as string[] | null };
+  if (blocked) return { destinationType: type, destinationId: id, blocked: true, allowedAiRoutes: [] as string[] };
+
+  const column = type === "contact" ? "contact_id" : type === "individual" ? "individual_id" : "group_id";
+  const { data: rows, error } = await supabase
+    .from("atis_destination_feature_settings")
+    .select("feature_key,enabled")
+    .eq("destination_type", type)
+    .eq(column, id)
+    .eq("feature_kind", "ai");
+  if (error) throw error;
+
+  const stored = new Map((rows ?? []).map((row: any) => [row.feature_key, row.enabled === true]));
+  const defaultEnabled = type !== "group";
+  const allowedAiRoutes = AI_FEATURE_KEYS.filter((key) => stored.has(key) ? stored.get(key) === true : defaultEnabled);
+  return { destinationType: type, destinationId: id, blocked: false, allowedAiRoutes };
+}
+
 async function processInboundMessages(supabase: any, instance: any, data: any) {
   const runtime = await assistantRuntime(supabase);
   if (!runtime.enabled) return { received: 0, replied: 0, ignored: 0, failed: 0 };
@@ -269,8 +347,24 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
     }
 
     try {
+      const policy = await resolveDestinationAiPolicy(supabase, instance, remoteJid);
+      if (policy.blocked) {
+        await supabase.from("atis_inbound_messages").update({
+          status: "ignored",
+          processed_at: new Date().toISOString(),
+          metadata: {
+            truncated: text.length > limitedText.length,
+            destination_type: policy.destinationType,
+            destination_id: policy.destinationId,
+            policy: "blocked",
+          },
+        }).eq("id", inbound.id);
+        counts.ignored++;
+        continue;
+      }
+
       await supabase.from("atis_inbound_messages").update({ status: "processing" }).eq("id", inbound.id);
-      const answer = await runAtisAssistant(supabase, limitedText);
+      const answer = await runAtisAssistant(supabase, limitedText, { allowedAiRoutes: policy.allowedAiRoutes });
       if (!evolution) {
         const config = getEvolutionConfigFromEnv();
         evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
@@ -291,6 +385,9 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
           answer_source: answer.source,
           answer_reference: answer.reference ?? null,
           provider_response_message_id: sent.providerMessageId ?? null,
+          destination_type: policy.destinationType,
+          destination_id: policy.destinationId,
+          ai_policy_applied: Array.isArray(policy.allowedAiRoutes),
         },
       }).eq("id", inbound.id);
       counts.replied++;

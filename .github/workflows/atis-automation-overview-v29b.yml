@@ -1,0 +1,79 @@
+name: Validate and Deploy ATIS Automation Overview v29b
+
+on:
+  push:
+    branches:
+      - agent/atis-backend-hardening-context
+    paths:
+      - '.github/workflows/atis-automation-overview-v29b.yml'
+
+permissions:
+  contents: write
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+jobs:
+  patch-build-deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout review branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/atis-backend-hardening-context
+          fetch-depth: 0
+
+      - name: Apply automation overview patch
+        run: |
+          python scripts/atis-automation-overview-v29-patch.py
+          python scripts/atis-automation-overview-v29-typefix.py
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check ATIS console
+        run: deno check supabase/functions/atis-console/index.ts
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend
+        run: |
+          npm install --package-lock=false --ignore-scripts
+          npm run build
+
+      - name: Commit validated automation overview
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "romulovidal"
+          git config user.email "romulo_vidal@live.com"
+          git add \
+            supabase/functions/atis-console/index.ts \
+            src/components/admin/atis/AtisAutomations.tsx \
+            src/components/admin/atis/AtisSpecializedAutomations.tsx
+          git diff --cached --check
+          git commit -m "feat(atis): unify automation operational overview"
+          git push origin HEAD:agent/atis-backend-hardening-context
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          test -n "${SUPABASE_PROJECT_ID:-}"
+          test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
+
+      - name: Deploy ATIS console only
+        run: supabase functions deploy atis-console --project-ref "$SUPABASE_PROJECT_ID"

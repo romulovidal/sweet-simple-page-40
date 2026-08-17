@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { runAtisAssistant } from "../_shared/atis/assistant.ts";
+import { structuredConversationContext } from "../_shared/atis/context-memory.ts";
 import { EvolutionProvider, getEvolutionConfigFromEnv } from "../_shared/atis/evolution-provider.ts";
 import {
   appendContinueInApp,
@@ -653,7 +654,11 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       }
 
       await supabase.from("atis_inbound_messages").update({ status: "processing" }).eq("id", inbound.id);
-      const conversationHistory = await loadConversationHistory(supabase, instance.id, remoteJid, runtime.historyInteractions);
+      const history = await loadConversationHistory(supabase, instance.id, remoteJid, runtime.historyInteractions);
+      const structuredContext = structuredConversationContext(state, commandText);
+      const conversationHistory = structuredContext.messages.length
+        ? [...history, ...structuredContext.messages]
+        : history;
       const styleInstruction = [
         profile.response_style === "concise" ? "Prefira respostas curtas." : profile.response_style === "detailed" ? "Quando útil, dê uma explicação um pouco mais detalhada." : null,
         profile.custom_instruction,
@@ -685,8 +690,16 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
           conversation_mode: state.conversation_mode ?? profile.conversation_mode,
           buttons_sent: delivery.usedButtons,
           audio_sent: delivery.audioSent,
-          history_interactions_used: Math.floor(conversationHistory.length / 2),
-          history_messages_used: conversationHistory.length,
+          history_interactions_used: Math.floor(history.length / 2),
+          history_messages_used: history.length,
+          context_messages_used: structuredContext.messages.length,
+          assistant_context_messages_used: conversationHistory.length,
+          context_source: structuredContext.source === "memory"
+            ? (history.length ? "memory+history" : "memory")
+            : (history.length ? "history" : "none"),
+          context_memory_reference: structuredContext.reference,
+          context_memory_age_seconds: structuredContext.age_seconds,
+          context_memory_reason: structuredContext.reason,
         },
       }).eq("id", inbound.id);
       counts.replied++;

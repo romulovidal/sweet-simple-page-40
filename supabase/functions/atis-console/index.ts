@@ -111,7 +111,7 @@ async function dashboard(supabase: any) {
   const since7d = new Date(now - 7 * 24 * 3600_000).toISOString();
   const [in24, in7, unanswered, prayers, groups] = await Promise.all([
     supabase.from("atis_inbound_messages").select("id", { count: "exact", head: true }).gte("received_at", since24h),
-    supabase.from("atis_inbound_messages").select("id,remote_jid,status,assistant_route,is_group,error,received_at").gte("received_at", since7d).order("received_at", { ascending: false }).limit(5000),
+    supabase.from("atis_inbound_messages").select("id,remote_jid,status,assistant_route,is_group,error,metadata,received_at").gte("received_at", since7d).order("received_at", { ascending: false }).limit(5000),
     supabase.from("atis_unanswered_questions").select("id,status,reason,route,occurrence_count,last_seen_at").in("status", ["open", "reviewing"]).order("last_seen_at", { ascending: false }).limit(1000),
     supabase.from("atis_prayer_requests").select("id", { count: "exact", head: true }).in("status", ["pending", "praying"]),
     supabase.from("atis_groups").select("id,name,provider_group_id").eq("is_active", true),
@@ -123,6 +123,7 @@ async function dashboard(supabase: any) {
   const replied = seven.filter((row: any) => row.status === "replied");
   const failed = seven.filter((row: any) => row.status === "failed");
   const ignored = seven.filter((row: any) => row.status === "ignored");
+  const degraded = replied.filter((row: any) => row.metadata?.degraded === true);
   const attempted = replied.length + failed.length;
   const conversations = new Set(seven.map((row: any) => row.remote_jid)).size;
 
@@ -172,6 +173,7 @@ async function dashboard(supabase: any) {
     conversations_7d: conversations,
     replied_7d: replied.length,
     failed_7d: failed.length,
+    degraded_7d: degraded.length,
     ignored_7d: ignored.length,
     private_7d: seven.filter((row: any) => !row.is_group).length,
     groups_7d: seven.filter((row: any) => row.is_group).length,

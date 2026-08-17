@@ -279,7 +279,8 @@ export function runtimeFailureReason(message: string) {
   const value = String(message ?? "").trim().toUpperCase();
   if (value.includes("AI_PROVIDER_UNAVAILABLE")) return "ai_provider_unavailable";
   if (value.includes("AI_EMPTY_RESPONSE")) return "ai_empty_response";
-  if (value.includes("APP_") || value.includes("SOURCE_") || value.includes("HTTP_")) return "source_unavailable";
+  if (value.includes("EVOLUTION_") || value.includes("EVOLUTION API")) return "delivery_unavailable";
+  if (value.includes("APP_") || value.includes("SOURCE_")) return "source_unavailable";
   return "runtime_error";
 }
 

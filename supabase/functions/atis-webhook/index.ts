@@ -4,6 +4,7 @@ import { runAtisAssistant } from "../_shared/atis/assistant.ts";
 import { structuredConversationContext } from "../_shared/atis/context-memory.ts";
 import { directPhoneCandidates, inboundSessionDestinationId, preferredPhoneMatch } from "../_shared/atis/direct-recipient.ts";
 import { EvolutionProvider, getEvolutionConfigFromEnv } from "../_shared/atis/evolution-provider.ts";
+import { assistantFailureReply } from "../_shared/atis/failure-fallback.ts";
 import {
   appendContinueInApp,
   assistantButtons,
@@ -720,7 +721,11 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       await rememberAnswer(supabase, state.id, answer.route, answer.reference, commandText);
       const gapReason = unansweredReason(answerText, answer.route);
       if (gapReason) {
-        await recordUnanswered(supabase, { inboundId: inbound.id, destinationType, destinationId, question: limitedText, route: answer.route, answer: answerText, reason: gapReason });
+        try {
+          await recordUnanswered(supabase, { inboundId: inbound.id, destinationType, destinationId, question: limitedText, route: answer.route, answer: answerText, reason: gapReason });
+        } catch (recordError) {
+          console.error("[atis-webhook] could not record answered gap", recordError instanceof Error ? recordError.message : recordError);
+        }
       }
       await supabase.from("atis_inbound_messages").update({
         assistant_route: answer.route,
@@ -754,16 +759,68 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       counts.replied++;
     } catch (error) {
       const message = error instanceof Error ? error.message : "ATIS_ASSISTANT_INBOUND_ERROR";
-      console.error("[atis-webhook] inbound assistant failed", message);
-      await supabase.from("atis_inbound_messages").update({ status: "failed", error: message.slice(0, 500), processed_at: new Date().toISOString() }).eq("id", inbound.id);
+      const errorCode = firstString((error as any)?.code);
+      const failureReason = runtimeFailureReason(`${errorCode ?? ""}:${message}`);
+      console.error("[atis-webhook] inbound assistant failed", failureReason, message);
+
+      let fallbackDelivered = false;
+      const fallbackText = assistantFailureReply(failureReason);
+      if (fallbackText && policyForFailure?.destinationType && policyForFailure?.destinationId) {
+        try {
+          if (!evolution) {
+            const config = getEvolutionConfigFromEnv();
+            evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
+          }
+          const sent = await evolution.sendText(providerInstanceName, directProviderTarget(remoteJid), fallbackText);
+          const processedAt = new Date().toISOString();
+          await supabase.from("atis_inbound_messages").update({
+            status: "replied",
+            response_text: fallbackText,
+            error: message.slice(0, 500),
+            processed_at: processedAt,
+            metadata: {
+              ...(inbound.metadata ?? {}),
+              destination_type: policyForFailure.destinationType,
+              destination_id: policyForFailure.destinationId,
+              degraded: true,
+              degraded_reason: failureReason,
+              provider_response_message_id: sent.providerMessageId ?? null,
+            },
+          }).eq("id", inbound.id);
+          fallbackDelivered = true;
+          counts.replied++;
+        } catch (fallbackError) {
+          console.error("[atis-webhook] degraded fallback delivery failed", fallbackError instanceof Error ? fallbackError.message : fallbackError);
+        }
+      }
+
+      if (!fallbackDelivered) {
+        await supabase.from("atis_inbound_messages").update({
+          status: "failed",
+          error: message.slice(0, 500),
+          processed_at: new Date().toISOString(),
+          metadata: {
+            ...(inbound.metadata ?? {}),
+            degraded_reason: failureReason,
+          },
+        }).eq("id", inbound.id);
+        counts.failed++;
+      }
+
       if (policyForFailure?.destinationType && policyForFailure?.destinationId) {
         try {
-          await recordUnanswered(supabase, { inboundId: inbound.id, destinationType: policyForFailure.destinationType, destinationId: policyForFailure.destinationId, question: limitedText, reason: runtimeFailureReason(message) });
+          await recordUnanswered(supabase, {
+            inboundId: inbound.id,
+            destinationType: policyForFailure.destinationType,
+            destinationId: policyForFailure.destinationId,
+            question: limitedText,
+            answer: fallbackDelivered ? fallbackText : null,
+            reason: failureReason,
+          });
         } catch (recordError) {
           console.error("[atis-webhook] could not record unanswered", recordError instanceof Error ? recordError.message : recordError);
         }
       }
-      counts.failed++;
     }
   }
 

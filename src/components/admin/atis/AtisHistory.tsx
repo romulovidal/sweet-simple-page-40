@@ -9,6 +9,7 @@ type Dashboard = {
   conversations_7d: number;
   replied_7d: number;
   failed_7d: number;
+  degraded_7d: number;
   ignored_7d: number;
   private_7d: number;
   groups_7d: number;
@@ -166,6 +167,7 @@ export default function AtisHistory() {
           ["7 dias", dashboard.inbound_7d, "mensagens"],
           ["Respostas", dashboard.replied_7d, "7 dias"],
           ["Falhas", dashboard.failed_7d, "7 dias"],
+          ["Degradadas", dashboard.degraded_7d, "fallback seguro"],
           ["Ignoradas", dashboard.ignored_7d, "sem acionamento"],
           ["Conversas", dashboard.conversations_7d, "em 7 dias"],
           ["Não respondeu", dashboard.unanswered_open, `${dashboard.unanswered_occurrences_open} ocorrências`],

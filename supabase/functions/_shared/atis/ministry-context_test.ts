@@ -19,7 +19,8 @@ Deno.test("encodes and parses remembered culto", () => {
 
 Deno.test("remembered culto routes follow-up to exact worship date", () => {
   const marker = ministryContextMessage("ctx:culto:2026-08-19", "E os cânticos?");
-  assert(marker?.content === "Contexto ministerial atual: [ATIS_CULTO_DATE=2026-08-19]", "culto marker should carry exact date");
+  assert(marker !== null, "culto follow-up should produce a context marker");
+  assert(marker.content === "Contexto ministerial atual: [ATIS_CULTO_DATE=2026-08-19]", "culto marker should carry exact date");
   const followup = resolveMinistryFollowup("E os cânticos?", [{ role: "user", content: marker.content }]);
   assert(followup?.route === "canticos_info", "culto follow-up should route to canticos_info");
   assert(followup.message.includes("__ATIS_CULTO_DATE=2026-08-19__"), "lookup should receive remembered culto date");
@@ -33,7 +34,8 @@ Deno.test("second worship item resolves to exact Cantico lyrics", () => {
   ]);
   assert(reference === "ctx:songs:2026-08-19:h15,c3,h124", "song token should preserve ordering and source");
   const marker = ministryContextMessage(reference, "Manda a letra do segundo");
-  assert(marker?.content.includes("[ATIS_SONG_LIST=2026-08-19|h15,c3,h124]"), "song list marker should preserve ordered items");
+  assert(marker !== null, "ordinal Cantico follow-up should produce a context marker");
+  assert(marker.content.includes("[ATIS_SONG_LIST=2026-08-19|h15,c3,h124]"), "song list marker should preserve ordered items");
   const followup = resolveMinistryFollowup("Manda a letra do segundo", [{ role: "user", content: marker.content }]);
   assert(followup?.route === "canticos_info", "second item should route to canticos lookup");
   assert(followup.message === "Cântico 3 letra", "second item should become an explicit Cantico lyrics lookup");
@@ -43,7 +45,7 @@ Deno.test("second worship item resolves to exact Cantico lyrics", () => {
 Deno.test("first worship item resolves to exact Harpa chorus", () => {
   const reference = "ctx:songs:2026-08-19:h15,c3,h124";
   const marker = ministryContextMessage(reference, "Refrão do primeiro");
-  assert(marker, "ordinal Harpa follow-up should produce a context marker");
+  assert(marker !== null, "ordinal Harpa follow-up should produce a context marker");
   const followup = resolveMinistryFollowup("Refrão do primeiro", [{ role: "user", content: marker.content }]);
   assert(followup?.route === "harpa_lookup", "first item should route to Harpa");
   assert(followup.message === "Harpa 15 refrão", "first item should become an explicit Harpa chorus lookup");

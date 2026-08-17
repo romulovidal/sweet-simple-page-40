@@ -1,3 +1,4 @@
+// Deterministic ministry schedule lookup for ATIS. Data comes only from the app database.
 type CultoCandidate = {
   event_id?: string | null;
   schedule_id?: string | null;

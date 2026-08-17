@@ -261,6 +261,67 @@ async function automationsList(supabase: any) {
   return data ?? [];
 }
 
+
+async function specializedAutomationsList(supabase: any) {
+  const { data, error } = await supabase
+    .from("atis_destination_feature_settings")
+    .select("id,destination_type,contact_id,individual_id,group_id,feature_key,enabled,schedule_mode,custom_time,timezone,updated_at")
+    .eq("feature_kind", "automation")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  const settings = data ?? [];
+
+  const contactIds = [...new Set(settings.filter((row: any) => row.destination_type === "contact" && row.contact_id).map((row: any) => row.contact_id))];
+  const individualIds = [...new Set(settings.filter((row: any) => row.destination_type === "individual" && row.individual_id).map((row: any) => row.individual_id))];
+  const groupIds = [...new Set(settings.filter((row: any) => row.destination_type === "group" && row.group_id).map((row: any) => row.group_id))];
+
+  const [contacts, individuals, groups] = await Promise.all([
+    contactIds.length
+      ? supabase.from("atis_contacts").select("id,name,phone_e164,blocked,is_active,whatsapp_opt_in,reactivation_requires_app").in("id", contactIds)
+      : Promise.resolve({ data: [], error: null }),
+    individualIds.length
+      ? supabase.from("atis_individuals").select("id,name,phone_e164,blocked,is_active,allow_messages").in("id", individualIds)
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase.from("atis_groups").select("id,name,provider_group_id,allow_automations,is_active,provider_exists").in("id", groupIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  for (const result of [contacts, individuals, groups]) if (result.error) throw result.error;
+
+  const contactById = new Map<string, any>((contacts.data ?? []).map((row: any) => [row.id, row]));
+  const individualById = new Map<string, any>((individuals.data ?? []).map((row: any) => [row.id, row]));
+  const groupById = new Map<string, any>((groups.data ?? []).map((row: any) => [row.id, row]));
+
+  return settings.map((row: any) => {
+    const type = row.destination_type as DestinationType;
+    const destinationId = type === "contact" ? row.contact_id : type === "individual" ? row.individual_id : row.group_id;
+    const destination: any = type === "contact" ? contactById.get(destinationId) : type === "individual" ? individualById.get(destinationId) : groupById.get(destinationId);
+    let destinationAllowed = false;
+    if (type === "contact") {
+      destinationAllowed = Boolean(destination && destination.blocked !== true && destination.is_active === true && destination.whatsapp_opt_in === true && destination.reactivation_requires_app !== true);
+    } else if (type === "individual") {
+      destinationAllowed = Boolean(destination && destination.blocked !== true && destination.is_active === true && destination.allow_messages === true);
+    } else {
+      destinationAllowed = Boolean(destination && destination.is_active === true && destination.provider_exists !== false && destination.allow_automations === true);
+    }
+    const fallback = type === "group" ? destination?.provider_group_id : destination?.phone_e164;
+    return {
+      id: row.id,
+      destination_type: type,
+      destination_id: destinationId,
+      destination_name: firstString(destination?.name, fallback) ?? "Destinatário",
+      feature_key: row.feature_key,
+      enabled: row.enabled === true,
+      destination_allowed: destinationAllowed,
+      effective_enabled: row.enabled === true && destinationAllowed,
+      schedule_mode: row.schedule_mode ?? "system",
+      custom_time: row.custom_time?.slice?.(0, 8) ?? null,
+      timezone: row.timezone ?? "America/Fortaleza",
+      updated_at: row.updated_at,
+    };
+  });
+}
+
 async function automationSave(supabase: any, auth: any, raw: Json) {
   const id = firstString(raw.id);
   const name = firstString(raw.name);
@@ -333,6 +394,7 @@ Deno.serve(async (req) => {
     if (action === "prayers_list") return json({ ok: true, rows: await prayersList(supabase, data) });
     if (action === "prayer_update") return json({ ok: true, row: await prayerUpdate(supabase, data) });
     if (action === "automations_list") return json({ ok: true, rows: await automationsList(supabase) });
+    if (action === "specialized_automations_list") return json({ ok: true, rows: await specializedAutomationsList(supabase) });
     if (action === "automation_save") return json({ ok: true, row: await automationSave(supabase, auth, data) });
     if (action === "automation_delete") return json({ ok: true, row: await automationDelete(supabase, data) });
     if (action === "profile_get" || action === "profile_save") {

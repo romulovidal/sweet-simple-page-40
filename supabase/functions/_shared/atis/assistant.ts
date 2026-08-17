@@ -1,6 +1,7 @@
 import { aiChatFetchWithProviders } from "../ai-fetch.ts";
 import { cultoLookup, isCultoIntent } from "./culto-lookup.ts";
 import { canticosLookup, isCanticosIntent } from "./assistant-extras.ts";
+import { captureCultoReference, captureSongListReference, resolveMinistryFollowup } from "./ministry-context.ts";
 
 type Json = Record<string, any>;
 export type AtisAssistantRoute =
@@ -558,8 +559,10 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
         .slice(-40)
     : [];
 
-  let route = deterministicIntent(input);
-  if (!route) route = await classifyWithAi(config.systemPrompt, input, history);
+  const ministryFollowup = resolveMinistryFollowup(input, history);
+  const effectiveInput = ministryFollowup?.message ?? input;
+  let route = ministryFollowup?.route ?? deterministicIntent(effectiveInput);
+  if (!route) route = await classifyWithAi(config.systemPrompt, effectiveInput, history);
 
   if (AI_ROUTES.has(route) && Array.isArray(options.allowedAiRoutes) && !options.allowedAiRoutes.includes(route)) {
     return {
@@ -570,10 +573,14 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   }
 
   if (route === "culto_info") {
-    return { text: await cultoLookup(supabase, input), route, source: "database" };
+    const text = await cultoLookup(supabase, effectiveInput);
+    const reference = await captureCultoReference(supabase, effectiveInput);
+    return { text, route, source: "database", reference };
   }
   if (route === "canticos_info") {
-    return { text: await canticosLookup(supabase, input), route, source: "database" };
+    const text = await canticosLookup(supabase, effectiveInput);
+    const reference = ministryFollowup?.carryReference ?? await captureSongListReference(supabase, effectiveInput);
+    return { text, route, source: "database", reference };
   }
   if (route === "birthdays") {
     return { text: await birthdaysLookup(supabase, input), route, source: "database" };
@@ -582,8 +589,8 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     return { text: await dailyVerseLookup(supabase), route, source: "database" };
   }
   if (route === "harpa_lookup") {
-    const result = await harpaLookup(supabase, config, input, history);
-    return { text: result.text, route, source: "app", reference: result.reference };
+    const result = await harpaLookup(supabase, config, effectiveInput, history);
+    return { text: result.text, route, source: "app", reference: ministryFollowup?.carryReference ?? result.reference };
   }
 
   let bible: BibleBook[] | null = null;

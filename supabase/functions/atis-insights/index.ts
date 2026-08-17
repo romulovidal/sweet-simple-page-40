@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         response_text_read: false,
         aggregation_only: true,
       },
-      insights: buildDestinationInsights(data ?? [], destinationType),
+      insights: buildDestinationInsights(data ?? [], destinationType, days),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "ATIS_INSIGHTS_ERROR";

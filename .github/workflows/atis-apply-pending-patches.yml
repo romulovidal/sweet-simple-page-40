@@ -1,0 +1,64 @@
+name: Apply pending ATIS patches
+
+on:
+  push:
+    paths:
+      - '.github/workflows/atis-apply-pending-patches.yml'
+      - '.github/scripts/patch_atis_consent_groups_prompt.py'
+      - '.github/scripts/patch_atis_history.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Repair Evolution patch expression
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/scripts/patch_atis_consent_groups_prompt.py')
+          text = p.read_text()
+          text = text.replace(
+              "'`${participants ? \"?getParticipants=true\" : \"\"}`'",
+              "'${participants ? \"?getParticipants=true\" : \"\"}'",
+          )
+          text = text.replace(
+              "'`${`?getParticipants=${participants ? \"true\" : \"false\"}`}`'",
+              "'?getParticipants=${participants ? \"true\" : \"false\"}'",
+          )
+          p.write_text(text)
+
+      - name: Apply consent, groups and prompt patch
+        run: python .github/scripts/patch_atis_consent_groups_prompt.py
+
+      - name: Apply conversation history patch
+        run: python .github/scripts/patch_atis_history.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'feat: finish ATIS consent groups prompt and conversation history'
+          git push

@@ -15,6 +15,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Patch assistant routing
         run: |
           python3 - <<'PY'
@@ -54,8 +57,8 @@ jobs:
           PY
       - name: Validate Deno files
         run: |
-          npx --yes deno@2.4.5 check supabase/functions/_shared/atis/culto-lookup.ts
-          npx --yes deno@2.4.5 check supabase/functions/_shared/atis/assistant.ts
+          deno check supabase/functions/_shared/atis/culto-lookup.ts
+          deno check supabase/functions/_shared/atis/assistant.ts
       - name: Validate frontend build
         run: |
           npm install --legacy-peer-deps --ignore-scripts

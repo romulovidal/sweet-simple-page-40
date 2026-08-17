@@ -23,14 +23,32 @@ function cleanTags(value: unknown) {
   return [...new Set(value.map((v) => String(v).trim()).filter(Boolean))].slice(0, 50);
 }
 
-function validBirthDate(value: unknown) {
-  const text = firstString(value);
-  if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new Error("INVALID_BIRTH_DATE");
-  const parsed = new Date(`${text}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) {
+function parseBirthDayMonth(value: unknown, explicitDay?: unknown, explicitMonth?: unknown) {
+  let day = Number(explicitDay);
+  let month = Number(explicitMonth);
+
+  if (!Number.isInteger(day) || !Number.isInteger(month)) {
+    const text = firstString(value);
+    if (!text) throw new Error("INVALID_BIRTH_DATE");
+
+    const ddmm = text.match(/^(\d{1,2})\/(\d{1,2})$/);
+    const iso = text.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    if (ddmm) {
+      day = Number(ddmm[1]);
+      month = Number(ddmm[2]);
+    } else if (iso) {
+      month = Number(iso[1]);
+      day = Number(iso[2]);
+    } else {
+      throw new Error("INVALID_BIRTH_DATE");
+    }
+  }
+
+  const maxDay = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  if (!Number.isInteger(day) || !Number.isInteger(month) || month < 1 || month > 12 || day < 1 || day > maxDay) {
     throw new Error("INVALID_BIRTH_DATE");
   }
-  return text;
+  return { day, month };
 }
 
 function normalizePhone(value: unknown, countryCode = "55") {
@@ -94,11 +112,13 @@ async function syncAppBirthdays(supabase: any, countryCode: string) {
       .maybeSingle();
     if (currentError) throw currentError;
 
+    const birthday = parseBirthDayMonth(profile.birth_date);
     const payload = {
       source: "app",
       user_id: profile.user_id,
       name,
-      birth_date: profile.birth_date,
+      birth_day: birthday.day,
+      birth_month: birthday.month,
       phone_e164: phone,
       is_active: true,
       metadata: { ...(current?.metadata ?? {}), app_profile_synced_at: now },
@@ -160,13 +180,13 @@ Deno.serve(async (req) => {
       const month = Number.isInteger(monthRaw) && monthRaw >= 1 && monthRaw <= 12 ? monthRaw : currentMonth(settings.timezone);
       const { data: rows, error } = await supabase
         .from("atis_birthdays")
-        .select("id,source,user_id,name,birth_date,phone_e164,tags,notes,is_active,created_at,updated_at")
+        .select("id,source,user_id,name,birth_date,birth_day,birth_month,phone_e164,tags,notes,is_active,created_at,updated_at")
         .eq("is_active", true)
         .order("birth_date");
       if (error) throw error;
       const birthdays = (rows ?? [])
-        .filter((row: any) => Number(String(row.birth_date).slice(5, 7)) === month)
-        .sort((a: any, b: any) => Number(String(a.birth_date).slice(8, 10)) - Number(String(b.birth_date).slice(8, 10)) || a.name.localeCompare(b.name, "pt-BR"));
+        .filter((row: any) => Number(row.birth_month) === month)
+        .sort((a: any, b: any) => Number(a.birth_day) - Number(b.birth_day) || a.name.localeCompare(b.name, "pt-BR"));
       return json({ month, birthdays, count: birthdays.length, settings });
     }
 
@@ -179,12 +199,13 @@ Deno.serve(async (req) => {
     if (action === "create") {
       const name = firstString(data.name);
       if (!name) return json({ error: "NAME_REQUIRED" }, 400);
-      const birthDate = validBirthDate(data.birth_date);
+      const birthday = parseBirthDayMonth(data.birth_date ?? data.birth_day_month, data.birth_day, data.birth_month);
       const phone = normalizePhone(data.phone ?? data.phone_e164);
       const { data: row, error } = await supabase.from("atis_birthdays").insert({
         source: "manual",
         name,
-        birth_date: birthDate,
+        birth_day: birthday.day,
+        birth_month: birthday.month,
         phone_e164: phone,
         tags: cleanTags(data.tags),
         notes: firstString(data.notes),
@@ -212,9 +233,13 @@ Deno.serve(async (req) => {
           if (!name) return json({ error: "NAME_REQUIRED" }, 400);
           patch.name = name;
         }
-        if (data.birth_date !== undefined) patch.birth_date = validBirthDate(data.birth_date);
+        if (data.birth_date !== undefined || data.birth_day_month !== undefined || data.birth_day !== undefined || data.birth_month !== undefined) {
+          const birthday = parseBirthDayMonth(data.birth_date ?? data.birth_day_month, data.birth_day, data.birth_month);
+          patch.birth_day = birthday.day;
+          patch.birth_month = birthday.month;
+        }
         if (data.phone !== undefined || data.phone_e164 !== undefined) patch.phone_e164 = normalizePhone(data.phone ?? data.phone_e164);
-      } else if (data.name !== undefined || data.birth_date !== undefined || data.phone !== undefined || data.phone_e164 !== undefined) {
+      } else if (data.name !== undefined || data.birth_date !== undefined || data.birth_day_month !== undefined || data.birth_day !== undefined || data.birth_month !== undefined || data.phone !== undefined || data.phone_e164 !== undefined) {
         return json({ error: "APP_BIRTHDAY_SOURCE_MANAGED" }, 409);
       }
 

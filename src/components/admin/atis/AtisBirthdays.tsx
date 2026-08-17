@@ -21,7 +21,9 @@ type Birthday = {
   source: "app" | "manual";
   user_id?: string | null;
   name: string;
-  birth_date: string;
+  birth_date?: string | null;
+  birth_day: number;
+  birth_month: number;
   phone_e164?: string | null;
   tags?: string[];
   notes?: string | null;
@@ -63,6 +65,7 @@ async function functionErrorMessage(error: any) {
       GROUP_NOT_ACTIVE: "O grupo selecionado não está ativo no ATIS.",
       INVALID_SEND_TIME: "Informe um horário válido.",
       APP_BIRTHDAY_SOURCE_MANAGED: "Este aniversário vem do cadastro do app e deve ser alterado no perfil do usuário.",
+      INVALID_BIRTH_DATE: "Informe o aniversário no formato DD/MM.",
     };
     return friendly[code] || body?.message || code || fallback;
   } catch {
@@ -80,6 +83,25 @@ async function invokeAtis<T = any>(body: Record<string, unknown>) {
   });
   if (error) throw new Error(await functionErrorMessage(error));
   return data as T;
+}
+
+function formatBirthday(value: Pick<Birthday, "birth_day" | "birth_month">) {
+  return `${String(value.birth_day).padStart(2, "0")}/${String(value.birth_month).padStart(2, "0")}`;
+}
+
+function maskBirthday(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function isValidBirthday(value: string) {
+  const match = value.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) return false;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const maxDay = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  return Number.isInteger(day) && Number.isInteger(month) && month >= 1 && month <= 12 && day >= 1 && day <= maxDay;
 }
 
 function formatPhone(value?: string | null) {
@@ -172,7 +194,7 @@ const AtisBirthdays = () => {
     clearMessages();
     setEditor(birthday);
     setName(birthday.name);
-    setBirthDate(birthday.birth_date);
+    setBirthDate(formatBirthday(birthday));
     setPhone(birthday.phone_e164 ?? "");
     setTags((birthday.tags ?? []).join(", "));
     setNotes(birthday.notes ?? "");
@@ -230,7 +252,7 @@ const AtisBirthdays = () => {
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Aniversariantes ATIS</p>
               <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] mt-1">Aniversariantes do mês</h2>
-              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Nome e data de nascimento são suficientes. O número de WhatsApp é opcional porque o envio inicial será feito somente no grupo configurado.</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Nome e aniversário em DD/MM são suficientes. O ano de nascimento não é solicitado nem usado pelo ATIS. O WhatsApp é opcional.</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -257,13 +279,13 @@ const AtisBirthdays = () => {
             <div className="rounded-xl bg-[hsl(var(--dark-bg))] p-6 text-center text-sm text-[hsl(var(--dark-muted))]">Nenhum aniversariante cadastrado neste mês.</div>
           ) : birthdays.map((birthday) => (
             <div key={birthday.id} className="rounded-xl bg-[hsl(var(--dark-bg))] p-3 sm:p-4 flex items-center gap-3">
-              <span className="w-11 h-11 rounded-xl grid place-items-center bg-primary/10 text-primary font-bold shrink-0">{birthday.birth_date.slice(8, 10)}</span>
+              <span className="w-11 h-11 rounded-xl grid place-items-center bg-primary/10 text-primary font-bold shrink-0">{String(birthday.birth_day).padStart(2, "0")}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{birthday.name}</p>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${birthday.source === "app" ? "bg-sky-500/10 text-sky-400" : "bg-primary/10 text-primary"}`}>{birthday.source === "app" ? "Cadastro do app" : "Manual"}</span>
                 </div>
-                <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">{formatPhone(birthday.phone_e164)}</p>
+                <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">🎂 {formatBirthday(birthday)} • {formatPhone(birthday.phone_e164)}</p>
               </div>
               {birthday.source === "manual" && (
                 <div className="flex gap-1 shrink-0">
@@ -326,13 +348,13 @@ const AtisBirthdays = () => {
             <div className="space-y-3 mt-5">
               <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Nome *</span><input value={name} onChange={(event) => setName(event.target.value)} className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
               <div className="grid sm:grid-cols-2 gap-3">
-                <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Data de nascimento *</span><input type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
+                <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Aniversário (DD/MM) *</span><input type="text" inputMode="numeric" maxLength={5} value={birthDate} onChange={(event) => setBirthDate(maskBirthday(event.target.value))} placeholder="Ex.: 25/12" className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
                 <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">WhatsApp — opcional</span><input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Pode deixar vazio" className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
               </div>
               <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="jovens, obreiros, coral" className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
               <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Observações</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="w-full rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] p-3 text-sm text-[hsl(var(--dark-text))] outline-none resize-y" /></label>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditor(null)} className="h-10 px-4 rounded-xl bg-[hsl(var(--dark-bg))] text-xs font-semibold text-[hsl(var(--dark-text))]">Cancelar</button><button onClick={saveBirthday} disabled={!name.trim() || !birthDate || busy !== null} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-2 disabled:opacity-40">{busy === "save" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditor(null)} className="h-10 px-4 rounded-xl bg-[hsl(var(--dark-bg))] text-xs font-semibold text-[hsl(var(--dark-text))]">Cancelar</button><button onClick={saveBirthday} disabled={!name.trim() || !isValidBirthday(birthDate) || busy !== null} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-2 disabled:opacity-40">{busy === "save" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar</button></div>
           </div>
         </div>
       )}

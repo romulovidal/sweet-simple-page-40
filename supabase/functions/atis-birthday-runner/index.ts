@@ -80,12 +80,14 @@ Deno.serve(async (req) => {
 
     const { data: birthdays, error: birthdayError } = await supabase
       .from("atis_birthdays")
-      .select("id,name,birth_date")
+      .select("id,name,birth_date,birth_day,birth_month")
       .eq("is_active", true);
     if (birthdayError) throw birthdayError;
     const today = (birthdays ?? []).filter((row: any) => {
-      const value = String(row.birth_date ?? "");
-      return Number(value.slice(5, 7)) === local.month && Number(value.slice(8, 10)) === local.day;
+      const legacy = String(row.birth_date ?? "");
+      const month = Number(row.birth_month ?? legacy.slice(5, 7));
+      const day = Number(row.birth_day ?? legacy.slice(8, 10));
+      return month === local.month && day === local.day;
     }).sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR"));
 
     if (!today.length) return json({ ok: true, skipped: true, reason: "NO_BIRTHDAYS_TODAY" });

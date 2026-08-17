@@ -1,46 +1,36 @@
 // Shared AI chat completions fetch.
-// Primary: Groq (OpenAI-compatible) — generous free tier.
-// Fallback 1: xAI (Grok) via OpenAI-compatible endpoint.
-// Fallback 2: Google Gemini (user-provided key).
-// Fallback 3: Removed (Lovable AI Gateway).
+// Default app chain: Groq → xAI → Gemini.
+// ATIS can explicitly restrict the chain to Groq → Gemini without changing
+// the behavior of the rest of the application.
 // TTS (audio) is NOT handled here — see tts-verse function.
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
+export type AiProviderName = "groq" | "xai" | "gemini";
 
 function shouldTryFallback(status: number): boolean {
   return status === 401 || status === 402 || status === 403 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
-// Map any legacy model id to a supported Groq model.
-// Default: llama-3.3-70b-versatile — fast, high quality, great for chat/devotional.
-// Reasoning-heavy tasks map to the same (Groq's llama-3.3-70b handles reasoning well).
 function toGroqModel(model: string): string {
   const m = String(model || "").toLowerCase();
   if (m.startsWith("groq/")) return m.slice("groq/".length);
-  // Pass through if it already looks like a Groq model id.
   if (m.startsWith("llama-") || m.startsWith("mixtral-") || m.startsWith("gemma") || m.startsWith("deepseek-") || m.startsWith("qwen")) {
     return m;
   }
   return "llama-3.3-70b-versatile";
 }
 
-// Map any legacy model id (google/*, openai/*) to a supported Grok model.
-// Defaults to grok-4-fast-non-reasoning: fast, cheap, no reasoning overhead —
-// ideal for chat, devotionals, push copy, quick lookups.
-// For heavier Bible study tools (exegese, contexto histórico) use grok-4-fast-reasoning.
 function toGrokModel(model: string): string {
   const m = String(model || "").toLowerCase();
   if (m.startsWith("x-ai/") || m.startsWith("grok")) {
     return m.startsWith("x-ai/") ? m.slice("x-ai/".length) : m;
   }
-  // Heavier reasoning tasks — map "pro" / "gpt-5" / "gpt-5.5" / "gemini-*-pro" to reasoning variant.
   if (m.includes("pro") || m.includes("gpt-5.5") || m.includes("gpt-5.4") || m.includes("gpt-5.2") || m.includes("o1") || m.includes("thinking")) {
     return "grok-4-fast-reasoning";
   }
-  // Default: fast non-reasoning for everything else.
   return "grok-4-fast-non-reasoning";
 }
 
@@ -54,7 +44,6 @@ function toGeminiModel(model: string): string {
   }
   return "gemini-2.5-flash";
 }
-
 
 async function tryGemini(body: Record<string, unknown>, key: string): Promise<Response> {
   const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
@@ -83,58 +72,66 @@ async function tryXai(body: Record<string, unknown>, key: string): Promise<Respo
   });
 }
 
-export async function aiChatFetch(body: Record<string, unknown>): Promise<Response> {
+export async function aiChatFetchWithProviders(
+  body: Record<string, unknown>,
+  providerOrder: AiProviderName[] = ["groq", "xai", "gemini"],
+): Promise<Response> {
   const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
   const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  
 
-  // Ordered provider chain: Groq → xAI → Gemini.
-  const providers: Array<{ name: string; run: () => Promise<Response> }> = [];
-  if (GROQ_API_KEY) providers.push({ name: "Groq", run: () => tryGroq(body, GROQ_API_KEY) });
-  if (XAI_API_KEY) providers.push({ name: "xAI", run: () => tryXai(body, XAI_API_KEY) });
-  if (GEMINI_API_KEY) providers.push({ name: "Gemini", run: () => tryGemini(body, GEMINI_API_KEY) });
+  const available: Record<AiProviderName, (() => Promise<Response>) | null> = {
+    groq: GROQ_API_KEY ? () => tryGroq(body, GROQ_API_KEY) : null,
+    xai: XAI_API_KEY ? () => tryXai(body, XAI_API_KEY) : null,
+    gemini: GEMINI_API_KEY ? () => tryGemini(body, GEMINI_API_KEY) : null,
+  };
+
+  const labels: Record<AiProviderName, string> = { groq: "Groq", xai: "xAI", gemini: "Gemini" };
+  const uniqueOrder = [...new Set(providerOrder)].filter((name): name is AiProviderName => name in available);
+  const providers = uniqueOrder
+    .map((name) => ({ name, run: available[name] }))
+    .filter((provider): provider is { name: AiProviderName; run: () => Promise<Response> } => typeof provider.run === "function");
 
   let lastRes: Response | null = null;
   for (let i = 0; i < providers.length; i++) {
-    const p = providers[i];
+    const provider = providers[i];
     try {
-      const res = await p.run();
+      const res = await provider.run();
       if (res.ok) return res;
       lastRes = res;
       const isLast = i === providers.length - 1;
       if (!isLast && shouldTryFallback(res.status)) {
         try {
           const errText = await res.clone().text();
-          console.error(`[ai-fetch] ${p.name} ${res.status}, trying next fallback. Body:`, errText.slice(0, 400));
+          console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}, trying next fallback. Body:`, errText.slice(0, 400));
         } catch { /* ignore */ }
         continue;
       }
       try {
         const errText = await res.clone().text();
-        console.error(`[ai-fetch] ${p.name} ${res.status}:`, errText.slice(0, 400));
+        console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}:`, errText.slice(0, 400));
       } catch { /* ignore */ }
       return res;
-    } catch (e) {
-      console.error(`[ai-fetch] ${p.name} threw:`, (e as Error)?.message);
+    } catch (error) {
+      console.error(`[ai-fetch] ${labels[provider.name]} threw:`, (error as Error)?.message);
     }
   }
+
   if (lastRes) return lastRes;
   return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
 }
 
-// Backwards-compat helpers used elsewhere in the code — untouched below.
+export async function aiChatFetch(body: Record<string, unknown>): Promise<Response> {
+  return await aiChatFetchWithProviders(body, ["groq", "xai", "gemini"]);
+}
+
+// Backwards-compat helper retained for older imports.
 async function _legacyGeminiOnly(body: Record<string, unknown>): Promise<Response> {
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (GEMINI_API_KEY) {
-    return await tryGemini(body, GEMINI_API_KEY);
-  }
+  if (GEMINI_API_KEY) return await tryGemini(body, GEMINI_API_KEY);
   return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
 }
 
-// Convenience: single-shot text generation. Returns generated text or '' on failure.
-// Use this in place of native Gemini `generateContent` calls so everything routes
-// through the same xAI Grok → Gemini → Lovable chain.
 export async function aiGenerateText(opts: {
   system?: string;
   user: string;
@@ -159,16 +156,15 @@ export async function aiGenerateText(opts: {
       } catch { /* ignore */ }
       return "";
     }
-    const j = await res.json().catch(() => null) as any;
-    const text = j?.choices?.[0]?.message?.content ?? "";
+    const body = await res.json().catch(() => null) as any;
+    const text = body?.choices?.[0]?.message?.content ?? "";
     return typeof text === "string" ? text.trim().replace(/^"|"$/g, "") : "";
-  } catch (e) {
-    console.error("[ai-generate] threw:", (e as Error)?.message);
+  } catch (error) {
+    console.error("[ai-generate] threw:", (error as Error)?.message);
     return "";
   }
 }
 
-// Returns true if ANY AI provider is configured (Groq, xAI, or Gemini).
 export function hasAnyAiKey(): boolean {
   return !!(
     Deno.env.get("GROQ_API_KEY") ||

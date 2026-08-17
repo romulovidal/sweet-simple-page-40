@@ -25,6 +25,24 @@ export class EvolutionProviderError extends Error {
   }
 }
 
+const APP_ORIGIN = "https://biblia.atalaias.online";
+
+const BIBLE_BOOK_ABBREV: Record<string, string> = {
+  genesis: "gn", exodo: "ex", levitico: "lv", numeros: "nm", deuteronomio: "dt",
+  josue: "js", juizes: "jz", rute: "rt", "1 samuel": "1sm", "2 samuel": "2sm",
+  "1 reis": "1rs", "2 reis": "2rs", "1 cronicas": "1cr", "2 cronicas": "2cr",
+  esdras: "ed", neemias: "ne", ester: "et", jo: "jó", salmos: "sl", proverbios: "pv",
+  eclesiastes: "ec", cantares: "ct", isaias: "is", jeremias: "jr", lamentacoes: "lm",
+  ezequiel: "ez", daniel: "dn", oseias: "os", joel: "jl", amos: "am", obadias: "ob",
+  jonas: "jn", miqueias: "mq", naum: "na", habacuque: "hc", sofonias: "sf", ageu: "ag",
+  zacarias: "zc", malaquias: "ml", mateus: "mt", marcos: "mc", lucas: "lc", joao: "jo",
+  atos: "at", romanos: "rm", "1 corintios": "1co", "2 corintios": "2co", galatas: "gl",
+  efesios: "ef", filipenses: "fp", colossenses: "cl", "1 tessalonicenses": "1ts",
+  "2 tessalonicenses": "2ts", "1 timoteo": "1tm", "2 timoteo": "2tm", tito: "tt",
+  filemom: "fm", hebreus: "hb", tiago: "tg", "1 pedro": "1pe", "2 pedro": "2pe",
+  "1 joao": "1jo", "2 joao": "2jo", "3 joao": "3jo", judas: "jd", apocalipse: "ap",
+};
+
 function cleanBaseUrl(value: string) {
   let normalized = value.trim().replace(/\/+$/, "");
   if (normalized && !/^https?:\/\//i.test(normalized)) normalized = `https://${normalized}`;
@@ -47,6 +65,10 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
+function normalizeLookup(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function normalizeState(raw: unknown): AtisInstanceStatus {
   const state = String(raw ?? "").trim().toLowerCase();
 
@@ -66,6 +88,137 @@ function providerMessageId(payload: any): string | null {
     payload?.data?.key?.id,
     payload?.data?.messageId,
   );
+}
+
+function parseBibleReply(text: string) {
+  const firstLine = text.split("\n", 1)[0]?.trim() ?? "";
+  const header = /^📖\s+\*([^*]+)\*$/u.exec(firstLine);
+  if (!header?.[1]) return null;
+
+  const label = header[1].trim();
+  const parts = label.split(/\s+—\s+/u);
+  const reference = parts[0]?.trim() ?? "";
+  const version = parts[1]?.trim() || "ARC";
+  const match = /^(.+?)\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?)?$/u.exec(reference);
+  if (!match) return null;
+
+  const bookName = match[1].trim();
+  const chapter = Number(match[2]);
+  const verseStart = match[3] ? Number(match[3]) : null;
+  const verseEnd = match[4] ? Number(match[4]) : verseStart;
+  if (!Number.isInteger(chapter) || chapter <= 0 || !verseStart || !verseEnd || verseEnd < verseStart) return null;
+  if (verseEnd - verseStart + 1 > 50) return null;
+
+  const bookAbbrev = BIBLE_BOOK_ABBREV[normalizeLookup(bookName)];
+  if (!bookAbbrev) return null;
+  const verses = Array.from({ length: verseEnd - verseStart + 1 }, (_, index) => verseStart + index);
+  const body = text.slice(firstLine.length).trim();
+  return { bookName, bookAbbrev, chapter, verseStart, verses, reference, version, body };
+}
+
+async function createGroupVerseShareLink(text: string) {
+  if (text.includes(`${APP_ORIGIN}/v/`)) return null;
+  const parsed = parseBibleReply(text);
+  if (!parsed) return null;
+
+  const params = new URLSearchParams({
+    book: parsed.bookAbbrev,
+    chapter: String(parsed.chapter),
+    verse: String(parsed.verseStart),
+    verses: parsed.verses.join(","),
+  });
+  const fallback = `${APP_ORIGIN}/biblia?${params.toString()}`;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceKey) return fallback;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-verse-share`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        book_abbrev: parsed.bookAbbrev,
+        chapter: parsed.chapter,
+        verses: parsed.verses,
+        text_snippet: parsed.body.replace(/\s+/g, " ").slice(0, 600),
+        book_name: parsed.bookName,
+        version: parsed.version,
+      }),
+    });
+    const result = await response.json().catch(() => null) as any;
+    if (response.ok && typeof result?.slug === "string" && result.slug.trim()) {
+      return `${APP_ORIGIN}/v/${result.slug.trim()}`;
+    }
+    console.error("[atis-rich-link] verse share unavailable", response.status, result?.error ?? "unknown");
+  } catch (error) {
+    console.error("[atis-rich-link] verse share failed", (error as Error)?.message);
+  }
+  return fallback;
+}
+
+function parseHarpaReply(text: string) {
+  const firstLine = text.split("\n", 1)[0]?.trim() ?? "";
+  const match = /^🎵\s+\*Harpa Cristã\s+(\d+)\s+—\s+(.+?)\*$/u.exec(firstLine);
+  if (!match) return null;
+  const number = Number(match[1]);
+  const title = match[2]?.trim() ?? "";
+  return Number.isInteger(number) && number > 0 && title ? { number, title } : null;
+}
+
+async function findHarpaYoutubeLink(text: string) {
+  if (/youtu\.be\/|youtube\.com\//i.test(text)) return null;
+  const hymn = parseHarpaReply(text);
+  if (!hymn) return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceKey) return null;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/youtube-search`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ number: hymn.number, title: hymn.title }),
+    });
+    const result = await response.json().catch(() => null) as any;
+    if (response.ok && typeof result?.videoId === "string" && result.videoId.trim()) {
+      return `https://www.youtube.com/watch?v=${encodeURIComponent(result.videoId.trim())}`;
+    }
+    console.error("[atis-rich-link] YouTube search unavailable", response.status, result?.code ?? result?.error ?? "unknown");
+  } catch (error) {
+    console.error("[atis-rich-link] YouTube search failed", (error as Error)?.message);
+  }
+  return null;
+}
+
+async function enrichGroupReply(text: string) {
+  let enriched = text.trim();
+
+  // Explicit Bible lookups produced from the app JSON receive the exact same
+  // short-share mechanism used by the app UI. If short-link allocation fails,
+  // a direct /biblia URL is used so the answer itself is never blocked.
+  const verseLink = await createGroupVerseShareLink(enriched);
+  if (verseLink) {
+    enriched = `${enriched}\n\n🔗 *Abrir e compartilhar na Bíblia do Atalaia:*\n${verseLink}`;
+  }
+
+  // Harpa content remains sourced from the app JSON. YouTube is used only to
+  // resolve a listening link; a provider/API failure never blocks the hymn text.
+  const youtubeLink = await findHarpaYoutubeLink(enriched);
+  if (youtubeLink) {
+    enriched = `${enriched}\n\n▶️ *Ouvir no YouTube:*\n${youtubeLink}`;
+  }
+
+  return enriched;
 }
 
 export class EvolutionProvider {
@@ -231,14 +384,8 @@ export class EvolutionProvider {
     return { raw: body };
   }
 
-  async findContacts(instanceName: string, take = 500, skip = 0) {
-    const body = await this.request(`/chat/findContacts/${encodeURIComponent(instanceName)}`, {
-      method: "POST",
-      body: JSON.stringify({ where: {}, take, skip, orderBy: {} }),
-    }, 30000);
-
-    return Array.isArray(body) ? body : Array.isArray((body as any)?.data) ? (body as any).data : [];
-  }
+  // Intentionally no contact-book lookup method here. ATIS must never import or
+  // enumerate the connected phone's personal WhatsApp address book.
 
   async fetchAllGroups(instanceName: string, getParticipants = true) {
     const query = `?getParticipants=${getParticipants ? "true" : "false"}`;
@@ -250,11 +397,12 @@ export class EvolutionProvider {
   }
 
   async sendText(instanceName: string, target: string, text: string, delay = 0) {
+    const finalText = target.endsWith("@g.us") ? await enrichGroupReply(text) : text;
     const body: any = await this.request(`/message/sendText/${encodeURIComponent(instanceName)}`, {
       method: "POST",
       body: JSON.stringify({
         number: target,
-        text,
+        text: finalText,
         ...(delay > 0 ? { delay } : {}),
       }),
     }, 30000);
@@ -263,6 +411,8 @@ export class EvolutionProvider {
       raw: body,
       providerMessageId: providerMessageId(body),
       status: firstString(body?.status, body?.data?.status),
+      enriched: finalText !== text,
+      sentText: finalText,
     };
   }
 }

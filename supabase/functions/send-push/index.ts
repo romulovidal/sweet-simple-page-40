@@ -122,14 +122,15 @@ Deno.serve(async (req) => {
     if (logError) console.error("[send-push] push_log insert failed", logError);
 
     // A targeted PWA push must never become a broadcast to unrelated ATIS destinations.
-    // PWA navigation URLs are intentionally NOT rendered in WhatsApp. The URL remains
-    // available to the native push itself, while ATIS receives only title + message body.
+    // The route is retained only as hidden event metadata; the enqueue SQL deliberately
+    // builds visible WhatsApp content exclusively from title + ATIS body.
     const atis = validated.user_id
       ? { ok: true, created: 0, skipped: 0, targeted_push_not_mirrored: true }
       : await enqueueNativePushForAtis(supabase, {
           type: validated.type,
           title: validated.title,
           body: validated.atis_body ?? validated.body,
+          url: validated.url,
           eventKey: `send-push:${crypto.randomUUID()}`,
         });
 

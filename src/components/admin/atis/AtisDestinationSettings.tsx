@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BrainCircuit, Clock3, Loader2, Save, X } from "lucide-react";
+import { Bell, BrainCircuit, Cake, Clock3, Loader2, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type AtisDestinationType = "contact" | "individual" | "group";
+type FeatureKind = "ai" | "push" | "automation";
+type ScheduleMode = "system" | "instant" | "custom_time";
 
 type FeatureSetting = {
-  kind: "ai" | "push";
+  kind: FeatureKind;
   key: string;
   label: string;
   description: string;
   enabled: boolean;
-  schedule_mode: "system" | "custom_time";
+  schedule_mode: ScheduleMode;
   custom_time?: string | null;
   timezone: string;
   configured?: boolean;
+  systemBehavior?: string;
 };
 
 type Props = {
@@ -30,8 +33,9 @@ async function errorMessage(error: any) {
   try {
     const body = await response.clone().json();
     const friendly: Record<string, string> = {
-      CUSTOM_TIME_REQUIRED: "Escolha um horário para todos os pushes configurados como horário personalizado.",
+      CUSTOM_TIME_REQUIRED: "Escolha um horário para todos os recursos configurados como horário personalizado.",
       DESTINATION_NOT_FOUND: "Este destinatário não está mais disponível no ATIS.",
+      INVALID_FEATURE: "Um dos recursos selecionados não está disponível para este tipo de destinatário.",
     };
     return friendly[body?.error] || body?.message || body?.error || fallback;
   } catch {
@@ -60,8 +64,45 @@ function Toggle({ enabled, onClick, disabled }: { enabled: boolean; onClick: () 
       className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-40 ${enabled ? "bg-primary" : "bg-[hsl(var(--dark-card-hover))]"}`}
       aria-pressed={enabled}
     >
-      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-1" : "translate-x-[-16px]"}`} style={{ left: "50%" }} />
+      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
     </button>
+  );
+}
+
+function ScheduleEditor({ item, saving, patch }: { item: FeatureSetting; saving: boolean; patch: (values: Partial<FeatureSetting>) => void }) {
+  if (!item.enabled) return null;
+  return (
+    <div className="grid sm:grid-cols-[1fr_150px] gap-2">
+      <select
+        value={item.schedule_mode}
+        disabled={saving}
+        onChange={(event) => {
+          const mode = event.target.value as ScheduleMode;
+          patch({ schedule_mode: mode, ...(mode !== "custom_time" ? { custom_time: null } : {}) });
+        }}
+        className="h-10 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-[11px] text-[hsl(var(--dark-text))] outline-none disabled:opacity-40"
+      >
+        <option value="system">Padrão do sistema</option>
+        <option value="instant">Instantâneo ao evento</option>
+        <option value="custom_time">Horário personalizado</option>
+      </select>
+      {item.schedule_mode === "custom_time" ? (
+        <label className="relative">
+          <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
+          <input
+            type="time"
+            value={item.custom_time ?? ""}
+            disabled={saving}
+            onChange={(event) => patch({ custom_time: event.target.value })}
+            className="w-full h-10 pl-9 pr-2 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-[11px] text-[hsl(var(--dark-text))] outline-none disabled:opacity-40"
+          />
+        </label>
+      ) : (
+        <div className="min-h-10 rounded-xl bg-primary/5 border border-primary/10 px-3 py-2 flex items-center text-[10px] leading-snug text-primary">
+          {item.schedule_mode === "instant" ? "Envia assim que o evento ocorrer" : item.systemBehavior || "Usa o comportamento padrão do recurso"}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -76,31 +117,26 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
     let active = true;
     setLoading(true);
     setError(null);
-    void invoke<{ settings: FeatureSetting[] }>({
-      action: "get",
-      data: { destination_type: destinationType, id: destinationId },
-    }).then((result) => {
-      if (active) setSettings(result.settings ?? []);
-    }).catch((err) => {
-      if (active) setError(err instanceof Error ? err.message : "Falha ao carregar configurações.");
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
+    void invoke<{ settings: FeatureSetting[] }>({ action: "get", data: { destination_type: destinationType, id: destinationId } })
+      .then((result) => { if (active) setSettings(result.settings ?? []); })
+      .catch((err) => { if (active) setError(err instanceof Error ? err.message : "Falha ao carregar configurações."); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [destinationType, destinationId]);
 
   const ai = useMemo(() => settings.filter((item) => item.kind === "ai"), [settings]);
   const pushes = useMemo(() => settings.filter((item) => item.kind === "push"), [settings]);
-  const invalidCustomTime = pushes.some((item) => item.enabled && item.schedule_mode === "custom_time" && !item.custom_time);
+  const automations = useMemo(() => settings.filter((item) => item.kind === "automation"), [settings]);
+  const invalidCustomTime = settings.some((item) => item.kind !== "ai" && item.enabled && item.schedule_mode === "custom_time" && !item.custom_time);
 
-  const patch = (kind: FeatureSetting["kind"], key: string, values: Partial<FeatureSetting>) => {
+  const patch = (kind: FeatureKind, key: string, values: Partial<FeatureSetting>) => {
     setSaved(false);
     setSettings((rows) => rows.map((row) => row.kind === kind && row.key === key ? { ...row, ...values } : row));
   };
 
   const save = async () => {
     if (invalidCustomTime) {
-      setError("Escolha um horário para todos os pushes configurados como horário personalizado.");
+      setError("Escolha um horário para todos os recursos configurados como horário personalizado.");
       return;
     }
     setSaving(true);
@@ -116,8 +152,8 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
             kind: item.kind,
             key: item.key,
             enabled: item.enabled,
-            schedule_mode: item.kind === "push" ? item.schedule_mode : "system",
-            custom_time: item.kind === "push" ? item.custom_time ?? null : null,
+            schedule_mode: item.kind === "ai" ? "system" : item.schedule_mode,
+            custom_time: item.kind === "ai" ? null : item.custom_time ?? null,
           })),
         },
       });
@@ -130,6 +166,36 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
     }
   };
 
+  const renderScheduledSection = (title: string, description: string, items: FeatureSetting[], icon: "bell" | "cake") => {
+    if (!items.length) return null;
+    const Icon = icon === "cake" ? Cake : Bell;
+    return (
+      <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
+        <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">
+          <Icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-bold text-[hsl(var(--dark-text))]">{title}</h4>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">{description}</p>
+          </div>
+        </div>
+        <div className="divide-y divide-[hsl(var(--dark-card-hover))]/60">
+          {items.map((item) => (
+            <div key={`${item.kind}:${item.key}`} className="p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-[hsl(var(--dark-text))]">{item.label}</p>
+                  <p className="text-[10px] leading-relaxed text-[hsl(var(--dark-muted))] mt-1">{item.description}</p>
+                </div>
+                <Toggle enabled={item.enabled} onClick={() => patch(item.kind, item.key, { enabled: !item.enabled })} disabled={saving} />
+              </div>
+              <ScheduleEditor item={item} saving={saving} patch={(values) => patch(item.kind, item.key, values)} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm px-3 py-5 sm:px-4 sm:py-8 overflow-y-auto">
       <div className="w-full max-w-2xl mx-auto rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] shadow-2xl overflow-hidden">
@@ -137,7 +203,7 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Configuração do destinatário</p>
             <h3 className="text-base font-bold text-[hsl(var(--dark-text))] mt-1 truncate">{destinationName}</h3>
-            <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Defina quais recursos este destino pode usar e quais pushes nativos serão espelhados no WhatsApp.</p>
+            <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Cada recurso deste destinatário tem ativação e horário próprios. Uma configuração não altera os demais contatos, individuais ou grupos.</p>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] shrink-0"><X className="w-4 h-4" /></button>
         </div>
@@ -147,15 +213,15 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
         ) : (
           <div className="p-4 sm:p-5 space-y-5">
             {error && <div className="rounded-xl p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs">{error}</div>}
-            {saved && <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Configurações salvas.</div>}
+            {saved && <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Configurações salvas para este destinatário.</div>}
 
             <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
               <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">
                 <BrainCircuit className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <div>
                   <h4 className="text-sm font-bold text-[hsl(var(--dark-text))]">Motores de IA</h4>
-                  <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Cada ferramenta pode ser liberada ou bloqueada para este destino.</p>
-                  {destinationType === "group" && <p className="text-[10px] text-amber-400 mt-1">Essas permissões não ligam sozinhas a resposta automática em grupos; elas são aplicadas quando o atendimento de grupos estiver habilitado.</p>}
+                  <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">As respostas conversacionais continuam instantâneas; aqui você apenas libera ou bloqueia cada motor para este destino.</p>
+                  {destinationType === "group" && <p className="text-[10px] text-amber-400 mt-1">Essas permissões não ligam sozinhas respostas automáticas no grupo.</p>}
                 </div>
               </div>
               <div className="divide-y divide-[hsl(var(--dark-card-hover))]/60">
@@ -171,49 +237,11 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
-              <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">
-                <Bell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-bold text-[hsl(var(--dark-text))]">Pushes nativos do app → WhatsApp</h4>
-                  <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Padrão do sistema envia quando o push nativo é executado. Horário personalizado segura a cópia na fila do ATIS até o horário escolhido.</p>
-                </div>
-              </div>
-              <div className="divide-y divide-[hsl(var(--dark-card-hover))]/60">
-                {pushes.map((item) => (
-                  <div key={item.key} className="p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[hsl(var(--dark-text))]">{item.label}</p>
-                        <p className="text-[10px] leading-relaxed text-[hsl(var(--dark-muted))] mt-1">{item.description}</p>
-                      </div>
-                      <Toggle enabled={item.enabled} onClick={() => patch("push", item.key, { enabled: !item.enabled })} disabled={saving} />
-                    </div>
-                    {item.enabled && (
-                      <div className="grid sm:grid-cols-[1fr_150px] gap-2">
-                        <select
-                          value={item.schedule_mode}
-                          onChange={(e) => patch("push", item.key, { schedule_mode: e.target.value as FeatureSetting["schedule_mode"], ...(e.target.value === "system" ? { custom_time: null } : {}) })}
-                          className="h-10 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-[11px] text-[hsl(var(--dark-text))] outline-none"
-                        >
-                          <option value="system">Padrão do sistema — instantâneo</option>
-                          <option value="custom_time">Horário personalizado</option>
-                        </select>
-                        {item.schedule_mode === "custom_time" ? (
-                          <label className="relative">
-                            <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--dark-muted))]" />
-                            <input type="time" value={item.custom_time ?? ""} onChange={(e) => patch("push", item.key, { custom_time: e.target.value })} className="w-full h-10 pl-9 pr-2 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] text-[11px] text-[hsl(var(--dark-text))] outline-none" />
-                          </label>
-                        ) : <div className="h-10 rounded-xl bg-primary/5 border border-primary/10 px-3 flex items-center text-[10px] text-primary">Executa junto ao push</div>}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
+            {renderScheduledSection("Pushes nativos do app → WhatsApp", "Cada push pode seguir o padrão do sistema, sair instantaneamente ou esperar um horário exclusivo deste destinatário.", pushes, "bell")}
+            {renderScheduledSection("Automações ATIS", "Automações próprias do ATIS também obedecem ativação e horário por destinatário.", automations, "cake")}
 
             <div className="rounded-xl p-3 bg-[hsl(var(--dark-bg))] text-[10px] leading-relaxed text-[hsl(var(--dark-muted))]">
-              Fuso horário: <strong className="text-[hsl(var(--dark-text))]">America/Fortaleza</strong>. Se um push nativo ocorrer depois do horário personalizado daquele dia, a cópia é liberada imediatamente para não ficar atrasada até o dia seguinte.
+              Fuso horário: <strong className="text-[hsl(var(--dark-text))]">America/Fortaleza</strong>. Em push nativo com horário personalizado, se o evento só chegar depois do horário escolhido, a mensagem é liberada naquele momento para não ficar presa até o dia seguinte.
             </div>
 
             <button onClick={save} disabled={saving || invalidCustomTime} className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40">

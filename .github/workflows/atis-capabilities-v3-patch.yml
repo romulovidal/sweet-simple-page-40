@@ -27,7 +27,9 @@ jobs:
           cache: npm
 
       - name: Apply integration patch
-        run: python3 scripts/atis-capabilities-v3-patch.py
+        run: |
+          python3 scripts/atis-capabilities-v3-patch.py
+          python3 scripts/atis-capabilities-v3-fixes.py
 
       - name: Deno checks
         run: |
@@ -56,7 +58,8 @@ jobs:
             supabase/functions/atis-webhook/index.ts \
             src/components/admin/atis/AtisDestinationSettings.tsx \
             src/components/admin/atis/AtisHistory.tsx \
-            src/pages/AtisPage.tsx
+            src/pages/AtisPage.tsx \
+            src/App.tsx
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "feat: integrate ATIS conversation capabilities"
           git push origin HEAD:atis-capabilities-v3

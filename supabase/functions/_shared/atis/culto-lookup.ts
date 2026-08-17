@@ -65,7 +65,7 @@ function shortAnswer(culto: CultoCandidate, q: string) {
       ? `✨ O tema do *${culto.title}* de ${fmtDate(culto.service_date)} é *${culto.theme}*.${culto.scripture_reference ? `\n📖 Texto-base: *${culto.scripture_reference}*` : ""}`
       : `✨ O tema do *${culto.title}* de ${fmtDate(culto.service_date)} ainda não foi informado no app.`;
   }
-  if (/que horas|qual horario|horario do culto|hora do culto/.test(q)) {
+  if (/que horas|qual horario|horario do culto|hora do culto|\bhorario\b/.test(q)) {
     return culto.start_time
       ? `🕒 O *${culto.title}* de ${fmtDate(culto.service_date)} começa às *${culto.start_time}*.`
       : `🕒 O horário do *${culto.title}* de ${fmtDate(culto.service_date)} ainda não foi informado no app.`;
@@ -80,7 +80,7 @@ function shortAnswer(culto: CultoCandidate, q: string) {
       ? `📍 O *${culto.title}* de ${fmtDate(culto.service_date)} será em *${culto.location}*.`
       : `📍 O local do *${culto.title}* de ${fmtDate(culto.service_date)} ainda não foi informado no app.`;
   }
-  if (/texto[- ]?base|referencia biblica|passagem base/.test(q)) {
+  if (/texto[- ]?base|referencia biblica|passagem base|qual (e|é) o texto/.test(q)) {
     return culto.scripture_reference
       ? `📖 O texto-base do *${culto.title}* de ${fmtDate(culto.service_date)} é *${culto.scripture_reference}*.`
       : `📖 O texto-base do *${culto.title}* de ${fmtDate(culto.service_date)} ainda não foi informado no app.`;
@@ -96,17 +96,20 @@ export function isCultoIntent(message: string) {
 
 export async function cultoLookup(supabase: any, message: string) {
   const q = normalize(message);
+  const contextDate = message.match(/__ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})__/i)?.[1] ?? null;
   const { data, error } = await supabase.rpc("atis_get_culto_candidates", { _days: 30, _timezone: TZ });
   if (error) throw error;
   const rows = (Array.isArray(data) ? data : []) as CultoCandidate[];
   const today = todayKey();
 
   let candidates: CultoCandidate[];
-  if (/\bhoje\b/.test(q)) candidates = rows.filter((row) => row.service_date === today);
+  if (contextDate) candidates = rows.filter((row) => row.service_date === contextDate);
+  else if (/\bhoje\b/.test(q)) candidates = rows.filter((row) => row.service_date === today);
   else if (/\bdomingo\b/.test(q)) candidates = rows.filter((row) => isSunday(row.service_date));
   else candidates = rows;
 
   if (!candidates.length) {
+    if (contextDate) return `📅 Não encontrei no app o culto de ${fmtDate(contextDate)} que estava no contexto desta conversa.`;
     if (/\bhoje\b/.test(q)) return "📅 Não há nenhum culto ativo programado para hoje no app.";
     if (/\bdomingo\b/.test(q)) return "📅 Não encontrei culto ativo programado para o próximo domingo no app.";
     return "📅 Não encontrei próximos cultos ativos cadastrados no app.";

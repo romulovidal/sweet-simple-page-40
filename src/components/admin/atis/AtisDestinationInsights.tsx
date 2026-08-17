@@ -16,6 +16,7 @@ type Insights = {
   last_seen_at?: string | null;
   memory_hits: number;
   ministry_memory_hits: number;
+  continuity_hits: number;
   top_routes: Array<{ route: string; count: number }>;
   context_sources: Array<{ source: string; count: number }>;
   peak_hour?: string | null;
@@ -29,8 +30,22 @@ async function invoke(body: Record<string, unknown>) {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error("Sua sessão administrativa expirou.");
-  const { data, error } = await supabase.functions.invoke("atis-console", { body, headers: { Authorization: `Bearer ${token}` } });
-  if (error) throw new Error(error.message || "Não foi possível carregar a inteligência operacional.");
+  const { data, error } = await supabase.functions.invoke("atis-insights", {
+    body,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (error) {
+    const response = error?.context;
+    if (response instanceof Response) {
+      try {
+        const parsed = await response.clone().json();
+        throw new Error(parsed?.message || parsed?.error || error.message);
+      } catch (err) {
+        if (err instanceof Error && err.message !== error.message) throw err;
+      }
+    }
+    throw new Error(error.message || "Não foi possível carregar a inteligência operacional.");
+  }
   return data as any;
 }
 
@@ -61,7 +76,7 @@ export default function AtisDestinationInsights({ destinationType, destinationId
   const load = async () => {
     setLoading(true); setError(null);
     try {
-      const result = await invoke({ action: "profile_insights", data: { destination_type: destinationType, id: destinationId, days: 30 } });
+      const result = await invoke({ destination_type: destinationType, id: destinationId, days: 30 });
       setData(result.insights ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao carregar inteligência operacional.");
@@ -100,7 +115,7 @@ export default function AtisDestinationInsights({ destinationType, destinationId
         <div className="rounded-xl bg-[hsl(var(--dark-bg))] p-3">
           <div className="flex items-center gap-2"><Clock3 className="w-4 h-4 text-primary" /><p className="text-[10px] font-bold">Continuidade e atividade</p></div>
           <div className="mt-2 space-y-1.5 text-[9px] text-[hsl(var(--dark-muted))]">
-            <p>Memória reaproveitada: <strong className="text-[hsl(var(--dark-text))]">{data.memory_hits + data.ministry_memory_hits}</strong></p>
+            <p>Memória reaproveitada: <strong className="text-[hsl(var(--dark-text))]">{data.continuity_hits}</strong></p>
             <p>Horário mais ativo: <strong className="text-[hsl(var(--dark-text))]">{data.peak_hour ?? "—"}</strong></p>
             <p>Degradadas: <strong className="text-[hsl(var(--dark-text))]">{data.degraded}</strong> · Falhas: <strong className="text-[hsl(var(--dark-text))]">{data.failed}</strong></p>
           </div>

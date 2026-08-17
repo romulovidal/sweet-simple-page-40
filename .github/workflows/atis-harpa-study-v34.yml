@@ -1,0 +1,76 @@
+name: Validate ATIS Harpa Study v34
+
+on:
+  push:
+    branches:
+      - agent/atis-backend-hardening-context
+    paths:
+      - '.github/workflows/atis-harpa-study-v34.yml'
+
+permissions:
+  contents: write
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+jobs:
+  patch-test-build-deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atis-backend-hardening-context
+          fetch-depth: 0
+
+      - name: Apply navigation alignment
+        run: python scripts/atis-harpa-study-v34-navigation.py
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Test navigation and webhook regression
+        run: |
+          deno test supabase/functions/_shared/atis/harpa-study-navigation_test.ts
+          deno test supabase/functions/_shared/atis/harpa-study-routing_test.ts
+          deno check supabase/functions/atis-webhook/index.ts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend
+        run: |
+          npm install --package-lock=false --ignore-scripts
+          npm run build
+
+      - name: Commit validated alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "romulovidal"
+          git config user.email "romulo_vidal@live.com"
+          git add \
+            supabase/functions/_shared/atis/conversation-runtime.ts \
+            supabase/functions/_shared/atis/harpa-study-navigation_test.ts \
+            src/components/admin/atis/AtisDestinationInsights.tsx
+          git diff --cached --check
+          git commit -m "fix(atis): align Harpa study app continuation"
+          git push origin HEAD:agent/atis-backend-hardening-context
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          test -n "${SUPABASE_PROJECT_ID:-}"
+          test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
+
+      - name: Deploy webhook with navigation alignment
+        run: supabase functions deploy atis-webhook --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt

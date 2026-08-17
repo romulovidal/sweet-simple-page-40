@@ -33,7 +33,7 @@ function sortedCounts(map: Map<string, number>, limit = 6) {
     .slice(0, limit);
 }
 
-export function buildDestinationInsights(rows: DestinationInsightRow[], destinationType: DestinationInsightType) {
+export function buildDestinationInsights(rows: DestinationInsightRow[], destinationType: DestinationInsightType, periodDays = 30) {
   const replied = rows.filter((row) => row.status === "replied");
   const failed = rows.filter((row) => row.status === "failed");
   const ignored = rows.filter((row) => row.status === "ignored");
@@ -84,7 +84,7 @@ export function buildDestinationInsights(rows: DestinationInsightRow[], destinat
   }
 
   return {
-    period_days: 30,
+    period_days: periodDays,
     total: rows.length,
     replied: replied.length,
     failed: failed.length,

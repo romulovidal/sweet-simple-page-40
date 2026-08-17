@@ -60,6 +60,7 @@ const routeLabels: Record<string, string> = {
   devotional: "Devocional",
   daily_verse: "Versículo do dia",
   harpa_lookup: "Harpa",
+  harpa_study: "Estudo da Harpa",
   culto_info: "Cultos",
   canticos_info: "Cânticos",
   ministry_relation: "Culto + Bíblia + Louvor",

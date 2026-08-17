@@ -218,7 +218,7 @@ export async function resolvePendingPrayer(supabase: any, state: any, command: "
 
 export function continueInAppLink(route: string, reference?: string | null) {
   const base = "https://biblia.atalaias.online";
-  if (route === "harpa_lookup") return `${base}/harpa`;
+  if (route === "harpa_lookup" || route === "harpa_study") return `${base}/harpa`;
   if (route === "canticos_info") return `${base}/canticos`;
   if (route === "culto_info") return `${base}/harpa`;
   if (["bible_lookup", "ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline"].includes(route)) return `${base}/biblia`;
@@ -241,7 +241,7 @@ export function assistantButtons(route: string) {
       { id: "atis:app", text: "📱 Abrir app" },
     ];
   }
-  if (route === "harpa_lookup" || route === "canticos_info") {
+  if (route === "harpa_lookup" || route === "harpa_study" || route === "canticos_info") {
     return [
       { id: "atis:app", text: "📱 Abrir app" },
       { id: "atis:mode:study", text: "📚 Modo Estudo" },

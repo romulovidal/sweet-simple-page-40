@@ -160,7 +160,7 @@ async function classifyWithAi(systemPrompt: string, message: string, history: At
     messages: [
       { role: "system", content: `${systemPrompt}\n\nVocê está apenas classificando intenção. Use o histórico somente para entender referências e continuidade. Retorne SOMENTE um identificador desta lista: ${allowed.join(", ")}. Não responda a pergunta.` },
       ...history.slice(-8),
-      { role: "user", content: userMessage },
+      { role: "user", content: message },
     ],
     temperature: 0,
     max_tokens: 40,
@@ -329,7 +329,7 @@ async function generateSpecialistAnswer(
     messages: [
       { role: "system", content: system },
       ...history,
-      { role: "user", content: message },
+      { role: "user", content: userMessage },
     ],
     temperature: 0.55,
     max_tokens: route === "exegetai" ? 2600 : 1800,

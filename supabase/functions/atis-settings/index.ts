@@ -1,3 +1,4 @@
+// Administrative endpoint for the editable ATIS ministerial prompt.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validateAdminAuth } from "../_shared/auth-utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";

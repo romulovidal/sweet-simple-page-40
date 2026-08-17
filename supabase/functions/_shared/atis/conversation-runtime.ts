@@ -262,10 +262,25 @@ export function normalizeButtonCommand(message: string) {
   return message;
 }
 
-export function looksUnanswered(text: string, route: string) {
+export function unansweredReason(text: string, route: string) {
   const q = normalize(text);
-  if (["culto_info", "birthdays", "canticos_info", "harpa_lookup", "daily_verse", "bible_lookup"].includes(route)) return false;
-  return /nao sei|não sei|nao consegui responder|não consegui responder|nao tenho informacao|não tenho informação|nao tenho certeza|não tenho certeza|nao posso confirmar|não posso confirmar/.test(q);
+  if (/nao consegui identificar uma referencia biblica completa|não consegui identificar uma referência bíblica completa/.test(q)) return "input_incomplete";
+  if (/preciso de um culto lembrado|preciso que o usuario escolha um item|preciso que o usuário escolha um item|faltam dados|dados suficientes/.test(q)) return "grounding_missing";
+  if (/nao encontrei|não encontrei|nao foi encontrado|não foi encontrado|nao possui letra disponivel|não possui letra disponível/.test(q)) return "lookup_not_found";
+  if (/nao sei|não sei|nao consegui responder|não consegui responder|nao tenho informacao|não tenho informação|nao tenho certeza|não tenho certeza|nao posso confirmar|não posso confirmar/.test(q)) return "assistant_uncertain";
+  return null;
+}
+
+export function looksUnanswered(text: string, route: string) {
+  return unansweredReason(text, route) !== null;
+}
+
+export function runtimeFailureReason(message: string) {
+  const value = String(message ?? "").trim().toUpperCase();
+  if (value.includes("AI_PROVIDER_UNAVAILABLE")) return "ai_provider_unavailable";
+  if (value.includes("AI_EMPTY_RESPONSE")) return "ai_empty_response";
+  if (value.includes("APP_") || value.includes("SOURCE_") || value.includes("HTTP_")) return "source_unavailable";
+  return "runtime_error";
 }
 
 export async function rememberAnswer(supabase: any, stateId: string, route: string, reference: string | null | undefined, userMessage: string) {
@@ -288,16 +303,14 @@ export async function recordUnanswered(supabase: any, input: {
   answer?: string | null;
   reason: string;
 }) {
-  const { error } = await supabase.from("atis_unanswered_questions").upsert({
-    inbound_message_id: input.inboundId,
-    destination_type: input.destinationType,
-    destination_id: input.destinationId,
-    question: input.question.slice(0, 5000),
-    route: input.route ?? null,
-    answer: input.answer?.slice(0, 5000) ?? null,
-    reason: input.reason,
-    status: "open",
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "inbound_message_id" });
+  const { error } = await supabase.rpc("atis_record_unanswered", {
+    _inbound_message_id: input.inboundId,
+    _destination_type: input.destinationType,
+    _destination_id: input.destinationId,
+    _question: input.question.slice(0, 5000),
+    _route: input.route ?? null,
+    _answer: input.answer?.slice(0, 5000) ?? null,
+    _reason: input.reason,
+  });
   if (error) throw error;
 }

@@ -14,7 +14,8 @@ import {
   isQuietNow,
   loadConversationState,
   loadDestinationProfile,
-  looksUnanswered,
+  runtimeFailureReason,
+  unansweredReason,
   normalizeButtonCommand,
   prayerContent,
   recordUnanswered,
@@ -717,8 +718,9 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       const answerText = appendContinueInApp(answer.text, answer.route, profile.continue_in_app, answer.reference);
       const delivery = await sendReplyWithProfile(evolution, providerInstanceName, directProviderTarget(remoteJid), answerText, profile, answer.route, true);
       await rememberAnswer(supabase, state.id, answer.route, answer.reference, commandText);
-      if (looksUnanswered(answerText, answer.route)) {
-        await recordUnanswered(supabase, { inboundId: inbound.id, destinationType, destinationId, question: limitedText, route: answer.route, answer: answerText, reason: "assistant_uncertain" });
+      const gapReason = unansweredReason(answerText, answer.route);
+      if (gapReason) {
+        await recordUnanswered(supabase, { inboundId: inbound.id, destinationType, destinationId, question: limitedText, route: answer.route, answer: answerText, reason: gapReason });
       }
       await supabase.from("atis_inbound_messages").update({
         assistant_route: answer.route,
@@ -756,7 +758,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       await supabase.from("atis_inbound_messages").update({ status: "failed", error: message.slice(0, 500), processed_at: new Date().toISOString() }).eq("id", inbound.id);
       if (policyForFailure?.destinationType && policyForFailure?.destinationId) {
         try {
-          await recordUnanswered(supabase, { inboundId: inbound.id, destinationType: policyForFailure.destinationType, destinationId: policyForFailure.destinationId, question: limitedText, reason: `error:${message.slice(0, 120)}` });
+          await recordUnanswered(supabase, { inboundId: inbound.id, destinationType: policyForFailure.destinationType, destinationId: policyForFailure.destinationId, question: limitedText, reason: runtimeFailureReason(message) });
         } catch (recordError) {
           console.error("[atis-webhook] could not record unanswered", recordError instanceof Error ? recordError.message : recordError);
         }

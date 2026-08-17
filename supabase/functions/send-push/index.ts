@@ -7,7 +7,11 @@ import { enqueueNativePushForAtis } from "../_shared/atis/native-push-bridge.ts"
 
 const PushPayloadSchema = z.object({
   title: z.string().trim().min(1).max(100),
+  // Native PWA notifications remain intentionally short.
   body: z.string().trim().min(1).max(500),
+  // WhatsApp may receive a richer/full version of the same event without
+  // inheriting the native notification preview limit.
+  atis_body: z.string().trim().min(1).max(4096).optional(),
   url: z.string().trim().max(200).optional().default("/"),
   type: z.string().trim().max(50).optional().default("general"),
   ttl: z.number().int().min(60).max(60 * 60 * 24 * 7).optional().default(60 * 60 * 24),
@@ -118,14 +122,14 @@ Deno.serve(async (req) => {
     if (logError) console.error("[send-push] push_log insert failed", logError);
 
     // A targeted PWA push must never become a broadcast to unrelated ATIS destinations.
-    // The ATIS bridge currently mirrors only system/broadcast native push executions.
+    // PWA navigation URLs are intentionally NOT rendered in WhatsApp. The URL remains
+    // available to the native push itself, while ATIS receives only title + message body.
     const atis = validated.user_id
       ? { ok: true, created: 0, skipped: 0, targeted_push_not_mirrored: true }
       : await enqueueNativePushForAtis(supabase, {
           type: validated.type,
           title: validated.title,
-          body: validated.body,
-          url: validated.url,
+          body: validated.atis_body ?? validated.body,
           eventKey: `send-push:${crypto.randomUUID()}`,
         });
 

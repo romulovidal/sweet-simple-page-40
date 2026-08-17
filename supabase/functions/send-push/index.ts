@@ -3,6 +3,7 @@ import webpush from "https://esm.sh/web-push@3.6.7";
 import { z } from "https://esm.sh/zod@3.25.76";
 import { corsHeaders } from "../_shared/cors.ts";
 import { validateAdminAuth } from "../_shared/auth-utils.ts";
+import { enqueueNativePushForAtis } from "../_shared/atis/native-push-bridge.ts";
 
 const PushPayloadSchema = z.object({
   title: z.string().trim().min(1).max(100),
@@ -90,13 +91,6 @@ Deno.serve(async (req) => {
     const { data: subs, error: fetchError } = await query;
     if (fetchError) throw fetchError;
 
-    if (!subs || subs.length === 0) {
-      return new Response(JSON.stringify({ sent: 0, failed: 0, message: "No active subscriptions found" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     webpush.setVapidDetails("mailto:admin@biblia-atalaia.lovable.app", vapidPublicKey, vapidPrivateKey);
 
     const pushPayload = JSON.stringify({
@@ -107,8 +101,9 @@ Deno.serve(async (req) => {
     });
     const options = { TTL: validated.ttl, urgency: validated.urgency };
 
+    const activeSubs = subs ?? [];
     const results = await Promise.all(
-      subs.map((sub: any) => sendToSubscription(supabase, sub, pushPayload, options)),
+      activeSubs.map((sub: any) => sendToSubscription(supabase, sub, pushPayload, options)),
     );
     const totalSent = results.reduce((acc, result) => acc + result.sent, 0);
     const totalFailed = results.reduce((acc, result) => acc + result.failed, 0);
@@ -116,14 +111,31 @@ Deno.serve(async (req) => {
     const { error: logError } = await supabase.from("push_log").insert({
       title: validated.title,
       body: validated.body,
-      url: validated.url,
       total_sent: totalSent,
       total_failed: totalFailed,
       sent_by: auth.userId,
     });
     if (logError) console.error("[send-push] push_log insert failed", logError);
 
-    return new Response(JSON.stringify({ sent: totalSent, failed: totalFailed, total: subs.length }), {
+    // A targeted PWA push must never become a broadcast to unrelated ATIS destinations.
+    // The ATIS bridge currently mirrors only system/broadcast native push executions.
+    const atis = validated.user_id
+      ? { ok: true, created: 0, skipped: 0, targeted_push_not_mirrored: true }
+      : await enqueueNativePushForAtis(supabase, {
+          type: validated.type,
+          title: validated.title,
+          body: validated.body,
+          url: validated.url,
+          eventKey: `send-push:${crypto.randomUUID()}`,
+        });
+
+    return new Response(JSON.stringify({
+      sent: totalSent,
+      failed: totalFailed,
+      total: activeSubs.length,
+      atis,
+      message: activeSubs.length === 0 ? "No active PWA subscriptions found; ATIS subscriptions were still evaluated." : undefined,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

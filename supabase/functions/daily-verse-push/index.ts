@@ -173,7 +173,9 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
             body: JSON.stringify({
               title: `📖 ${finalVerse.ref}`,
+              // PWA keeps its compact preview; ATIS receives the complete passage.
               body: limitNotificationBody(finalVerse.text),
+              atis_body: finalVerse.text,
               url: "/",
               type: "daily-verse",
               ttl: 86400,

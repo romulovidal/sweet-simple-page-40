@@ -18,10 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Repair Evolution patch expression
+      - name: Repair Evolution patch expressions
         shell: python
         run: |
           from pathlib import Path
+
+          # Patch the shared provider directly because its local variable is getParticipants.
+          provider = Path('supabase/functions/_shared/atis/evolution-provider.ts')
+          provider_text = provider.read_text()
+          old_provider = '    const query = getParticipants ? "?getParticipants=true" : "";'
+          new_provider = '    const query = `?getParticipants=${getParticipants ? "true" : "false"}`;'
+          if old_provider not in provider_text:
+              raise SystemExit('Expected EvolutionProvider group query was not found.')
+          provider.write_text(provider_text.replace(old_provider, new_provider, 1))
+
+          # Repair the two inline Evolution implementations used by recipients/sync.
           p = Path('.github/scripts/patch_atis_consent_groups_prompt.py')
           text = p.read_text()
           text = text.replace(
@@ -32,7 +43,16 @@ jobs:
               "'`${`?getParticipants=${participants ? \"true\" : \"false\"}`}`'",
               "'?getParticipants=${participants ? \"true\" : \"false\"}'",
           )
-          p.write_text(text)
+
+          obsolete = '''replace_once(
+              "supabase/functions/_shared/atis/evolution-provider.ts",
+              'const query = includeParticipants ? "?getParticipants=true" : "";',
+              'const query = `?getParticipants=${includeParticipants ? "true" : "false"}`;',
+          )
+          '''
+          if obsolete not in text:
+              raise SystemExit('Expected obsolete shared-provider patch block was not found.')
+          p.write_text(text.replace(obsolete, '', 1))
 
       - name: Apply consent, groups and prompt patch
         run: python .github/scripts/patch_atis_consent_groups_prompt.py

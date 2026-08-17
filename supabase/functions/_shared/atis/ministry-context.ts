@@ -1,0 +1,228 @@
+import type { AtisConversationMessage, AtisAssistantRoute } from "./assistant.ts";
+
+const TZ = "America/Fortaleza";
+const CANTICO_OFFSET = 100000;
+const MAX_CONTEXT_ITEMS = 30;
+
+export type MinistryReference =
+  | { kind: "culto"; date: string }
+  | { kind: "songs"; date: string | null; items: Array<{ kind: "harpa" | "cantico"; number: number }> };
+
+export type MinistryFollowup = {
+  route: AtisAssistantRoute;
+  message: string;
+  carryReference: string | null;
+};
+
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function todayKey() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function addDays(iso: string, days: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 12));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function isSunday(iso: string) {
+  return new Date(`${iso}T12:00:00Z`).getUTCDay() === 0;
+}
+
+function validIsoDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+export function encodeCultoReference(date: string) {
+  const valid = validIsoDate(date);
+  return valid ? `ctx:culto:${valid}` : null;
+}
+
+export function encodeSongsReference(date: string | null, items: Array<{ kind: "harpa" | "cantico"; number: number }>) {
+  const encoded = items
+    .filter((item) => Number.isInteger(item.number) && item.number > 0)
+    .slice(0, MAX_CONTEXT_ITEMS)
+    .map((item) => `${item.kind === "harpa" ? "h" : "c"}${item.number}`);
+  if (!encoded.length) return null;
+  return `ctx:songs:${validIsoDate(date ?? "") ?? "-"}:${encoded.join(",")}`;
+}
+
+export function parseMinistryReference(reference: string | null | undefined): MinistryReference | null {
+  const raw = String(reference ?? "").trim();
+  const culto = /^ctx:culto:(\d{4}-\d{2}-\d{2})$/.exec(raw);
+  if (culto) return { kind: "culto", date: culto[1] };
+
+  const songs = /^ctx:songs:(\d{4}-\d{2}-\d{2}|-):([hc]\d+(?:,[hc]\d+)*)$/.exec(raw);
+  if (!songs) return null;
+  const items = songs[2].split(",").map((token) => {
+    const match = /^([hc])(\d+)$/.exec(token);
+    if (!match) return null;
+    const number = Number(match[2]);
+    if (!Number.isInteger(number) || number <= 0) return null;
+    return { kind: match[1] === "h" ? "harpa" as const : "cantico" as const, number };
+  }).filter(Boolean) as Array<{ kind: "harpa" | "cantico"; number: number }>;
+  return items.length ? { kind: "songs", date: songs[1] === "-" ? null : songs[1], items } : null;
+}
+
+function ordinalPosition(message: string) {
+  const q = normalize(message);
+  const words: Array<[RegExp, number]> = [
+    [/\b(primeiro|primeira)\b/, 1],
+    [/\b(segundo|segunda)\b/, 2],
+    [/\b(terceiro|terceira)\b/, 3],
+    [/\b(quarto|quarta)\b/, 4],
+    [/\b(quinto|quinta)\b/, 5],
+    [/\b(sexto|sexta)\b/, 6],
+    [/\b(setimo|setima)\b/, 7],
+    [/\b(oitavo|oitava)\b/, 8],
+    [/\b(nono|nona)\b/, 9],
+    [/\b(decimo|decima)\b/, 10],
+  ];
+  for (const [pattern, position] of words) if (pattern.test(q)) return position;
+  const numeric = q.match(/(?:^|\s)(\d{1,2})(?:º|ª|o|a)?(?:\s|$)/);
+  if (numeric) {
+    const position = Number(numeric[1]);
+    if (position >= 1 && position <= MAX_CONTEXT_ITEMS) return position;
+  }
+  return null;
+}
+
+export function ministryContextMessage(reference: string, message: string) {
+  const parsed = parseMinistryReference(reference);
+  if (!parsed) return null;
+  const q = normalize(message).replace(/^atis[,:\s-]*/i, "");
+
+  if (parsed.kind === "culto") {
+    if (!/\b(cantico|canticos|hino|hinos|louvor|louvores|programacao|sequencia|lista)\b/.test(q)) return null;
+    return {
+      content: `Contexto ministerial atual: [ATIS_CULTO_DATE=${parsed.date}]`,
+      label: `Culto ${parsed.date}`,
+    };
+  }
+
+  const position = ordinalPosition(q);
+  if (!position || position > parsed.items.length) return null;
+  const compact = parsed.items.map((item) => `${item.kind === "harpa" ? "h" : "c"}${item.number}`).join(",");
+  return {
+    content: `Contexto ministerial atual: [ATIS_SONG_LIST=${parsed.date ?? "-"}|${compact}]`,
+    label: `Lista de louvor${parsed.date ? ` ${parsed.date}` : ""}`,
+  };
+}
+
+function latestMinistryMarker(history: AtisConversationMessage[]) {
+  for (const item of [...history].reverse()) {
+    if (item.role !== "user") continue;
+    const culto = item.content.match(/\[ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})\]/);
+    if (culto) return { kind: "culto" as const, date: culto[1] };
+    const songs = item.content.match(/\[ATIS_SONG_LIST=(\d{4}-\d{2}-\d{2}|-)\|([hc]\d+(?:,[hc]\d+)*)\]/);
+    if (songs) {
+      const items = songs[2].split(",").map((token) => {
+        const match = /^([hc])(\d+)$/.exec(token);
+        return match ? { kind: match[1] === "h" ? "harpa" as const : "cantico" as const, number: Number(match[2]) } : null;
+      }).filter(Boolean) as Array<{ kind: "harpa" | "cantico"; number: number }>;
+      if (items.length) return { kind: "songs" as const, date: songs[1] === "-" ? null : songs[1], items };
+    }
+  }
+  return null;
+}
+
+export function resolveMinistryFollowup(message: string, history: AtisConversationMessage[]): MinistryFollowup | null {
+  const marker = latestMinistryMarker(history);
+  if (!marker) return null;
+  const q = normalize(message);
+
+  if (marker.kind === "culto") {
+    if (!/\b(cantico|canticos|hino|hinos|louvor|louvores|programacao|sequencia|lista)\b/.test(q)) return null;
+    return {
+      route: "canticos_info",
+      message: `programação de louvor do culto: ${message} __ATIS_CULTO_DATE=${marker.date}__`,
+      carryReference: null,
+    };
+  }
+
+  const position = ordinalPosition(message);
+  if (!position || position > marker.items.length) return null;
+  const item = marker.items[position - 1];
+  const wantsChorus = /\b(refrao|coro)\b/.test(q);
+  const wantsLyrics = /\b(letra|manda|mande|mostra|mostre|envia|envie)\b/.test(q) || wantsChorus;
+  const carryReference = encodeSongsReference(marker.date, marker.items);
+  if (item.kind === "harpa") {
+    return {
+      route: "harpa_lookup",
+      message: `Harpa ${item.number}${wantsChorus ? " refrão" : ""}`,
+      carryReference,
+    };
+  }
+  return {
+    route: "canticos_info",
+    message: `Cântico ${item.number}${wantsLyrics ? " letra" : ""}`,
+    carryReference,
+  };
+}
+
+export async function captureCultoReference(supabase: any, message: string) {
+  const q = normalize(message);
+  const { data, error } = await supabase.rpc("atis_get_culto_candidates", { _days: 30, _timezone: TZ });
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : [];
+  const today = todayKey();
+  let candidates = rows;
+  if (/\bhoje\b/.test(q)) candidates = rows.filter((row: any) => row.service_date === today);
+  else if (/\bdomingo\b/.test(q)) candidates = rows.filter((row: any) => isSunday(String(row.service_date)));
+  const selected = candidates[0];
+  return selected?.service_date ? encodeCultoReference(String(selected.service_date)) : null;
+}
+
+function programmingRequest(message: string) {
+  const q = normalize(message);
+  return /__atis_culto_date=\d{4}-\d{2}-\d{2}__/.test(q)
+    || (/\b(culto|domingo|hoje|proximo|programacao|sequencia|lista)\b/.test(q)
+      && /\b(hino|hinos|cantico|canticos|louvor|louvores)\b/.test(q));
+}
+
+export async function captureSongListReference(supabase: any, message: string) {
+  if (!programmingRequest(message)) return null;
+  const marker = message.match(/__ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})__/i)?.[1] ?? null;
+  const q = normalize(message);
+  const today = todayKey();
+  const through = addDays(today, 30);
+  const { data, error } = await supabase
+    .from("culto_selections")
+    .select("culto_date,items")
+    .eq("is_active", true)
+    .gte("culto_date", today)
+    .lte("culto_date", through)
+    .order("culto_date", { ascending: true });
+  if (error) throw error;
+  let rows = Array.isArray(data) ? data : [];
+  if (marker) rows = rows.filter((row: any) => row.culto_date === marker);
+  else if (/\bhoje\b/.test(q)) rows = rows.filter((row: any) => row.culto_date === today);
+  else if (/\bdomingo\b/.test(q)) rows = rows.filter((row: any) => isSunday(String(row.culto_date)));
+  const selection = rows[0];
+  if (!selection) return null;
+  const items = (Array.isArray(selection.items) ? selection.items : [])
+    .map((item: any) => Number(item?.hino_number))
+    .filter((number: number) => Number.isFinite(number) && number > 0)
+    .slice(0, MAX_CONTEXT_ITEMS)
+    .map((number: number) => number >= CANTICO_OFFSET
+      ? { kind: "cantico" as const, number: number - CANTICO_OFFSET }
+      : { kind: "harpa" as const, number });
+  return encodeSongsReference(String(selection.culto_date), items);
+}

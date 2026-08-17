@@ -55,7 +55,7 @@ function fullCard(culto: CultoCandidate) {
 }
 
 function shortAnswer(culto: CultoCandidate, q: string) {
-  if (/quem.+(prega|pregara|vai pregar|ministra|ministrara|vai ministrar)|\b(pregador|ministro)\b/.test(q)) {
+  if (/quem.+(prega|pregar|pregara|vai pregar|ministra|ministrar|ministrara|vai ministrar)|\b(pregador|ministro)\b/.test(q)) {
     return culto.minister_name
       ? `🎙️ Quem ministrará no *${culto.title}* de ${fmtDate(culto.service_date)} será *${culto.minister_name}*.${culto.theme ? `\n✨ Tema: *${culto.theme}*` : ""}`
       : `🎙️ O ministro/pregador do *${culto.title}* de ${fmtDate(culto.service_date)} ainda não foi informado no app.`;
@@ -90,7 +90,7 @@ function shortAnswer(culto: CultoCandidate, q: string) {
 
 export function isCultoIntent(message: string) {
   const q = normalize(message);
-  return /\b(culto|cultos|prega|pregador|ministra|ministro|dirigente)\b/.test(q) ||
+  return /\b(culto|cultos|prega|pregar|pregador|pregacao|ministra|ministrar|ministro|dirigente)\b/.test(q) ||
     (/\b(tema|horario|que horas)\b/.test(q) && /\b(domingo|hoje|igreja)\b/.test(q));
 }
 
@@ -114,7 +114,8 @@ export async function cultoLookup(supabase: any, message: string) {
 
   const culto = candidates[0];
   if (/\btem culto\b/.test(q)) {
-    return `✅ Sim. Hoje teremos *${culto.title}*${culto.start_time ? ` às *${culto.start_time}*` : ""}.${culto.minister_name ? `\n🎙️ Ministro: *${culto.minister_name}*` : ""}${culto.theme ? `\n✨ Tema: *${culto.theme}*` : ""}`;
+    const when = /\bhoje\b/.test(q) ? "Hoje teremos" : `Teremos em ${fmtDate(culto.service_date)}`;
+    return `✅ Sim. ${when} *${culto.title}*${culto.start_time ? ` às *${culto.start_time}*` : ""}.${culto.minister_name ? `\n🎙️ Ministro: *${culto.minister_name}*` : ""}${culto.theme ? `\n✨ Tema: *${culto.theme}*` : ""}`;
   }
   return shortAnswer(culto, q);
 }

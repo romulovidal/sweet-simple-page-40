@@ -31,6 +31,7 @@ jobs:
           python3 scripts/atis-capabilities-v3-patch.py
           python3 scripts/atis-capabilities-v3-fixes.py
           python3 scripts/atis-capabilities-v3-fixes2.py
+          python3 scripts/atis-capabilities-v3-fixes3.py
 
       - name: Deno checks
         run: |
@@ -57,6 +58,8 @@ jobs:
             supabase/functions/_shared/atis/conversation-runtime.ts \
             supabase/functions/atis-console/index.ts \
             supabase/functions/atis-webhook/index.ts \
+            supabase/migrations/20260817151000_atis_conversation_capabilities.sql \
+            src/components/admin/atis/AtisConversationProfile.tsx \
             src/components/admin/atis/AtisDestinationSettings.tsx \
             src/components/admin/atis/AtisHistory.tsx \
             src/pages/AtisPage.tsx \

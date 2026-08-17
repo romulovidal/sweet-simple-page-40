@@ -341,7 +341,13 @@ async function generateSpecialistAnswer(
   const body = await response.json().catch(() => null) as any;
   const text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  return clampText(guardUngroundedBibleQuotes(text, bibleContext?.text ?? null));
+  const guarded = guardUngroundedBibleQuotes(text, bibleContext?.text ?? null);
+  if (route === "devotional" && bibleContext) {
+    const placeholder = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
+    const trustedDailyVerse = `📖 *${bibleContext.label}*\n“${bibleContext.text}”`;
+    return clampText(guarded.replaceAll(placeholder, trustedDailyVerse));
+  }
+  return clampText(guarded);
 }
 
 export async function runAtisAssistant(supabase: any, message: string, options: AtisAssistantOptions = {}): Promise<AtisAssistantResult> {

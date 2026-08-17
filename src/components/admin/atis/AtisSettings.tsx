@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AtSign, BrainCircuit, Loader2, MessageCircle, Save, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import { AtSign, BrainCircuit, CakeSlice, Loader2, MessageCircle, Save, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 async function invoke(body: Record<string, unknown>) {
@@ -36,13 +36,17 @@ type Behavior = { direct: boolean; groups: boolean; mentionOnly: boolean };
 const AtisSettings = () => {
   const [prompt, setPrompt] = useState("");
   const [original, setOriginal] = useState("");
+  const [birthdayPrompt, setBirthdayPrompt] = useState("");
+  const [birthdayOriginal, setBirthdayOriginal] = useState("");
   const [behavior, setBehavior] = useState<Behavior>({ direct: true, groups: true, mentionOnly: false });
   const [behaviorOriginal, setBehaviorOriginal] = useState<Behavior>({ direct: true, groups: true, mentionOnly: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [birthdaySaving, setBirthdaySaving] = useState(false);
   const [behaviorSaving, setBehaviorSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [birthdaySaved, setBirthdaySaved] = useState(false);
   const [behaviorSaved, setBehaviorSaved] = useState(false);
 
   useEffect(() => {
@@ -51,6 +55,8 @@ const AtisSettings = () => {
       if (!active) return;
       setPrompt(data.prompt ?? "");
       setOriginal(data.prompt ?? "");
+      setBirthdayPrompt(data.birthday_prompt ?? "");
+      setBirthdayOriginal(data.birthday_prompt ?? "");
       const nextBehavior = {
         direct: data.auto_reply_direct !== false,
         groups: data.auto_reply_groups !== false,
@@ -76,6 +82,17 @@ const AtisSettings = () => {
       setPrompt(result.prompt ?? prompt); setOriginal(result.prompt ?? prompt); setSaved(true);
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível salvar."); }
     finally { setSaving(false); }
+  };
+
+  const saveBirthdayPrompt = async () => {
+    setBirthdaySaving(true); setError(null); setBirthdaySaved(false);
+    try {
+      const result = await invoke({ action: "save_birthday_prompt", prompt: birthdayPrompt });
+      setBirthdayPrompt(result.prompt ?? birthdayPrompt);
+      setBirthdayOriginal(result.prompt ?? birthdayPrompt);
+      setBirthdaySaved(true);
+    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível salvar o prompt de aniversário."); }
+    finally { setBirthdaySaving(false); }
   };
 
   const saveBehavior = async () => {
@@ -106,12 +123,13 @@ const AtisSettings = () => {
       <div className="rounded-3xl p-5 bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]/60">
         <div className="flex items-start gap-3">
           <span className="w-11 h-11 rounded-2xl grid place-items-center bg-primary/15 text-primary shrink-0"><SlidersHorizontal className="w-5 h-5" /></span>
-          <div><p className="text-[10px] uppercase tracking-[0.2em] text-primary">Configurações do ATIS</p><h2 className="text-xl font-bold mt-1">Personalize o comportamento</h2><p className="text-xs text-[hsl(var(--dark-muted))] mt-2 leading-relaxed">Controle quando o ATIS participa das conversas e ajuste sua identidade ministerial.</p></div>
+          <div><p className="text-[10px] uppercase tracking-[0.2em] text-primary">Configurações do ATIS</p><h2 className="text-xl font-bold mt-1">Personalize o comportamento</h2><p className="text-xs text-[hsl(var(--dark-muted))] mt-2 leading-relaxed">Controle quando o ATIS participa das conversas e ajuste os prompts usados nos atendimentos e conteúdos automáticos.</p></div>
         </div>
       </div>
 
       {error && <div className="rounded-2xl p-4 bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</div>}
       {behaviorSaved && <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">Comportamento salvo. As próximas mensagens já usarão esta configuração.</div>}
+      {birthdaySaved && <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">Prompt de aniversário salvo. As próximas mensagens de aniversário já usarão esta versão.</div>}
       {saved && <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">Prompt salvo. As próximas conversas já usarão esta versão.</div>}
 
       <section className="rounded-3xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]/60 overflow-hidden">
@@ -140,6 +158,19 @@ const AtisSettings = () => {
         </div>
         <div className="p-4 sm:p-5 border-t border-[hsl(var(--dark-card-hover))]/60">
           <button onClick={saveBehavior} disabled={behaviorSaving || !behaviorChanged} className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40">{behaviorSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{behaviorSaving ? "Salvando..." : "Salvar comportamento"}</button>
+        </div>
+      </section>
+
+      <section className="rounded-3xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]/60 overflow-hidden">
+        <div className="p-4 sm:p-5 flex items-start gap-3 border-b border-[hsl(var(--dark-card-hover))]/60">
+          <CakeSlice className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1"><h3 className="text-sm font-bold">Prompt de aniversários</h3><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1 leading-relaxed">Personalize como o ATIS escreve a mensagem automática de aniversariantes. Os nomes vêm do cadastro ATIS e o texto bíblico literal continua vindo da Bíblia ARC do próprio app.</p></div>
+        </div>
+        <div className="p-4 sm:p-5">
+          <textarea value={birthdayPrompt} onChange={(e) => { setBirthdayPrompt(e.target.value); setBirthdaySaved(false); }} rows={16} spellCheck={false} className="w-full min-h-[46dvh] md:min-h-[360px] rounded-2xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] p-4 text-xs sm:text-sm leading-relaxed outline-none focus:border-primary/50 resize-y" />
+          <div className="mt-2 flex items-center justify-between text-[10px] text-[hsl(var(--dark-muted))]"><span>{birthdayPrompt.length.toLocaleString("pt-BR")} / 12.000 caracteres</span><span>{birthdayPrompt === birthdayOriginal ? "Sem alterações" : "Alterações não salvas"}</span></div>
+          <div className="mt-4 rounded-2xl p-3 bg-primary/5 border border-primary/10 flex items-start gap-2"><ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" /><p className="text-[10px] leading-relaxed text-[hsl(var(--dark-muted))]">Mesmo que o prompt seja alterado, o ATIS não pode inventar nomes nem transcrever um versículo que não tenha sido recuperado do acervo ARC do app.</p></div>
+          <button onClick={saveBirthdayPrompt} disabled={birthdaySaving || birthdayPrompt.trim().length < 120 || birthdayPrompt === birthdayOriginal} className="w-full h-12 mt-4 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40">{birthdaySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{birthdaySaving ? "Salvando..." : "Salvar prompt de aniversário"}</button>
         </div>
       </section>
 

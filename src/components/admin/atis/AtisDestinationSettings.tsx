@@ -197,8 +197,8 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm px-3 py-5 sm:px-4 sm:py-8 overflow-y-auto">
-      <div className="w-full max-w-2xl mx-auto rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-start sm:justify-center sm:px-4 sm:py-8 overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[92dvh] sm:max-h-[calc(100vh-4rem)] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] shadow-2xl">
         <div className="p-4 sm:p-5 border-b border-[hsl(var(--dark-card-hover))] flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Configuração do destinatário</p>
@@ -238,7 +238,7 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
             </section>
 
             {renderScheduledSection("Pushes nativos do app → WhatsApp", "Cada push pode seguir o padrão do sistema, sair instantaneamente ou esperar um horário exclusivo deste destinatário.", pushes, "bell")}
-            {renderScheduledSection("Automações ATIS", "Automações próprias do ATIS também obedecem ativação e horário por destinatário.", automations, "cake")}
+            {renderScheduledSection("Conteúdos e automações ATIS", "Conteúdos automáticos do ATIS também têm ativação e horário exclusivos para este destinatário. A Reflexão Devocional usa o Versículo do Dia e o motor devocional já existentes no app.", automations, "cake")}
 
             <div className="rounded-xl p-3 bg-[hsl(var(--dark-bg))] text-[10px] leading-relaxed text-[hsl(var(--dark-muted))]">
               Fuso horário: <strong className="text-[hsl(var(--dark-text))]">America/Fortaleza</strong>. Em push nativo com horário personalizado, se o evento só chegar depois do horário escolhido, a mensagem é liberada naquele momento para não ficar presa até o dia seguinte.

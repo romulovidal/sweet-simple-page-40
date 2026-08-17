@@ -36,11 +36,18 @@ const PUSH_CATALOG: CatalogItem[] = [
 const AUTOMATION_CATALOG: CatalogItem[] = [
   {
     kind: "automation",
+    key: "daily_devotional",
+    label: "Reflexão devocional diária",
+    description: "Gera uma reflexão a partir do Versículo do Dia já existente no app e envia pelo WhatsApp.",
+    systemBehavior: "Segue o horário padrão do Versículo do Dia configurado no app.",
+  },
+  {
+    kind: "automation",
     key: "birthdays",
     label: "Aniversariantes do dia",
     description: "Envia ao grupo a mensagem com os aniversariantes cadastrados para aquele dia.",
     destinations: ["group"],
-    systemBehavior: "O padrão atual do ATIS é enviar assim que o aniversário do dia for detectado.",
+    systemBehavior: "Envia assim que o aniversário do dia for detectado.",
   },
 ];
 

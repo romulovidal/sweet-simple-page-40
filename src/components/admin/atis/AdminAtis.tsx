@@ -74,9 +74,11 @@ function formatDate(value?: string | null) {
   catch { return "—"; }
 }
 
-const AdminAtis = () => {
+type AdminAtisProps = { initialView?: "overview" | "connection" };
+
+const AdminAtis = ({ initialView = "overview" }: AdminAtisProps) => {
   const navigate = useNavigate();
-  const [view, setView] = useState<"overview" | "connection">("overview");
+  const [view, setView] = useState<"overview" | "connection">(initialView);
   const [instance, setInstance] = useState<AtisInstance | null>(null);
   const [metrics, setMetrics] = useState<Metrics>({ contacts: 0, individuals: 0, groups: 0, pending: 0 });
   const [qr, setQr] = useState<string | null>(null);
@@ -115,6 +117,7 @@ const AdminAtis = () => {
   }, [loadMetrics, loadWebhook]);
 
   useEffect(() => { mounted.current = true; void load(); return () => { mounted.current = false; }; }, [load]);
+  useEffect(() => { setView(initialView); }, [initialView]);
 
   const refreshStatus = useCallback(async (silent = false) => {
     if (!instance) return;
@@ -147,7 +150,7 @@ const AdminAtis = () => {
   const connect = () => run("connect", async () => {
     if (!instance) return;
     const result = await invokeAtis<any>("atis-instance", { action: "connect", instance_id: instance.id });
-    setInstance(result.instance); setQr(result.connection?.qr ?? null); setPairingCode(result.connection?.pairing_code ?? null); setView("connection");
+    setInstance(result.instance); setQr(result.connection?.qr ?? null); setPairingCode(result.connection?.pairing_code ?? null); setView("connection"); navigate("/atis/conexao");
   });
   const configureWebhook = () => run("webhook", async () => {
     if (!instance) return;
@@ -184,7 +187,7 @@ const AdminAtis = () => {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl p-5 bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] text-white relative overflow-hidden">
+      <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] text-white relative overflow-hidden">
         <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex items-center gap-4">
           <span className="w-14 h-14 rounded-2xl grid place-items-center bg-white/15"><MessageCircle className="w-7 h-7" /></span>
@@ -193,7 +196,7 @@ const AdminAtis = () => {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="hidden md:flex gap-2">
         <button onClick={() => setView("overview")} className={`h-9 px-4 rounded-xl text-xs font-bold ${view === "overview" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>Visão geral</button>
         <button onClick={() => setView("connection")} className={`h-9 px-4 rounded-xl text-xs font-bold ${view === "connection" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}>Conexão</button>
       </div>

@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
+import { runAtisAssistant } from "../_shared/atis/assistant.ts";
+import { EvolutionProvider, getEvolutionConfigFromEnv } from "../_shared/atis/evolution-provider.ts";
 
 type Json = Record<string, any>;
 type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | "error" | "unknown";
@@ -83,6 +85,38 @@ function messageProviderStatus(item: any) {
   );
 }
 
+function inboundRemoteJid(item: any) {
+  return firstString(item?.key?.remoteJid, item?.remoteJid, item?.message?.key?.remoteJid);
+}
+
+function inboundFromMe(item: any) {
+  return item?.key?.fromMe === true || item?.fromMe === true || item?.message?.key?.fromMe === true;
+}
+
+function inboundText(item: any) {
+  const message = item?.message ?? item?.data?.message ?? {};
+  return firstString(
+    message?.conversation,
+    message?.extendedTextMessage?.text,
+    message?.imageMessage?.caption,
+    message?.videoMessage?.caption,
+    message?.buttonsResponseMessage?.selectedDisplayText,
+    message?.buttonsResponseMessage?.selectedButtonId,
+    message?.listResponseMessage?.title,
+    item?.text,
+    item?.body,
+  );
+}
+
+function inboundSenderName(item: any) {
+  return firstString(item?.pushName, item?.senderName, item?.notifyName, item?.data?.pushName);
+}
+
+function directProviderTarget(remoteJid: string) {
+  if (remoteJid.endsWith("@s.whatsapp.net")) return remoteJid.replace(/@s\.whatsapp\.net$/i, "");
+  return remoteJid;
+}
+
 function safePayload(event: string, body: Json) {
   const data = body?.data;
   const base: Json = {
@@ -105,13 +139,15 @@ function safePayload(event: string, body: Json) {
     };
   }
 
-  if (["MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "SEND_MESSAGE"].includes(event)) {
+  if (["MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "SEND_MESSAGE", "MESSAGES_UPSERT"].includes(event)) {
     return {
       ...base,
       data: messageEntries(data).slice(0, 50).map((item: any) => ({
         message_id: messageId(item),
         status: messageProviderStatus(item),
-        remote_jid: firstString(item?.key?.remoteJid, item?.remoteJid, item?.update?.key?.remoteJid),
+        remote_jid: inboundRemoteJid(item),
+        from_me: inboundFromMe(item),
+        has_text: Boolean(inboundText(item)),
       })),
     };
   }
@@ -172,6 +208,105 @@ async function markDeliveryMetadata(supabase: any, event: string, data: any) {
     }
   }
   return matched;
+}
+
+async function assistantRuntime(supabase: any) {
+  const { data, error } = await supabase.from("atis_settings").select("value").eq("key", "assistant").maybeSingle();
+  if (error) throw error;
+  return {
+    enabled: data?.value?.enabled !== false,
+    autoReplyDirect: data?.value?.auto_reply_direct !== false,
+    autoReplyGroups: data?.value?.auto_reply_groups === true,
+    maxInboundChars: Math.max(100, Math.min(10000, Number(data?.value?.max_inbound_chars ?? 5000))),
+  };
+}
+
+async function processInboundMessages(supabase: any, instance: any, data: any) {
+  const runtime = await assistantRuntime(supabase);
+  if (!runtime.enabled) return { received: 0, replied: 0, ignored: 0, failed: 0 };
+
+  let evolution: EvolutionProvider | null = null;
+  const counts = { received: 0, replied: 0, ignored: 0, failed: 0 };
+
+  for (const item of messageEntries(data).slice(0, 20)) {
+    const providerMessageId = messageId(item);
+    const remoteJid = inboundRemoteJid(item);
+    const text = inboundText(item);
+    if (!providerMessageId || !remoteJid || !text || inboundFromMe(item)) {
+      counts.ignored++;
+      continue;
+    }
+
+    const isGroup = remoteJid.endsWith("@g.us");
+    const limitedText = text.slice(0, runtime.maxInboundChars);
+    const { data: inbound, error: insertError } = await supabase
+      .from("atis_inbound_messages")
+      .insert({
+        instance_id: instance.id,
+        provider_message_id: providerMessageId,
+        remote_jid: remoteJid,
+        sender_name: inboundSenderName(item),
+        message_text: limitedText,
+        is_group: isGroup,
+        status: "received",
+        metadata: { truncated: text.length > limitedText.length },
+      })
+      .select("id")
+      .single();
+
+    if (insertError?.code === "23505") {
+      counts.ignored++;
+      continue;
+    }
+    if (insertError) throw insertError;
+    counts.received++;
+
+    const autoReplyAllowed = isGroup ? runtime.autoReplyGroups : runtime.autoReplyDirect;
+    if (!autoReplyAllowed) {
+      await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString() }).eq("id", inbound.id);
+      counts.ignored++;
+      continue;
+    }
+
+    try {
+      await supabase.from("atis_inbound_messages").update({ status: "processing" }).eq("id", inbound.id);
+      const answer = await runAtisAssistant(supabase, limitedText);
+      if (!evolution) {
+        const config = getEvolutionConfigFromEnv();
+        evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
+      }
+      const sent = await evolution.sendText(
+        instance.external_instance_name || instance.name,
+        directProviderTarget(remoteJid),
+        answer.text,
+      );
+      await supabase.from("atis_inbound_messages").update({
+        assistant_route: answer.route,
+        response_text: answer.text,
+        status: "replied",
+        processed_at: new Date().toISOString(),
+        error: null,
+        metadata: {
+          truncated: text.length > limitedText.length,
+          answer_source: answer.source,
+          answer_reference: answer.reference ?? null,
+          provider_response_message_id: sent.providerMessageId ?? null,
+        },
+      }).eq("id", inbound.id);
+      counts.replied++;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ATIS_ASSISTANT_INBOUND_ERROR";
+      console.error("[atis-webhook] inbound assistant failed", message);
+      await supabase.from("atis_inbound_messages").update({
+        status: "failed",
+        error: message.slice(0, 500),
+        processed_at: new Date().toISOString(),
+      }).eq("id", inbound.id);
+      counts.failed++;
+    }
+  }
+
+  return counts;
 }
 
 Deno.serve(async (req) => {
@@ -240,15 +375,13 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
 
-    if (insertError?.code === "23505") {
-      return json({ ok: true, duplicate: true });
-    }
+    if (insertError?.code === "23505") return json({ ok: true, duplicate: true });
     if (insertError) throw insertError;
-
     if (!instance) return json({ ok: true, ignored: true, reason: "UNKNOWN_INSTANCE" });
 
     const now = new Date().toISOString();
     let deliveryMatches = 0;
+    let inbound = { received: 0, replied: 0, ignored: 0, failed: 0 };
 
     if (event === "QRCODE_UPDATED") {
       const { error } = await supabase.from("atis_instances").update({
@@ -280,6 +413,8 @@ Deno.serve(async (req) => {
       if (error) throw error;
     } else if (["MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "SEND_MESSAGE"].includes(event)) {
       deliveryMatches = await markDeliveryMetadata(supabase, event, body?.data);
+    } else if (event === "MESSAGES_UPSERT") {
+      inbound = await processInboundMessages(supabase, instance, body?.data);
     } else if (event.startsWith("CONTACTS_") || event.startsWith("GROUP")) {
       const marker = event.startsWith("CONTACTS_") ? "contacts_sync_needed_at" : "groups_sync_needed_at";
       const { error } = await supabase.from("atis_instances").update({
@@ -299,7 +434,7 @@ Deno.serve(async (req) => {
     }).eq("id", inserted.id);
     if (processedError) throw processedError;
 
-    return json({ ok: true, event, delivery_matches: deliveryMatches });
+    return json({ ok: true, event, delivery_matches: deliveryMatches, inbound });
   } catch (error) {
     console.error("[atis-webhook] processing failed", error instanceof Error ? error.message : error);
     return json({ error: "WEBHOOK_PROCESSING_FAILED" }, 500);

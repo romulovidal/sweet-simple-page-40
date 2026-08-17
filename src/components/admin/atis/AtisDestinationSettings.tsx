@@ -112,11 +112,13 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError(null);
+    setDirty(false);
     void invoke<{ settings: FeatureSetting[] }>({ action: "get", data: { destination_type: destinationType, id: destinationId } })
       .then((result) => { if (active) setSettings(result.settings ?? []); })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : "Falha ao carregar configurações."); })
@@ -131,6 +133,7 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
 
   const patch = (kind: FeatureKind, key: string, values: Partial<FeatureSetting>) => {
     setSaved(false);
+    setDirty(true);
     setSettings((rows) => rows.map((row) => row.kind === kind && row.key === key ? { ...row, ...values } : row));
   };
 
@@ -159,6 +162,7 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
       });
       setSettings(result.settings ?? settings);
       setSaved(true);
+      setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível salvar.");
     } finally {
@@ -198,8 +202,8 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
 
   return (
     <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-start sm:justify-center sm:px-4 sm:py-8 overflow-hidden">
-      <div className="w-full max-w-2xl max-h-[92dvh] sm:max-h-[calc(100vh-4rem)] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] shadow-2xl">
-        <div className="p-4 sm:p-5 border-b border-[hsl(var(--dark-card-hover))] flex items-start gap-3">
+      <div className="w-full max-w-2xl max-h-[92dvh] sm:max-h-[calc(100vh-4rem)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] shadow-2xl overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[hsl(var(--dark-card-hover))] flex items-start gap-3 shrink-0">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Configuração do destinatário</p>
             <h3 className="text-base font-bold text-[hsl(var(--dark-text))] mt-1 truncate">{destinationName}</h3>
@@ -211,44 +215,51 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
         {loading ? (
           <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : (
-          <div className="p-4 sm:p-5 space-y-5">
-            {error && <div className="rounded-xl p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs">{error}</div>}
-            {saved && <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Configurações salvas para este destinatário.</div>}
-
-            <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
-              <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">
-                <BrainCircuit className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-bold text-[hsl(var(--dark-text))]">Motores de IA</h4>
-                  <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">As respostas conversacionais continuam instantâneas; aqui você apenas libera ou bloqueia cada motor para este destino.</p>
-                  {destinationType === "group" && <p className="text-[10px] text-amber-400 mt-1">Essas permissões não ligam sozinhas respostas automáticas no grupo.</p>}
-                </div>
+          <>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-5 space-y-5">
+              {error && <div className="rounded-xl p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs">{error}</div>}
+              {saved && <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">Configurações salvas para este destinatário.</div>}
+              <div className={`rounded-xl p-3 border text-[10px] leading-relaxed ${dirty ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-primary/5 border-primary/10 text-primary"}`}>
+                {dirty ? "Há alterações ainda não salvas. Toque em Salvar configurações na barra fixa abaixo para colocá-las em funcionamento." : "Os valores exibidos estão salvos no ATIS. Qualquer nova alteração só entra em vigor depois de tocar em Salvar configurações."}
               </div>
-              <div className="divide-y divide-[hsl(var(--dark-card-hover))]/60">
-                {ai.map((item) => (
-                  <div key={item.key} className="p-4 flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-[hsl(var(--dark-text))]">{item.label}</p>
-                      <p className="text-[10px] leading-relaxed text-[hsl(var(--dark-muted))] mt-1">{item.description}</p>
-                    </div>
-                    <Toggle enabled={item.enabled} onClick={() => patch("ai", item.key, { enabled: !item.enabled })} disabled={saving} />
+
+              <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
+                <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">
+                  <BrainCircuit className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-[hsl(var(--dark-text))]">Motores de IA</h4>
+                    <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">As respostas conversacionais continuam instantâneas; aqui você apenas libera ou bloqueia cada motor para este destino.</p>
+                    {destinationType === "group" && <p className="text-[10px] text-amber-400 mt-1">Essas permissões não ligam sozinhas respostas automáticas no grupo.</p>}
                   </div>
-                ))}
+                </div>
+                <div className="divide-y divide-[hsl(var(--dark-card-hover))]/60">
+                  {ai.map((item) => (
+                    <div key={item.key} className="p-4 flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[hsl(var(--dark-text))]">{item.label}</p>
+                        <p className="text-[10px] leading-relaxed text-[hsl(var(--dark-muted))] mt-1">{item.description}</p>
+                      </div>
+                      <Toggle enabled={item.enabled} onClick={() => patch("ai", item.key, { enabled: !item.enabled })} disabled={saving} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {renderScheduledSection("Pushes nativos do app → WhatsApp", "Cada push pode seguir o padrão do sistema, sair instantaneamente ou esperar um horário exclusivo deste destinatário.", pushes, "bell")}
+              {renderScheduledSection("Conteúdos e automações ATIS", "Conteúdos automáticos do ATIS também têm ativação e horário exclusivos para este destinatário. A Reflexão Devocional usa o Versículo do Dia e o motor devocional já existentes no app.", automations, "cake")}
+
+              <div className="rounded-xl p-3 bg-[hsl(var(--dark-bg))] text-[10px] leading-relaxed text-[hsl(var(--dark-muted))]">
+                Fuso horário: <strong className="text-[hsl(var(--dark-text))]">America/Fortaleza</strong>. Em push nativo com horário personalizado, se o evento só chegar depois do horário escolhido, a mensagem é liberada naquele momento para não ficar presa até o dia seguinte.
               </div>
-            </section>
-
-            {renderScheduledSection("Pushes nativos do app → WhatsApp", "Cada push pode seguir o padrão do sistema, sair instantaneamente ou esperar um horário exclusivo deste destinatário.", pushes, "bell")}
-            {renderScheduledSection("Conteúdos e automações ATIS", "Conteúdos automáticos do ATIS também têm ativação e horário exclusivos para este destinatário. A Reflexão Devocional usa o Versículo do Dia e o motor devocional já existentes no app.", automations, "cake")}
-
-            <div className="rounded-xl p-3 bg-[hsl(var(--dark-bg))] text-[10px] leading-relaxed text-[hsl(var(--dark-muted))]">
-              Fuso horário: <strong className="text-[hsl(var(--dark-text))]">America/Fortaleza</strong>. Em push nativo com horário personalizado, se o evento só chegar depois do horário escolhido, a mensagem é liberada naquele momento para não ficar presa até o dia seguinte.
             </div>
 
-            <button onClick={save} disabled={saving || invalidCustomTime} className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {saving ? "Salvando..." : "Salvar configurações"}
-            </button>
-          </div>
+            <div className="shrink-0 p-3 sm:p-4 border-t border-[hsl(var(--dark-card-hover))] bg-[hsl(var(--dark-card))]/95 backdrop-blur pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <button onClick={save} disabled={saving || invalidCustomTime} className={`w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 ${dirty ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] border border-[hsl(var(--dark-card-hover))]"}`}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? "Salvando..." : dirty ? "Salvar configurações" : "Configurações salvas"}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -30,6 +30,7 @@ jobs:
         run: |
           python3 scripts/atis-capabilities-v3-patch.py
           python3 scripts/atis-capabilities-v3-fixes.py
+          python3 scripts/atis-capabilities-v3-fixes2.py
 
       - name: Deno checks
         run: |

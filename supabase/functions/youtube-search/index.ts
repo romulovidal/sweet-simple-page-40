@@ -9,6 +9,26 @@ const cache = new Map<string, { videoId: string; title: string; channel: string;
 const MEMORY_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const DB_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function scoreCandidate(item: any, hymnNumber: number, hymnTitle: string) {
+  const title = normalize(String(item?.snippet?.title ?? ""));
+  const channel = normalize(String(item?.snippet?.channelTitle ?? ""));
+  const wantedTitle = normalize(hymnTitle);
+  const number = String(hymnNumber);
+  let score = 0;
+
+  if (wantedTitle && title.includes(wantedTitle)) score += 10;
+  if (title.includes("harpa crista")) score += 7;
+  else if (title.includes("harpa")) score += 4;
+  if (new RegExp(`(^|\\s)0*${number}(\\s|$)`).test(title)) score += 5;
+  if (title.includes("hino")) score += 2;
+  if (channel.includes("harpa") || channel.includes("hinario") || channel.includes("hinos")) score += 1;
+  return score;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -66,7 +86,7 @@ Deno.serve(async (req) => {
     const url = new URL("https://www.googleapis.com/youtube/v3/search");
     url.searchParams.set("part", "snippet");
     url.searchParams.set("type", "video");
-    url.searchParams.set("maxResults", "1");
+    url.searchParams.set("maxResults", "5");
     url.searchParams.set("videoEmbeddable", "true");
     url.searchParams.set("q", q);
     url.searchParams.set("key", API_KEY);
@@ -91,10 +111,18 @@ Deno.serve(async (req) => {
       return json({ error: "Busca do YouTube temporariamente indisponível", code }, 503);
     }
 
-    const item = data?.items?.[0];
-    if (!item?.id?.videoId) {
+    const candidates = Array.isArray(data?.items)
+      ? data.items.filter((item: any) => item?.id?.videoId)
+      : [];
+    if (!candidates.length) {
       return json({ error: "Nenhum vídeo encontrado" }, 404);
     }
+
+    const ranked = candidates
+      .map((item: any, index: number) => ({ item, index, score: scoreCandidate(item, n, t) }))
+      .sort((a: any, b: any) => b.score - a.score || a.index - b.index);
+    const selected = ranked[0];
+    const item = selected.item;
 
     const result = {
       videoId: item.id.videoId as string,
@@ -116,7 +144,12 @@ Deno.serve(async (req) => {
           youtube_channel: result.channel,
           checked_at: checkedAt,
           expires_at: expiresAt,
-          metadata: { source: "youtube_data_api_v3", query: q },
+          metadata: {
+            source: "youtube_data_api_v3",
+            query: q,
+            candidate_count: candidates.length,
+            selected_score: selected.score,
+          },
         }, { onConflict: "hymn_number" });
         if (upsertError) throw upsertError;
       } catch (error) {
@@ -124,7 +157,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ ...result, cached: false, cache_source: "provider" });
+    return json({ ...result, cached: false, cache_source: "provider", selected_score: selected.score });
   } catch (e) {
     console.error("[youtube-search] error", e);
     return json({ error: "Erro interno" }, 500);

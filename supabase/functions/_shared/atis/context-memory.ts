@@ -43,7 +43,7 @@ function isBibleFollowup(message: string) {
   // Explicitly switching to another app resource should not pull Bible context
   // into the classifier. Cross-resource recommendations are handled by their
   // own tools rather than by leaking prior state into unrelated requests.
-  if (/\b(culto|cultos|cantico|canticos|louvor|louvores|harpa|hino|hinos|aniversari|oracao|pedido de oracao|agenda|programacao)\b/.test(q)) {
+  if (/\b(culto|cultos|cantico|canticos|louvor|louvores|harpa|hino|hinos|aniversario|aniversarios|oracao|pedido de oracao|agenda|programacao)\b/.test(q)) {
     return false;
   }
 

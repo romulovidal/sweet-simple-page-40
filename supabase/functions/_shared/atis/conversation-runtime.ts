@@ -38,8 +38,8 @@ function defaultProfile(type: DestinationType): DestinationProfile {
     timezone: "America/Fortaleza",
     cooldown_seconds: 4,
     max_replies_per_10m: 8,
-    mention_only: type === "group",
-    enable_buttons: true,
+    mention_only: false,
+    enable_buttons: false,
     enable_audio: false,
     continue_in_app: true,
     custom_instruction: null,
@@ -255,9 +255,10 @@ export function assistantButtons(route: string) {
 
 export function normalizeButtonCommand(message: string) {
   const value = message.trim().toLowerCase();
-  if (value === "atis:mode:study") return "modo estudo";
-  if (value === "atis:devotional") return "reflexão devocional";
-  if (value === "atis:app") return "__ATIS_OPEN_APP__";
+  const plain = normalize(message).replace(/^[^a-z0-9]+/g, "");
+  if (value === "atis:mode:study" || plain.includes("modo estudo")) return "modo estudo";
+  if (value === "atis:devotional" || plain.includes("devocional")) return "reflexão devocional";
+  if (value === "atis:app" || plain.includes("abrir app")) return "__ATIS_OPEN_APP__";
   return message;
 }
 

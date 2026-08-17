@@ -20,6 +20,9 @@ import AdminAtis from "@/components/admin/atis/AdminAtis";
 import AtisRecipients from "@/components/admin/atis/AtisRecipients";
 import AtisBirthdays from "@/components/admin/atis/AtisBirthdays";
 import AtisSettings from "@/components/admin/atis/AtisSettings";
+import AtisSend from "@/components/admin/atis/AtisSend";
+import AtisAutomations from "@/components/admin/atis/AtisAutomations";
+import AtisHistory from "@/components/admin/atis/AtisHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -34,6 +37,9 @@ const AtisPage = () => {
   const birthdays = location.pathname.startsWith("/atis/aniversariantes");
   const connection = location.pathname.startsWith("/atis/conexao");
   const settings = location.pathname.startsWith("/atis/configuracoes");
+  const sendView = location.pathname.startsWith("/atis/enviar");
+  const automationsView = location.pathname.startsWith("/atis/automacoes");
+  const historyView = location.pathname.startsWith("/atis/historico");
   const dashboard = location.pathname === "/atis";
 
   useEffect(() => {
@@ -93,14 +99,14 @@ const AtisPage = () => {
           <button onClick={() => navigate("/atis/aniversariantes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${birthdays ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Cake className="w-4 h-4" /> Aniversariantes</button>
           <button onClick={() => navigate("/atis/conexao")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${connection ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Smartphone className="w-4 h-4" /> Conexão</button>
           <button onClick={() => navigate("/atis/configuracoes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${settings ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Settings2 className="w-4 h-4" /> Configurações</button>
-          <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Enviar</span>
-          <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Automações</span>
-          <span className="h-9 px-4 rounded-xl shrink-0 grid place-items-center text-xs font-semibold bg-[hsl(var(--dark-card))]/60 text-[hsl(var(--dark-muted))]/50">Histórico</span>
+          <button onClick={() => navigate("/atis/enviar")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${sendView ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><Send className="w-4 h-4" /> Enviar</button>
+          <button onClick={() => navigate("/atis/automacoes")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${automationsView ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><WandSparkles className="w-4 h-4" /> Automações</button>
+          <button onClick={() => navigate("/atis/historico")} className={`h-9 px-4 rounded-xl shrink-0 text-xs font-bold flex items-center gap-2 ${historyView ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--dark-card))] text-[hsl(var(--dark-muted))]"}`}><History className="w-4 h-4" /> Histórico</button>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-7 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10">
-        {recipients ? <AtisRecipients /> : birthdays ? <AtisBirthdays /> : settings ? <AtisSettings /> : connection ? <AdminAtis initialView="connection" /> : <AdminAtis initialView="overview" />}
+        {recipients ? <AtisRecipients /> : birthdays ? <AtisBirthdays /> : settings ? <AtisSettings /> : sendView ? <AtisSend /> : automationsView ? <AtisAutomations /> : historyView ? <AtisHistory /> : connection ? <AdminAtis initialView="connection" /> : <AdminAtis initialView="overview" />}
       </main>
 
       {moreOpen && (
@@ -113,15 +119,15 @@ const AtisPage = () => {
             <button onClick={() => navigate("/atis/configuracoes")} className={`w-full mt-2 rounded-2xl p-3 flex items-center gap-3 text-left ${settings ? "bg-primary/15 border border-primary/20" : "bg-[hsl(var(--dark-bg))]"}`}><span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/15 text-primary"><Settings2 className="w-5 h-5" /></span><div><p className="text-xs font-bold">Configurações do ATIS</p><p className="text-[10px] text-[hsl(var(--dark-muted))] mt-0.5">Editar prompt e comportamento do assistente</p></div></button>
             <div className="grid grid-cols-3 gap-2 mt-3">
               {[
-                ["Enviar", Send, "Em breve"],
-                ["Automações", WandSparkles, "Em breve"],
-                ["Histórico", History, "Em breve"],
-              ].map(([label, Icon, status]: any) => (
-                <div key={label} className="rounded-2xl bg-[hsl(var(--dark-bg))] p-3 min-h-[92px] flex flex-col items-center justify-center text-center opacity-55">
+                ["Enviar", Send, "/atis/enviar"],
+                ["Automações", WandSparkles, "/atis/automacoes"],
+                ["Histórico", History, "/atis/historico"],
+              ].map(([label, Icon, path]: any) => (
+                <button key={label} onClick={() => navigate(path)} className="rounded-2xl bg-[hsl(var(--dark-bg))] p-3 min-h-[92px] flex flex-col items-center justify-center text-center active:scale-95 transition">
                   <Icon className="w-5 h-5 text-primary" />
                   <p className="text-[11px] font-bold mt-2">{label}</p>
-                  <p className="text-[9px] text-[hsl(var(--dark-muted))] mt-0.5">{status}</p>
-                </div>
+                  <p className="text-[9px] text-emerald-400 mt-0.5">Disponível</p>
+                </button>
               ))}
             </div>
             <button onClick={() => navigate("/admin")} className="w-full h-11 mt-3 rounded-2xl bg-[hsl(var(--dark-bg))] text-xs font-semibold">Abrir Painel Admin</button>
@@ -135,7 +141,7 @@ const AtisPage = () => {
           <button onClick={() => navigate("/atis/destinatarios")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(recipients)}`} aria-current={recipients ? "page" : undefined}><ContactRound className="w-5 h-5" /><span className="text-[9px] font-bold">Destinos</span></button>
           <button onClick={() => navigate("/atis/aniversariantes")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(birthdays)}`} aria-current={birthdays ? "page" : undefined}><Cake className="w-5 h-5" /><span className="text-[9px] font-bold">Anivers.</span></button>
           <button onClick={() => navigate("/atis/conexao")} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${navButton(connection)}`} aria-current={connection ? "page" : undefined}><Smartphone className="w-5 h-5" /><span className="text-[9px] font-bold">Conexão</span></button>
-          <button onClick={() => setMoreOpen((value) => !value)} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${moreOpen || settings ? "text-primary" : "text-[hsl(var(--dark-muted))]"}`} aria-expanded={moreOpen}><MoreHorizontal className="w-5 h-5" /><span className="text-[9px] font-bold">Mais</span></button>
+          <button onClick={() => setMoreOpen((value) => !value)} className={`flex flex-col items-center justify-center gap-1 active:scale-95 transition ${moreOpen || settings || sendView || automationsView || historyView ? "text-primary" : "text-[hsl(var(--dark-muted))]"}`} aria-expanded={moreOpen}><MoreHorizontal className="w-5 h-5" /><span className="text-[9px] font-bold">Mais</span></button>
         </div>
       </nav>
     </div>

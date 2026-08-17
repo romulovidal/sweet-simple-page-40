@@ -54,8 +54,8 @@ async function profileGet(supabase: any, type: DestinationType, id: string) {
     timezone: "America/Fortaleza",
     cooldown_seconds: 4,
     max_replies_per_10m: 8,
-    mention_only: type === "group",
-    enable_buttons: true,
+    mention_only: false,
+    enable_buttons: false,
     enable_audio: false,
     continue_in_app: true,
     custom_instruction: null,
@@ -88,7 +88,7 @@ async function profileSave(supabase: any, auth: any, type: DestinationType, id: 
     cooldown_seconds: clampInt(raw.cooldown_seconds, 4, 0, 300),
     max_replies_per_10m: clampInt(raw.max_replies_per_10m, 8, 1, 50),
     mention_only: type === "group" ? raw.mention_only === true : false,
-    enable_buttons: raw.enable_buttons !== false,
+    enable_buttons: raw.enable_buttons === true,
     enable_audio: raw.enable_audio === true,
     continue_in_app: raw.continue_in_app !== false,
     custom_instruction: customInstruction,
@@ -125,10 +125,21 @@ async function dashboard(supabase: any) {
     routeCounts.set(route, (routeCounts.get(route) ?? 0) + 1);
   }
   const routes = [...routeCounts.entries()].map(([route, count]) => ({ route, count })).sort((a, b) => b.count - a.count).slice(0, 10);
-  const groupByJid = new Map((groups.data ?? []).map((group: any) => [group.provider_group_id, group]));
+  const groupByJid = new Map<string, any>((groups.data ?? []).map((group: any): [string, any] => [String(group.provider_group_id), group]));
   const groupCounts = new Map<string, number>();
-  for (const row of seven) if (row.is_group && groupByJid.has(row.remote_jid)) groupCounts.set(row.remote_jid, (groupCounts.get(row.remote_jid) ?? 0) + 1);
-  const group_metrics = [...groupCounts.entries()].map(([jid, count]) => ({ id: groupByJid.get(jid)?.id, name: groupByJid.get(jid)?.name, messages_7d: count })).sort((a, b) => b.messages_7d - a.messages_7d).slice(0, 12);
+  const groupRoutes = new Map<string, Map<string, number>>();
+  for (const row of seven) {
+    if (!row.is_group || !groupByJid.has(row.remote_jid)) continue;
+    groupCounts.set(row.remote_jid, (groupCounts.get(row.remote_jid) ?? 0) + 1);
+    const route = row.assistant_route || "sem_rota";
+    const routes = groupRoutes.get(row.remote_jid) ?? new Map<string, number>();
+    routes.set(route, (routes.get(route) ?? 0) + 1);
+    groupRoutes.set(row.remote_jid, routes);
+  }
+  const group_metrics = [...groupCounts.entries()].map(([jid, count]) => {
+    const routes = [...(groupRoutes.get(jid)?.entries() ?? [])].sort((a, b) => b[1] - a[1]);
+    return { id: groupByJid.get(jid)?.id, name: groupByJid.get(jid)?.name, messages_7d: count, top_route: routes[0]?.[0] ?? null, top_route_count: routes[0]?.[1] ?? 0, routes: routes.slice(0, 3).map(([route, route_count]) => ({ route, count: route_count })) };
+  }).sort((a, b) => b.messages_7d - a.messages_7d).slice(0, 12);
   return {
     inbound_24h: in24.count ?? in24.data?.length ?? 0,
     inbound_7d: seven.length,

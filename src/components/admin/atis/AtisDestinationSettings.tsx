@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, BrainCircuit, Cake, Clock3, Loader2, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import AtisConversationProfile from "./AtisConversationProfile";
 
 export type AtisDestinationType = "contact" | "individual" | "group";
 type FeatureKind = "ai" | "push" | "automation";
@@ -222,6 +223,8 @@ const AtisDestinationSettings = ({ destinationType, destinationId, destinationNa
               <div className={`rounded-xl p-3 border text-[10px] leading-relaxed ${dirty ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-primary/5 border-primary/10 text-primary"}`}>
                 {dirty ? "Há alterações ainda não salvas. Toque em Salvar configurações na barra fixa abaixo para colocá-las em funcionamento." : "Os valores exibidos estão salvos no ATIS. Qualquer nova alteração só entra em vigor depois de tocar em Salvar configurações."}
               </div>
+
+              <AtisConversationProfile destinationType={destinationType} destinationId={destinationId} />
 
               <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
                 <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3">

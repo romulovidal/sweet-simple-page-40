@@ -99,7 +99,7 @@ function parseBibleReply(text: string) {
   const parts = label.split(/\s+—\s+/u);
   const reference = parts[0]?.trim() ?? "";
   const version = parts[1]?.trim() || "ARC";
-  const match = /^(.+?)\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?)?$/u.exec(reference);
+  const match = /^(.+?)\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?$/u.exec(reference);
   if (!match) return null;
 
   const bookName = match[1].trim();
@@ -415,6 +415,45 @@ export class EvolutionProvider {
       sentText: finalText,
     };
   }
+
+async sendButtons(instanceName: string, target: string, text: string, buttons: Array<{ id: string; text: string }>, footer = "Bíblia do Atalaia") {
+  if (!buttons.length) return await this.sendText(instanceName, target, text);
+  const body: any = await this.request(`/message/sendButtons/${encodeURIComponent(instanceName)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: target,
+      title: "Atis",
+      description: text,
+      footer,
+      buttons: buttons.slice(0, 3).map((button) => ({
+        type: "reply",
+        displayText: button.text.slice(0, 40),
+        id: button.id.slice(0, 120),
+      })),
+    }),
+  }, 30000);
+  return { raw: body, providerMessageId: providerMessageId(body), status: firstString(body?.status, body?.data?.status), sentText: text };
+}
+
+async sendAudio(instanceName: string, target: string, audio: Uint8Array, mimetype = "audio/wav") {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let index = 0; index < audio.length; index += chunk) {
+    binary += String.fromCharCode(...audio.subarray(index, Math.min(index + chunk, audio.length)));
+  }
+  const media = btoa(binary);
+  const body: any = await this.request(`/message/sendMedia/${encodeURIComponent(instanceName)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: target,
+      mediatype: "audio",
+      mimetype,
+      media,
+      fileName: "atis-resposta.wav",
+    }),
+  }, 45000);
+  return { raw: body, providerMessageId: providerMessageId(body), status: firstString(body?.status, body?.data?.status) };
+}
 }
 
 export function getEvolutionConfigFromEnv() {

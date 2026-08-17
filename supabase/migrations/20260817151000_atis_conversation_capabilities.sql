@@ -13,7 +13,7 @@ create table if not exists public.atis_destination_profiles (
   cooldown_seconds integer not null default 4 check (cooldown_seconds between 0 and 300),
   max_replies_per_10m integer not null default 8 check (max_replies_per_10m between 1 and 50),
   mention_only boolean not null default false,
-  enable_buttons boolean not null default true,
+  enable_buttons boolean not null default false,
   enable_audio boolean not null default false,
   continue_in_app boolean not null default true,
   custom_instruction text null check (custom_instruction is null or length(custom_instruction) <= 1000),

@@ -2,6 +2,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "../_shared/cors.ts";
 import { runAtisAssistant } from "../_shared/atis/assistant.ts";
 import { EvolutionProvider, getEvolutionConfigFromEnv } from "../_shared/atis/evolution-provider.ts";
+import {
+  appendContinueInApp,
+  assistantButtons,
+  confirmationCommand,
+  consumeReplyBudget,
+  conversationModeCommand,
+  isPrayerIntent,
+  isQuietNow,
+  loadConversationState,
+  loadDestinationProfile,
+  looksUnanswered,
+  normalizeButtonCommand,
+  prayerContent,
+  recordUnanswered,
+  rememberAnswer,
+  resolvePendingPrayer,
+  setConversationMode,
+  startPrayerConfirmation,
+  type DestinationProfile,
+  type DestinationType as ConversationDestinationType,
+} from "../_shared/atis/conversation-runtime.ts";
 
 type Json = Record<string, any>;
 type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | "error" | "unknown";
@@ -404,6 +425,58 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
   return { destinationType: type, destinationId: id, blocked: false, allowedAiRoutes };
 }
 
+
+async function sendReplyWithProfile(
+  provider: EvolutionProvider,
+  instanceName: string,
+  target: string,
+  text: string,
+  profile: DestinationProfile,
+  route: string | null,
+  withButtons = false,
+) {
+  let sent: any = null;
+  let usedButtons = false;
+  if (withButtons && profile.enable_buttons && route) {
+    try {
+      sent = await provider.sendButtons(instanceName, target, text, assistantButtons(route));
+      usedButtons = true;
+    } catch (error) {
+      console.error("[atis-webhook] interactive buttons failed; falling back to text", error instanceof Error ? error.message : error);
+    }
+  }
+  if (!sent) sent = await provider.sendText(instanceName, target, text);
+
+  let audioSent = false;
+  if (profile.enable_audio && text.length <= 1800) {
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (supabaseUrl && serviceKey) {
+        const cleanText = text.replace(/https?:\/\/\S+/g, "").replace(/[\*_`>#]/g, " ").replace(/\s+/g, " ").trim().slice(0, 1200);
+        if (cleanText.length >= 8) {
+          const response = await fetch(`${supabaseUrl}/functions/v1/tts-verse`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ text: cleanText }),
+          });
+          if (response.ok) {
+            const bytes = new Uint8Array(await response.arrayBuffer());
+            if (bytes.length > 44 && bytes.length < 8_000_000) {
+              await provider.sendAudio(instanceName, target, bytes, response.headers.get("content-type") || "audio/wav");
+              audioSent = true;
+            }
+          } else {
+            console.error("[atis-webhook] optional TTS unavailable", response.status);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[atis-webhook] optional audio reply failed", error instanceof Error ? error.message : error);
+    }
+  }
+  return { sent, usedButtons, audioSent };
+}
 async function processInboundMessages(supabase: any, instance: any, data: any) {
   const runtime = await assistantRuntime(supabase);
   if (!runtime.enabled) return { received: 0, replied: 0, ignored: 0, failed: 0 };
@@ -411,89 +484,40 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
   let evolution: EvolutionProvider | null = null;
   let ownerMentionIds: string[] | null = null;
   const counts = { received: 0, replied: 0, ignored: 0, failed: 0 };
+  const providerInstanceName = instance.external_instance_name || instance.name;
 
   for (const item of messageEntries(data).slice(0, 20)) {
     const providerMessageId = messageId(item);
     const remoteJid = inboundRemoteJid(item);
-    const text = inboundText(item);
-    if (!providerMessageId || !remoteJid || !text || inboundFromMe(item)) {
+    const rawText = inboundText(item);
+    if (!providerMessageId || !remoteJid || !rawText || inboundFromMe(item)) {
       counts.ignored++;
       continue;
     }
 
     const isGroup = remoteJid.endsWith("@g.us");
-    const limitedText = text.slice(0, runtime.maxInboundChars);
+    const limitedText = rawText.slice(0, runtime.maxInboundChars);
+    const commandText = normalizeButtonCommand(limitedText);
+    const senderName = inboundSenderName(item);
     const { data: inbound, error: insertError } = await supabase
       .from("atis_inbound_messages")
       .insert({
         instance_id: instance.id,
         provider_message_id: providerMessageId,
         remote_jid: remoteJid,
-        sender_name: inboundSenderName(item),
+        sender_name: senderName,
         message_text: limitedText,
         is_group: isGroup,
         status: "received",
-        metadata: { truncated: text.length > limitedText.length },
+        metadata: { truncated: rawText.length > limitedText.length },
       })
       .select("id")
       .single();
 
-    if (insertError?.code === "23505") {
-      counts.ignored++;
-      continue;
-    }
+    if (insertError?.code === "23505") { counts.ignored++; continue; }
     if (insertError) throw insertError;
     counts.received++;
 
-    // Optional quiet group mode: ignore general group chatter and answer only when
-    // someone writes the name "Atis" or explicitly @mentions the connected account.
-    if (isGroup && runtime.groupMentionOnly) {
-      let addressedToAtis = textCallsAtis(limitedText);
-      const mentionedJids = inboundMentionedJids(item);
-
-      if (!addressedToAtis && mentionedJids.length > 0) {
-        if (ownerMentionIds === null) {
-          ownerMentionIds = providerOwnerMentionIds({
-            ownerJid: instance?.metadata?.owner_jid,
-            owner: instance?.metadata?.owner,
-            number: instance?.metadata?.owner_number,
-          });
-          if (!ownerMentionIds.length) {
-            try {
-              if (!evolution) {
-                const config = getEvolutionConfigFromEnv();
-                evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
-              }
-              const providerInstances = await evolution.fetchInstances(instance.external_instance_name || instance.name);
-              ownerMentionIds = providerOwnerMentionIds(providerInstances);
-            } catch (error) {
-              console.error("[atis-webhook] could not resolve own JID for group mention", error instanceof Error ? error.message : error);
-              ownerMentionIds = [];
-            }
-          }
-        }
-        const mentionedIdentities = mentionedJids.map(normalizeMentionIdentity).filter(Boolean) as string[];
-        addressedToAtis = mentionedIdentities.some((id) => ownerMentionIds?.includes(id));
-      }
-
-      if (!addressedToAtis) {
-        await supabase.from("atis_inbound_messages").update({
-          status: "ignored",
-          processed_at: new Date().toISOString(),
-          metadata: {
-            truncated: text.length > limitedText.length,
-            policy: "group_mention_only",
-            mentioned_jids_count: mentionedJids.length,
-          },
-        }).eq("id", inbound.id);
-        counts.ignored++;
-        continue;
-      }
-    }
-
-    // App contacts can revoke WhatsApp consent by sending exactly "sair". The profile is
-    // updated as the source of truth and the ATIS contact is locked until the user opts in
-    // again from the authenticated app profile.
     if (!isGroup && isContactOptOutCommand(limitedText)) {
       const phone = remoteJidPhone(remoteJid);
       if (phone) {
@@ -507,10 +531,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
         if (contact) {
           const now = new Date().toISOString();
           if (contact.user_id) {
-            const { error: profileError } = await supabase
-              .from("profiles")
-              .update({ whatsapp_opt_in: false })
-              .eq("user_id", contact.user_id);
+            const { error: profileError } = await supabase.from("profiles").update({ whatsapp_opt_in: false }).eq("user_id", contact.user_id);
             if (profileError) throw profileError;
           }
           const { error: contactUpdateError } = await supabase.from("atis_contacts").update({
@@ -521,38 +542,16 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
             consent_updated_at: now,
           }).eq("id", contact.id);
           if (contactUpdateError) throw contactUpdateError;
-
           await supabase.from("atis_message_targets").update({
             status: "cancelled",
             last_error_code: "CONTACT_OPTED_OUT",
             last_error_message: "Recipient sent SAIR. Reactivation is allowed only from the app.",
             updated_at: now,
           }).eq("contact_id", contact.id).eq("status", "pending");
-
           const confirmation = "✅ Pronto! Você não receberá mais mensagens do ATIS. Para reativar, abra o app *A Bíblia do Atalaia* → *Perfil* → *Notificações no WhatsApp* e autorize novamente. 🙏";
-          if (!evolution) {
-            const config = getEvolutionConfigFromEnv();
-            evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
-          }
-          const sent = await evolution.sendText(
-            instance.external_instance_name || instance.name,
-            directProviderTarget(remoteJid),
-            confirmation,
-          );
-          await supabase.from("atis_inbound_messages").update({
-            assistant_route: null,
-            response_text: confirmation,
-            status: "replied",
-            processed_at: now,
-            error: null,
-            metadata: {
-              truncated: text.length > limitedText.length,
-              action: "contact_opt_out",
-              reactivation_requires_app: true,
-              contact_id: contact.id,
-              provider_response_message_id: sent.providerMessageId ?? null,
-            },
-          }).eq("id", inbound.id);
+          if (!evolution) { const config = getEvolutionConfigFromEnv(); evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey }); }
+          const sent = await evolution.sendText(providerInstanceName, directProviderTarget(remoteJid), confirmation);
+          await supabase.from("atis_inbound_messages").update({ assistant_route: null, response_text: confirmation, status: "replied", processed_at: now, error: null, metadata: { action: "contact_opt_out", contact_id: contact.id, provider_response_message_id: sent.providerMessageId ?? null } }).eq("id", inbound.id);
           counts.replied++;
           continue;
         }
@@ -561,57 +560,131 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
 
     const autoReplyAllowed = isGroup ? runtime.autoReplyGroups : runtime.autoReplyDirect;
     if (!autoReplyAllowed) {
-      await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString() }).eq("id", inbound.id);
+      await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: "auto_reply_disabled" } }).eq("id", inbound.id);
       counts.ignored++;
       continue;
     }
 
+    let policyForFailure: any = null;
     try {
       const policy = await resolveDestinationAiPolicy(supabase, instance, remoteJid);
-      if (policy.blocked) {
-        await supabase.from("atis_inbound_messages").update({
-          status: "ignored",
-          processed_at: new Date().toISOString(),
-          metadata: {
-            truncated: text.length > limitedText.length,
-            destination_type: policy.destinationType,
-            destination_id: policy.destinationId,
-            policy: "blocked",
-          },
-        }).eq("id", inbound.id);
+      policyForFailure = policy;
+      if (policy.blocked || !policy.destinationType || !policy.destinationId) {
+        await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { destination_type: policy.destinationType, destination_id: policy.destinationId, policy: "blocked_or_unknown" } }).eq("id", inbound.id);
         counts.ignored++;
+        continue;
+      }
+      const destinationType = policy.destinationType as ConversationDestinationType;
+      const destinationId = policy.destinationId as string;
+      const profile = await loadDestinationProfile(supabase, destinationType, destinationId);
+      const state = await loadConversationState(supabase, instance.id, remoteJid, destinationType, destinationId, profile.conversation_mode);
+
+      if (isGroup && (runtime.groupMentionOnly || profile.mention_only)) {
+        let addressedToAtis = textCallsAtis(limitedText);
+        const mentionedJids = inboundMentionedJids(item);
+        if (!addressedToAtis && mentionedJids.length > 0) {
+          if (ownerMentionIds === null) {
+            ownerMentionIds = providerOwnerMentionIds({ ownerJid: instance?.metadata?.owner_jid, owner: instance?.metadata?.owner, number: instance?.metadata?.owner_number });
+            if (!ownerMentionIds.length) {
+              try {
+                if (!evolution) { const config = getEvolutionConfigFromEnv(); evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey }); }
+                ownerMentionIds = providerOwnerMentionIds(await evolution.fetchInstances(providerInstanceName));
+              } catch (error) {
+                console.error("[atis-webhook] could not resolve own JID for group mention", error instanceof Error ? error.message : error);
+                ownerMentionIds = [];
+              }
+            }
+          }
+          const mentioned = mentionedJids.map(normalizeMentionIdentity).filter(Boolean) as string[];
+          addressedToAtis = mentioned.some((id) => ownerMentionIds?.includes(id));
+        }
+        if (!addressedToAtis) {
+          await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: "group_mention_only", destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
+          counts.ignored++;
+          continue;
+        }
+      }
+
+      if (isQuietNow(profile)) {
+        await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: "quiet_hours", destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
+        counts.ignored++;
+        continue;
+      }
+
+      let specialReply: string | null = null;
+      let specialRoute: string | null = null;
+      const mode = conversationModeCommand(commandText);
+      const confirmation = confirmationCommand(commandText);
+
+      if (commandText === "__ATIS_OPEN_APP__") {
+        specialReply = "📱 Continue na *Bíblia do Atalaia*:\nhttps://biblia.atalaias.online";
+        specialRoute = "open_app";
+      } else if (mode) {
+        await setConversationMode(supabase, state.id, mode.mode);
+        state.conversation_mode = mode.mode;
+        specialReply = mode.text;
+        specialRoute = "conversation_mode";
+      } else if (!isGroup && confirmation && state?.pending_action?.type === "prayer_request") {
+        specialReply = await resolvePendingPrayer(supabase, state, confirmation, { instanceId: instance.id, remoteJid, senderName, destinationType, destinationId });
+        specialRoute = "prayer_request";
+      } else if (isPrayerIntent(commandText)) {
+        if (isGroup) {
+          specialReply = "🙏 Para proteger sua privacidade, envie o pedido de oração *no privado do ATIS*. Eu só registro o pedido depois de pedir sua confirmação.";
+        } else {
+          specialReply = await startPrayerConfirmation(supabase, state.id, prayerContent(commandText));
+        }
+        specialRoute = "prayer_request";
+      }
+
+      const budget = await consumeReplyBudget(supabase, instance.id, remoteJid, profile);
+      if (budget?.allowed !== true) {
+        await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: String(budget?.reason ?? "rate_limit").toLowerCase(), retry_after_seconds: budget?.retry_after_seconds ?? null, destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
+        counts.ignored++;
+        continue;
+      }
+
+      if (!evolution) { const config = getEvolutionConfigFromEnv(); evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey }); }
+
+      if (specialReply) {
+        const delivery = await sendReplyWithProfile(evolution, providerInstanceName, directProviderTarget(remoteJid), specialReply, { ...profile, enable_audio: false }, specialRoute, false);
+        await supabase.from("atis_inbound_messages").update({ assistant_route: specialRoute, response_text: specialReply, status: "replied", processed_at: new Date().toISOString(), error: null, metadata: { destination_type: destinationType, destination_id: destinationId, provider_response_message_id: delivery.sent?.providerMessageId ?? null, special_action: specialRoute } }).eq("id", inbound.id);
+        counts.replied++;
         continue;
       }
 
       await supabase.from("atis_inbound_messages").update({ status: "processing" }).eq("id", inbound.id);
       const conversationHistory = await loadConversationHistory(supabase, instance.id, remoteJid, runtime.historyInteractions);
-      const answer = await runAtisAssistant(supabase, limitedText, {
+      const styleInstruction = [
+        profile.response_style === "concise" ? "Prefira respostas curtas." : profile.response_style === "detailed" ? "Quando útil, dê uma explicação um pouco mais detalhada." : null,
+        profile.custom_instruction,
+      ].filter(Boolean).join(" ");
+      const answer = await runAtisAssistant(supabase, commandText, {
         allowedAiRoutes: policy.allowedAiRoutes,
         conversationHistory,
+        conversationMode: state.conversation_mode ?? profile.conversation_mode,
+        destinationInstruction: styleInstruction || null,
       });
-      if (!evolution) {
-        const config = getEvolutionConfigFromEnv();
-        evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
+      const answerText = appendContinueInApp(answer.text, answer.route, profile.continue_in_app, answer.reference);
+      const delivery = await sendReplyWithProfile(evolution, providerInstanceName, directProviderTarget(remoteJid), answerText, profile, answer.route, true);
+      await rememberAnswer(supabase, state.id, answer.route, answer.reference, commandText);
+      if (looksUnanswered(answerText, answer.route)) {
+        await recordUnanswered(supabase, { inboundId: inbound.id, destinationType, destinationId, question: limitedText, route: answer.route, answer: answerText, reason: "assistant_uncertain" });
       }
-      const sent = await evolution.sendText(
-        instance.external_instance_name || instance.name,
-        directProviderTarget(remoteJid),
-        answer.text,
-      );
       await supabase.from("atis_inbound_messages").update({
         assistant_route: answer.route,
-        response_text: answer.text,
+        response_text: answerText,
         status: "replied",
         processed_at: new Date().toISOString(),
         error: null,
         metadata: {
-          truncated: text.length > limitedText.length,
           answer_source: answer.source,
           answer_reference: answer.reference ?? null,
-          provider_response_message_id: sent.providerMessageId ?? null,
-          destination_type: policy.destinationType,
-          destination_id: policy.destinationId,
-          ai_policy_applied: Array.isArray(policy.allowedAiRoutes),
+          provider_response_message_id: delivery.sent?.providerMessageId ?? null,
+          destination_type: destinationType,
+          destination_id: destinationId,
+          conversation_mode: state.conversation_mode ?? profile.conversation_mode,
+          buttons_sent: delivery.usedButtons,
+          audio_sent: delivery.audioSent,
           history_interactions_used: Math.floor(conversationHistory.length / 2),
           history_messages_used: conversationHistory.length,
         },
@@ -620,18 +693,20 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "ATIS_ASSISTANT_INBOUND_ERROR";
       console.error("[atis-webhook] inbound assistant failed", message);
-      await supabase.from("atis_inbound_messages").update({
-        status: "failed",
-        error: message.slice(0, 500),
-        processed_at: new Date().toISOString(),
-      }).eq("id", inbound.id);
+      await supabase.from("atis_inbound_messages").update({ status: "failed", error: message.slice(0, 500), processed_at: new Date().toISOString() }).eq("id", inbound.id);
+      if (policyForFailure?.destinationType && policyForFailure?.destinationId) {
+        try {
+          await recordUnanswered(supabase, { inboundId: inbound.id, destinationType: policyForFailure.destinationType, destinationId: policyForFailure.destinationId, question: limitedText, reason: `error:${message.slice(0, 120)}` });
+        } catch (recordError) {
+          console.error("[atis-webhook] could not record unanswered", recordError instanceof Error ? recordError.message : recordError);
+        }
+      }
       counts.failed++;
     }
   }
 
   return counts;
 }
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405);

@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   ShieldCheck,
   Smartphone,
   Trash2,
@@ -17,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import AtisDestinationSettings, { type AtisDestinationType } from "./AtisDestinationSettings";
 
 type Tab = "contacts" | "individuals" | "groups";
 
@@ -70,6 +72,12 @@ type Member = {
   display_name?: string | null;
   is_admin: boolean;
   is_super_admin: boolean;
+};
+
+type ConfigurationTarget = {
+  type: AtisDestinationType;
+  id: string;
+  name: string;
 };
 
 async function functionErrorMessage(error: any) {
@@ -126,6 +134,7 @@ const AtisRecipients = () => {
   const [availableGroups, setAvailableGroups] = useState<AvailableGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [configurationTarget, setConfigurationTarget] = useState<ConfigurationTarget | null>(null);
 
   const clearMessages = () => { setError(null); setNotice(null); };
 
@@ -156,6 +165,11 @@ const AtisRecipients = () => {
     try { await task(); }
     catch (err) { setError(err instanceof Error ? err.message : "Não foi possível concluir a operação."); }
     finally { setBusy(null); }
+  };
+
+  const openConfiguration = (type: AtisDestinationType, id: string, targetName: string) => {
+    clearMessages();
+    setConfigurationTarget({ type, id, name: targetName });
   };
 
   const filteredContacts = useMemo(() => {
@@ -251,7 +265,7 @@ const AtisRecipients = () => {
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Destinatários ATIS</p>
             <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] mt-1">Controle quem pode receber mensagens</h2>
-            <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Contatos vêm somente do cadastro do app. Individuais são manuais. Grupos só entram quando você escolher.</p>
+            <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Contatos vêm somente do cadastro do app. Individuais são manuais. Grupos só entram quando você escolher. O botão de configuração define IAs e pushes por destino.</p>
           </div>
           <button onClick={() => void loadAll()} disabled={busy !== null} className="h-10 px-4 rounded-xl bg-[hsl(var(--dark-bg))] text-xs font-semibold text-[hsl(var(--dark-text))] flex items-center justify-center gap-2 disabled:opacity-40">
             <RefreshCw className="w-4 h-4" /> Atualizar
@@ -295,6 +309,7 @@ const AtisRecipients = () => {
                 <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-0.5">{formatPhone(contact.phone_e164)}</p>
                 <p className={`text-[10px] mt-1 ${contact.whatsapp_opt_in ? "text-emerald-400" : "text-amber-400"}`}>{contact.whatsapp_opt_in ? "Opt-in ativo" : "Sem opt-in para automações"}{contact.blocked ? " • Bloqueado no ATIS" : ""}</p>
               </div>
+              <button onClick={() => openConfiguration("contact", contact.id, contact.name)} title="Configurar IAs e pushes" className="w-9 h-9 rounded-xl grid place-items-center bg-primary/10 text-primary"><Settings2 className="w-4 h-4" /></button>
               <button onClick={() => toggleContactBlock(contact)} disabled={busy !== null} title={contact.blocked ? "Desbloquear no ATIS" : "Bloquear no ATIS"} className={`w-9 h-9 rounded-xl grid place-items-center ${contact.blocked ? "bg-destructive/15 text-destructive" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"}`}><Ban className="w-4 h-4" /></button>
             </div>
           ))}
@@ -308,6 +323,7 @@ const AtisRecipients = () => {
               <div className="flex items-center gap-3">
                 <span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/15 text-primary shrink-0"><Smartphone className="w-5 h-5" /></span>
                 <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{person.name}</p><p className="text-[11px] text-[hsl(var(--dark-muted))]">{formatPhone(person.phone_e164)}</p><p className={`text-[10px] mt-1 ${person.blocked || !person.allow_messages ? "text-amber-400" : "text-emerald-400"}`}>{person.blocked ? "Bloqueado" : person.allow_messages ? "Envios permitidos" : "Envios desativados"}</p></div>
+                <button onClick={() => openConfiguration("individual", person.id, person.name)} title="Configurar IAs e pushes" className="w-9 h-9 rounded-xl grid place-items-center bg-primary/10 text-primary"><Settings2 className="w-4 h-4" /></button>
                 <button onClick={() => openEditIndividual(person)} className="w-9 h-9 rounded-xl grid place-items-center bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"><Pencil className="w-4 h-4" /></button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -324,7 +340,11 @@ const AtisRecipients = () => {
         <div className="space-y-2">
           {filteredGroups.length === 0 ? <Empty text="Nenhum grupo cadastrado no ATIS. Toque em + Grupo para escolher entre os grupos do WhatsApp conectado." /> : filteredGroups.map((group) => (
             <div key={group.id} className="rounded-2xl p-4 bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))]/50">
-              <div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/15 text-primary shrink-0"><UsersRound className="w-5 h-5" /></span><div className="min-w-0 flex-1"><p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{group.name}</p><p className="text-[11px] text-[hsl(var(--dark-muted))]">{group.participant_count ?? 0} participantes</p><p className={`text-[10px] mt-1 ${group.provider_exists ? "text-emerald-400" : "text-destructive"}`}>{group.provider_exists ? "Disponível no WhatsApp" : "Não localizado no WhatsApp"}</p></div></div>
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/15 text-primary shrink-0"><UsersRound className="w-5 h-5" /></span>
+                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[hsl(var(--dark-text))] truncate">{group.name}</p><p className="text-[11px] text-[hsl(var(--dark-muted))]">{group.participant_count ?? 0} participantes</p><p className={`text-[10px] mt-1 ${group.provider_exists ? "text-emerald-400" : "text-destructive"}`}>{group.provider_exists ? "Disponível no WhatsApp" : "Não localizado no WhatsApp"}</p></div>
+                <button onClick={() => openConfiguration("group", group.id, group.name)} title="Configurar IAs e pushes" className="w-9 h-9 rounded-xl grid place-items-center bg-primary/10 text-primary shrink-0"><Settings2 className="w-4 h-4" /></button>
+              </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <button onClick={() => toggleGroup(group, "allow_manual_send")} disabled={busy !== null} className={`h-9 rounded-xl text-[10px] font-bold border ${group.allow_manual_send ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] border-[hsl(var(--dark-card-hover))]"}`}>Envio manual {group.allow_manual_send ? "ON" : "OFF"}</button>
                 <button onClick={() => toggleGroup(group, "allow_automations")} disabled={busy !== null} className={`h-9 rounded-xl text-[10px] font-bold border ${group.allow_automations ? "bg-primary/10 text-primary border-primary/20" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))] border-[hsl(var(--dark-card-hover))]"}`}>Automações {group.allow_automations ? "ON" : "OFF"}</button>
@@ -352,6 +372,15 @@ const AtisRecipients = () => {
         <Overlay onClose={() => { setSelectedGroup(null); setMembers([]); }} title={`Participantes — ${selectedGroup.name}`}>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">{members.length === 0 ? <Empty text="Nenhum participante retornado." /> : members.map((member) => <div key={member.provider_member_id} className="p-3 rounded-xl bg-[hsl(var(--dark-bg))] flex items-center gap-3"><UserRound className="w-4 h-4 text-[hsl(var(--dark-muted))]" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-[hsl(var(--dark-text))] truncate">{member.display_name || member.phone_e164 || member.provider_member_id}</p>{member.phone_e164 && <p className="text-[10px] text-[hsl(var(--dark-muted))]">{formatPhone(member.phone_e164)}</p>}</div>{(member.is_admin || member.is_super_admin) && <ShieldCheck className="w-4 h-4 text-primary" />}</div>)}</div>
         </Overlay>
+      )}
+
+      {configurationTarget && (
+        <AtisDestinationSettings
+          destinationType={configurationTarget.type}
+          destinationId={configurationTarget.id}
+          destinationName={configurationTarget.name}
+          onClose={() => setConfigurationTarget(null)}
+        />
       )}
 
       <style>{`.field{width:100%;height:44px;border-radius:12px;background:hsl(var(--dark-bg));border:1px solid hsl(var(--dark-card-hover));padding-left:12px;padding-right:12px;font-size:13px;color:hsl(var(--dark-text));outline:none}.field:focus{border-color:hsl(var(--primary)/.55)}`}</style>

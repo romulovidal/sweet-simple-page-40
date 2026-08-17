@@ -3,7 +3,7 @@ import { validateAdminAuth } from "../_shared/auth-utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { runAtisAssistant } from "../_shared/atis/assistant.ts";
 
-// ATIS assistant behavior, including daily devotional grounding, is centralized in _shared/atis/assistant.ts.
+// ATIS assistant behavior, daily devotional grounding and trusted verse fallback are centralized in _shared/atis/assistant.ts.
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,

@@ -65,5 +65,6 @@ jobs:
           git add supabase/functions/_shared/atis/assistant.ts
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "feat: let ATIS answer culto schedule and ministry questions"
+          git reset --hard HEAD
           git pull --rebase origin main
           git push origin main

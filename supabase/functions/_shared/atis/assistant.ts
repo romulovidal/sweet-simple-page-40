@@ -21,11 +21,16 @@ export type AtisAssistantResult = {
   reference?: string | null;
 };
 
+export type AtisAssistantOptions = {
+  allowedAiRoutes?: string[] | null;
+};
+
 type BibleBook = { abbrev: string; name?: string; chapters: string[][] };
 type BibleReference = { book: BibleBook; bookName: string; chapter: number; verseStart?: number; verseEnd?: number };
 
 const DEFAULT_BASE_URL = "https://biblia.atalaias.online";
 const DEFAULT_ATIS_PROMPT = "Você é Atis, assistente virtual ministerial. Responda em português brasileiro, de forma acolhedora, concisa e fiel às Escrituras. Nunca invente dados que devam ser consultados no aplicativo.";
+const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional"]);
 const CANONICAL_BOOKS = [
   "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios", "Eclesiastes", "Cantares", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oséias", "Joel", "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias", "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse",
 ];
@@ -297,7 +302,7 @@ async function generateSpecialistAnswer(
   return clampText(guardUngroundedBibleQuotes(text, bibleContext?.text ?? null));
 }
 
-export async function runAtisAssistant(supabase: any, message: string): Promise<AtisAssistantResult> {
+export async function runAtisAssistant(supabase: any, message: string, options: AtisAssistantOptions = {}): Promise<AtisAssistantResult> {
   const input = firstString(message);
   if (!input) return { text: "Como posso ajudar? 😊", route: "ask_bible", source: "ai" };
 
@@ -306,6 +311,14 @@ export async function runAtisAssistant(supabase: any, message: string): Promise<
 
   let route = deterministicIntent(input);
   if (!route) route = await classifyWithAi(config.systemPrompt, input);
+
+  if (AI_ROUTES.has(route) && Array.isArray(options.allowedAiRoutes) && !options.allowedAiRoutes.includes(route)) {
+    return {
+      text: "🔒 Este recurso de IA não está habilitado para esta conversa. Um administrador pode ativá-lo nas configurações deste destinatário.",
+      route,
+      source: "database",
+    };
+  }
 
   if (route === "birthdays") {
     return { text: await birthdaysLookup(supabase, input), route, source: "database" };

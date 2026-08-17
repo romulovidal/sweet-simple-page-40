@@ -1,0 +1,53 @@
+name: Fix ATIS group responses
+
+on:
+  push:
+    paths:
+      - '.github/workflows/atis-fix-group-responses.yml'
+      - '.github/scripts/patch_atis_group_responses.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply ATIS group response patch
+        run: python .github/scripts/patch_atis_group_responses.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --package-lock=false --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check Edge Functions
+        run: |
+          deno check supabase/functions/atis-webhook/index.ts
+          deno check supabase/functions/atis-settings/index.ts
+
+      - name: Commit implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/atis-webhook/index.ts supabase/functions/atis-settings/index.ts src/components/admin/atis/AtisSettings.tsx
+          if git diff --cached --quiet; then
+            echo 'No implementation changes to commit.'
+            exit 0
+          fi
+          git commit -m 'fix: enable ATIS group replies and mention-only mode'
+          git push

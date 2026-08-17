@@ -66,3 +66,5 @@ jobs:
 
       - name: Deploy ATIS webhook only
         run: supabase functions deploy atis-webhook --project-ref "$SUPABASE_PROJECT_ID"
+
+# rerun after direct-recipient typing fix

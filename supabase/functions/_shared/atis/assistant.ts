@@ -67,6 +67,23 @@ function clampText(value: string, max = 3800) {
   return `${text.slice(0, max - 55).trimEnd()}\n\n… conteúdo reduzido para envio no WhatsApp.`;
 }
 
+function normalizedQuote(value: string) {
+  return normalize(value).replace(/\s+/g, " ");
+}
+
+function guardUngroundedBibleQuotes(value: string, bibleContext: string | null) {
+  const source = bibleContext ? normalizedQuote(bibleContext) : "";
+  const replacement = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
+  const protect = (full: string, quoted: string) => {
+    if (quoted.trim().length < 24) return full;
+    if (source && source.includes(normalizedQuote(quoted))) return full;
+    return replacement;
+  };
+  return value
+    .replace(/“([^”\n]{24,})”/g, protect)
+    .replace(/"([^"\n]{24,})"/g, protect);
+}
+
 async function fetchJsonCached(url: string, kind: "bible" | "harpa") {
   const cached = kind === "bible" ? bibleCache : harpaCache;
   if (cached?.url === url) return cached.data;
@@ -260,7 +277,7 @@ async function generateSpecialistAnswer(
 ) {
   const specialist = specialistPrompt(route, prompts) ?? "Responda fielmente à solicitação usando somente informações que você possa sustentar.";
   const context = bibleContext ? `\n\nCONTEXTO BÍBLICO RECUPERADO DO APP (${config.bibleVersion})\n${bibleContext.label}\n${bibleContext.text}` : "";
-  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.${context}`;
+  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.${context}`;
   const response = await aiChatFetchWithProviders({
     model: route === "exegetai" || route === "timeline" ? "llama-3.3-70b-versatile" : "llama-3.3-70b-versatile",
     messages: [
@@ -277,7 +294,7 @@ async function generateSpecialistAnswer(
   const body = await response.json().catch(() => null) as any;
   const text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  return clampText(text);
+  return clampText(guardUngroundedBibleQuotes(text, bibleContext?.text ?? null));
 }
 
 export async function runAtisAssistant(supabase: any, message: string): Promise<AtisAssistantResult> {

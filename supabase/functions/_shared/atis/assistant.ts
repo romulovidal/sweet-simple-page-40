@@ -1,4 +1,5 @@
 import { aiChatFetchWithProviders } from "../ai-fetch.ts";
+import { cultoLookup, isCultoIntent } from "./culto-lookup.ts";
 
 type Json = Record<string, any>;
 export type AtisAssistantRoute =
@@ -12,7 +13,8 @@ export type AtisAssistantRoute =
   | "daily_verse"
   | "birthdays"
   | "bible_lookup"
-  | "harpa_lookup";
+  | "harpa_lookup"
+  | "culto_info";
 
 export type AtisAssistantResult = {
   text: string;
@@ -140,6 +142,7 @@ async function loadSpecialistPrompts(supabase: any) {
 
 function deterministicIntent(message: string): AtisAssistantRoute | null {
   const q = normalize(message);
+  if (isCultoIntent(message)) return "culto_info";
   if (/aniversari/.test(q)) return "birthdays";
   if (/\b(harpa|hino)\b/.test(q)) return "harpa_lookup";
   if (/versiculo do dia|verso do dia/.test(q)) return "daily_verse";
@@ -154,7 +157,7 @@ function deterministicIntent(message: string): AtisAssistantRoute | null {
 }
 
 async function classifyWithAi(systemPrompt: string, message: string, history: AtisConversationMessage[] = []): Promise<AtisAssistantRoute> {
-  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup"];
+  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "culto_info"];
   const response = await aiChatFetchWithProviders({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -446,6 +449,9 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     };
   }
 
+  if (route === "culto_info") {
+    return { text: await cultoLookup(supabase, input), route, source: "database" };
+  }
   if (route === "birthdays") {
     return { text: await birthdaysLookup(supabase, input), route, source: "database" };
   }

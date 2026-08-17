@@ -1,10 +1,13 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const API_KEY = Deno.env.get("YOUTUBE_API_KEY");
 
-// Cache best-effort por isolate. O resultado de busca não contém a API key.
+// Fast isolate-local cache plus persistent database cache. The result never
+// contains the API key and can safely be reused by the app and ATIS.
 const cache = new Map<string, { videoId: string; title: string; channel: string; ts: number }>();
-const TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const MEMORY_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const DB_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -23,8 +26,39 @@ Deno.serve(async (req) => {
 
     const key = `${n}::${t.toLowerCase()}`;
     const cached = cache.get(key);
-    if (cached && Date.now() - cached.ts < TTL_MS) {
-      return json({ ...cached, cached: true });
+    if (cached && Date.now() - cached.ts < MEMORY_TTL_MS) {
+      return json({ ...cached, cached: true, cache_source: "memory" });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
+    const supabase = supabaseUrl && serviceKey
+      ? createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+      : null;
+
+    if (supabase) {
+      try {
+        const { data: dbCached, error: cacheError } = await supabase
+          .from("atis_harpa_youtube_cache")
+          .select("hymn_title,youtube_video_id,youtube_title,youtube_channel,checked_at,expires_at")
+          .eq("hymn_number", n)
+          .gt("expires_at", new Date().toISOString())
+          .maybeSingle();
+        if (cacheError) throw cacheError;
+        if (dbCached?.youtube_video_id) {
+          const result = {
+            videoId: String(dbCached.youtube_video_id),
+            title: String(dbCached.youtube_title || dbCached.hymn_title || t),
+            channel: String(dbCached.youtube_channel || ""),
+            ts: new Date(dbCached.checked_at || Date.now()).getTime(),
+          };
+          cache.set(key, result);
+          return json({ ...result, cached: true, cache_source: "database" });
+        }
+      } catch (error) {
+        // Cache failure must never prevent a fresh provider search.
+        console.error("[youtube-search] persistent cache read failed", (error as Error)?.message);
+      }
     }
 
     const padded = String(n).padStart(2, "0");
@@ -69,7 +103,28 @@ Deno.serve(async (req) => {
       ts: Date.now(),
     };
     cache.set(key, result);
-    return json(result);
+
+    if (supabase) {
+      try {
+        const checkedAt = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + DB_TTL_MS).toISOString();
+        const { error: upsertError } = await supabase.from("atis_harpa_youtube_cache").upsert({
+          hymn_number: n,
+          hymn_title: t,
+          youtube_video_id: result.videoId,
+          youtube_title: result.title,
+          youtube_channel: result.channel,
+          checked_at: checkedAt,
+          expires_at: expiresAt,
+          metadata: { source: "youtube_data_api_v3", query: q },
+        }, { onConflict: "hymn_number" });
+        if (upsertError) throw upsertError;
+      } catch (error) {
+        console.error("[youtube-search] persistent cache write failed", (error as Error)?.message);
+      }
+    }
+
+    return json({ ...result, cached: false, cache_source: "provider" });
   } catch (e) {
     console.error("[youtube-search] error", e);
     return json({ error: "Erro interno" }, 500);

@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Cake,
   CalendarDays,
   CheckCircle2,
-  Clock3,
   Loader2,
   Pencil,
   Plus,
   RefreshCw,
   Save,
+  Settings,
   Trash2,
   UsersRound,
   X,
@@ -29,24 +29,6 @@ type Birthday = {
   notes?: string | null;
 };
 
-type BirthdayGroup = {
-  id: string;
-  name: string;
-  participant_count?: number;
-  allow_automations: boolean;
-  is_active: boolean;
-  provider_exists: boolean;
-};
-
-type BirthdaySettings = {
-  enabled: boolean;
-  mode: "group_only";
-  group_id?: string | null;
-  send_time?: string | null;
-  timezone: string;
-  message_template?: string | null;
-};
-
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -58,16 +40,13 @@ async function functionErrorMessage(error: any) {
   if (!(response instanceof Response)) return fallback;
   try {
     const body = await response.clone().json();
-    const code = body?.error;
     const friendly: Record<string, string> = {
-      GROUP_AND_SEND_TIME_REQUIRED: "Escolha o grupo e o horário antes de ativar o agendamento.",
-      GROUP_AUTOMATIONS_DISABLED: "Este grupo ainda não permite automações. Ative essa opção em Destinatários → Grupos.",
-      GROUP_NOT_ACTIVE: "O grupo selecionado não está ativo no ATIS.",
-      INVALID_SEND_TIME: "Informe um horário válido.",
       APP_BIRTHDAY_SOURCE_MANAGED: "Este aniversário vem do cadastro do app e deve ser alterado no perfil do usuário.",
       INVALID_BIRTH_DATE: "Informe o aniversário no formato DD/MM.",
+      INVALID_PHONE: "Informe um WhatsApp válido ou deixe o campo vazio.",
+      NAME_REQUIRED: "Informe o nome do aniversariante.",
     };
-    return friendly[code] || body?.message || code || fallback;
+    return friendly[body?.error] || body?.message || body?.error || fallback;
   } catch {
     return fallback;
   }
@@ -119,8 +98,6 @@ const AtisBirthdays = () => {
   const defaultMonth = Number(new Intl.DateTimeFormat("en-US", { month: "numeric", timeZone: "America/Fortaleza" }).format(new Date()));
   const [month, setMonth] = useState(defaultMonth);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
-  const [groups, setGroups] = useState<BirthdayGroup[]>([]);
-  const [settings, setSettings] = useState<BirthdaySettings>({ enabled: false, mode: "group_only", group_id: null, send_time: null, timezone: "America/Fortaleza", message_template: null });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -131,10 +108,6 @@ const AtisBirthdays = () => {
   const [phone, setPhone] = useState("");
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
-  const [groupId, setGroupId] = useState("");
-  const [sendTime, setSendTime] = useState("");
-  const [template, setTemplate] = useState("");
-  const [enabled, setEnabled] = useState(false);
 
   const clearMessages = () => { setError(null); setNotice(null); };
 
@@ -142,18 +115,8 @@ const AtisBirthdays = () => {
     setLoading(true);
     clearMessages();
     try {
-      const [list, groupResult] = await Promise.all([
-        invokeAtis<{ birthdays: Birthday[]; settings: BirthdaySettings }>( { action: "list", data: { month } } ),
-        invokeAtis<{ groups: BirthdayGroup[] }>( { action: "groups" } ),
-      ]);
+      const list = await invokeAtis<{ birthdays: Birthday[] }>({ action: "list", data: { month } });
       setBirthdays(list.birthdays ?? []);
-      setGroups(groupResult.groups ?? []);
-      const next = list.settings ?? settings;
-      setSettings(next);
-      setGroupId(next.group_id ?? "");
-      setSendTime(next.send_time ?? "");
-      setTemplate(next.message_template ?? "");
-      setEnabled(next.enabled === true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao carregar aniversariantes.");
     } finally {
@@ -171,10 +134,8 @@ const AtisBirthdays = () => {
     finally { setBusy(null); }
   };
 
-  const selectedGroup = useMemo(() => groups.find((group) => group.id === groupId) ?? null, [groups, groupId]);
-
   const syncApp = () => run("sync", async () => {
-    const result = await invokeAtis<{ app_birthdays?: { found?: number; created?: number; updated?: number } }>({ action: "sync_app" });
+    const result = await invokeAtis<{ app_birthdays?: { found?: number } }>({ action: "sync_app" });
     await load();
     setNotice(`${Number(result.app_birthdays?.found ?? 0)} aniversário(s) do cadastro do app conferidos. WhatsApp não é obrigatório.`);
   });
@@ -208,11 +169,12 @@ const AtisBirthdays = () => {
       tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
       notes: notes.trim() || null,
     };
-    if (editor === "new") await invokeAtis({ action: "create", data });
+    const wasNew = editor === "new";
+    if (wasNew) await invokeAtis({ action: "create", data });
     else if (editor) await invokeAtis({ action: "update", data: { id: editor.id, ...data } });
     setEditor(null);
     await load();
-    setNotice(editor === "new" ? "Aniversariante cadastrado." : "Aniversariante atualizado.");
+    setNotice(wasNew ? "Aniversariante cadastrado." : "Aniversariante atualizado.");
   });
 
   const archiveBirthday = (birthday: Birthday) => {
@@ -224,24 +186,7 @@ const AtisBirthdays = () => {
     });
   };
 
-  const saveSchedule = () => run("schedule", async () => {
-    const result = await invokeAtis<{ settings: BirthdaySettings }>({
-      action: "settings_update",
-      data: {
-        group_id: groupId || null,
-        send_time: sendTime || null,
-        enabled,
-        timezone: "America/Fortaleza",
-        message_template: template.trim() || null,
-      },
-    });
-    setSettings(result.settings);
-    setNotice(enabled ? "Agendamento de aniversários ativado para o grupo selecionado." : "Configuração salva. O agendamento permanece desativado.");
-  });
-
-  if (loading) {
-    return <div className="py-16 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
-  }
+  if (loading) return <div className="py-16 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-5">
@@ -252,7 +197,7 @@ const AtisBirthdays = () => {
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Aniversariantes ATIS</p>
               <h2 className="text-lg font-bold text-[hsl(var(--dark-text))] mt-1">Aniversariantes do mês</h2>
-              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Nome e aniversário em DD/MM são suficientes. O ano de nascimento não é solicitado nem usado pelo ATIS. O WhatsApp é opcional.</p>
+              <p className="text-xs text-[hsl(var(--dark-muted))] mt-1">Nome e aniversário em DD/MM são suficientes. Ano de nascimento e WhatsApp não são obrigatórios.</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -273,7 +218,6 @@ const AtisBirthdays = () => {
           </select>
           <span className="ml-auto text-xs text-[hsl(var(--dark-muted))]">{birthdays.length} cadastrado(s)</span>
         </div>
-
         <div className="mt-4 space-y-2">
           {!birthdays.length ? (
             <div className="rounded-xl bg-[hsl(var(--dark-bg))] p-6 text-center text-sm text-[hsl(var(--dark-muted))]">Nenhum aniversariante cadastrado neste mês.</div>
@@ -302,39 +246,10 @@ const AtisBirthdays = () => {
         <div className="flex items-start gap-3">
           <span className="w-11 h-11 rounded-xl grid place-items-center bg-primary/15 text-primary shrink-0"><UsersRound className="w-5 h-5" /></span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-bold text-[hsl(var(--dark-text))]">Mensagem automática no grupo de aniversário</h3>
-            <p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">O ATIS consulta os aniversariantes do dia e envia uma única mensagem ao grupo escolhido. Nenhuma mensagem individual é criada por este agendamento.</p>
+            <h3 className="text-sm font-bold text-[hsl(var(--dark-text))]">Agendamento agora é individual por grupo</h3>
+            <p className="text-[11px] leading-relaxed text-[hsl(var(--dark-muted))] mt-1">Não existe mais um grupo e horário geral nesta tela. Abra <strong className="text-[hsl(var(--dark-text))]">Destinatários → Grupos → Configurações</strong> e ative <strong className="text-[hsl(var(--dark-text))]">Aniversariantes do dia</strong> no grupo desejado. Cada grupo pode usar Padrão do sistema, Instantâneo ou um horário personalizado diferente.</p>
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${enabled ? "bg-emerald-500/15 text-emerald-400" : "bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-muted))]"}`}>{enabled ? "Ativo" : "Desativado"}</span>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-3 mt-4">
-          <label className="space-y-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--dark-muted))]">Grupo Feliz Aniversário</span>
-            <select value={groupId} onChange={(event) => setGroupId(event.target.value)} className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none">
-              <option value="">Selecione um grupo cadastrado</option>
-              {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.allow_automations ? "" : " — automações OFF"}</option>)}
-            </select>
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--dark-muted))]">Horário diário</span>
-            <div className="relative"><Clock3 className="absolute left-3 top-3.5 w-4 h-4 text-[hsl(var(--dark-muted))]" /><input type="time" value={sendTime} onChange={(event) => setSendTime(event.target.value)} className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] pl-10 pr-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></div>
-          </label>
-        </div>
-
-        {selectedGroup && !selectedGroup.allow_automations && <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-[11px] text-amber-400">Este grupo ainda está com “Automações” desligado. Ative em <strong>Destinatários → Grupos</strong> antes de ligar o agendamento.</div>}
-
-        <label className="block space-y-1.5 mt-3">
-          <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--dark-muted))]">Mensagem personalizada — opcional</span>
-          <textarea value={template} onChange={(event) => setTemplate(event.target.value)} rows={4} placeholder="Deixe vazio para usar a mensagem padrão. Tokens disponíveis: {{nome}}, {{nomes}}, {{quantidade}}, {{grupo}}, {{data}}" className="w-full rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] p-3 text-sm text-[hsl(var(--dark-text))] placeholder:text-[hsl(var(--dark-muted))]/60 outline-none resize-y" />
-        </label>
-
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-[hsl(var(--dark-text))] cursor-pointer">
-            <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="w-4 h-4 accent-primary" />
-            Ativar agendamento automático
-          </label>
-          <button onClick={saveSchedule} disabled={busy !== null} className="sm:ml-auto h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-40">{busy === "schedule" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar configuração</button>
+          <Settings className="w-5 h-5 text-[hsl(var(--dark-muted))] shrink-0" />
         </div>
       </div>
 
@@ -354,7 +269,10 @@ const AtisBirthdays = () => {
               <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="jovens, obreiros, coral" className="w-full h-11 rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] px-3 text-sm text-[hsl(var(--dark-text))] outline-none" /></label>
               <label className="block space-y-1.5"><span className="text-xs text-[hsl(var(--dark-muted))]">Observações</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="w-full rounded-xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))] p-3 text-sm text-[hsl(var(--dark-text))] outline-none resize-y" /></label>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditor(null)} className="h-10 px-4 rounded-xl bg-[hsl(var(--dark-bg))] text-xs font-semibold text-[hsl(var(--dark-text))]">Cancelar</button><button onClick={saveBirthday} disabled={!name.trim() || !isValidBirthday(birthDate) || busy !== null} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-2 disabled:opacity-40">{busy === "save" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar</button></div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setEditor(null)} className="h-10 px-4 rounded-xl bg-[hsl(var(--dark-bg))] text-xs font-semibold text-[hsl(var(--dark-text))]">Cancelar</button>
+              <button onClick={saveBirthday} disabled={!name.trim() || !isValidBirthday(birthDate) || busy !== null} className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-2 disabled:opacity-40">{busy === "save" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar</button>
+            </div>
           </div>
         </div>
       )}

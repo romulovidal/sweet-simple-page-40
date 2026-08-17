@@ -67,11 +67,12 @@ export function buildDestinationInsights(rows: DestinationInsightRow[], destinat
   const peakHour = sortedCounts(hourCounts, 1)[0] ?? null;
   const memoryHits = contextCounts.get("memory") ?? 0;
   const ministryMemoryHits = rows.filter((row) => row.metadata?.context_memory_reason === "ministry_memory").length;
+  const continuityHits = rows.filter((row) => row.metadata?.context_source === "memory" || row.metadata?.context_memory_reason === "ministry_memory").length;
   const recommendations: string[] = [];
 
   if (failed.length > 0) recommendations.push(`Há ${failed.length} falha(s) técnica(s) no período; vale revisar o Histórico e inteligência operacional.`);
   if (degraded.length > 0) recommendations.push(`Houve ${degraded.length} resposta(s) degradada(s); a conversa recebeu fallback seguro, mas a causa continua registrada para revisão.`);
-  if (memoryHits + ministryMemoryHits > 0) recommendations.push(`O contexto estruturado foi reaproveitado em ${memoryHits + ministryMemoryHits} interação(ões), sinal de continuidade real da conversa.`);
+  if (continuityHits > 0) recommendations.push(`O contexto estruturado foi reaproveitado em ${continuityHits} interação(ões), sinal de continuidade real da conversa.`);
 
   const studyRoutes = new Set(["exegetai", "chapter_summary", "connections", "timeline", "word_meaning"]);
   const studyCount = routes.filter((row) => studyRoutes.has(row.key)).reduce((sum, row) => sum + row.count, 0);
@@ -95,6 +96,7 @@ export function buildDestinationInsights(rows: DestinationInsightRow[], destinat
     last_seen_at: lastSeen,
     memory_hits: memoryHits,
     ministry_memory_hits: ministryMemoryHits,
+    continuity_hits: continuityHits,
     top_routes: routes.map(({ key, count }) => ({ route: key, count })),
     context_sources: contexts.map(({ key, count }) => ({ source: key, count })),
     peak_hour: peakHour ? `${peakHour.key}:00` : null,

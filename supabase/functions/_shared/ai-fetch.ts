@@ -11,16 +11,27 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat
 export type AiProviderName = "groq" | "xai" | "gemini";
 
 function shouldTryFallback(status: number): boolean {
-  return status === 401 || status === 402 || status === 403 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+  // A provider may return 400 for a retired/unsupported model even when the
+  // request is otherwise valid. In that case the next configured provider
+  // must still get a chance to answer.
+  return status === 400 || status === 401 || status === 402 || status === 403 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
 function toGroqModel(model: string): string {
   const m = String(model || "").toLowerCase();
   if (m.startsWith("groq/")) return m.slice("groq/".length);
-  if (m.startsWith("llama-") || m.startsWith("mixtral-") || m.startsWith("gemma") || m.startsWith("deepseek-") || m.startsWith("qwen")) {
+
+  // Groq retired these model IDs for Free/Developer usage on 2026-08-16.
+  // Keep old callers working by transparently mapping them to the recommended
+  // GPT-OSS replacements instead of letting a retired ID stop the whole chain.
+  if (m === "llama-3.3-70b-versatile") return "openai/gpt-oss-120b";
+  if (m === "llama-3.1-8b-instant") return "openai/gpt-oss-20b";
+
+  if (m.startsWith("openai/gpt-oss-") || m.startsWith("qwen/qwen3.6-")) return m;
+  if (m.startsWith("mixtral-") || m.startsWith("gemma") || m.startsWith("deepseek-") || m.startsWith("qwen/")) {
     return m;
   }
-  return "llama-3.3-70b-versatile";
+  return "openai/gpt-oss-120b";
 }
 
 function toGrokModel(model: string): string {
@@ -144,7 +155,7 @@ export async function aiGenerateText(opts: {
   messages.push({ role: "user", content: opts.user });
   try {
     const res = await aiChatFetch({
-      model: opts.model ?? "llama-3.3-70b-versatile",
+      model: opts.model ?? "openai/gpt-oss-120b",
       messages,
       temperature: opts.temperature ?? 0.9,
       max_tokens: opts.maxTokens ?? 2048,

@@ -29,30 +29,25 @@ jobs:
           if 'from "./culto-lookup.ts"' not in s:
               assert old in s
               s = s.replace(old, new, 1)
-
           old = '  | "harpa_lookup";'
           new = '  | "harpa_lookup"\n  | "culto_info";'
           if '| "culto_info"' not in s:
               assert old in s
               s = s.replace(old, new, 1)
-
           marker = 'function deterministicIntent(message: string): AtisAssistantRoute | null {\n  const q = normalize(message);\n'
           if 'if (isCultoIntent(message)) return "culto_info";' not in s:
               assert marker in s
               s = s.replace(marker, marker + '  if (isCultoIntent(message)) return "culto_info";\n', 1)
-
           old = '"birthdays", "bible_lookup", "harpa_lookup"]'
           new = '"birthdays", "bible_lookup", "harpa_lookup", "culto_info"]'
           if '"harpa_lookup", "culto_info"]' not in s:
               assert old in s
               s = s.replace(old, new, 1)
-
           marker = '  if (route === "birthdays") {\n'
           branch = '  if (route === "culto_info") {\n    return { text: await cultoLookup(supabase, input), route, source: "database" };\n  }\n'
           if 'route === "culto_info"' not in s:
               assert marker in s
               s = s.replace(marker, branch + marker, 1)
-
           p.write_text(s)
           PY
       - name: Validate Deno files
@@ -70,4 +65,5 @@ jobs:
           git add supabase/functions/_shared/atis/assistant.ts
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "feat: let ATIS answer culto schedule and ministry questions"
-          git push
+          git pull --rebase origin main
+          git push origin main

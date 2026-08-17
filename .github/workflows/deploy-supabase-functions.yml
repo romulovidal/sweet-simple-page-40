@@ -1,5 +1,6 @@
 name: Deploy Supabase Edge Functions
 
+# Deployment trigger: ATIS group response controls.
 on:
   push:
     branches:

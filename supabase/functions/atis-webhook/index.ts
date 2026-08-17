@@ -110,6 +110,78 @@ function inboundText(item: any) {
   );
 }
 
+function normalizeMentionIdentity(value: unknown) {
+  const raw = firstString(value);
+  if (!raw) return null;
+  const beforeAt = raw.split("@")[0] ?? raw;
+  const beforeDevice = beforeAt.split(":")[0] ?? beforeAt;
+  const digits = beforeDevice.replace(/\D/g, "");
+  return digits || raw.toLowerCase();
+}
+
+function inboundMentionedJids(item: any): string[] {
+  const message = item?.message ?? item?.data?.message ?? {};
+  const contexts = [
+    message?.extendedTextMessage?.contextInfo,
+    message?.imageMessage?.contextInfo,
+    message?.videoMessage?.contextInfo,
+    message?.documentMessage?.contextInfo,
+    message?.buttonsResponseMessage?.contextInfo,
+    message?.listResponseMessage?.contextInfo,
+    item?.contextInfo,
+    item?.data?.contextInfo,
+  ].filter(Boolean);
+  const values: string[] = [];
+  for (const context of contexts) {
+    const candidates = [context?.mentionedJid, context?.mentionedJids, context?.mentions];
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        for (const value of candidate) {
+          const jid = firstString(value, value?.jid, value?.id);
+          if (jid) values.push(jid);
+        }
+      } else {
+        const jid = firstString(candidate, candidate?.jid, candidate?.id);
+        if (jid) values.push(jid);
+      }
+    }
+  }
+  return [...new Set(values)];
+}
+
+function textCallsAtis(value: string) {
+  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return /(^|[^a-z0-9])atis([^a-z0-9]|$)/i.test(normalized);
+}
+
+function providerOwnerMentionIds(payload: any): string[] {
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : payload && typeof payload === "object"
+        ? [payload]
+        : [];
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const candidates = [
+      row?.ownerJid,
+      row?.owner,
+      row?.number,
+      row?.instance?.ownerJid,
+      row?.instance?.owner,
+      row?.instance?.number,
+      row?.profile?.wid?._serialized,
+      row?.profile?.wid?.user,
+    ];
+    for (const candidate of candidates) {
+      const normalized = normalizeMentionIdentity(candidate);
+      if (normalized) ids.add(normalized);
+    }
+  }
+  return [...ids];
+}
+
 function inboundSenderName(item: any) {
   return firstString(item?.pushName, item?.senderName, item?.notifyName, item?.data?.pushName);
 }
@@ -232,7 +304,8 @@ async function assistantRuntime(supabase: any) {
   return {
     enabled: data?.value?.enabled !== false,
     autoReplyDirect: data?.value?.auto_reply_direct !== false,
-    autoReplyGroups: data?.value?.auto_reply_groups === true,
+    autoReplyGroups: data?.value?.auto_reply_groups !== false,
+    groupMentionOnly: data?.value?.group_mention_only === true,
     maxInboundChars: Math.max(100, Math.min(10000, Number(data?.value?.max_inbound_chars ?? 5000))),
     historyInteractions: Math.max(20, Math.min(50, Number(data?.value?.history_messages ?? 20))),
   };
@@ -325,7 +398,8 @@ async function resolveDestinationAiPolicy(supabase: any, instance: any, remoteJi
   if (error) throw error;
 
   const stored = new Map((rows ?? []).map((row: any) => [row.feature_key, row.enabled === true]));
-  const defaultEnabled = type !== "group";
+  // Synced active groups use the assistant by default. Explicit per-group false rows still win.
+  const defaultEnabled = true;
   const allowedAiRoutes = AI_FEATURE_KEYS.filter((key) => stored.has(key) ? stored.get(key) === true : defaultEnabled);
   return { destinationType: type, destinationId: id, blocked: false, allowedAiRoutes };
 }
@@ -335,6 +409,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
   if (!runtime.enabled) return { received: 0, replied: 0, ignored: 0, failed: 0 };
 
   let evolution: EvolutionProvider | null = null;
+  let ownerMentionIds: string[] | null = null;
   const counts = { received: 0, replied: 0, ignored: 0, failed: 0 };
 
   for (const item of messageEntries(data).slice(0, 20)) {
@@ -369,6 +444,52 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
     }
     if (insertError) throw insertError;
     counts.received++;
+
+    // Optional quiet group mode: ignore general group chatter and answer only when
+    // someone writes the name "Atis" or explicitly @mentions the connected account.
+    if (isGroup && runtime.groupMentionOnly) {
+      let addressedToAtis = textCallsAtis(limitedText);
+      const mentionedJids = inboundMentionedJids(item);
+
+      if (!addressedToAtis && mentionedJids.length > 0) {
+        if (ownerMentionIds === null) {
+          ownerMentionIds = providerOwnerMentionIds({
+            ownerJid: instance?.metadata?.owner_jid,
+            owner: instance?.metadata?.owner,
+            number: instance?.metadata?.owner_number,
+          });
+          if (!ownerMentionIds.length) {
+            try {
+              if (!evolution) {
+                const config = getEvolutionConfigFromEnv();
+                evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey });
+              }
+              const providerInstances = await evolution.fetchInstances(instance.external_instance_name || instance.name);
+              ownerMentionIds = providerOwnerMentionIds(providerInstances);
+            } catch (error) {
+              console.error("[atis-webhook] could not resolve own JID for group mention", error instanceof Error ? error.message : error);
+              ownerMentionIds = [];
+            }
+          }
+        }
+        const mentionedIdentities = mentionedJids.map(normalizeMentionIdentity).filter(Boolean) as string[];
+        addressedToAtis = mentionedIdentities.some((id) => ownerMentionIds?.includes(id));
+      }
+
+      if (!addressedToAtis) {
+        await supabase.from("atis_inbound_messages").update({
+          status: "ignored",
+          processed_at: new Date().toISOString(),
+          metadata: {
+            truncated: text.length > limitedText.length,
+            policy: "group_mention_only",
+            mentioned_jids_count: mentionedJids.length,
+          },
+        }).eq("id", inbound.id);
+        counts.ignored++;
+        continue;
+      }
+    }
 
     // App contacts can revoke WhatsApp consent by sending exactly "sair". The profile is
     // updated as the source of truth and the ATIS contact is locked until the user opts in

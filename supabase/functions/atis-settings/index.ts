@@ -32,11 +32,36 @@ Deno.serve(async (req) => {
         prompt: typeof row.value?.system_prompt === "string" ? row.value.system_prompt : "",
         enabled: row.value?.enabled !== false,
         auto_reply_direct: row.value?.auto_reply_direct !== false,
-        auto_reply_groups: row.value?.auto_reply_groups === true,
+        auto_reply_groups: row.value?.auto_reply_groups !== false,
+        group_mention_only: row.value?.group_mention_only === true,
         updated_at: row.updated_at,
         immutable_policy: true,
       });
     }
+
+    if (action === "save_behavior") {
+      const next = {
+        ...(row.value ?? {}),
+        auto_reply_direct: input.auto_reply_direct !== false,
+        auto_reply_groups: input.auto_reply_groups !== false,
+        group_mention_only: input.group_mention_only === true,
+      };
+      const { data: saved, error: saveError } = await supabase
+        .from("atis_settings")
+        .update({ value: next })
+        .eq("key", "assistant")
+        .select("updated_at")
+        .single();
+      if (saveError) throw saveError;
+      return json({
+        ok: true,
+        auto_reply_direct: next.auto_reply_direct,
+        auto_reply_groups: next.auto_reply_groups,
+        group_mention_only: next.group_mention_only,
+        updated_at: saved.updated_at,
+      });
+    }
+
     if (action === "save") {
       const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
       if (prompt.length < 200) return json({ error: "PROMPT_TOO_SHORT", message: "O prompt precisa ter pelo menos 200 caracteres." }, 400);

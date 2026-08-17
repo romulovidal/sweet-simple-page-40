@@ -31,7 +31,7 @@ type AtisStatus = "disconnected" | "connecting" | "qr_required" | "connected" | 
 type DestinationType = "contact" | "individual" | "group";
 
 const MAX_BODY_BYTES = 1024 * 1024;
-const AI_FEATURE_KEYS = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional"];
+const AI_FEATURE_KEYS = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "ministry_relation"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

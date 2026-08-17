@@ -74,14 +74,18 @@ export function ministryRelationContextFromHistory(history: ConversationMessage[
   for (const item of [...history].reverse()) {
     if (item.role !== "user") continue;
     const songs = item.content.match(/\[ATIS_SONG_LIST=(\d{4}-\d{2}-\d{2}|-)\|([hc]\d+(?:,[hc]\d+)*)(?:\|s=([hc]\d+))?\]/);
-    if (!songs) continue;
-    const items = songs[2].split(",").map(parseSongToken).filter(Boolean) as SongRef[];
-    if (!items.length) continue;
-    const selectedCandidate = songs[3] ? parseSongToken(songs[3]) : null;
-    const selected = selectedCandidate && items.some((row) => row.kind === selectedCandidate.kind && row.number === selectedCandidate.number)
-      ? selectedCandidate
-      : null;
-    return { date: songs[1] === "-" ? null : songs[1], items, selected };
+    if (songs) {
+      const items = songs[2].split(",").map(parseSongToken).filter(Boolean) as SongRef[];
+      if (items.length) {
+        const selectedCandidate = songs[3] ? parseSongToken(songs[3]) : null;
+        const selected = selectedCandidate && items.some((row) => row.kind === selectedCandidate.kind && row.number === selectedCandidate.number)
+          ? selectedCandidate
+          : null;
+        return { date: songs[1] === "-" ? null : songs[1], items, selected };
+      }
+    }
+    const culto = item.content.match(/\[ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})\]/);
+    if (culto) return { date: culto[1], items: [], selected: null };
   }
   return null;
 }

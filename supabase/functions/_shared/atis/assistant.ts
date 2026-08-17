@@ -2,6 +2,7 @@ import { aiChatFetchWithProviders } from "../ai-fetch.ts";
 import { cultoLookup, isCultoIntent } from "./culto-lookup.ts";
 import { canticosLookup, isCanticosIntent } from "./assistant-extras.ts";
 import { captureCultoReference, captureSongListReference, resolveMinistryFollowup } from "./ministry-context.ts";
+import { generateMinistryRelationAnswer, isMinistryRelationIntent, loadMinistryRelationGrounding } from "./ministry-intelligence.ts";
 
 type Json = Record<string, any>;
 export type AtisAssistantRoute =
@@ -17,7 +18,8 @@ export type AtisAssistantRoute =
   | "bible_lookup"
   | "harpa_lookup"
   | "culto_info"
-  | "canticos_info";
+  | "canticos_info"
+  | "ministry_relation";
 
 export type AtisAssistantResult = {
   text: string;
@@ -49,7 +51,7 @@ const IMMUTABLE_ATIS_POLICY = `REGRAS TÉCNICAS FIXAS DO ATIS (não editáveis p
 - Texto bíblico literal só pode ser transcrito quando recuperado do acervo bíblico do app nesta solicitação.
 - Use apenas as rotas e ferramentas disponibilizadas pelo backend do ATIS.
 - Para IA do ATIS, mantenha Groq como primário e Gemini como fallback.`;
-const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional"]);
+const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "ministry_relation"]);
 const CANONICAL_BOOKS = [
   "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios", "Eclesiastes", "Cantares", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oséias", "Joel", "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias", "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse",
 ];
@@ -147,6 +149,7 @@ async function loadSpecialistPrompts(supabase: any) {
 
 function deterministicIntent(message: string): AtisAssistantRoute | null {
   const q = normalize(message);
+  if (isMinistryRelationIntent(message)) return "ministry_relation";
   if (isCanticosIntent(message)) return "canticos_info";
   if (isCultoIntent(message)) return "culto_info";
   if (/aniversari/.test(q)) return "birthdays";
@@ -163,7 +166,7 @@ function deterministicIntent(message: string): AtisAssistantRoute | null {
 }
 
 async function classifyWithAi(systemPrompt: string, message: string, history: AtisConversationMessage[] = []): Promise<AtisAssistantRoute> {
-  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "culto_info", "canticos_info"];
+  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "culto_info", "canticos_info", "ministry_relation"];
   const response = await aiChatFetchWithProviders({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -591,6 +594,40 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   if (route === "harpa_lookup") {
     const result = await harpaLookup(supabase, config, effectiveInput, history);
     return { text: result.text, route, source: "app", reference: ministryFollowup?.carryReference ?? result.reference };
+  }
+  if (route === "ministry_relation") {
+    const grounding = await loadMinistryRelationGrounding(supabase, config.baseUrl, history);
+    if (!grounding) {
+      return {
+        text: "🎶 Para relacionar culto, Bíblia e louvor, preciso de um culto lembrado com uma seleção de louvor ativa no app. Consulte primeiro o culto ou os cânticos desse culto.",
+        route,
+        source: "database",
+        reference: ministryFollowup?.carryReference ?? null,
+      };
+    }
+    let ministryBibleContext: { label: string; text: string } | null = null;
+    if (grounding.culto.scriptureReference) {
+      try {
+        const ministryBible = await loadBible(config);
+        const ministryBibleReference = parseBibleReference(grounding.culto.scriptureReference, ministryBible);
+        if (ministryBibleReference) ministryBibleContext = bibleText(ministryBibleReference, false);
+      } catch (error) {
+        console.error("[atis-assistant] ministry Bible grounding failed", error instanceof Error ? error.message : error);
+      }
+    }
+    const generated = await generateMinistryRelationAnswer(
+      config.systemPrompt,
+      input,
+      grounding,
+      ministryBibleContext,
+      options.conversationMode ?? "normal",
+    );
+    return {
+      text: clampText(guardUngroundedBibleQuotes(generated, ministryBibleContext?.text ?? null)),
+      route,
+      source: "ai",
+      reference: ministryFollowup?.carryReference ?? grounding.reference,
+    };
   }
 
   let bible: BibleBook[] | null = null;

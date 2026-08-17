@@ -1,4 +1,5 @@
 import type { AtisConversationMessage, AtisAssistantRoute } from "./assistant.ts";
+import { isMinistryRelationIntent } from "./ministry-intelligence.ts";
 
 const TZ = "America/Fortaleza";
 const CANTICO_OFFSET = 100000;
@@ -153,7 +154,7 @@ export function ministryContextMessage(reference: string, message: string) {
   const q = normalize(message).replace(/^atis[,:\s-]*/i, "");
 
   if (parsed.kind === "culto") {
-    if (!cultoSongsFollowup(q) && !cultoDetailFollowup(q)) return null;
+    if (!cultoSongsFollowup(q) && !cultoDetailFollowup(q) && !isMinistryRelationIntent(q)) return null;
     return {
       content: `Contexto ministerial atual: [ATIS_CULTO_DATE=${parsed.date}]`,
       label: `Culto ${parsed.date}`,
@@ -161,7 +162,7 @@ export function ministryContextMessage(reference: string, message: string) {
   }
 
   const position = ordinalPosition(q);
-  if ((!position || position > parsed.items.length) && !(parsed.selected && selectedSongFollowup(q))) return null;
+  if (!isMinistryRelationIntent(q) && ((!position || position > parsed.items.length) && !(parsed.selected && selectedSongFollowup(q)))) return null;
   return {
     content: songListMarker(parsed),
     label: `Lista de louvor${parsed.date ? ` ${parsed.date}` : ""}`,
@@ -210,6 +211,13 @@ export function resolveMinistryFollowup(message: string, history: AtisConversati
   const q = normalize(message);
 
   if (marker.kind === "culto") {
+    if (isMinistryRelationIntent(q)) {
+      return {
+        route: "ministry_relation",
+        message,
+        carryReference: encodeCultoReference(marker.date),
+      };
+    }
     if (cultoSongsFollowup(q)) {
       return {
         route: "canticos_info",
@@ -225,6 +233,14 @@ export function resolveMinistryFollowup(message: string, history: AtisConversati
       };
     }
     return null;
+  }
+
+  if (isMinistryRelationIntent(q)) {
+    return {
+      route: "ministry_relation",
+      message,
+      carryReference: encodeSongsReference(marker.date, marker.items, marker.selected ?? null),
+    };
   }
 
   const position = ordinalPosition(message);

@@ -2,6 +2,7 @@ export type NativePushBridgeInput = {
   type: string;
   title: string;
   body: string;
+  url?: string | null;
   eventKey: string;
 };
 
@@ -11,9 +12,9 @@ export async function enqueueNativePushForAtis(supabase: any, input: NativePushB
       _push_type: input.type,
       _title: input.title,
       _body: input.body,
-      // Native/PWA routes are navigation metadata and must never become visible
-      // WhatsApp content. Keep the RPC parameter for backwards compatibility.
-      _url: null,
+      // Kept only as internal event metadata. The database enqueue function
+      // deliberately does not concatenate this value into WhatsApp content.
+      _url: input.url ?? null,
       _event_key: input.eventKey,
     });
     if (error) {

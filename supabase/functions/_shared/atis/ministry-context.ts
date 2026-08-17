@@ -4,9 +4,11 @@ const TZ = "America/Fortaleza";
 const CANTICO_OFFSET = 100000;
 const MAX_CONTEXT_ITEMS = 30;
 
+type SongReference = { kind: "harpa" | "cantico"; number: number };
+
 export type MinistryReference =
   | { kind: "culto"; date: string }
-  | { kind: "songs"; date: string | null; items: Array<{ kind: "harpa" | "cantico"; number: number }> };
+  | { kind: "songs"; date: string | null; items: SongReference[]; selected?: SongReference | null };
 
 export type MinistryFollowup = {
   route: AtisAssistantRoute;
@@ -50,18 +52,33 @@ function validIsoDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+function songToken(item: SongReference) {
+  return `${item.kind === "harpa" ? "h" : "c"}${item.number}`;
+}
+
+function parseSongToken(token: string): SongReference | null {
+  const match = /^([hc])(\d+)$/.exec(token);
+  if (!match) return null;
+  const number = Number(match[2]);
+  if (!Number.isInteger(number) || number <= 0) return null;
+  return { kind: match[1] === "h" ? "harpa" : "cantico", number };
+}
+
 export function encodeCultoReference(date: string) {
   const valid = validIsoDate(date);
   return valid ? `ctx:culto:${valid}` : null;
 }
 
-export function encodeSongsReference(date: string | null, items: Array<{ kind: "harpa" | "cantico"; number: number }>) {
-  const encoded = items
+export function encodeSongsReference(date: string | null, items: SongReference[], selected: SongReference | null = null) {
+  const cleanItems = items
     .filter((item) => Number.isInteger(item.number) && item.number > 0)
-    .slice(0, MAX_CONTEXT_ITEMS)
-    .map((item) => `${item.kind === "harpa" ? "h" : "c"}${item.number}`);
-  if (!encoded.length) return null;
-  return `ctx:songs:${validIsoDate(date ?? "") ?? "-"}:${encoded.join(",")}`;
+    .slice(0, MAX_CONTEXT_ITEMS);
+  if (!cleanItems.length) return null;
+  const encoded = cleanItems.map(songToken);
+  const selectedToken = selected && cleanItems.some((item) => item.kind === selected.kind && item.number === selected.number)
+    ? `;s=${songToken(selected)}`
+    : "";
+  return `ctx:songs:${validIsoDate(date ?? "") ?? "-"}:${encoded.join(",")}${selectedToken}`;
 }
 
 export function parseMinistryReference(reference: string | null | undefined): MinistryReference | null {
@@ -69,16 +86,15 @@ export function parseMinistryReference(reference: string | null | undefined): Mi
   const culto = /^ctx:culto:(\d{4}-\d{2}-\d{2})$/.exec(raw);
   if (culto) return { kind: "culto", date: culto[1] };
 
-  const songs = /^ctx:songs:(\d{4}-\d{2}-\d{2}|-):([hc]\d+(?:,[hc]\d+)*)$/.exec(raw);
+  const songs = /^ctx:songs:(\d{4}-\d{2}-\d{2}|-):([hc]\d+(?:,[hc]\d+)*)(?:;s=([hc]\d+))?$/.exec(raw);
   if (!songs) return null;
-  const items = songs[2].split(",").map((token) => {
-    const match = /^([hc])(\d+)$/.exec(token);
-    if (!match) return null;
-    const number = Number(match[2]);
-    if (!Number.isInteger(number) || number <= 0) return null;
-    return { kind: match[1] === "h" ? "harpa" as const : "cantico" as const, number };
-  }).filter(Boolean) as Array<{ kind: "harpa" | "cantico"; number: number }>;
-  return items.length ? { kind: "songs", date: songs[1] === "-" ? null : songs[1], items } : null;
+  const items = songs[2].split(",").map(parseSongToken).filter(Boolean) as SongReference[];
+  if (!items.length) return null;
+  const selected = songs[3] ? parseSongToken(songs[3]) : null;
+  const validSelected = selected && items.some((item) => item.kind === selected.kind && item.number === selected.number)
+    ? selected
+    : null;
+  return { kind: "songs", date: songs[1] === "-" ? null : songs[1], items, selected: validSelected };
 }
 
 function ordinalPosition(message: string) {
@@ -104,13 +120,40 @@ function ordinalPosition(message: string) {
   return null;
 }
 
+function cultoSongsFollowup(q: string) {
+  return /\b(cantico|canticos|hino|hinos|louvor|louvores|programacao|sequencia|lista)\b/.test(q);
+}
+
+function cultoDetailFollowup(q: string) {
+  return /quem.+(prega|vai pregar|ministra|vai ministrar)|\b(pregador|ministro|dirigente)\b/.test(q)
+    || /\b(tema|assunto da mensagem)\b/.test(q)
+    || /que horas|qual horario|\bhorario\b|hora do culto/.test(q)
+    || /\b(onde|local|endereco)\b/.test(q)
+    || /texto[- ]?base|referencia biblica|passagem base|qual (e|é) o texto/.test(q);
+}
+
+function selectedSongFollowup(q: string) {
+  return /\b(ultimo|ultima)\b.*\b(hino|cantico|louvor)\b/.test(q)
+    || /\b(esse|essa)\b.*\b(hino|cantico|louvor)\b/.test(q)
+    || /\bqual\b.*\bnumero\b/.test(q)
+    || /\b(manda|mande|mostra|mostre|envia|envie)\b.*\b(de novo|novamente|outra vez|letra|refrao|coro)\b/.test(q)
+    || /^(manda|mande|mostra|mostre|envia|envie|repete|repita)( de novo| novamente| outra vez)?$/.test(q)
+    || /\b(letra|refrao|coro)\b.*\b(esse|essa|ultimo|ultima)\b/.test(q);
+}
+
+function songListMarker(parsed: Extract<MinistryReference, { kind: "songs" }>) {
+  const compact = parsed.items.map(songToken).join(",");
+  const selected = parsed.selected ? `|s=${songToken(parsed.selected)}` : "";
+  return `Contexto ministerial atual: [ATIS_SONG_LIST=${parsed.date ?? "-"}|${compact}${selected}]`;
+}
+
 export function ministryContextMessage(reference: string, message: string) {
   const parsed = parseMinistryReference(reference);
   if (!parsed) return null;
   const q = normalize(message).replace(/^atis[,:\s-]*/i, "");
 
   if (parsed.kind === "culto") {
-    if (!/\b(cantico|canticos|hino|hinos|louvor|louvores|programacao|sequencia|lista)\b/.test(q)) return null;
+    if (!cultoSongsFollowup(q) && !cultoDetailFollowup(q)) return null;
     return {
       content: `Contexto ministerial atual: [ATIS_CULTO_DATE=${parsed.date}]`,
       label: `Culto ${parsed.date}`,
@@ -118,57 +161,41 @@ export function ministryContextMessage(reference: string, message: string) {
   }
 
   const position = ordinalPosition(q);
-  if (!position || position > parsed.items.length) return null;
-  const compact = parsed.items.map((item) => `${item.kind === "harpa" ? "h" : "c"}${item.number}`).join(",");
+  if ((!position || position > parsed.items.length) && !(parsed.selected && selectedSongFollowup(q))) return null;
   return {
-    content: `Contexto ministerial atual: [ATIS_SONG_LIST=${parsed.date ?? "-"}|${compact}]`,
+    content: songListMarker(parsed),
     label: `Lista de louvor${parsed.date ? ` ${parsed.date}` : ""}`,
   };
 }
 
-function latestMinistryMarker(history: AtisConversationMessage[]) {
+function latestMinistryMarker(history: AtisConversationMessage[]): MinistryReference | null {
   for (const item of [...history].reverse()) {
     if (item.role !== "user") continue;
     const culto = item.content.match(/\[ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})\]/);
-    if (culto) return { kind: "culto" as const, date: culto[1] };
-    const songs = item.content.match(/\[ATIS_SONG_LIST=(\d{4}-\d{2}-\d{2}|-)\|([hc]\d+(?:,[hc]\d+)*)\]/);
+    if (culto) return { kind: "culto", date: culto[1] };
+    const songs = item.content.match(/\[ATIS_SONG_LIST=(\d{4}-\d{2}-\d{2}|-)\|([hc]\d+(?:,[hc]\d+)*)(?:\|s=([hc]\d+))?\]/);
     if (songs) {
-      const items = songs[2].split(",").map((token) => {
-        const match = /^([hc])(\d+)$/.exec(token);
-        return match ? { kind: match[1] === "h" ? "harpa" as const : "cantico" as const, number: Number(match[2]) } : null;
-      }).filter(Boolean) as Array<{ kind: "harpa" | "cantico"; number: number }>;
-      if (items.length) return { kind: "songs" as const, date: songs[1] === "-" ? null : songs[1], items };
+      const items = songs[2].split(",").map(parseSongToken).filter(Boolean) as SongReference[];
+      if (!items.length) continue;
+      const selected = songs[3] ? parseSongToken(songs[3]) : null;
+      return {
+        kind: "songs",
+        date: songs[1] === "-" ? null : songs[1],
+        items,
+        selected: selected && items.some((candidate) => candidate.kind === selected.kind && candidate.number === selected.number) ? selected : null,
+      };
     }
   }
   return null;
 }
 
-export function resolveMinistryFollowup(message: string, history: AtisConversationMessage[]): MinistryFollowup | null {
-  const marker = latestMinistryMarker(history);
-  if (!marker) return null;
-  const q = normalize(message);
-
-  if (marker.kind === "culto") {
-    if (!/\b(cantico|canticos|hino|hinos|louvor|louvores|programacao|sequencia|lista)\b/.test(q)) return null;
-    return {
-      route: "canticos_info",
-      message: `programação de louvor do culto: ${message} __ATIS_CULTO_DATE=${marker.date}__`,
-      carryReference: null,
-    };
-  }
-
-  const position = ordinalPosition(message);
-  if (!position || position > marker.items.length) return null;
-  const item = marker.items[position - 1];
+function selectedSongRoute(item: SongReference, q: string, carryReference: string | null): MinistryFollowup {
   const wantsChorus = /\b(refrao|coro)\b/.test(q);
-  const wantsLyrics = /\b(letra|manda|mande|mostra|mostre|envia|envie)\b/.test(q) || wantsChorus;
-  const carryReference = encodeSongsReference(marker.date, marker.items);
+  const wantsNumber = /\bqual\b.*\bnumero\b|\bnumero desse\b|\bnumero deste\b/.test(q);
+  const wantsLyrics = /\b(letra|manda|mande|mostra|mostre|envia|envie|repete|repita)\b/.test(q) || wantsChorus;
   if (item.kind === "harpa") {
-    return {
-      route: "harpa_lookup",
-      message: `Harpa ${item.number}${wantsChorus ? " refrão" : ""}`,
-      carryReference,
-    };
+    const suffix = wantsChorus ? " refrão" : wantsNumber ? " qual o número desse hino" : "";
+    return { route: "harpa_lookup", message: `Harpa ${item.number}${suffix}`, carryReference };
   }
   return {
     route: "canticos_info",
@@ -177,14 +204,53 @@ export function resolveMinistryFollowup(message: string, history: AtisConversati
   };
 }
 
+export function resolveMinistryFollowup(message: string, history: AtisConversationMessage[]): MinistryFollowup | null {
+  const marker = latestMinistryMarker(history);
+  if (!marker) return null;
+  const q = normalize(message);
+
+  if (marker.kind === "culto") {
+    if (cultoSongsFollowup(q)) {
+      return {
+        route: "canticos_info",
+        message: `programação de louvor do culto: ${message} __ATIS_CULTO_DATE=${marker.date}__`,
+        carryReference: encodeCultoReference(marker.date),
+      };
+    }
+    if (cultoDetailFollowup(q)) {
+      return {
+        route: "culto_info",
+        message: `${message} __ATIS_CULTO_DATE=${marker.date}__`,
+        carryReference: encodeCultoReference(marker.date),
+      };
+    }
+    return null;
+  }
+
+  const position = ordinalPosition(message);
+  if (position && position <= marker.items.length) {
+    const item = marker.items[position - 1];
+    const carryReference = encodeSongsReference(marker.date, marker.items, item);
+    return selectedSongRoute(item, q, carryReference);
+  }
+
+  if (marker.selected && selectedSongFollowup(q)) {
+    const carryReference = encodeSongsReference(marker.date, marker.items, marker.selected);
+    return selectedSongRoute(marker.selected, q, carryReference);
+  }
+  return null;
+}
+
 export async function captureCultoReference(supabase: any, message: string) {
   const q = normalize(message);
+  const contextDate = message.match(/__ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})__/i)?.[1] ?? null;
   const { data, error } = await supabase.rpc("atis_get_culto_candidates", { _days: 30, _timezone: TZ });
   if (error) throw error;
   const rows = Array.isArray(data) ? data : [];
   const today = todayKey();
   let candidates = rows;
-  if (/\bhoje\b/.test(q)) candidates = rows.filter((row: any) => row.service_date === today);
+  if (contextDate) candidates = rows.filter((row: any) => row.service_date === contextDate);
+  else if (/\bhoje\b/.test(q)) candidates = rows.filter((row: any) => row.service_date === today);
   else if (/\bdomingo\b/.test(q)) candidates = rows.filter((row: any) => isSunday(String(row.service_date)));
   const selected = candidates[0];
   return selected?.service_date ? encodeCultoReference(String(selected.service_date)) : null;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { AlertCircle, BarChart3, CheckCircle2, Loader2, MessageSquareText, RefreshCw, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, BarChart3, BrainCircuit, CheckCircle2, Loader2, MessageSquareText, RefreshCw, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Tab = "history" | "unanswered" | "prayers";
@@ -13,7 +13,15 @@ type Dashboard = {
   group_metrics: Array<{ id?: string; name?: string; messages_7d: number; top_route?: string | null; top_route_count?: number }>;
 };
 
-type HistoryRow = { id: string; remote_jid: string; sender_name?: string | null; message_text: string; is_group: boolean; assistant_route?: string | null; response_text?: string | null; status: string; error?: string | null; received_at: string };
+type HistoryMetadata = {
+  context_source?: "memory" | "memory+history" | "history" | "none" | string | null;
+  context_memory_reference?: string | null;
+  context_memory_reason?: string | null;
+  context_memory_age_seconds?: number | string | null;
+  history_messages_used?: number | null;
+  context_messages_used?: number | null;
+};
+type HistoryRow = { id: string; remote_jid: string; sender_name?: string | null; message_text: string; is_group: boolean; assistant_route?: string | null; response_text?: string | null; status: string; error?: string | null; metadata?: HistoryMetadata | null; received_at: string };
 type Unanswered = { id: string; question: string; route?: string | null; answer?: string | null; reason: string; status: string; created_at: string };
 type Prayer = { id: string; sender_name?: string | null; content: string; status: string; is_private: boolean; admin_note?: string | null; created_at: string };
 
@@ -37,6 +45,14 @@ function dateTime(value: string) {
   catch { return value; }
 }
 
+function contextLabel(source?: string | null) {
+  if (source === "memory+history") return "memória + histórico";
+  if (source === "memory") return "memória";
+  if (source === "history") return "histórico";
+  if (source === "none") return "sem contexto";
+  return null;
+}
+
 export default function AtisHistory() {
   const [tab, setTab] = useState<Tab>("history");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -46,6 +62,18 @@ export default function AtisHistory() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const contextMetrics = useMemo(() => {
+    const metrics = { memory: 0, history: 0, none: 0, measured: 0 };
+    for (const row of history) {
+      if (row.status !== "replied") continue;
+      const source = row.metadata?.context_source;
+      if (source === "memory" || source === "memory+history") { metrics.memory++; metrics.measured++; }
+      else if (source === "history") { metrics.history++; metrics.measured++; }
+      else if (source === "none") { metrics.none++; metrics.measured++; }
+    }
+    return metrics;
+  }, [history]);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -91,11 +119,35 @@ export default function AtisHistory() {
         ["Orações", dashboard.prayer_open, "em acompanhamento"],
       ].map(([label, value, sub]) => <div key={String(label)} className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-3"><p className="text-[9px] uppercase tracking-wider text-[hsl(var(--dark-muted))]">{label}</p><p className="text-xl font-black mt-1">{value}</p><p className="text-[9px] text-[hsl(var(--dark-muted))]">{sub}</p></div>)}</div>}
 
+      <div className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4">
+        <div className="flex items-start gap-3">
+          <BrainCircuit className="w-5 h-5 text-primary mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold">Contexto conversacional · amostra recente</p>
+            <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">Mostra como as respostas novas estão recuperando continuidade. A memória estruturada tem prioridade; o histórico textual permanece como fallback.</p>
+          </div>
+        </div>
+        {contextMetrics.measured > 0 ? (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {[
+              ["Memória", contextMetrics.memory, "estruturada"],
+              ["Histórico", contextMetrics.history, "fallback"],
+              ["Sem contexto", contextMetrics.none, "resposta nova"],
+            ].map(([label, value, sub]) => <div key={String(label)} className="rounded-xl bg-[hsl(var(--dark-bg))] p-3"><p className="text-[9px] text-[hsl(var(--dark-muted))]">{label}</p><p className="text-lg font-black mt-0.5">{value}</p><p className="text-[8px] text-[hsl(var(--dark-muted))]">{sub}</p></div>)}
+          </div>
+        ) : (
+          <p className="mt-3 text-[10px] text-[hsl(var(--dark-muted))]">A nova telemetria já está ativa. Ela aparecerá aqui assim que houver respostas processadas pela versão contextual do webhook.</p>
+        )}
+      </div>
+
       {dashboard && (dashboard.routes.length > 0 || dashboard.group_metrics.length > 0) && <div className="grid md:grid-cols-2 gap-3"><div className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4"><p className="text-xs font-bold">Assuntos mais usados · 7 dias</p><div className="mt-3 space-y-2">{dashboard.routes.slice(0, 6).map((row) => <div key={row.route} className="flex items-center gap-2 text-[10px]"><span className="flex-1 truncate">{row.route}</span><strong>{row.count}</strong></div>)}</div></div><div className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4"><p className="text-xs font-bold">Grupos mais ativos · 7 dias</p><div className="mt-3 space-y-2">{dashboard.group_metrics.length ? dashboard.group_metrics.slice(0, 6).map((row, index) => <div key={`${row.id}-${index}`} className="flex items-center gap-2 text-[10px]"><span className="flex-1 truncate">{row.name || "Grupo"}{row.top_route ? <span className="block text-[8px] text-[hsl(var(--dark-muted))] mt-0.5">Mais perguntado: {row.top_route}</span> : null}</span><strong>{row.messages_7d}</strong></div>) : <p className="text-[10px] text-[hsl(var(--dark-muted))]">Sem atividade de grupos no período.</p>}</div></div></div>}
 
       <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[hsl(var(--dark-card))] sticky top-[70px] z-20"><TabButton active={tab === "history"} onClick={() => setTab("history")} label="Conversas" count={history.length} /><TabButton active={tab === "unanswered"} onClick={() => setTab("unanswered")} label="Não respondeu" count={unanswered.length} /><TabButton active={tab === "prayers"} onClick={() => setTab("prayers")} label="Orações" count={prayers.length} /></div>
 
-      {tab === "history" && <div className="space-y-2">{history.length === 0 ? <Empty text="Nenhuma conversa registrada." /> : history.map((row) => <div key={row.id} className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4"><div className="flex items-start gap-3"><MessageSquareText className="w-4 h-4 text-primary mt-0.5" /><div className="min-w-0 flex-1"><div className="flex items-center gap-2 flex-wrap"><p className="text-xs font-bold truncate">{row.sender_name || (row.is_group ? "Grupo" : "Conversa")}</p>{row.assistant_route && <span className="text-[8px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{row.assistant_route}</span>}<span className="text-[8px] text-[hsl(var(--dark-muted))]">{dateTime(row.received_at)}</span></div><p className="mt-2 text-xs"><span className="text-[hsl(var(--dark-muted))]">Usuário:</span> {row.message_text}</p>{row.response_text && <p className="mt-2 text-xs whitespace-pre-wrap"><span className="text-primary font-bold">ATIS:</span> {row.response_text}</p>}{row.error && <p className="mt-2 text-[10px] text-destructive">Erro: {row.error}</p>}</div></div></div>)}</div>}
+      {tab === "history" && <div className="space-y-2">{history.length === 0 ? <Empty text="Nenhuma conversa registrada." /> : history.map((row) => {
+        const context = contextLabel(row.metadata?.context_source);
+        return <div key={row.id} className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4"><div className="flex items-start gap-3"><MessageSquareText className="w-4 h-4 text-primary mt-0.5" /><div className="min-w-0 flex-1"><div className="flex items-center gap-2 flex-wrap"><p className="text-xs font-bold truncate">{row.sender_name || (row.is_group ? "Grupo" : "Conversa")}</p>{row.assistant_route && <span className="text-[8px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{row.assistant_route}</span>}{context && <span className={`text-[8px] px-2 py-0.5 rounded-full ${row.metadata?.context_source?.includes("memory") ? "bg-emerald-500/10 text-emerald-400" : "bg-sky-500/10 text-sky-400"}`}>{context}</span>}<span className="text-[8px] text-[hsl(var(--dark-muted))]">{dateTime(row.received_at)}</span></div>{row.metadata?.context_memory_reference && row.metadata?.context_source?.includes("memory") && <p className="text-[9px] text-emerald-400/80 mt-1">Memória bíblica: {row.metadata.context_memory_reference}</p>}<p className="mt-2 text-xs"><span className="text-[hsl(var(--dark-muted))]">Usuário:</span> {row.message_text}</p>{row.response_text && <p className="mt-2 text-xs whitespace-pre-wrap"><span className="text-primary font-bold">ATIS:</span> {row.response_text}</p>}{row.error && <p className="mt-2 text-[10px] text-destructive">Erro: {row.error}</p>}</div></div></div>;
+      })}</div>}
 
       {tab === "unanswered" && <div className="space-y-2">{unanswered.length === 0 ? <Empty text="Nenhuma pergunta aberta nesta central." icon="check" /> : unanswered.map((row) => <div key={row.id} className="rounded-2xl bg-[hsl(var(--dark-card))] border border-amber-500/20 p-4"><div className="flex gap-3"><AlertCircle className="w-4 h-4 text-amber-400 mt-0.5" /><div className="flex-1 min-w-0"><div className="flex gap-2 flex-wrap"><span className="text-[8px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300">{row.reason}</span>{row.route && <span className="text-[8px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{row.route}</span>}<span className="text-[8px] text-[hsl(var(--dark-muted))]">{dateTime(row.created_at)}</span></div><p className="text-xs font-semibold mt-2">{row.question}</p>{row.answer && <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-2 whitespace-pre-wrap">Resposta registrada: {row.answer}</p>}<div className="flex gap-2 mt-3"><button disabled={busy === row.id} onClick={() => updateUnanswered(row.id, "resolved")} className="h-9 px-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-[10px] font-bold disabled:opacity-40">Marcar resolvida</button><button disabled={busy === row.id} onClick={() => updateUnanswered(row.id, "ignored")} className="h-9 px-3 rounded-xl bg-[hsl(var(--dark-bg))] text-[10px] font-bold disabled:opacity-40">Ignorar</button></div></div></div></div>)}</div>}
 

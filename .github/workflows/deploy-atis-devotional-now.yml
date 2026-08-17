@@ -1,0 +1,44 @@
+name: Deploy ATIS Devotional Now
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-atis-devotional-now.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate target
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
+
+      - name: Deploy ATIS functions
+        run: |
+          npx --yes supabase@latest functions deploy atis-destination-settings --project-ref "$SUPABASE_PROJECT_ID"
+          npx --yes supabase@latest functions deploy atis-content-runner --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/deploy-atis-devotional-now.yml
+          git commit -m "chore: remove one-off ATIS devotional deploy workflow"
+          git push origin HEAD:main

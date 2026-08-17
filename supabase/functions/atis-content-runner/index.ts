@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validateAdminAuth } from "../_shared/auth-utils.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { runAtisAssistant } from "../_shared/atis/assistant.ts";
 
 type Json = Record<string, any>;
 type DestinationType = "contact" | "individual" | "group";
@@ -99,7 +98,7 @@ async function resolveDestination(supabase: any, schedule: Schedule, defaultInst
   return { instanceId, targetType: "group", targetKey: `group:${data.id}`, contactId: null, individualId: null, groupId: data.id, phone: null, providerTargetId: data.provider_group_id, name: data.name ?? "Grupo" };
 }
 
-async function dailyDevotionalContent(supabase: any, dateKey: string, verseRef: string) {
+async function dailyDevotionalContent(supabase: any, dateKey: string, verseRef: string, url: string, serviceKey: string) {
   const { data: cached, error: cacheError } = await supabase.from("atis_settings").select("value").eq("key", "daily_devotional_cache").maybeSingle();
   if (cacheError) throw cacheError;
   const value = cached?.value ?? {};
@@ -107,16 +106,22 @@ async function dailyDevotionalContent(supabase: any, dateKey: string, verseRef: 
     return value.content.trim();
   }
 
-  const result = await runAtisAssistant(
-    supabase,
-    `Faça uma reflexão devocional curta e prática sobre ${verseRef}. Use o texto bíblico do aplicativo como fonte.`,
-    { allowedAiRoutes: ["devotional"] },
-  );
-  if (result.route !== "devotional" || !result.text.trim()) throw new Error("DEVOTIONAL_GENERATION_FAILED");
+  const response = await fetch(`${url}/functions/v1/atis-ai`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: `Faça uma reflexão devocional curta e prática sobre ${verseRef}. Use o texto bíblico do aplicativo como fonte.`,
+    }),
+  });
+  const result = await response.json().catch(() => null) as any;
+  if (!response.ok || result?.route !== "devotional" || typeof result?.text !== "string" || !result.text.trim()) {
+    throw new Error("DEVOTIONAL_GENERATION_FAILED");
+  }
+
   const content = `🌿 *Reflexão devocional*\n📖 *${verseRef}*\n\n${result.text.trim()}`;
   const { error } = await supabase.from("atis_settings").upsert({
     key: "daily_devotional_cache",
-    value: { date: dateKey, reference: verseRef, content, generated_at: new Date().toISOString(), source: "current_daily_verse+atis_devotional" },
+    value: { date: dateKey, reference: verseRef, content, generated_at: new Date().toISOString(), source: "current_daily_verse+atis-ai:devotional" },
     description: "Cache diário da reflexão devocional do ATIS, gerada a partir do Versículo do Dia do app.",
   }, { onConflict: "key" });
   if (error) throw error;
@@ -204,7 +209,7 @@ Deno.serve(async (req) => {
       }
 
       if (!content || contentDate !== local.dateKey || contentReference !== verse.verse_ref) {
-        content = await dailyDevotionalContent(supabase, local.dateKey, verse.verse_ref);
+        content = await dailyDevotionalContent(supabase, local.dateKey, verse.verse_ref, url, serviceKey);
         contentDate = local.dateKey;
         contentReference = verse.verse_ref;
       }

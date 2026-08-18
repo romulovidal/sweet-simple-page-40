@@ -478,8 +478,8 @@ async function enrichBibleReferences(
     references.push(reference);
   }
 
-  const expansionTargets = contextReference?.verseStart ? [contextReference] : references.slice(0, 2);
-  for (const reference of expansionTargets) {
+  let appendedBlocks = 0;
+  for (const reference of references) {
     const canonical = bibleText(reference, false);
     const block = await trustedBibleBlock(supabase, config, reference);
     if (!block) continue;
@@ -487,6 +487,9 @@ async function enrichBibleReferences(
     const linkLine = linkMatch ? `📖 Leia aqui: ${linkMatch[0]}` : null;
     const rawCanonicalPresent = output.includes(canonical.text);
     const normalizedCanonicalPresent = normalizedQuote(output).includes(normalizedQuote(canonical.text));
+
+    // Every literal Bible passage already present in the answer receives its
+    // verified app share link, even when several passages are shown.
     if (rawCanonicalPresent || normalizedCanonicalPresent) {
       if (linkLine && !output.includes(linkMatch![0])) {
         output = rawCanonicalPresent
@@ -495,7 +498,19 @@ async function enrichBibleReferences(
       }
       continue;
     }
+
+    // Do not turn every merely-mentioned reference into a large Bible block.
+    // With a primary passage, only that passage may be appended. Otherwise,
+    // keep the existing cap of two automatically expanded references.
+    const isPrimary = Boolean(
+      contextReference?.verseStart
+      && referenceKey(reference) === referenceKey(contextReference),
+    );
+    if (contextReference?.verseStart && !isPrimary) continue;
+    if (!contextReference?.verseStart && appendedBlocks >= 2) continue;
+
     output = `${output.trimEnd()}\n\n${block}`;
+    appendedBlocks++;
   }
   return output.trim();
 }

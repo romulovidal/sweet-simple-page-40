@@ -691,7 +691,27 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
 
       const budget = await consumeReplyBudget(supabase, instance.id, remoteJid, profile);
       if (budget?.allowed !== true) {
-        await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: String(budget?.reason ?? "rate_limit").toLowerCase(), retry_after_seconds: budget?.retry_after_seconds ?? null, destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
+        const budgetReason = String(budget?.reason ?? "RATE_LIMIT").toUpperCase();
+        const retryAfter = Math.max(1, Number(budget?.retry_after_seconds ?? 1));
+        if (!isGroup && budgetReason === "RATE_LIMIT") {
+          const waitText = retryAfter >= 60 ? `${Math.ceil(retryAfter / 60)} min` : `${retryAfter} s`;
+          const notice = `⏳ Esta conversa atingiu temporariamente o limite de proteção do ATIS. Não perdi o contexto. Tente novamente em cerca de ${waitText}.`;
+          try {
+            if (!evolution) { const config = getEvolutionConfigFromEnv(); evolution = new EvolutionProvider({ baseUrl: config.baseUrl, apiKey: config.apiKey }); }
+            const sent = await evolution.sendText(providerInstanceName, directProviderTarget(remoteJid), notice);
+            await supabase.from("atis_inbound_messages").update({
+              status: "replied", response_text: notice, processed_at: new Date().toISOString(), error: null,
+              metadata: { policy: "rate_limit", retry_after_seconds: retryAfter, destination_type: destinationType, destination_id: destinationId, provider_response_message_id: sent.providerMessageId ?? null },
+            }).eq("id", inbound.id);
+            counts.replied++;
+          } catch (rateLimitDeliveryError) {
+            console.error("[atis-webhook] rate-limit notice delivery failed", rateLimitDeliveryError instanceof Error ? rateLimitDeliveryError.message : rateLimitDeliveryError);
+            await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: "rate_limit", retry_after_seconds: retryAfter, destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
+            counts.ignored++;
+          }
+          continue;
+        }
+        await supabase.from("atis_inbound_messages").update({ status: "ignored", processed_at: new Date().toISOString(), metadata: { policy: budgetReason.toLowerCase(), retry_after_seconds: retryAfter, destination_type: destinationType, destination_id: destinationId } }).eq("id", inbound.id);
         counts.ignored++;
         continue;
       }
@@ -724,6 +744,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
         conversationHistory: assistantHistory,
         conversationMode: state.conversation_mode ?? profile.conversation_mode,
         destinationInstruction: styleInstruction || null,
+        memoryBibleReference: structuredContext.reference,
       });
       const answerText = appendContinueInApp(answer.text, answer.route, profile.continue_in_app, answer.reference);
       const delivery = await sendReplyWithProfile(evolution, providerInstanceName, directProviderTarget(remoteJid), answerText, profile, answer.route, true);

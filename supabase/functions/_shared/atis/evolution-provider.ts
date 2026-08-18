@@ -398,7 +398,7 @@ export class EvolutionProvider {
 
   async sendText(instanceName: string, target: string, text: string, delay = 0) {
     const finalText = target.endsWith("@g.us") ? await enrichGroupReply(text) : text;
-    const body: any = await this.request(`/message/sendText/${encodeURIComponent(instanceName)}`, {
+    const send = () => this.request(`/message/sendText/${encodeURIComponent(instanceName)}`, {
       method: "POST",
       body: JSON.stringify({
         number: target,
@@ -406,6 +406,19 @@ export class EvolutionProvider {
         ...(delay > 0 ? { delay } : {}),
       }),
     }, 30000);
+
+    let body: any;
+    try {
+      body = await send();
+    } catch (error) {
+      const retryable = error instanceof EvolutionProviderError && (
+        [400, 408, 409, 425, 429, 502, 503, 504].includes(error.status) || error.status >= 500
+      );
+      if (!retryable) throw error;
+      console.warn("[atis-evolution] retrying text delivery once", error.status, error.code);
+      await new Promise((resolve) => setTimeout(resolve, error.status === 429 ? 1200 : 650));
+      body = await send();
+    }
 
     return {
       raw: body,

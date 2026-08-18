@@ -86,3 +86,5 @@ jobs:
         run: |
           supabase functions deploy atis-ai --project-ref "$SUPABASE_PROJECT_ID"
           supabase functions deploy atis-webhook --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+
+# rerun after aligning legacy Harpa navigation expectations with the global no-link policy

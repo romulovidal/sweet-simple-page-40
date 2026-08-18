@@ -1,0 +1,47 @@
+name: ATIS v46.2 Canonical Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atis-v46-2-canonical-guard.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atis-v46-2-canonical-guard
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Apply v46.2 patch
+        run: python3 scripts/patch-atis-v46-2.py
+      - name: Run regressions
+        run: |
+          deno test supabase/functions/_shared/atis/semantic-bible_test.ts
+          deno test supabase/functions/_shared/atis/canonical-bible_test.ts
+          deno test supabase/functions/_shared/atis/context-routing_test.ts
+          deno test supabase/functions/_shared/atis/link-policy_test.ts
+      - name: Type-check production runtimes
+        run: |
+          deno check supabase/functions/atis-ai/index.ts
+          deno check supabase/functions/atis-webhook/index.ts
+      - name: Commit functional changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/patch-atis-v46-2.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/functions/_shared/atis/canonical-bible.ts \
+                  supabase/functions/_shared/atis/canonical-bible_test.ts \
+                  supabase/functions/_shared/atis/semantic-bible.ts \
+                  supabase/functions/_shared/atis/semantic-bible_test.ts \
+                  scripts/patch-atis-v46-2.py
+          git commit -m "fix(atis): harden canonical semantic grounding"
+          git push origin HEAD:agent/atis-v46-2-canonical-guard

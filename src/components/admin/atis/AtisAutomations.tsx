@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock3, Loader2, Pencil, Plus, Save, Trash2, WandSparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import AtisSpecializedAutomations from "./AtisSpecializedAutomations";
 
 type Automation = {
   id: string;
@@ -111,7 +112,7 @@ export default function AtisAutomations() {
     <div className="space-y-4">
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
         <WandSparkles className="w-5 h-5 text-primary mt-0.5" />
-        <div className="flex-1"><h2 className="text-sm font-bold">Automações do ATIS</h2><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Crie rotinas recorrentes usando o motor e a fila já existentes. Grupos só recebem automações quando essa permissão estiver ativa no próprio grupo.</p><button onClick={() => setEditing(emptyForm())} className="mt-3 h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold inline-flex items-center gap-2"><Plus className="w-4 h-4" /> Nova automação</button></div>
+        <div className="flex-1"><h2 className="text-sm font-bold">Automações do ATIS</h2><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Crie rotinas gerais no motor de automações. Logo abaixo, acompanhe também as rotinas especializadas configuradas diretamente por contato, indivíduo ou grupo.</p><button onClick={() => setEditing(emptyForm())} className="mt-3 h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold inline-flex items-center gap-2"><Plus className="w-4 h-4" /> Nova automação</button></div>
       </div>
 
       {error && <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">{error}</div>}
@@ -120,6 +121,8 @@ export default function AtisAutomations() {
       {loading ? <div className="py-14 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div> : rows.length === 0 ? (
         <div className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-8 text-center"><WandSparkles className="w-9 h-9 mx-auto text-[hsl(var(--dark-muted))] opacity-50" /><p className="text-sm font-bold mt-3">Nenhuma automação geral cadastrada</p><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Aniversários e conteúdos por destinatário continuam independentes. Esta área é para novas rotinas gerais.</p></div>
       ) : <div className="space-y-2">{rows.map((row) => <div key={row.id} className="rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] p-4"><div className="flex items-start gap-3"><span className={`w-2.5 h-2.5 rounded-full mt-1.5 ${row.enabled ? "bg-emerald-400" : "bg-[hsl(var(--dark-muted))]"}`} /><div className="min-w-0 flex-1"><div className="flex items-center gap-2 flex-wrap"><p className="text-sm font-bold">{row.name}</p><span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{row.type}</span></div>{row.description && <p className="text-[10px] text-[hsl(var(--dark-muted))] mt-1">{row.description}</p>}<p className="text-[10px] text-[hsl(var(--dark-muted))] mt-2 flex gap-2 flex-wrap"><span className="inline-flex items-center gap-1"><Clock3 className="w-3 h-3" /> {row.schedule_cron}</span><span>• {row.target_selector?.mode === "all_groups" ? "Todos os grupos permitidos" : "Contatos com consentimento"}</span><span>• {formatLast(row.last_run_at)}</span></p></div><button onClick={() => edit(row)} className="w-8 h-8 rounded-lg grid place-items-center bg-[hsl(var(--dark-bg))]"><Pencil className="w-4 h-4" /></button><button onClick={() => remove(row)} className="w-8 h-8 rounded-lg grid place-items-center text-destructive bg-destructive/10"><Trash2 className="w-4 h-4" /></button></div></div>)}</div>}
+
+      <AtisSpecializedAutomations />
 
       {editing && <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center"><div className="w-full sm:max-w-xl max-h-[94dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-[hsl(var(--dark-bg))] border border-[hsl(var(--dark-card-hover))]"><div className="sticky top-0 bg-[hsl(var(--dark-bg))]/95 backdrop-blur p-4 border-b border-[hsl(var(--dark-card-hover))] flex items-center"><div className="flex-1"><p className="text-sm font-bold">{editing.id ? "Editar automação" : "Nova automação"}</p><p className="text-[10px] text-[hsl(var(--dark-muted))]">Fuso: America/Fortaleza</p></div><button onClick={() => setEditing(null)} className="w-9 h-9 rounded-xl bg-[hsl(var(--dark-card))] grid place-items-center"><X className="w-4 h-4" /></button></div><div className="p-4 space-y-4 pb-24">
         <Field label="Nome *"><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} maxLength={160} className="field-auto" placeholder="Ex.: Palavra da semana" /></Field>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bot, Clock3, Loader2, Save, ShieldCheck, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AtisDestinationType } from "./AtisDestinationSettings";
+import AtisDestinationInsights from "./AtisDestinationInsights";
 
 type Profile = {
   conversation_mode: "normal" | "study" | "concise";
@@ -74,10 +75,13 @@ export default function AtisConversationProfile({ destinationType, destinationId
   if (!profile) return <section className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">{error || "Comportamento indisponível."}</section>;
 
   return <section className="rounded-2xl border border-[hsl(var(--dark-card-hover))] overflow-hidden">
-    <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3"><Bot className="w-5 h-5 text-primary mt-0.5" /><div><h4 className="text-sm font-bold">Comportamento da conversa</h4><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Perfil independente para esta pessoa ou grupo: profundidade, silêncio, antispam, botões, áudio e continuidade no app.</p></div></div>
+    <div className="p-4 bg-[hsl(var(--dark-bg))] flex items-start gap-3"><Bot className="w-5 h-5 text-primary mt-0.5" /><div><h4 className="text-sm font-bold">Comportamento da conversa</h4><p className="text-[11px] text-[hsl(var(--dark-muted))] mt-1">Perfil independente para esta pessoa ou grupo: profundidade, silêncio, antispam, botões e áudio.</p></div></div>
     <div className="p-4 space-y-4">
       {error && <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-[10px] text-destructive">{error}</div>}
       {saved && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-[10px] text-emerald-400">Comportamento salvo.</div>}
+
+      <AtisDestinationInsights destinationType={destinationType} destinationId={destinationId} />
+
       <div className="grid sm:grid-cols-2 gap-3"><Field label="Modo padrão"><select value={profile.conversation_mode} onChange={(e) => patch({ conversation_mode: e.target.value as Profile["conversation_mode"] })} className="profile-field"><option value="normal">Normal</option><option value="study">Modo Estudo</option><option value="concise">Conciso</option></select></Field><Field label="Estilo das respostas"><select value={profile.response_style} onChange={(e) => patch({ response_style: e.target.value as Profile["response_style"] })} className="profile-field"><option value="concise">Curto</option><option value="balanced">Equilibrado</option><option value="detailed">Detalhado</option></select></Field></div>
       <Field label="Instrução de estilo deste destino"><textarea value={profile.custom_instruction ?? ""} onChange={(e) => patch({ custom_instruction: e.target.value })} maxLength={1000} rows={3} placeholder="Ex.: responder com linguagem simples para jovens. Não altera regras de segurança do ATIS." className="profile-field h-auto py-3 resize-y" /></Field>
 
@@ -86,7 +90,7 @@ export default function AtisConversationProfile({ destinationType, destinationId
       <div className="grid sm:grid-cols-2 gap-3"><Field label="Cooldown entre respostas (segundos)"><input type="number" min={0} max={300} value={profile.cooldown_seconds} onChange={(e) => patch({ cooldown_seconds: Number(e.target.value) })} className="profile-field" /></Field><Field label="Máximo de respostas / 10 min"><input type="number" min={1} max={50} value={profile.max_replies_per_10m} onChange={(e) => patch({ max_replies_per_10m: Number(e.target.value) })} className="profile-field" /></Field></div>
 
       {destinationType === "group" && <div className="rounded-xl bg-[hsl(var(--dark-bg))] p-3"><Row icon={<ShieldCheck className="w-4 h-4" />} title="Responder só quando chamado" subtitle="Em grupo, exige “Atis” ou @menção para evitar interferir em conversas"><Toggle checked={profile.mention_only} onChange={(value) => patch({ mention_only: value })} /></Row></div>}
-      <div className="rounded-xl bg-[hsl(var(--dark-bg))] divide-y divide-[hsl(var(--dark-card-hover))]/60"><div className="p-3"><Row icon={<Bot className="w-4 h-4" />} title="Botões de ação" subtitle="Experimental na Evolution 2.3.7; deixe desligado salvo teste controlado"><Toggle checked={profile.enable_buttons} onChange={(value) => patch({ enable_buttons: value })} /></Row></div><div className="p-3"><Row icon={<Volume2 className="w-4 h-4" />} title="Resposta em áudio" subtitle="Quando possível, envia também uma narração; texto continua sendo a resposta principal"><Toggle checked={profile.enable_audio} onChange={(value) => patch({ enable_audio: value })} /></Row></div><div className="p-3"><Row icon={<ShieldCheck className="w-4 h-4" />} title="Link “Continue no app”" subtitle="Acrescenta um caminho contextual para a Bíblia do Atalaia"><Toggle checked={profile.continue_in_app} onChange={(value) => patch({ continue_in_app: value })} /></Row></div></div>
+      <div className="rounded-xl bg-[hsl(var(--dark-bg))] divide-y divide-[hsl(var(--dark-card-hover))]/60"><div className="p-3"><Row icon={<Bot className="w-4 h-4" />} title="Botões de ação" subtitle="Experimental na Evolution 2.3.7; deixe desligado salvo teste controlado"><Toggle checked={profile.enable_buttons} onChange={(value) => patch({ enable_buttons: value })} /></Row></div><div className="p-3"><Row icon={<Volume2 className="w-4 h-4" />} title="Resposta em áudio" subtitle="Quando possível, envia também uma narração; texto continua sendo a resposta principal"><Toggle checked={profile.enable_audio} onChange={(value) => patch({ enable_audio: value })} /></Row></div></div>
       <button onClick={save} disabled={saving || !dirty} className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-40">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{saving ? "Salvando…" : dirty ? "Salvar comportamento" : "Comportamento salvo"}</button>
     </div>
     <style>{`.profile-field{width:100%;min-height:40px;border-radius:12px;border:1px solid hsl(var(--dark-card-hover));background:hsl(var(--dark-bg));padding:0 10px;color:hsl(var(--dark-text));font-size:11px;outline:none}`}</style>

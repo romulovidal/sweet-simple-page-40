@@ -7,6 +7,12 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.,;!?()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function clampText(value: string, max = 3800) {
+  const text = value.trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 55).trimEnd()}\n\n… conteúdo reduzido para envio no WhatsApp.`;
+}
+
 function todayKey() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const get = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
@@ -44,6 +50,7 @@ export function isCanticosIntent(message: string) {
 
 async function worshipSelectionLookup(supabase: any, message: string) {
   const q = normalize(message);
+  const contextDate = message.match(/__ATIS_CULTO_DATE=(\d{4}-\d{2}-\d{2})__/i)?.[1] ?? null;
   const today = todayKey();
   const through = addDays(today, 30);
   const { data, error } = await supabase
@@ -55,10 +62,12 @@ async function worshipSelectionLookup(supabase: any, message: string) {
     .order("culto_date", { ascending: true });
   if (error) throw error;
   let rows = Array.isArray(data) ? data : [];
-  if (/\bhoje\b/.test(q)) rows = rows.filter((row: any) => row.culto_date === today);
+  if (contextDate) rows = rows.filter((row: any) => row.culto_date === contextDate);
+  else if (/\bhoje\b/.test(q)) rows = rows.filter((row: any) => row.culto_date === today);
   else if (/\bdomingo\b/.test(q)) rows = rows.filter((row: any) => isSunday(row.culto_date));
   const selection = rows[0];
   if (!selection) {
+    if (contextDate) return `🎶 Ainda não há uma seleção de louvor ativa cadastrada para o culto de ${fmtDate(contextDate)} no app.`;
     if (/\bhoje\b/.test(q)) return "🎶 Ainda não há uma seleção de louvor ativa cadastrada para hoje no app.";
     if (/\bdomingo\b/.test(q)) return "🎶 Ainda não há uma seleção de louvor ativa cadastrada para o próximo domingo no app.";
     return "🎶 Não encontrei uma próxima seleção de louvor ativa cadastrada no app.";
@@ -112,6 +121,12 @@ async function canticoSearch(supabase: any, message: string) {
     const { data, error } = await supabase.from("canticos").select("numero,titulo,categoria,tom,capotraste,momentos_sugeridos,referencia_biblica,letra_raw").eq("numero", Number(numberMatch[1])).eq("publicado", true).maybeSingle();
     if (error) throw error;
     if (!data) return `🎵 Não encontrei o Cântico ${numberMatch[1]} entre os cânticos publicados do app.`;
+    const wantsLyrics = /\b(letra|manda|mande|mostra|mostre|envia|envie)\b/.test(q);
+    if (wantsLyrics) {
+      const lyrics = String(data.letra_raw ?? "").trim();
+      if (!lyrics) return `🎵 O *Cântico ${data.numero} — ${data.titulo}* está cadastrado no app, mas ainda não possui letra disponível.`;
+      return clampText(`🎵 *Cântico ${data.numero} — ${data.titulo}*\n\n${lyrics}`);
+    }
     const extras = [data.categoria ? `Categoria: ${data.categoria}` : null, data.tom ? `Tom: ${data.tom}` : null, data.referencia_biblica ? `Referência: ${data.referencia_biblica}` : null].filter(Boolean);
     return `🎵 *Cântico ${data.numero} — ${data.titulo}*${extras.length ? `\n${extras.join(" · ")}` : ""}`;
   }
@@ -140,6 +155,7 @@ async function canticoSearch(supabase: any, message: string) {
 
 export async function canticosLookup(supabase: any, message: string) {
   const q = normalize(message);
-  const asksProgramming = /\b(culto|domingo|hoje|proximo|programacao|sequencia|lista)\b/.test(q) && /\b(hino|hinos|cantico|canticos|louvor|louvores)\b/.test(q);
+  const hasContextDate = /__atis_culto_date=\d{4}-\d{2}-\d{2}__/.test(q);
+  const asksProgramming = hasContextDate || (/\b(culto|domingo|hoje|proximo|programacao|sequencia|lista)\b/.test(q) && /\b(hino|hinos|cantico|canticos|louvor|louvores)\b/.test(q));
   return asksProgramming ? await worshipSelectionLookup(supabase, message) : await canticoSearch(supabase, message);
 }

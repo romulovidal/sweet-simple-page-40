@@ -41,7 +41,7 @@ function defaultProfile(type: DestinationType): DestinationProfile {
     mention_only: false,
     enable_buttons: false,
     enable_audio: false,
-    continue_in_app: true,
+    continue_in_app: false,
     custom_instruction: null,
   };
 }
@@ -218,7 +218,7 @@ export async function resolvePendingPrayer(supabase: any, state: any, command: "
 
 export function continueInAppLink(route: string, reference?: string | null) {
   const base = "https://biblia.atalaias.online";
-  if (route === "harpa_lookup") return `${base}/harpa`;
+  if (route === "harpa_lookup" || route === "harpa_study") return `${base}/harpa`;
   if (route === "canticos_info") return `${base}/canticos`;
   if (route === "culto_info") return `${base}/harpa`;
   if (["bible_lookup", "ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline"].includes(route)) return `${base}/biblia`;
@@ -227,10 +227,21 @@ export function continueInAppLink(route: string, reference?: string | null) {
   return reference ? `${base}/biblia` : base;
 }
 
-export function appendContinueInApp(text: string, route: string, enabled: boolean, reference?: string | null) {
-  if (!enabled || /https?:\/\/biblia\.atalaias\.online/i.test(text)) return text;
-  const link = continueInAppLink(route, reference);
-  return `${text.trim()}\n\n📱 *Continue no app:*\n${link}`;
+export function sanitizeAtisLinks(text: string) {
+  const canonicalVerseLine = /^\s*📖\s*Leia aqui:\s*(https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+)\s*$/i;
+  let output = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label) => String(label));
+  output = output.split("\n").map((line) => {
+    const trusted = line.match(canonicalVerseLine);
+    if (trusted) return `📖 Leia aqui: ${trusted[1]}`;
+    return line.replace(/https?:\/\/[^\s<>"')\]]+/gi, "");
+  }).join("\n");
+  output = output.replace(/^\s*📱\s*\*?Continue no app:?\*?\s*$/gim, "");
+  output = output.replace(/\n{3,}/g, "\n\n").trim();
+  return output;
+}
+
+export function appendContinueInApp(text: string, _route: string, _enabled: boolean, _reference?: string | null) {
+  return sanitizeAtisLinks(text);
 }
 
 export function assistantButtons(route: string) {
@@ -238,18 +249,15 @@ export function assistantButtons(route: string) {
     return [
       { id: "atis:mode:study", text: "📚 Modo Estudo" },
       { id: "atis:devotional", text: "🌿 Devocional" },
-      { id: "atis:app", text: "📱 Abrir app" },
     ];
   }
-  if (route === "harpa_lookup" || route === "canticos_info") {
+  if (route === "harpa_lookup" || route === "harpa_study" || route === "canticos_info") {
     return [
-      { id: "atis:app", text: "📱 Abrir app" },
       { id: "atis:mode:study", text: "📚 Modo Estudo" },
     ];
   }
   return [
     { id: "atis:mode:study", text: "📚 Modo Estudo" },
-    { id: "atis:app", text: "📱 Abrir app" },
   ];
 }
 
@@ -262,10 +270,26 @@ export function normalizeButtonCommand(message: string) {
   return message;
 }
 
-export function looksUnanswered(text: string, route: string) {
+export function unansweredReason(text: string, route: string) {
   const q = normalize(text);
-  if (["culto_info", "birthdays", "canticos_info", "harpa_lookup", "daily_verse", "bible_lookup"].includes(route)) return false;
-  return /nao sei|não sei|nao consegui responder|não consegui responder|nao tenho informacao|não tenho informação|nao tenho certeza|não tenho certeza|nao posso confirmar|não posso confirmar/.test(q);
+  if (/nao consegui identificar uma referencia biblica completa|não consegui identificar uma referência bíblica completa/.test(q)) return "input_incomplete";
+  if (/preciso de um culto lembrado|preciso que o usuario escolha um item|preciso que o usuário escolha um item|faltam dados|dados suficientes/.test(q)) return "grounding_missing";
+  if (/nao encontrei|não encontrei|nao foi encontrado|não foi encontrado|nao possui letra disponivel|não possui letra disponível/.test(q)) return "lookup_not_found";
+  if (/nao sei|não sei|nao consegui responder|não consegui responder|nao tenho informacao|não tenho informação|nao tenho certeza|não tenho certeza|nao posso confirmar|não posso confirmar/.test(q)) return "assistant_uncertain";
+  return null;
+}
+
+export function looksUnanswered(text: string, route: string) {
+  return unansweredReason(text, route) !== null;
+}
+
+export function runtimeFailureReason(message: string) {
+  const value = String(message ?? "").trim().toUpperCase();
+  if (value.includes("AI_PROVIDER_UNAVAILABLE")) return "ai_provider_unavailable";
+  if (value.includes("AI_EMPTY_RESPONSE")) return "ai_empty_response";
+  if (value.includes("EVOLUTION_") || value.includes("EVOLUTION API")) return "delivery_unavailable";
+  if (value.includes("APP_") || value.includes("SOURCE_")) return "source_unavailable";
+  return "runtime_error";
 }
 
 export async function rememberAnswer(supabase: any, stateId: string, route: string, reference: string | null | undefined, userMessage: string) {
@@ -288,16 +312,14 @@ export async function recordUnanswered(supabase: any, input: {
   answer?: string | null;
   reason: string;
 }) {
-  const { error } = await supabase.from("atis_unanswered_questions").upsert({
-    inbound_message_id: input.inboundId,
-    destination_type: input.destinationType,
-    destination_id: input.destinationId,
-    question: input.question.slice(0, 5000),
-    route: input.route ?? null,
-    answer: input.answer?.slice(0, 5000) ?? null,
-    reason: input.reason,
-    status: "open",
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "inbound_message_id" });
+  const { error } = await supabase.rpc("atis_record_unanswered", {
+    _inbound_message_id: input.inboundId,
+    _destination_type: input.destinationType,
+    _destination_id: input.destinationId,
+    _question: input.question.slice(0, 5000),
+    _route: input.route ?? null,
+    _answer: input.answer?.slice(0, 5000) ?? null,
+    _reason: input.reason,
+  });
   if (error) throw error;
 }

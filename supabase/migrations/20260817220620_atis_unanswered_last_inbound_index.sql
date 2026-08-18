@@ -1,0 +1,2 @@
+create index if not exists atis_unanswered_questions_last_inbound_message_id_idx
+  on public.atis_unanswered_questions(last_inbound_message_id);

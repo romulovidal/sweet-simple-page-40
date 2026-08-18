@@ -1,6 +1,8 @@
 import { aiChatFetchWithProviders } from "../ai-fetch.ts";
 import { cultoLookup, isCultoIntent } from "./culto-lookup.ts";
 import { canticosLookup, isCanticosIntent } from "./assistant-extras.ts";
+import { captureCultoReference, captureSongListReference, resolveMinistryFollowup } from "./ministry-context.ts";
+import { generateMinistryRelationAnswer, isMinistryRelationIntent, loadMinistryRelationGrounding } from "./ministry-intelligence.ts";
 
 type Json = Record<string, any>;
 export type AtisAssistantRoute =
@@ -15,8 +17,10 @@ export type AtisAssistantRoute =
   | "birthdays"
   | "bible_lookup"
   | "harpa_lookup"
+  | "harpa_study"
   | "culto_info"
-  | "canticos_info";
+  | "canticos_info"
+  | "ministry_relation";
 
 export type AtisAssistantResult = {
   text: string;
@@ -48,7 +52,7 @@ const IMMUTABLE_ATIS_POLICY = `REGRAS TÉCNICAS FIXAS DO ATIS (não editáveis p
 - Texto bíblico literal só pode ser transcrito quando recuperado do acervo bíblico do app nesta solicitação.
 - Use apenas as rotas e ferramentas disponibilizadas pelo backend do ATIS.
 - Para IA do ATIS, mantenha Groq como primário e Gemini como fallback.`;
-const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional"]);
+const AI_ROUTES = new Set<AtisAssistantRoute>(["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "harpa_study", "ministry_relation"]);
 const CANONICAL_BOOKS = [
   "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios", "Eclesiastes", "Cantares", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oséias", "Joel", "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias", "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse",
 ];
@@ -82,6 +86,31 @@ function firstString(...values: unknown[]) {
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.,;!?()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+
+export function hasExplicitBibleReferenceCue(message: string) {
+  if (!/\d/.test(message)) return false;
+  const q = ` ${normalize(message)} `;
+  for (const canonical of CANONICAL_BOOKS) {
+    const aliases = [canonical, ...(EXTRA_ALIASES[canonical] ?? [])];
+    for (const alias of aliases) {
+      const token = normalize(alias);
+      if (!token) continue;
+      const marker = ` ${token} `;
+      const index = q.indexOf(marker);
+      if (index < 0) continue;
+      const tail = q.slice(index + marker.length).trimStart();
+      if (/^\d{1,3}(?:\s*:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?)?\b/.test(tail)) return true;
+    }
+  }
+  return false;
+}
+
+export function stripGeneratedUrls(value: string) {
+  let output = value.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label) => String(label));
+  output = output.replace(/https?:\/\/[^\s<>"')\]]+/gi, "");
+  return output.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function clampText(value: string, max = 3800) {
@@ -144,8 +173,31 @@ async function loadSpecialistPrompts(supabase: any) {
   };
 }
 
-function deterministicIntent(message: string): AtisAssistantRoute | null {
+export function isHarpaStudyIntent(message: string, history: AtisConversationMessage[] = []) {
   const q = normalize(message);
+  const studyCue = /\b(tema|explique|explicacao|significado|mensagem|estudo|teolog|aplicacao|relacione|relacao|conex|passagens|biblic)\b/.test(q);
+  if (!studyCue) return false;
+  if (/\b(harpa|hino)\b/.test(q)) return true;
+  return [...history].reverse().some((item) => item.role === "assistant" && /Harpa Cristã\s+\d{1,3}\s+—/i.test(item.content));
+}
+
+export function deterministicIntent(message: string, history: AtisConversationMessage[] = []): AtisAssistantRoute | null {
+  const q = normalize(message);
+  const explicitBibleReference = hasExplicitBibleReferenceCue(message);
+  if (explicitBibleReference) {
+    if (/significado original|etimolog|hebraic|grego|aramaic|raiz da palavra/.test(q)) return "word_meaning";
+    if (/conex(ao|oes)|referenc(ia|ias) cruzad|profecia.*cumpr|cumprimento.*profecia|interligad/.test(q)) return "connections";
+    if (/linha do tempo|contexto histor|cronolog|imperio|costume da epoca|periodo histor/.test(q)) return "timeline";
+    if (/\b(resumo|resuma|sintese|sintetize|pontos[- ]?chave)\b/.test(q)) return "chapter_summary";
+    if (/\b(exegese|exeget|estudo aprofundado|analise teologica|teologia profunda)\b/.test(q)) return "exegetai";
+    if (/\b(devocional|reflexao devocional)\b/.test(q)) return "devotional";
+    // A bare/explicit Bible reference is a direct app lookup and must not depend on AI.
+    // Only explanatory language promotes it to the conversational Bible route.
+    if (/\b(explique|explicacao|significa|significado|comente|comentario|entenda|interprete|interpretacao|ensina|quer dizer|por que|porque)\b|\bfale sobre\b/.test(q)) return "ask_bible";
+    return "bible_lookup";
+  }
+  if (isHarpaStudyIntent(message, history)) return "harpa_study";
+  if (isMinistryRelationIntent(message)) return "ministry_relation";
   if (isCanticosIntent(message)) return "canticos_info";
   if (isCultoIntent(message)) return "culto_info";
   if (/aniversari/.test(q)) return "birthdays";
@@ -162,7 +214,7 @@ function deterministicIntent(message: string): AtisAssistantRoute | null {
 }
 
 async function classifyWithAi(systemPrompt: string, message: string, history: AtisConversationMessage[] = []): Promise<AtisAssistantRoute> {
-  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "culto_info", "canticos_info"];
+  const allowed: AtisAssistantRoute[] = ["ask_bible", "exegetai", "chapter_summary", "word_meaning", "connections", "timeline", "devotional", "daily_verse", "birthdays", "bible_lookup", "harpa_lookup", "harpa_study", "culto_info", "canticos_info", "ministry_relation"];
   const response = await aiChatFetchWithProviders({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -210,7 +262,6 @@ function parseBibleReference(message: string, bible: BibleBook[]): BibleReferenc
   return null;
 }
 
-
 function parseBibleFollowupReference(message: string, bible: BibleBook[], history: AtisConversationMessage[]): BibleReference | null {
   const q = normalize(message);
   const hasCue = /\b(versiculo|verso|capitulo|seguinte|proximo)\b/.test(q)
@@ -218,13 +269,27 @@ function parseBibleFollowupReference(message: string, bible: BibleBook[], histor
   if (!hasCue) return null;
 
   let base: BibleReference | null = null;
+
+  // Prefer the last explicit Bible reference typed by the user. This is more
+  // stable than depending on the assistant response format and preserves
+  // continuity for prompts such as "Mateus 24" -> "explique o verso 14".
   for (const item of [...history].reverse()) {
-    if (item.role !== "assistant") continue;
-    const match = item.content.match(/📖\s*\*([^*\n]+)\*/u);
-    if (!match) continue;
-    const candidate = match[1].replace(/\s+—.*$/u, "").trim();
-    base = parseBibleReference(candidate, bible);
+    if (item.role !== "user") continue;
+    base = parseBibleReference(item.content, bible);
     if (base) break;
+  }
+
+  // Backwards-compatible fallback for conversations whose prior assistant
+  // response already contains the standardized Bible header.
+  if (!base) {
+    for (const item of [...history].reverse()) {
+      if (item.role !== "assistant") continue;
+      const match = item.content.match(/📖\s*\*([^*\n]+)\*/u);
+      if (!match) continue;
+      const candidate = match[1].replace(/\s+—.*$/u, "").trim();
+      base = parseBibleReference(candidate, bible);
+      if (base) break;
+    }
   }
   if (!base) return null;
 
@@ -270,6 +335,7 @@ function parseBibleFollowupReference(message: string, bible: BibleBook[], histor
   }
   return null;
 }
+
 function bibleText(reference: BibleReference, wholeChapter = false) {
   const verses = reference.book.chapters[reference.chapter - 1] ?? [];
   const start = wholeChapter || !reference.verseStart ? 1 : reference.verseStart;
@@ -280,6 +346,175 @@ function bibleText(reference: BibleReference, wholeChapter = false) {
     ? `${reference.bookName} ${reference.chapter}:${reference.verseStart}${end !== reference.verseStart ? `-${end}` : ""}`
     : `${reference.bookName} ${reference.chapter}`;
   return { label, text: lines.join("\n") };
+}
+
+
+function verseNumbers(reference: BibleReference) {
+  if (!reference.verseStart) return [] as number[];
+  const verses = reference.book.chapters[reference.chapter - 1] ?? [];
+  const end = Math.min(reference.verseEnd ?? reference.verseStart, verses.length);
+  const numbers: number[] = [];
+  for (let verse = reference.verseStart; verse <= end; verse++) numbers.push(verse);
+  return numbers;
+}
+
+function verseShareText(reference: BibleReference) {
+  const verses = reference.book.chapters[reference.chapter - 1] ?? [];
+  if (!reference.verseStart) return null;
+  const end = Math.min(reference.verseEnd ?? reference.verseStart, verses.length);
+  const lines: string[] = [];
+  for (let verse = reference.verseStart; verse <= end; verse++) lines.push(`${verse} ${verses[verse - 1]}`);
+  const label = `${reference.bookName} ${reference.chapter}:${reference.verseStart}${end !== reference.verseStart ? `-${end}` : ""}`;
+  return { label, text: lines.join(" ") };
+}
+
+async function createShortVerseLink(_supabase: any, config: any, reference: BibleReference, textSnippet: string) {
+  const verses = verseNumbers(reference);
+  if (!verses.length || verses.length > 50) return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceKey) throw new Error("VERSE_SHARE_SERVER_CONFIG_MISSING");
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/create-verse-share`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      book_abbrev: reference.book.abbrev,
+      chapter: reference.chapter,
+      verses,
+      text_snippet: textSnippet.slice(0, 600),
+      book_name: reference.bookName,
+      version: config.bibleVersion,
+    }),
+  });
+  const body = await response.json().catch(() => null) as any;
+  const slug = firstString(body?.slug);
+  if (!response.ok || !slug) {
+    throw new Error(firstString(body?.error) ?? `VERSE_SHARE_HTTP_${response.status}`);
+  }
+  return `${config.baseUrl}/v/${slug}`;
+}
+
+async function trustedBibleBlock(supabase: any, config: any, reference: BibleReference) {
+  const share = verseShareText(reference);
+  if (!share) return null;
+  let link: string | null = null;
+  try {
+    link = await createShortVerseLink(supabase, config, reference, share.text);
+  } catch (error) {
+    console.error("[atis-assistant] verse share link failed", error instanceof Error ? error.message : error);
+  }
+  return `📖 *${share.label} (${config.bibleVersion})*\n\n"${share.text}"${link ? `\n\n📖 Leia aqui: ${link}` : ""}`;
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function referenceKey(reference: BibleReference) {
+  return `${normalize(reference.book.abbrev)}:${reference.chapter}:${reference.verseStart ?? 0}:${reference.verseEnd ?? reference.verseStart ?? 0}`;
+}
+
+function referenceCovers(parent: BibleReference, child: BibleReference) {
+  if (normalize(parent.book.abbrev) !== normalize(child.book.abbrev) || parent.chapter !== child.chapter || !parent.verseStart || !child.verseStart) return false;
+  const parentEnd = parent.verseEnd ?? parent.verseStart;
+  const childEnd = child.verseEnd ?? child.verseStart;
+  return child.verseStart >= parent.verseStart && childEnd <= parentEnd;
+}
+
+function extractBibleReferences(value: string, bible: BibleBook[]) {
+  const bookPattern = [...CANONICAL_BOOKS].sort((a, b) => b.length - a.length).map(escapeRegex).join("|");
+  const matcher = new RegExp(`(?:${bookPattern})\\s+\\d{1,3}\\s*:\\s*\\d{1,3}(?:\\s*[-–]\\s*\\d{1,3})?`, "giu");
+  const found: BibleReference[] = [];
+  for (const match of value.matchAll(matcher)) {
+    const reference = parseBibleReference(match[0], bible);
+    if (reference?.verseStart) found.push(reference);
+  }
+  return found;
+}
+
+export function cleanBibleGuardPlaceholders(value: string, bible: BibleBook[], contextReference: BibleReference | null = null) {
+  const markerSource = String.raw`📖\s*\*\(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app\)\*`;
+  let output = value;
+  if (contextReference?.verseStart) {
+    output = output.replace(new RegExp(`${markerSource}\\s*\\(v\\.?\\s*(\\d{1,3})\\)`, "giu"), (_full, rawVerse) => {
+      const verse = Number(rawVerse);
+      const chapterVerses = contextReference.book.chapters[contextReference.chapter - 1] ?? [];
+      if (verse < 1 || verse > chapterVerses.length) return `📖 *${bibleText(contextReference, false).label}*`;
+      return `📖 *${contextReference.bookName} ${contextReference.chapter}:${verse}*`;
+    });
+  }
+  output = output.replace(new RegExp(`${markerSource}\\s*\\(([^)]+)\\)`, "giu"), (_full, candidate) => {
+    const reference = parseBibleReference(String(candidate), bible);
+    return reference?.verseStart ? `📖 *${bibleText(reference, false).label}*` : String(candidate);
+  });
+  output = output.replace(new RegExp(markerSource, "giu"), contextReference?.verseStart ? `📖 *${bibleText(contextReference, false).label}*` : "");
+  return output.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function enrichBibleReferences(
+  value: string,
+  supabase: any,
+  config: any,
+  bible: BibleBook[] | null,
+  contextReference: BibleReference | null = null,
+) {
+  if (!bible?.length) return value.trim();
+  let output = cleanBibleGuardPlaceholders(value, bible, contextReference);
+  const candidates = extractBibleReferences(output, bible);
+  if (contextReference?.verseStart) candidates.unshift(contextReference);
+
+  const references: BibleReference[] = [];
+  const seen = new Set<string>();
+  for (const reference of candidates) {
+    if (!reference.verseStart) continue;
+    if (contextReference?.verseStart && reference !== contextReference && referenceCovers(contextReference, reference)) continue;
+    const key = referenceKey(reference);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    references.push(reference);
+  }
+
+  let appendedBlocks = 0;
+  for (const reference of references) {
+    const canonical = bibleText(reference, false);
+    const block = await trustedBibleBlock(supabase, config, reference);
+    if (!block) continue;
+    const linkMatch = block.match(/https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+/i);
+    const linkLine = linkMatch ? `📖 Leia aqui: ${linkMatch[0]}` : null;
+    const rawCanonicalPresent = output.includes(canonical.text);
+    const normalizedCanonicalPresent = normalizedQuote(output).includes(normalizedQuote(canonical.text));
+
+    // Every literal Bible passage already present in the answer receives its
+    // verified app share link, even when several passages are shown.
+    if (rawCanonicalPresent || normalizedCanonicalPresent) {
+      if (linkLine && !output.includes(linkMatch![0])) {
+        output = rawCanonicalPresent
+          ? output.replace(canonical.text, `${canonical.text}\n\n${linkLine}`)
+          : `${output.trimEnd()}\n\n${linkLine}`;
+      }
+      continue;
+    }
+
+    // Do not turn every merely-mentioned reference into a large Bible block.
+    // With a primary passage, only that passage may be appended. Otherwise,
+    // keep the existing cap of two automatically expanded references.
+    const isPrimary = Boolean(
+      contextReference?.verseStart
+      && referenceKey(reference) === referenceKey(contextReference),
+    );
+    if (contextReference?.verseStart && !isPrimary) continue;
+    if (!contextReference?.verseStart && appendedBlocks >= 2) continue;
+
+    output = `${output.trimEnd()}\n\n${block}`;
+    appendedBlocks++;
+  }
+  return output.trim();
 }
 
 async function loadBible(config: any) {
@@ -347,6 +582,7 @@ async function harpaLookup(supabase: any, config: any, message: string, history:
   }).filter(Boolean).join("\n\n");
   return { text: clampText(`🎵 *Harpa Cristã ${hymn.numero} — ${title}*\n\n${body}`), reference: `Harpa ${hymn.numero}` };
 }
+
 function requestedMonth(message: string, timezone = "America/Fortaleza") {
   const q = normalize(message);
   for (const [name, month] of Object.entries(MONTHS)) if (q.includes(normalize(name))) return month;
@@ -382,10 +618,20 @@ async function currentDailyVerse(supabase: any): Promise<CurrentDailyVerse | nul
   };
 }
 
-async function dailyVerseLookup(supabase: any) {
+async function dailyVerseLookup(supabase: any, config: any) {
   const daily = await currentDailyVerse(supabase);
   if (!daily) return "📖 O versículo do dia ainda não está disponível no app.";
-  return `📖 *${daily.reference}*\n“${daily.text}”`;
+  try {
+    const bible = await loadBible(config);
+    const reference = parseBibleReference(daily.reference, bible);
+    if (reference?.verseStart) {
+      const block = await trustedBibleBlock(supabase, config, reference);
+      if (block) return block;
+    }
+  } catch (error) {
+    console.error("[atis-assistant] daily verse share formatting failed", error instanceof Error ? error.message : error);
+  }
+  return `📖 *${daily.reference} (${config.bibleVersion})*\n\n"${daily.text}"`;
 }
 
 function specialistPrompt(route: AtisAssistantRoute, prompts: any) {
@@ -405,11 +651,13 @@ function specialistPrompt(route: AtisAssistantRoute, prompts: any) {
 }
 
 async function generateSpecialistAnswer(
+  supabase: any,
   route: AtisAssistantRoute,
   config: any,
   prompts: any,
   message: string,
   bibleContext: { label: string; text: string } | null,
+  bible: BibleBook[] | null,
   history: AtisConversationMessage[] = [],
   conversationMode: "normal" | "study" | "concise" = "normal",
   destinationInstruction: string | null = null,
@@ -433,7 +681,7 @@ async function generateSpecialistAnswer(
   const userMessage = route === "devotional" && bibleContext
     ? `**${bibleContext.label}**\n\n"${bibleContext.text}"`
     : message;
-  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
+  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
   const response = await aiChatFetchWithProviders({
     model: route === "exegetai" || route === "timeline" ? "llama-3.3-70b-versatile" : "llama-3.3-70b-versatile",
     messages: [
@@ -451,14 +699,13 @@ async function generateSpecialistAnswer(
   const body = await response.json().catch(() => null) as any;
   const text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  const guarded = guardUngroundedBibleQuotes(text, bibleContext?.text ?? null);
+  const guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
+  const contextReference = bibleContext && bible ? parseBibleReference(bibleContext.label, bible) : null;
   if (route === "devotional" && bibleContext) {
     const placeholder = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
     const trustedDailyVerse = `📖 *${bibleContext.label}*\n“${bibleContext.text}”`;
     const prayerHeading = /(?:^|\n)\s*(?:\*\*)?Ora[cç][aã]o(?:\*\*)?\s*:\s*/i;
 
-    // O texto bíblico confiável só pode ser restaurado antes da seção de oração.
-    // Nunca transformamos um placeholder dentro da oração no próprio versículo.
     let devotional = guarded;
     const headingMatch = prayerHeading.exec(devotional);
     if (headingMatch?.index !== undefined) {
@@ -527,9 +774,9 @@ async function generateSpecialistAnswer(
       }
     }
 
-    return clampText(devotional);
+    return clampText(await enrichBibleReferences(devotional, supabase, config, bible, contextReference));
   }
-  return clampText(guarded);
+  return clampText(await enrichBibleReferences(guarded, supabase, config, bible, contextReference));
 }
 
 export async function runAtisAssistant(supabase: any, message: string, options: AtisAssistantOptions = {}): Promise<AtisAssistantResult> {
@@ -545,8 +792,10 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
         .slice(-40)
     : [];
 
-  let route = deterministicIntent(input);
-  if (!route) route = await classifyWithAi(config.systemPrompt, input, history);
+  const ministryFollowup = resolveMinistryFollowup(input, history);
+  const effectiveInput = ministryFollowup?.message ?? input;
+  let route = ministryFollowup?.route ?? deterministicIntent(effectiveInput, history);
+  if (!route) route = await classifyWithAi(config.systemPrompt, effectiveInput, history);
 
   if (AI_ROUTES.has(route) && Array.isArray(options.allowedAiRoutes) && !options.allowedAiRoutes.includes(route)) {
     return {
@@ -557,20 +806,103 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   }
 
   if (route === "culto_info") {
-    return { text: await cultoLookup(supabase, input), route, source: "database" };
+    const text = await cultoLookup(supabase, effectiveInput);
+    const reference = await captureCultoReference(supabase, effectiveInput);
+    return { text, route, source: "database", reference };
   }
   if (route === "canticos_info") {
-    return { text: await canticosLookup(supabase, input), route, source: "database" };
+    const text = await canticosLookup(supabase, effectiveInput);
+    const reference = ministryFollowup?.carryReference ?? await captureSongListReference(supabase, effectiveInput);
+    return { text, route, source: "database", reference };
   }
   if (route === "birthdays") {
     return { text: await birthdaysLookup(supabase, input), route, source: "database" };
   }
   if (route === "daily_verse") {
-    return { text: await dailyVerseLookup(supabase), route, source: "database" };
+    return { text: await dailyVerseLookup(supabase, config), route, source: "database" };
+  }
+  if (route === "harpa_study") {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+    if (!supabaseUrl || !serviceKey) throw new Error("HARPA_STUDY_SERVER_CONFIG_MISSING");
+    const response = await fetch(`${supabaseUrl}/functions/v1/atis-harpa-study`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        message: effectiveInput,
+        history,
+        conversation_mode: options.conversationMode ?? "normal",
+      }),
+    });
+    const result = await response.json().catch(() => null) as any;
+    if (!response.ok || !firstString(result?.answer)) {
+      const code = firstString(result?.error) ?? "HARPA_STUDY_UNAVAILABLE";
+      throw new Error(code);
+    }
+    let answerText = clampText(stripGeneratedUrls(result.answer));
+    try {
+      const harpaBible = await loadBible(config);
+      answerText = clampText(await enrichBibleReferences(answerText, supabase, config, harpaBible, null));
+    } catch (error) {
+      console.error("[atis-assistant] Harpa study Bible link enrichment failed", error instanceof Error ? error.message : error);
+    }
+    return {
+      text: answerText,
+      route,
+      source: "ai",
+      reference: ministryFollowup?.carryReference ?? firstString(result.reference),
+    };
   }
   if (route === "harpa_lookup") {
-    const result = await harpaLookup(supabase, config, input, history);
-    return { text: result.text, route, source: "app", reference: result.reference };
+    const result = await harpaLookup(supabase, config, effectiveInput, history);
+    return { text: result.text, route, source: "app", reference: ministryFollowup?.carryReference ?? result.reference };
+  }
+  if (route === "ministry_relation") {
+    const grounding = await loadMinistryRelationGrounding(supabase, config.baseUrl, history);
+    if (!grounding) {
+      return {
+        text: "🎶 Para relacionar culto, Bíblia e louvor, preciso de um culto lembrado com uma seleção de louvor ativa no app. Consulte primeiro o culto ou os cânticos desse culto.",
+        route,
+        source: "database",
+        reference: ministryFollowup?.carryReference ?? null,
+      };
+    }
+    let ministryBibleContext: { label: string; text: string } | null = null;
+    let ministryBible: BibleBook[] | null = null;
+    if (grounding.culto.scriptureReference) {
+      try {
+        ministryBible = await loadBible(config);
+        const ministryBibleReference = parseBibleReference(grounding.culto.scriptureReference, ministryBible);
+        if (ministryBibleReference) ministryBibleContext = bibleText(ministryBibleReference, false);
+      } catch (error) {
+        console.error("[atis-assistant] ministry Bible grounding failed", error instanceof Error ? error.message : error);
+      }
+    }
+    const generated = await generateMinistryRelationAnswer(
+      config.systemPrompt,
+      input,
+      grounding,
+      ministryBibleContext,
+      options.conversationMode ?? "normal",
+    );
+    const ministryReference = ministryBibleContext && ministryBible ? parseBibleReference(ministryBibleContext.label, ministryBible) : null;
+    const ministryText = await enrichBibleReferences(
+      guardUngroundedBibleQuotes(stripGeneratedUrls(generated), ministryBibleContext?.text ?? null),
+      supabase,
+      config,
+      ministryBible,
+      ministryReference,
+    );
+    return {
+      text: clampText(ministryText),
+      route,
+      source: "ai",
+      reference: ministryFollowup?.carryReference ?? grounding.reference,
+    };
   }
 
   let bible: BibleBook[] | null = null;
@@ -578,8 +910,8 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   try {
     bible = await loadBible(config);
     const directReference = parseBibleReference(input, bible);
-    reference = directReference ?? parseBibleFollowupReference(input, bible, history);
-    if (!directReference && reference) route = "bible_lookup";
+    const followupReference = directReference ? null : parseBibleFollowupReference(input, bible, history);
+    reference = directReference ?? followupReference;
   } catch (error) {
     console.error("[atis-assistant] Bible asset lookup failed", error instanceof Error ? error.message : error);
   }
@@ -589,7 +921,11 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
       return { text: "📖 Não consegui identificar uma referência bíblica completa. Envie, por exemplo: *João 3:16*.", route, source: "app" };
     }
     const content = bibleText(reference, !reference.verseStart);
-    return { text: clampText(`📖 *${content.label} — ${config.bibleVersion}*\n${content.text}`), route, source: "app", reference: content.label };
+    if (reference.verseStart) {
+      const block = await trustedBibleBlock(supabase, config, reference);
+      if (block) return { text: clampText(block), route, source: "app", reference: content.label };
+    }
+    return { text: clampText(`📖 *${content.label} (${config.bibleVersion})*\n\n${content.text}`), route, source: "app", reference: content.label };
   }
 
   const prompts = await loadSpecialistPrompts(supabase);
@@ -608,6 +944,6 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     const wholeChapter = route === "chapter_summary" || route === "exegetai" || route === "timeline";
     context = bibleText(reference, wholeChapter && !reference.verseStart);
   }
-  const text = await generateSpecialistAnswer(route, config, prompts, input, context, history, options.conversationMode ?? "normal", firstString(options.destinationInstruction));
+  const text = await generateSpecialistAnswer(supabase, route, config, prompts, input, context, bible, history, options.conversationMode ?? "normal", firstString(options.destinationInstruction));
   return { text, route, source: "ai", reference: context?.label ?? null };
 }

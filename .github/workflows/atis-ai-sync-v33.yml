@@ -1,0 +1,45 @@
+name: Sync ATIS AI v33
+
+on:
+  push:
+    branches:
+      - agent/atis-backend-hardening-context
+    paths:
+      - '.github/workflows/atis-ai-sync-v33.yml'
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atis-backend-hardening-context
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check ATIS AI
+        run: deno check supabase/functions/atis-ai/index.ts
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          test -n "${SUPABASE_PROJECT_ID:-}"
+          test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
+
+      - name: Deploy ATIS AI
+        run: supabase functions deploy atis-ai --project-ref "$SUPABASE_PROJECT_ID"

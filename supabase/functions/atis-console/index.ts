@@ -110,25 +110,51 @@ async function dashboard(supabase: any) {
   const since24h = new Date(now - 24 * 3600_000).toISOString();
   const since7d = new Date(now - 7 * 24 * 3600_000).toISOString();
   const [in24, in7, unanswered, prayers, groups] = await Promise.all([
-    supabase.from("atis_inbound_messages").select("id,remote_jid,status,assistant_route", { count: "exact" }).gte("received_at", since24h),
-    supabase.from("atis_inbound_messages").select("id,remote_jid,status,assistant_route,is_group,received_at").gte("received_at", since7d).order("received_at", { ascending: false }).limit(3000),
-    supabase.from("atis_unanswered_questions").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("atis_inbound_messages").select("id", { count: "exact", head: true }).gte("received_at", since24h),
+    supabase.from("atis_inbound_messages").select("id,remote_jid,status,assistant_route,is_group,error,metadata,received_at").gte("received_at", since7d).order("received_at", { ascending: false }).limit(5000),
+    supabase.from("atis_unanswered_questions").select("id,status,reason,route,occurrence_count,last_seen_at").in("status", ["open", "reviewing"]).order("last_seen_at", { ascending: false }).limit(1000),
     supabase.from("atis_prayer_requests").select("id", { count: "exact", head: true }).in("status", ["pending", "praying"]),
     supabase.from("atis_groups").select("id,name,provider_group_id").eq("is_active", true),
   ]);
   for (const result of [in24, in7, unanswered, prayers, groups]) if (result.error) throw result.error;
+
   const seven = in7.data ?? [];
+  const activeUnanswered = unanswered.data ?? [];
+  const replied = seven.filter((row: any) => row.status === "replied");
+  const failed = seven.filter((row: any) => row.status === "failed");
+  const ignored = seven.filter((row: any) => row.status === "ignored");
+  const degraded = replied.filter((row: any) => row.metadata?.degraded === true);
+  const attempted = replied.length + failed.length;
   const conversations = new Set(seven.map((row: any) => row.remote_jid)).size;
+
   const routeCounts = new Map<string, number>();
-  for (const row of seven) {
-    const route = row.assistant_route || "sem_rota";
-    routeCounts.set(route, (routeCounts.get(route) ?? 0) + 1);
+  for (const row of replied) {
+    if (!row.assistant_route) continue;
+    routeCounts.set(row.assistant_route, (routeCounts.get(row.assistant_route) ?? 0) + 1);
   }
   const routes = [...routeCounts.entries()].map(([route, count]) => ({ route, count })).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  const failureCounts = new Map<string, number>();
+  for (const row of failed) {
+    const reason = firstString(row.error) ?? "erro_sem_codigo";
+    failureCounts.set(reason, (failureCounts.get(reason) ?? 0) + 1);
+  }
+  const failure_reasons = [...failureCounts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count).slice(0, 8);
+
+  const unansweredReasonCounts = new Map<string, number>();
+  let unansweredOccurrences = 0;
+  for (const row of activeUnanswered) {
+    const count = Math.max(1, Number(row.occurrence_count ?? 1));
+    unansweredOccurrences += count;
+    const reason = firstString(row.reason) ?? "assistant_uncertain";
+    unansweredReasonCounts.set(reason, (unansweredReasonCounts.get(reason) ?? 0) + count);
+  }
+  const unanswered_reasons = [...unansweredReasonCounts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count).slice(0, 8);
+
   const groupByJid = new Map<string, any>((groups.data ?? []).map((group: any): [string, any] => [String(group.provider_group_id), group]));
   const groupCounts = new Map<string, number>();
   const groupRoutes = new Map<string, Map<string, number>>();
-  for (const row of seven) {
+  for (const row of replied) {
     if (!row.is_group || !groupByJid.has(row.remote_jid)) continue;
     groupCounts.set(row.remote_jid, (groupCounts.get(row.remote_jid) ?? 0) + 1);
     const route = row.assistant_route || "sem_rota";
@@ -140,13 +166,24 @@ async function dashboard(supabase: any) {
     const routes = [...(groupRoutes.get(jid)?.entries() ?? [])].sort((a, b) => b[1] - a[1]);
     return { id: groupByJid.get(jid)?.id, name: groupByJid.get(jid)?.name, messages_7d: count, top_route: routes[0]?.[0] ?? null, top_route_count: routes[0]?.[1] ?? 0, routes: routes.slice(0, 3).map(([route, route_count]) => ({ route, count: route_count })) };
   }).sort((a, b) => b.messages_7d - a.messages_7d).slice(0, 12);
+
   return {
-    inbound_24h: in24.count ?? in24.data?.length ?? 0,
+    inbound_24h: in24.count ?? 0,
     inbound_7d: seven.length,
     conversations_7d: conversations,
-    unanswered_open: unanswered.count ?? 0,
+    replied_7d: replied.length,
+    failed_7d: failed.length,
+    degraded_7d: degraded.length,
+    ignored_7d: ignored.length,
+    private_7d: seven.filter((row: any) => !row.is_group).length,
+    groups_7d: seven.filter((row: any) => row.is_group).length,
+    reply_success_rate: attempted > 0 ? Math.round((replied.length / attempted) * 1000) / 10 : null,
+    unanswered_open: activeUnanswered.length,
+    unanswered_occurrences_open: unansweredOccurrences,
     prayer_open: prayers.count ?? 0,
     routes,
+    failure_reasons,
+    unanswered_reasons,
     group_metrics,
   };
 }
@@ -165,9 +202,13 @@ async function historyList(supabase: any, raw: Json) {
 
 async function unansweredList(supabase: any, raw: Json) {
   const limit = clampInt(raw.limit, 100, 1, 250);
-  let query = supabase.from("atis_unanswered_questions").select("*").order("created_at", { ascending: false }).limit(limit);
-  const status = firstString(raw.status) ?? "open";
-  if (status !== "all") query = query.eq("status", status);
+  let query = supabase.from("atis_unanswered_questions")
+    .select("id,question,route,answer,reason,status,resolution_note,resolved_by,resolved_at,occurrence_count,first_seen_at,last_seen_at,created_at,updated_at")
+    .order("last_seen_at", { ascending: false })
+    .limit(limit);
+  const status = firstString(raw.status) ?? "active";
+  if (status === "active") query = query.in("status", ["open", "reviewing"]);
+  else if (status !== "all") query = query.eq("status", status);
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
@@ -176,9 +217,10 @@ async function unansweredList(supabase: any, raw: Json) {
 async function unansweredUpdate(supabase: any, auth: any, raw: Json) {
   const id = firstString(raw.id);
   if (!id) throw new Error("ID_REQUIRED");
-  const status = ["open", "resolved", "ignored"].includes(raw.status) ? raw.status : null;
+  const status = ["open", "reviewing", "resolved", "ignored"].includes(raw.status) ? raw.status : null;
   if (!status) throw new Error("INVALID_STATUS");
   const note = firstString(raw.resolution_note);
+  if (note && note.length > 2000) throw new Error("RESOLUTION_NOTE_TOO_LONG");
   const payload: Json = { status, resolution_note: note, updated_at: new Date().toISOString() };
   if (status === "resolved") {
     payload.resolved_at = new Date().toISOString();
@@ -219,6 +261,67 @@ async function automationsList(supabase: any) {
   const { data, error } = await supabase.from("atis_automations").select("id,key,name,description,type,enabled,timezone,trigger_type,schedule_cron,event_key,target_selector,config,last_run_at,next_run_at,created_at,updated_at").order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+
+async function specializedAutomationsList(supabase: any) {
+  const { data, error } = await supabase
+    .from("atis_destination_feature_settings")
+    .select("id,destination_type,contact_id,individual_id,group_id,feature_key,enabled,schedule_mode,custom_time,timezone,updated_at")
+    .eq("feature_kind", "automation")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  const settings = data ?? [];
+
+  const contactIds = [...new Set(settings.filter((row: any) => row.destination_type === "contact" && row.contact_id).map((row: any) => row.contact_id))];
+  const individualIds = [...new Set(settings.filter((row: any) => row.destination_type === "individual" && row.individual_id).map((row: any) => row.individual_id))];
+  const groupIds = [...new Set(settings.filter((row: any) => row.destination_type === "group" && row.group_id).map((row: any) => row.group_id))];
+
+  const [contacts, individuals, groups] = await Promise.all([
+    contactIds.length
+      ? supabase.from("atis_contacts").select("id,name,phone_e164,blocked,is_active,whatsapp_opt_in,reactivation_requires_app").in("id", contactIds)
+      : Promise.resolve({ data: [], error: null }),
+    individualIds.length
+      ? supabase.from("atis_individuals").select("id,name,phone_e164,blocked,is_active,allow_messages").in("id", individualIds)
+      : Promise.resolve({ data: [], error: null }),
+    groupIds.length
+      ? supabase.from("atis_groups").select("id,name,provider_group_id,allow_automations,is_active,provider_exists").in("id", groupIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  for (const result of [contacts, individuals, groups]) if (result.error) throw result.error;
+
+  const contactById = new Map<string, any>((contacts.data ?? []).map((row: any) => [row.id, row]));
+  const individualById = new Map<string, any>((individuals.data ?? []).map((row: any) => [row.id, row]));
+  const groupById = new Map<string, any>((groups.data ?? []).map((row: any) => [row.id, row]));
+
+  return settings.map((row: any) => {
+    const type = row.destination_type as DestinationType;
+    const destinationId = type === "contact" ? row.contact_id : type === "individual" ? row.individual_id : row.group_id;
+    const destination: any = type === "contact" ? contactById.get(destinationId) : type === "individual" ? individualById.get(destinationId) : groupById.get(destinationId);
+    let destinationAllowed = false;
+    if (type === "contact") {
+      destinationAllowed = Boolean(destination && destination.blocked !== true && destination.is_active === true && destination.whatsapp_opt_in === true && destination.reactivation_requires_app !== true);
+    } else if (type === "individual") {
+      destinationAllowed = Boolean(destination && destination.blocked !== true && destination.is_active === true && destination.allow_messages === true);
+    } else {
+      destinationAllowed = Boolean(destination && destination.is_active === true && destination.provider_exists !== false && destination.allow_automations === true);
+    }
+    const fallback = type === "group" ? destination?.provider_group_id : destination?.phone_e164;
+    return {
+      id: row.id,
+      destination_type: type,
+      destination_id: destinationId,
+      destination_name: firstString(destination?.name, fallback) ?? "Destinatário",
+      feature_key: row.feature_key,
+      enabled: row.enabled === true,
+      destination_allowed: destinationAllowed,
+      effective_enabled: row.enabled === true && destinationAllowed,
+      schedule_mode: row.schedule_mode ?? "system",
+      custom_time: row.custom_time?.slice?.(0, 8) ?? null,
+      timezone: row.timezone ?? "America/Fortaleza",
+      updated_at: row.updated_at,
+    };
+  });
 }
 
 async function automationSave(supabase: any, auth: any, raw: Json) {
@@ -293,6 +396,7 @@ Deno.serve(async (req) => {
     if (action === "prayers_list") return json({ ok: true, rows: await prayersList(supabase, data) });
     if (action === "prayer_update") return json({ ok: true, row: await prayerUpdate(supabase, data) });
     if (action === "automations_list") return json({ ok: true, rows: await automationsList(supabase) });
+    if (action === "specialized_automations_list") return json({ ok: true, rows: await specializedAutomationsList(supabase) });
     if (action === "automation_save") return json({ ok: true, row: await automationSave(supabase, auth, data) });
     if (action === "automation_delete") return json({ ok: true, row: await automationDelete(supabase, data) });
     if (action === "profile_get" || action === "profile_save") {

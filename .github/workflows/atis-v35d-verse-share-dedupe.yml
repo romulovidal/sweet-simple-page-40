@@ -8,23 +8,19 @@ on:
       - '.github/workflows/atis-v35d-verse-share-dedupe.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
   SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
 jobs:
-  patch-check-deploy:
+  check-deploy:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/atis-backend-hardening-context
-          fetch-depth: 0
-
-      - name: Apply native share dedupe fix
-        run: python scripts/atis-v35d-verse-share-dedupe.py
 
       - uses: denoland/setup-deno@v2
         with:
@@ -35,17 +31,6 @@ jobs:
           deno check supabase/functions/create-verse-share/index.ts
           deno check supabase/functions/atis-ai/index.ts
           deno check supabase/functions/atis-webhook/index.ts
-
-      - name: Commit validated v35d
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "romulovidal"
-          git config user.email "romulo_vidal@live.com"
-          git add supabase/functions/create-verse-share/index.ts
-          git diff --cached --check
-          git commit -m "fix(share): deduplicate verse links by exact passage and version"
-          git push origin HEAD:agent/atis-backend-hardening-context
 
       - uses: supabase/setup-cli@v1
         with:

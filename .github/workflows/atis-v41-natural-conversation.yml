@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/workflows/atis-v41-natural-conversation.yml'
       - 'scripts/atis-v41-natural-conversation.py'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/atis-v41-natural-conversation.yml'
+      - 'scripts/atis-v41-natural-conversation.py'
 
 permissions:
   contents: write

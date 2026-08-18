@@ -1,0 +1,374 @@
+import { aiChatFetchWithProviders } from "../ai-fetch.ts";
+
+export type CanonicalBibleBook = { abbrev: string; name?: string; chapters: string[][] };
+
+export type CanonicalEvidence = {
+  reference: string;
+  text: string;
+  score: number;
+  testament: "OT" | "NT";
+  matchedEntities: string[];
+  matchedTerms: string[];
+};
+
+type ConnectionItem = { reference: string; explanation: string };
+type CanonicalConnections = {
+  new_testament: ConnectionItem[];
+  parallels: ConnectionItem[];
+  recurring_themes: ConnectionItem[];
+  prophecy_fulfillment: {
+    status: "explicit" | "typology" | "none";
+    explanation: string;
+    references: string[];
+  };
+};
+
+const NT_BOOKS = new Set([
+  "mateus", "marcos", "lucas", "joao", "atos", "romanos", "1 corintios", "2 corintios", "galatas", "efesios",
+  "filipenses", "colossenses", "1 tessalonicenses", "2 tessalonicenses", "1 timoteo", "2 timoteo", "tito", "filemom",
+  "hebreus", "tiago", "1 pedro", "2 pedro", "1 joao", "2 joao", "3 joao", "judas", "apocalipse",
+]);
+
+const STOPWORDS = new Set([
+  "ainda", "assim", "antes", "aquela", "aquele", "aqueles", "aqui", "cada", "como", "contra", "coisa", "coisas", "depois",
+  "desde", "disse", "dizer", "entao", "estava", "estando", "este", "esta", "estes", "estas", "feito", "foram", "grande", "havia",
+  "isso", "isto", "mesmo", "muito", "nao", "para", "pela", "pelas", "pelo", "pelos", "porque", "quando", "quanto", "quem", "sobre",
+  "tambem", "tinha", "todos", "toda", "todas", "tudo", "uma", "umas", "uns", "vosso", "vossa", "senhor", "deus", "eis", "mais",
+  "sera", "serao", "sendo", "tendo", "toda", "todo", "deles", "delas", "dele", "dela", "nele", "nela", "seus", "suas", "meu", "minha",
+]);
+
+const GENERIC_CAPITALIZED = new Set([
+  "e", "mas", "entao", "disse", "porque", "quando", "depois", "assim", "ora", "logo", "senhor", "deus", "eis", "portanto",
+]);
+
+function normalize(value: string) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function words(value: string) {
+  return normalize(value).split(" ").filter(Boolean);
+}
+
+function unique<T>(items: T[]) {
+  return [...new Set(items)];
+}
+
+function hasToken(normalizedText: string, token: string) {
+  return (` ${normalizedText} `).includes(` ${token} `);
+}
+
+function canonicalBookName(book: CanonicalBibleBook) {
+  return String(book.name || book.abbrev || "").trim();
+}
+
+function testamentForBook(book: CanonicalBibleBook): "OT" | "NT" {
+  return NT_BOOKS.has(normalize(canonicalBookName(book))) ? "NT" : "OT";
+}
+
+function sourceLocation(label: string, bible: CanonicalBibleBook[]) {
+  const normalizedLabel = normalize(label);
+  const book = bible
+    .map((item) => ({ item, token: normalize(canonicalBookName(item)) }))
+    .filter((entry) => entry.token && normalizedLabel.startsWith(`${entry.token} `))
+    .sort((a, b) => b.token.length - a.token.length)[0]?.item;
+  if (!book) return null;
+  const rest = normalizedLabel.slice(normalize(canonicalBookName(book)).length).trim();
+  const match = /^(\d{1,3})(?:\s+(\d{1,3})(?:\s+(\d{1,3}))?)?/.exec(rest);
+  if (!match) return { book, chapter: null as number | null, verseStart: null as number | null, verseEnd: null as number | null };
+  const chapter = Number(match[1]);
+  const verseStart = match[2] ? Number(match[2]) : null;
+  const verseEnd = match[3] ? Number(match[3]) : verseStart;
+  return { book, chapter, verseStart, verseEnd };
+}
+
+function sourceEntities(sourceText: string) {
+  const found = sourceText.match(/\b[\p{Lu}À-Ý][\p{L}À-ÿ'’-]{2,}\b/gu) ?? [];
+  return unique(found.map(normalize))
+    .filter((token) => token.length >= 3 && !STOPWORDS.has(token) && !GENERIC_CAPITALIZED.has(token));
+}
+
+function significantTerms(sourceText: string, message: string, entities: string[]) {
+  const entitySet = new Set(entities);
+  const source = words(sourceText)
+    .filter((token) => token.length >= 5 && !STOPWORDS.has(token) && !entitySet.has(token));
+  const frequency = new Map<string, number>();
+  for (const token of source) frequency.set(token, (frequency.get(token) ?? 0) + 1);
+  const thematic = [...frequency.entries()]
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .slice(0, 18)
+    .map(([token]) => token);
+  const query = unique(words(message).filter((token) => token.length >= 4 && !STOPWORDS.has(token))).slice(0, 12);
+  return { thematic, query };
+}
+
+export function retrieveCanonicalEvidence(
+  sourceLabel: string,
+  sourceText: string,
+  message: string,
+  bible: CanonicalBibleBook[],
+  maxResults = 12,
+): CanonicalEvidence[] {
+  if (!Array.isArray(bible) || !bible.length || !sourceText.trim()) return [];
+
+  const location = sourceLocation(sourceLabel, bible);
+  const sourceTestament = location ? testamentForBook(location.book) : "OT";
+  const entities = sourceEntities(sourceText);
+  const { thematic, query } = significantTerms(sourceText, message, entities);
+
+  const rows: Array<{
+    book: CanonicalBibleBook;
+    bookName: string;
+    chapter: number;
+    verse: number;
+    text: string;
+    normalized: string;
+    testament: "OT" | "NT";
+  }> = [];
+
+  for (const book of bible) {
+    const bookName = canonicalBookName(book);
+    const testament = testamentForBook(book);
+    for (let chapterIndex = 0; chapterIndex < (book.chapters?.length ?? 0); chapterIndex++) {
+      const verses = book.chapters[chapterIndex] ?? [];
+      for (let verseIndex = 0; verseIndex < verses.length; verseIndex++) {
+        const text = String(verses[verseIndex] ?? "").trim();
+        if (!text) continue;
+        rows.push({
+          book,
+          bookName,
+          chapter: chapterIndex + 1,
+          verse: verseIndex + 1,
+          text,
+          normalized: normalize(text),
+          testament,
+        });
+      }
+    }
+  }
+
+  const entityFrequency = new Map<string, number>();
+  for (const entity of entities) {
+    let count = 0;
+    for (const row of rows) if (hasToken(row.normalized, entity)) count++;
+    entityFrequency.set(entity, count);
+  }
+
+  const candidates: CanonicalEvidence[] = [];
+  for (const row of rows) {
+    if (location && normalize(canonicalBookName(location.book)) === normalize(row.bookName) && location.chapter === row.chapter) {
+      const start = location.verseStart ?? 1;
+      const end = location.verseEnd ?? Number.MAX_SAFE_INTEGER;
+      if (row.verse >= start && row.verse <= end) continue;
+    }
+
+    const matchedEntities = entities.filter((entity) => hasToken(row.normalized, entity));
+    const matchedTerms = thematic.filter((term) => hasToken(row.normalized, term)).slice(0, 5);
+    const queryMatches = query.filter((term) => hasToken(row.normalized, term));
+
+    let score = 0;
+    for (const entity of matchedEntities) {
+      const frequency = entityFrequency.get(entity) ?? 9999;
+      score += frequency <= 12 ? 24 : frequency <= 50 ? 15 : frequency <= 200 ? 8 : 3;
+    }
+    score += matchedTerms.length * 1.5;
+    score += queryMatches.length * 3;
+    if (sourceTestament === "OT" && row.testament === "NT" && matchedEntities.length) score += 8;
+    if (score < 3) continue;
+
+    candidates.push({
+      reference: `${row.bookName} ${row.chapter}:${row.verse}`,
+      text: row.text,
+      score,
+      testament: row.testament,
+      matchedEntities,
+      matchedTerms: unique([...matchedTerms, ...queryMatches]).slice(0, 6),
+    });
+  }
+
+  candidates.sort((a, b) => b.score - a.score || a.reference.localeCompare(b.reference, "pt-BR"));
+
+  const output: CanonicalEvidence[] = [];
+  const chapterCounts = new Map<string, number>();
+  for (const candidate of candidates) {
+    const chapterKey = candidate.reference.replace(/:\d+$/, "");
+    const count = chapterCounts.get(chapterKey) ?? 0;
+    if (count >= 2) continue;
+    output.push(candidate);
+    chapterCounts.set(chapterKey, count + 1);
+    if (output.length >= Math.max(1, Math.min(maxResults, 20))) break;
+  }
+  return output;
+}
+
+export function canonicalEvidenceContext(evidence: CanonicalEvidence[], maxItems = 6) {
+  const selected = evidence.slice(0, Math.max(0, Math.min(maxItems, 10)));
+  if (!selected.length) return "";
+  return `\n\nEVIDÊNCIAS CANÔNICAS RECUPERADAS DA BÍBLIA DO APP\n${selected.map((item) => `- ${item.reference}: ${item.text}`).join("\n")}\nUse essas evidências somente quando forem realmente relevantes. Elas são referências cruzadas verificadas no acervo do app; não force todas na resposta e não introduza fatos que não estejam sustentados pela passagem-base ou por estas evidências.`;
+}
+
+function parseJsonObject(value: string) {
+  const stripped = String(value ?? "").replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(stripped.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+function normalizeReference(value: string) {
+  return normalize(value).replace(/\s+/g, " ");
+}
+
+function fallbackExplanation(item: CanonicalEvidence) {
+  if (item.matchedEntities.length) {
+    const names = item.matchedEntities.map((name) => name.charAt(0).toUpperCase() + name.slice(1)).join(" e ");
+    return `Retoma diretamente ${names}, permitindo comparar como esse personagem ou episódio é desenvolvido em outra parte das Escrituras.`;
+  }
+  if (item.matchedTerms.length) {
+    return `Retoma temas presentes na passagem-base, especialmente ${item.matchedTerms.slice(0, 2).join(" e ")}.`;
+  }
+  return "Apresenta um paralelo textual relevante com a passagem-base.";
+}
+
+function validateItems(raw: unknown, allowed: Map<string, CanonicalEvidence>, maxItems: number): ConnectionItem[] {
+  if (!Array.isArray(raw)) return [];
+  const output: ConnectionItem[] = [];
+  const seen = new Set<string>();
+  for (const candidate of raw) {
+    const requested = typeof candidate?.reference === "string" ? candidate.reference.trim() : "";
+    const evidence = allowed.get(normalizeReference(requested));
+    if (!evidence) continue;
+    const key = normalizeReference(evidence.reference);
+    if (seen.has(key)) continue;
+    const explanation = typeof candidate?.explanation === "string" && candidate.explanation.trim().length >= 12
+      ? candidate.explanation.trim().replace(/\s+/g, " ")
+      : fallbackExplanation(evidence);
+    output.push({ reference: evidence.reference, explanation });
+    seen.add(key);
+    if (output.length >= maxItems) break;
+  }
+  return output;
+}
+
+export function validateCanonicalConnectionsPayload(raw: unknown, evidence: CanonicalEvidence[], sourceLabel: string): CanonicalConnections {
+  const allowed = new Map(evidence.map((item) => [normalizeReference(item.reference), item]));
+  const body = raw && typeof raw === "object" ? raw as any : {};
+  const newTestament = validateItems(body.new_testament, allowed, 4);
+  const parallels = validateItems(body.parallels, allowed, 3);
+  const recurringThemes = validateItems(body.recurring_themes, allowed, 3);
+
+  const prophecyRaw = body.prophecy_fulfillment && typeof body.prophecy_fulfillment === "object" ? body.prophecy_fulfillment : {};
+  const status = ["explicit", "typology", "none"].includes(prophecyRaw.status) ? prophecyRaw.status : "none";
+  const prophecyRefs = Array.isArray(prophecyRaw.references)
+    ? unique(prophecyRaw.references
+        .map((item: unknown) => typeof item === "string" ? allowed.get(normalizeReference(item))?.reference : null)
+        .filter(Boolean)) as string[]
+    : [];
+  let prophecyExplanation = typeof prophecyRaw.explanation === "string" ? prophecyRaw.explanation.trim().replace(/\s+/g, " ") : "";
+  if (!prophecyExplanation) {
+    prophecyExplanation = status === "explicit"
+      ? "Há uma relação explícita de profecia e cumprimento sustentada pelas referências recuperadas acima."
+      : status === "typology"
+      ? "A ligação não é uma profecia explícita; trata-se de um desenvolvimento tipológico ou contraste que o próprio texto bíblico posterior estabelece."
+      : `${sourceLabel} não apresenta, nas evidências recuperadas, uma profecia explícita cujo cumprimento deva ser afirmado aqui.`;
+  }
+
+  const ntEvidence = evidence.filter((item) => item.testament === "NT");
+  if (!newTestament.length && ntEvidence.length) {
+    for (const item of ntEvidence.slice(0, 4)) newTestament.push({ reference: item.reference, explanation: fallbackExplanation(item) });
+  }
+  if (!parallels.length) {
+    for (const item of evidence.filter((item) => !newTestament.some((existing) => normalizeReference(existing.reference) === normalizeReference(item.reference))).slice(0, 2)) {
+      parallels.push({ reference: item.reference, explanation: fallbackExplanation(item) });
+    }
+  }
+
+  return {
+    new_testament: newTestament,
+    parallels,
+    recurring_themes: recurringThemes,
+    prophecy_fulfillment: {
+      status,
+      explanation: prophecyExplanation,
+      references: prophecyRefs,
+    },
+  };
+}
+
+function renderItems(title: string, items: ConnectionItem[], used: Set<string>) {
+  const lines: string[] = [];
+  for (const item of items) {
+    const key = normalizeReference(item.reference);
+    if (used.has(key)) continue;
+    used.add(key);
+    lines.push(`- **${item.reference}** — ${item.explanation}`);
+  }
+  return lines.length ? `**${title}**\n${lines.join("\n")}` : "";
+}
+
+export function renderCanonicalConnections(connections: CanonicalConnections) {
+  const used = new Set<string>();
+  const sections: string[] = [];
+  const nt = renderItems("Conexões no Novo Testamento", connections.new_testament, used);
+  if (nt) sections.push(nt);
+  const parallels = renderItems("Paralelos diretos", connections.parallels, used);
+  if (parallels) sections.push(parallels);
+  const themes = renderItems("Temas recorrentes", connections.recurring_themes, used);
+  if (themes) sections.push(themes);
+
+  const prophecyRefs = connections.prophecy_fulfillment.references.filter((reference) => !used.has(normalizeReference(reference)));
+  const prophecySuffix = prophecyRefs.length ? ` Referências relacionadas: ${prophecyRefs.join(", ")}.` : "";
+  sections.push(`**Profecia / cumprimento**\n${connections.prophecy_fulfillment.explanation}${prophecySuffix}`);
+  return sections.filter(Boolean).join("\n\n").trim();
+}
+
+export async function generateCanonicalConnectionsAnswer(args: {
+  systemPrompt: string;
+  sourceLabel: string;
+  sourceText: string;
+  userMessage: string;
+  evidence: CanonicalEvidence[];
+  conversationMode?: "normal" | "study" | "concise";
+}) {
+  const evidence = args.evidence.slice(0, 12);
+  if (!evidence.length) {
+    return `Não encontrei referências cruzadas fortes o suficiente no acervo bíblico para afirmar conexões de ${args.sourceLabel} com segurança. Prefiro não inventar relações.`;
+  }
+
+  const evidenceText = evidence.map((item) => `${item.reference} | ${item.text}`).join("\n");
+  const response = await aiChatFetchWithProviders({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content: `${args.systemPrompt}\n\nVocê está usando o MOTOR CANÔNICO DO ATIS. A passagem-base e cada referência candidata abaixo foram recuperadas da Bíblia do próprio app. Sua função é somente interpretar relações sustentáveis entre esses textos.\n\nREGRAS\n- Não crie referências que não estejam na lista de evidências.\n- Dê prioridade máxima a referências que mencionem diretamente personagens ou acontecimentos da passagem-base.\n- Se a passagem-base for do Antigo Testamento, destaque conexões explícitas do Novo Testamento quando existirem.\n- Diferencie rigorosamente profecia explícita, tipologia/desenvolvimento canônico e simples paralelo. Não chame tipologia de cumprimento profético.\n- Nunca deixe a parte de profecia/cumprimento vazia: quando não houver profecia explícita, diga isso claramente e explique eventual tipologia ou contraste bíblico.\n- Prefira 4 a 6 conexões realmente fortes a muitas conexões fracas.\n- Não transcreva versículos nem escreva links.\n- Retorne SOMENTE JSON válido no formato: {"new_testament":[{"reference":"Hebreus 11:4","explanation":"..."}],"parallels":[{"reference":"...","explanation":"..."}],"recurring_themes":[{"reference":"...","explanation":"..."}],"prophecy_fulfillment":{"status":"explicit|typology|none","explanation":"...","references":["..."]}}.`,
+      },
+      {
+        role: "user",
+        content: `PASSAGEM-BASE (${args.sourceLabel})\n${args.sourceText}\n\nPERGUNTA\n${args.userMessage}\n\nEVIDÊNCIAS CANÔNICAS VERIFICADAS\n${evidenceText}`,
+      },
+    ],
+    temperature: 0.25,
+    reasoning_effort: "low",
+    reasoning_format: "hidden",
+    max_tokens: args.conversationMode === "concise" ? 700 : 1500,
+  }, ["groq", "gemini"]);
+
+  let parsed: unknown = null;
+  if (response.ok) {
+    const body = await response.json().catch(() => null) as any;
+    const text = body?.choices?.[0]?.message?.content;
+    if (typeof text === "string") parsed = parseJsonObject(text);
+  }
+  const validated = validateCanonicalConnectionsPayload(parsed, evidence, args.sourceLabel);
+  return renderCanonicalConnections(validated);
+}

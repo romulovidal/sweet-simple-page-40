@@ -1,4 +1,5 @@
 import { aiChatFetchWithProviders } from "../ai-fetch.ts";
+import { retrieveSemanticBibleEvidence } from "./semantic-bible.ts";
 
 export type CanonicalBibleBook = { abbrev: string; name?: string; chapters: string[][] };
 
@@ -233,6 +234,9 @@ function fallbackExplanation(item: CanonicalEvidence) {
     const names = item.matchedEntities.map((name) => name.charAt(0).toUpperCase() + name.slice(1)).join(" e ");
     return `Retoma diretamente ${names}, permitindo comparar como esse personagem ou episódio é desenvolvido em outra parte das Escrituras.`;
   }
+  if (item.matchedTerms.includes("semantic")) {
+    return "Foi recuperada semanticamente por tratar de um conceito, padrão ou relação canônica próxima da passagem-base, ainda que não repita as mesmas palavras.";
+  }
   if (item.matchedTerms.length) {
     return `Retoma temas presentes na passagem-base, especialmente ${item.matchedTerms.slice(0, 2).join(" e ")}.`;
   }
@@ -339,7 +343,37 @@ export async function generateCanonicalConnectionsAnswer(args: {
   evidence: CanonicalEvidence[];
   conversationMode?: "normal" | "study" | "concise";
 }) {
-  const evidence = args.evidence.slice(0, 12);
+  const semanticEvidence = await retrieveSemanticBibleEvidence({
+    sourceLabel: args.sourceLabel,
+    sourceText: args.sourceText,
+    userMessage: args.userMessage,
+    bibleVersion: "ARC",
+    matchCount: 18,
+    minSimilarity: 0.46,
+  });
+
+  const merged = new Map<string, CanonicalEvidence>();
+  for (const item of [...args.evidence, ...semanticEvidence]) {
+    const key = normalizeReference(item.reference);
+    if (!key) continue;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, item);
+      continue;
+    }
+    merged.set(key, {
+      ...existing,
+      score: Math.max(existing.score, item.score) + 2,
+      text: existing.text.length >= item.text.length ? existing.text : item.text,
+      matchedEntities: unique([...existing.matchedEntities, ...item.matchedEntities]),
+      matchedTerms: unique([...existing.matchedTerms, ...item.matchedTerms]),
+    });
+  }
+
+  const evidence = [...merged.values()]
+    .sort((a, b) => b.score - a.score || (a.testament === "NT" ? -1 : 1) || a.reference.localeCompare(b.reference, "pt-BR"))
+    .slice(0, 14);
+
   if (!evidence.length) {
     return `Não encontrei referências cruzadas fortes o suficiente no acervo bíblico para afirmar conexões de ${args.sourceLabel} com segurança. Prefiro não inventar relações.`;
   }
@@ -350,7 +384,7 @@ export async function generateCanonicalConnectionsAnswer(args: {
     messages: [
       {
         role: "system",
-        content: `${args.systemPrompt}\n\nVocê está usando o MOTOR CANÔNICO DO ATIS. A passagem-base e cada referência candidata abaixo foram recuperadas da Bíblia do próprio app. Sua função é somente interpretar relações sustentáveis entre esses textos.\n\nREGRAS\n- Não crie referências que não estejam na lista de evidências.\n- Dê prioridade máxima a referências que mencionem diretamente personagens ou acontecimentos da passagem-base.\n- Se a passagem-base for do Antigo Testamento, destaque conexões explícitas do Novo Testamento quando existirem.\n- Diferencie rigorosamente profecia explícita, tipologia/desenvolvimento canônico e simples paralelo. Não chame tipologia de cumprimento profético.\n- Nunca deixe a parte de profecia/cumprimento vazia: quando não houver profecia explícita, diga isso claramente e explique eventual tipologia ou contraste bíblico.\n- Prefira 4 a 6 conexões realmente fortes a muitas conexões fracas.\n- Não transcreva versículos nem escreva links.\n- Retorne SOMENTE JSON válido no formato: {"new_testament":[{"reference":"Hebreus 11:4","explanation":"..."}],"parallels":[{"reference":"...","explanation":"..."}],"recurring_themes":[{"reference":"...","explanation":"..."}],"prophecy_fulfillment":{"status":"explicit|typology|none","explanation":"...","references":["..."]}}.`,
+        content: `${args.systemPrompt}\n\nVocê está usando o MOTOR CANÔNICO HÍBRIDO DO ATIS. A passagem-base e cada referência candidata abaixo foram recuperadas da Bíblia do próprio app por busca lexical e/ou semântica. Sua função é somente interpretar relações sustentáveis entre esses textos.\n\nREGRAS\n- Não crie referências que não estejam na lista de evidências.\n- Dê prioridade máxima a referências que mencionem diretamente personagens ou acontecimentos da passagem-base.\n- Use evidência semântica para descobrir relações conceituais que não repetem necessariamente as mesmas palavras, mas descarte semelhanças vagas ou apenas temáticas demais.\n- Se a passagem-base for do Antigo Testamento, destaque conexões explícitas do Novo Testamento quando existirem.\n- Diferencie rigorosamente profecia explícita, tipologia/desenvolvimento canônico e simples paralelo. Não chame tipologia de cumprimento profético.\n- Nunca deixe a parte de profecia/cumprimento vazia: quando não houver profecia explícita, diga isso claramente e explique eventual tipologia ou contraste bíblico.\n- Prefira 4 a 6 conexões realmente fortes a muitas conexões fracas.\n- Não transcreva versículos nem escreva links.\n- Retorne SOMENTE JSON válido no formato: {"new_testament":[{"reference":"Livro 1:1","explanation":"..."}],"parallels":[{"reference":"Livro 2:2","explanation":"..."}],"recurring_themes":[{"reference":"Livro 3:3","explanation":"..."}],"prophecy_fulfillment":{"status":"explicit|typology|none","explanation":"...","references":["Livro 4:4"]}}.`,
       },
       {
         role: "user",

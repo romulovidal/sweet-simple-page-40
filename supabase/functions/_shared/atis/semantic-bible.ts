@@ -139,6 +139,31 @@ function parseJsonObject(value: string) {
   }
 }
 
+const CONCEPT_STOPWORDS = new Set([
+  "ainda", "assim", "antes", "aquela", "aquele", "aqui", "como", "contra", "depois", "desde", "disse", "entao",
+  "estava", "este", "esta", "feito", "foram", "havia", "isso", "isto", "mais", "muito", "nao", "para", "pela", "pelo",
+  "porque", "quando", "quanto", "quem", "senhor", "deus", "tambem", "tinha", "todo", "toda", "todos", "todas", "uma", "umas",
+  "uns", "povo", "coisa", "coisas", "eis", "pois", "porquanto", "havemos", "sendo", "tendo", "conexoes", "biblicas", "biblica",
+  "novo", "testamento", "profecia", "cumprimento", "passagem", "texto", "versiculo", "versiculos", "explique", "explicacao",
+]);
+
+export function deterministicConceptTerms(sourceText: string, userMessage: string) {
+  const sourceTokens = normalize(sourceText).split(" ").filter(Boolean);
+  const frequency = new Map<string, number>();
+  for (const token of sourceTokens) {
+    if (token.length < 4 || /\d/.test(token) || CONCEPT_STOPWORDS.has(token)) continue;
+    frequency.set(token, (frequency.get(token) ?? 0) + 1);
+  }
+  const sourceTerms = [...frequency.entries()]
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([token]) => token)
+    .slice(0, 10);
+  const queryTerms = normalize(userMessage).split(" ")
+    .filter((token) => token.length >= 4 && !/\d/.test(token) && !CONCEPT_STOPWORDS.has(token))
+    .slice(0, 4);
+  return unique([...sourceTerms, ...queryTerms]).slice(0, 12);
+}
+
 export function sanitizeConceptTerms(raw: unknown): string[] {
   const values = Array.isArray(raw)
     ? raw
@@ -279,7 +304,9 @@ async function retrieveConceptBridgeEvidence(args: {
   matchCount: number;
 }) {
   try {
-    const terms = await expandConceptTerms(args.sourceLabel, args.sourceText, args.userMessage);
+    const deterministic = deterministicConceptTerms(args.sourceText, args.userMessage);
+    const expanded = await expandConceptTerms(args.sourceLabel, args.sourceText, args.userMessage);
+    const terms = sanitizeConceptTerms([...deterministic, ...expanded]);
     if (!terms.length) return [];
     const rows = await conceptRpc(terms, args.bibleVersion, Math.max(args.matchCount * 2, 32));
     return conceptRowsToEvidence({ rows, terms, sourceLabel: args.sourceLabel, matchCount: args.matchCount });

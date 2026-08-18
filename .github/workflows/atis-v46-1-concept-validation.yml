@@ -1,10 +1,12 @@
 name: ATIS v46.1 Concept Validation
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
-      - '.github/workflows/atis-v46-1-concept-validation.yml'
+      - 'supabase/functions/_shared/atis/semantic-bible.ts'
+      - 'supabase/functions/_shared/atis/semantic-bible_test.ts'
+      - 'supabase/migrations/*atis_bible_concept_bridge_search.sql'
 
 permissions:
   contents: read
@@ -14,8 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: agent/atis-v46-1-concept-bridge
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x

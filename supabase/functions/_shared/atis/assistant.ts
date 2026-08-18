@@ -457,6 +457,28 @@ export function cleanBibleGuardPlaceholders(value: string, bible: BibleBook[], c
   return output.replace(/\n{3,}/g, "\n\n").trim();
 }
 
+export function cleanGeneratedBibleScaffolding(value: string) {
+  const lines = String(value ?? "").split(/\r?\n/);
+  const cleaned = lines.filter((line) => {
+    // The model must never manufacture the share UI. A verified link is added
+    // later by trustedBibleBlock/create-verse-share.
+    if (/^\s*📖\s*Leia aqui\s*:\s*$/iu.test(line)) return false;
+
+    // Remove dangling Bible headers such as:
+    //   📖 *Gênesis 29:6 (ARC)* –
+    // They are artifacts of the model trying to imitate the backend formatter.
+    if (/^\s*📖\s*\*[^*\n]+\*\s*[-–—:]\s*$/u.test(line)) return false;
+
+    // Remove list items that contain only a Bible reference followed by an
+    // empty dash/colon. The reference was already extracted before this cleanup
+    // and the canonical block will be built from the app Bible.
+    if (/^\s*[-•]\s*\*{0,2}[^*\n]*\d{1,3}\s*:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?\*{0,2}\s*[-–—:]\s*$/u.test(line)) return false;
+
+    return true;
+  });
+  return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 async function enrichBibleReferences(
   value: string,
   supabase: any,
@@ -466,7 +488,10 @@ async function enrichBibleReferences(
 ) {
   if (!bible?.length) return value.trim();
   let output = cleanBibleGuardPlaceholders(value, bible, contextReference);
+  // Extract references before removing presentation artifacts, so the backend
+  // can still resolve the real verse even if the model emitted an empty header.
   const candidates = extractBibleReferences(output, bible);
+  output = cleanGeneratedBibleScaffolding(output);
   if (contextReference?.verseStart) candidates.unshift(contextReference);
 
   const references: BibleReference[] = [];
@@ -681,7 +706,7 @@ async function generateSpecialistAnswer(
   const userMessage = route === "devotional" && bibleContext
     ? `**${bibleContext.label}**\n\n"${bibleContext.text}"`
     : message;
-  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.\n- Em modo normal ou conciso, perguntas abertas devem ser respondidas diretamente em no máximo 2 parágrafos curtos, com no máximo 2 referências bíblicas de apoio. Não use tabelas, listas longas ou vários subtítulos salvo pedido explícito.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
+  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.\n- Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.\nPara perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.\nEm modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.\nQuando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.\nNão escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.\nEmojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.\nSe a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
   const response = await aiChatFetchWithProviders({
     model: route === "exegetai" || route === "timeline" ? "llama-3.3-70b-versatile" : "llama-3.3-70b-versatile",
     messages: [

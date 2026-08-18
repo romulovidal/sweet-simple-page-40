@@ -485,6 +485,7 @@ async function enrichBibleReferences(
   config: any,
   bible: BibleBook[] | null,
   contextReference: BibleReference | null = null,
+  maxAutomaticBlocks = 1,
 ) {
   if (!bible?.length) return value.trim();
   let output = cleanBibleGuardPlaceholders(value, bible, contextReference);
@@ -527,14 +528,15 @@ async function enrichBibleReferences(
     }
 
     // Do not turn every merely-mentioned reference into a large Bible block.
-    // With a primary passage, only that passage may be appended. Otherwise,
-    // keep the existing cap of two automatically expanded references.
+    // Natural conversation should normally keep references inline. A canonical
+    // ARC block is appended only when the current intent actually calls for it.
     const isPrimary = Boolean(
       contextReference?.verseStart
       && referenceKey(reference) === referenceKey(contextReference),
     );
     if (contextReference?.verseStart && !isPrimary) continue;
-    if (!contextReference?.verseStart && appendedBlocks >= 2) continue;
+    if (maxAutomaticBlocks <= 0) continue;
+    if (!contextReference?.verseStart && appendedBlocks >= maxAutomaticBlocks) continue;
 
     output = `${output.trimEnd()}\n\n${block}`;
     appendedBlocks++;
@@ -675,6 +677,20 @@ function specialistPrompt(route: AtisAssistantRoute, prompts: any) {
   return key ? firstString(prompts.tools?.[key]) : null;
 }
 
+export function automaticBibleBlockLimit(
+  route: AtisAssistantRoute,
+  conversationMode: "normal" | "study" | "concise",
+  hasContextReference: boolean,
+  message: string,
+) {
+  if (hasContextReference) return 1;
+  if (conversationMode === "study" || route === "exegetai" || route === "connections") return 2;
+  if (route !== "ask_bible") return 1;
+  const q = normalize(message);
+  const asksForText = /\b(versiculo|verso|passagem|texto biblico|onde esta escrito|onde diz|mostre|mostra|cite o texto|qual texto)\b/.test(q);
+  return asksForText ? 1 : 0;
+}
+
 async function generateSpecialistAnswer(
   supabase: any,
   route: AtisAssistantRoute,
@@ -736,6 +752,13 @@ async function generateSpecialistAnswer(
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
   const guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
   const contextReference = bibleContext && bible ? parseBibleReference(bibleContext.label, bible) : null;
+  const automaticBibleBlocks = automaticBibleBlockLimit(
+    route,
+    conversationMode,
+    Boolean(contextReference?.verseStart),
+    message,
+  );
+
   if (route === "devotional" && bibleContext) {
     const placeholder = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
     const trustedDailyVerse = `📖 *${bibleContext.label}*\n“${bibleContext.text}”`;
@@ -809,9 +832,9 @@ async function generateSpecialistAnswer(
       }
     }
 
-    return clampText(await enrichBibleReferences(devotional, supabase, config, bible, contextReference));
+    return clampText(await enrichBibleReferences(devotional, supabase, config, bible, contextReference, automaticBibleBlocks));
   }
-  return clampText(await enrichBibleReferences(guarded, supabase, config, bible, contextReference));
+  return clampText(await enrichBibleReferences(guarded, supabase, config, bible, contextReference, automaticBibleBlocks));
 }
 
 export async function runAtisAssistant(supabase: any, message: string, options: AtisAssistantOptions = {}): Promise<AtisAssistantResult> {

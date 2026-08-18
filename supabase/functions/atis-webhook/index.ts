@@ -22,6 +22,7 @@ import {
   recordUnanswered,
   rememberAnswer,
   resolvePendingPrayer,
+  sanitizeAtisLinks,
   setConversationMode,
   startPrayerConfirmation,
   type DestinationProfile,
@@ -463,25 +464,26 @@ async function sendReplyWithProfile(
   route: string | null,
   withButtons = false,
 ) {
+  const safeText = sanitizeAtisLinks(text);
   let sent: any = null;
   let usedButtons = false;
   if (withButtons && profile.enable_buttons && route) {
     try {
-      sent = await provider.sendButtons(instanceName, target, text, assistantButtons(route));
+      sent = await provider.sendButtons(instanceName, target, safeText, assistantButtons(route));
       usedButtons = true;
     } catch (error) {
       console.error("[atis-webhook] interactive buttons failed; falling back to text", error instanceof Error ? error.message : error);
     }
   }
-  if (!sent) sent = await provider.sendText(instanceName, target, text);
+  if (!sent) sent = await provider.sendText(instanceName, target, safeText);
 
   let audioSent = false;
-  if (profile.enable_audio && text.length <= 1800) {
+  if (profile.enable_audio && safeText.length <= 1800) {
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       if (supabaseUrl && serviceKey) {
-        const cleanText = text.replace(/https?:\/\/\S+/g, "").replace(/[\*_`>#]/g, " ").replace(/\s+/g, " ").trim().slice(0, 1200);
+        const cleanText = safeText.replace(/https?:\/\/\S+/g, "").replace(/[\*_`>#]/g, " ").replace(/\s+/g, " ").trim().slice(0, 1200);
         if (cleanText.length >= 8) {
           const response = await fetch(`${supabaseUrl}/functions/v1/tts-verse`, {
             method: "POST",

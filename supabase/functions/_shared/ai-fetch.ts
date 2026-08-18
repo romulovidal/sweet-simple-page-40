@@ -105,10 +105,40 @@ export async function aiChatFetchWithProviders(
   };
 
   const labels: Record<AiProviderName, string> = { groq: "Groq", xai: "xAI", gemini: "Gemini" };
+  const modelFor = (name: AiProviderName) => {
+    const requested = String(body.model ?? "");
+    if (name === "groq") return toGroqModel(requested);
+    if (name === "xai") return toGrokModel(requested);
+    return toGeminiModel(requested);
+  };
   const uniqueOrder = [...new Set(providerOrder)].filter((name): name is AiProviderName => name in available);
   const providers = uniqueOrder
     .map((name) => ({ name, run: available[name] }))
     .filter((provider): provider is { name: AiProviderName; run: () => Promise<Response> } => typeof provider.run === "function");
+
+  type Attempt = {
+    provider: AiProviderName;
+    model: string;
+    attempt: number;
+    status: number | "throw";
+    ms: number;
+    retry_after?: string;
+    remaining_tokens?: string;
+    reset_tokens?: string;
+    remaining_requests?: string;
+    detail?: string;
+  };
+  const attempts: Attempt[] = [];
+  const compactDiagnostics = () => attempts.map((item) => [
+    `${item.provider}/${item.model}`,
+    `a${item.attempt}`,
+    String(item.status),
+    item.remaining_tokens ? `tok=${item.remaining_tokens}` : null,
+    item.reset_tokens ? `tokreset=${item.reset_tokens}` : null,
+    item.remaining_requests ? `req=${item.remaining_requests}` : null,
+    item.retry_after ? `retry=${item.retry_after}` : null,
+    item.detail ? `msg=${item.detail}` : null,
+  ].filter(Boolean).join(':')).join('|').slice(0, 1400);
 
   let lastRes: Response | null = null;
   for (let i = 0; i < providers.length; i++) {
@@ -116,37 +146,57 @@ export async function aiChatFetchWithProviders(
     const maxAttempts = 2;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const startedAt = Date.now();
       try {
         const res = await provider.run();
-        if (res.ok) return res;
+        if (res.ok) {
+          console.info(`[ai-fetch] success ${provider.name}/${modelFor(provider.name)} a${attempt + 1} ${Date.now() - startedAt}ms`);
+          return res;
+        }
         lastRes = res;
+        const errText = await res.clone().text().catch(() => "");
+        const detail = errText.replace(/\s+/g, ' ').slice(0, 180);
+        attempts.push({
+          provider: provider.name,
+          model: modelFor(provider.name),
+          attempt: attempt + 1,
+          status: res.status,
+          ms: Date.now() - startedAt,
+          retry_after: res.headers.get('retry-after') ?? undefined,
+          remaining_tokens: res.headers.get('x-ratelimit-remaining-tokens') ?? undefined,
+          reset_tokens: res.headers.get('x-ratelimit-reset-tokens') ?? undefined,
+          remaining_requests: res.headers.get('x-ratelimit-remaining-requests') ?? undefined,
+          detail: detail || undefined,
+        });
 
         const retrySameProvider = attempt + 1 < maxAttempts && isTransientStatus(res.status);
         if (retrySameProvider) {
-          try {
-            const errText = await res.clone().text();
-            console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}, retrying once. Body:`, errText.slice(0, 400));
-          } catch { /* ignore */ }
+          console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}, retrying once.`, detail);
           await wait(retryDelayMs(attempt));
           continue;
         }
 
         const isLastProvider = i === providers.length - 1;
         if (!isLastProvider && shouldTryFallback(res.status)) {
-          try {
-            const errText = await res.clone().text();
-            console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}, trying next fallback. Body:`, errText.slice(0, 400));
-          } catch { /* ignore */ }
+          console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}, trying next fallback.`, detail);
           break;
         }
 
-        try {
-          const errText = await res.clone().text();
-          console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}:`, errText.slice(0, 400));
-        } catch { /* ignore */ }
-        return res;
+        console.error(`[ai-fetch] ${labels[provider.name]} ${res.status}:`, detail);
+        const headers = new Headers(res.headers);
+        headers.set('x-atis-ai-diagnostic', compactDiagnostics());
+        return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
       } catch (error) {
-        console.error(`[ai-fetch] ${labels[provider.name]} threw:`, (error as Error)?.message);
+        const detail = String((error as Error)?.message ?? error).replace(/\s+/g, ' ').slice(0, 180);
+        attempts.push({
+          provider: provider.name,
+          model: modelFor(provider.name),
+          attempt: attempt + 1,
+          status: 'throw',
+          ms: Date.now() - startedAt,
+          detail,
+        });
+        console.error(`[ai-fetch] ${labels[provider.name]} threw:`, detail);
         if (attempt + 1 < maxAttempts) {
           await wait(retryDelayMs(attempt));
           continue;
@@ -156,8 +206,17 @@ export async function aiChatFetchWithProviders(
     }
   }
 
-  if (lastRes) return lastRes;
-  return new Response(JSON.stringify({ error: "No AI provider available" }), { status: 402 });
+  const diagnostic = compactDiagnostics();
+  console.error('[ai-fetch] all configured providers exhausted', diagnostic);
+  if (lastRes) {
+    const headers = new Headers(lastRes.headers);
+    headers.set('x-atis-ai-diagnostic', diagnostic);
+    return new Response(lastRes.body, { status: lastRes.status, statusText: lastRes.statusText, headers });
+  }
+  return new Response(JSON.stringify({ error: "No AI provider available" }), {
+    status: 503,
+    headers: { "Content-Type": "application/json", "x-atis-ai-diagnostic": diagnostic || "no-configured-provider" },
+  });
 }
 
 export async function aiChatFetch(body: Record<string, unknown>): Promise<Response> {

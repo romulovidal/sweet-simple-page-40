@@ -690,11 +690,15 @@ async function generateSpecialistAnswer(
       { role: "user", content: userMessage },
     ],
     temperature: 0.55,
-    max_tokens: conversationMode === "study" ? 2800 : conversationMode === "concise" ? 900 : route === "exegetai" ? 2600 : 1800,
+    // WhatsApp output is clamped to ~3.8k characters later, so reserving
+    // 1.8k-2.8k output tokens only wastes TPM. Keep enough room for a useful
+    // answer while staying compatible with Groq's Free/Developer token budget.
+    max_tokens: conversationMode === "study" ? 1200 : conversationMode === "concise" ? 450 : route === "exegetai" ? 1400 : 900,
   }, ["groq", "gemini"]);
   if (!response.ok) {
-    console.error("[atis-assistant] AI provider failed", response.status, (await response.text().catch(() => "")).slice(0, 300));
-    throw new Error("AI_PROVIDER_UNAVAILABLE");
+    const diagnostic = response.headers.get("x-atis-ai-diagnostic")?.slice(0, 420) ?? "";
+    console.error("[atis-assistant] AI provider failed", response.status, diagnostic, (await response.text().catch(() => "")).slice(0, 300));
+    throw new Error(diagnostic ? `AI_PROVIDER_UNAVAILABLE|${diagnostic}` : "AI_PROVIDER_UNAVAILABLE");
   }
   const body = await response.json().catch(() => null) as any;
   const text = firstString(body?.choices?.[0]?.message?.content);
@@ -786,16 +790,23 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
   const config = await loadAssistantConfig(supabase);
   if (!config.enabled) return { text: "O atendimento inteligente do Atis está temporariamente indisponível.", route: "ask_bible", source: "database" };
 
+  // Structured memory carries long-lived context. Keep only the most recent
+  // conversational turns in the AI prompt so Free/Developer provider TPM
+  // limits are not consumed by replaying the entire WhatsApp transcript.
   const history = Array.isArray(options.conversationHistory)
     ? options.conversationHistory
         .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string" && item.content.trim())
-        .slice(-40)
+        .slice(-8)
     : [];
 
   const ministryFollowup = resolveMinistryFollowup(input, history);
   const effectiveInput = ministryFollowup?.message ?? input;
   let route = ministryFollowup?.route ?? deterministicIntent(effectiveInput, history);
-  if (!route) route = await classifyWithAi(config.systemPrompt, effectiveInput, history);
+  // All specialized ATIS capabilities already have deterministic cues. For an
+  // otherwise open conversational question, ask_bible is the safe default.
+  // This avoids spending a full provider request only to classify a message
+  // before immediately making a second provider request to answer it.
+  if (!route) route = "ask_bible";
 
   if (AI_ROUTES.has(route) && Array.isArray(options.allowedAiRoutes) && !options.allowedAiRoutes.includes(route)) {
     return {

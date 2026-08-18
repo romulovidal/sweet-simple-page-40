@@ -228,9 +228,13 @@ export function continueInAppLink(route: string, reference?: string | null) {
 }
 
 export function sanitizeAtisLinks(text: string) {
-  const allowed = (url: string) => /^https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+$/i.test(url);
-  let output = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label, url) => allowed(url) ? `[${label}](${url})` : String(label));
-  output = output.replace(/https?:\/\/[^\s<>"')\]]+/gi, (url) => allowed(url) ? url : "");
+  const canonicalVerseLine = /^\s*📖\s*Leia aqui:\s*(https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+)\s*$/i;
+  let output = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label) => String(label));
+  output = output.split("\n").map((line) => {
+    const trusted = line.match(canonicalVerseLine);
+    if (trusted) return `📖 Leia aqui: ${trusted[1]}`;
+    return line.replace(/https?:\/\/[^\s<>"')\]]+/gi, "");
+  }).join("\n");
   output = output.replace(/^\s*📱\s*\*?Continue no app:?\*?\s*$/gim, "");
   output = output.replace(/\n{3,}/g, "\n\n").trim();
   return output;

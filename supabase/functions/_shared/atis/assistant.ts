@@ -88,6 +88,31 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.,;!?()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+
+export function hasExplicitBibleReferenceCue(message: string) {
+  if (!/\d/.test(message)) return false;
+  const q = ` ${normalize(message)} `;
+  for (const canonical of CANONICAL_BOOKS) {
+    const aliases = [canonical, ...(EXTRA_ALIASES[canonical] ?? [])];
+    for (const alias of aliases) {
+      const token = normalize(alias);
+      if (!token) continue;
+      const marker = ` ${token} `;
+      const index = q.indexOf(marker);
+      if (index < 0) continue;
+      const tail = q.slice(index + marker.length).trimStart();
+      if (/^\d{1,3}(?:\s*:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?)?\b/.test(tail)) return true;
+    }
+  }
+  return false;
+}
+
+export function stripGeneratedUrls(value: string) {
+  let output = value.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label) => String(label));
+  output = output.replace(/https?:\/\/[^\s<>"')\]]+/gi, "");
+  return output.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function clampText(value: string, max = 3800) {
   const text = value.trim();
   if (text.length <= max) return text;
@@ -156,8 +181,19 @@ export function isHarpaStudyIntent(message: string, history: AtisConversationMes
   return [...history].reverse().some((item) => item.role === "assistant" && /Harpa Cristã\s+\d{1,3}\s+—/i.test(item.content));
 }
 
-function deterministicIntent(message: string, history: AtisConversationMessage[] = []): AtisAssistantRoute | null {
+export function deterministicIntent(message: string, history: AtisConversationMessage[] = []): AtisAssistantRoute | null {
   const q = normalize(message);
+  const explicitBibleReference = hasExplicitBibleReferenceCue(message);
+  if (explicitBibleReference) {
+    if (/significado original|etimolog|hebraic|grego|aramaic|raiz da palavra/.test(q)) return "word_meaning";
+    if (/conex(ao|oes)|referenc(ia|ias) cruzad|profecia.*cumpr|cumprimento.*profecia|interligad/.test(q)) return "connections";
+    if (/linha do tempo|contexto histor|cronolog|imperio|costume da epoca|periodo histor/.test(q)) return "timeline";
+    if (/\b(resumo|resuma|sintese|sintetize|pontos[- ]?chave)\b/.test(q)) return "chapter_summary";
+    if (/\b(exegese|exeget|estudo aprofundado|analise teologica|teologia profunda)\b/.test(q)) return "exegetai";
+    if (/\b(devocional|reflexao devocional)\b/.test(q)) return "devotional";
+    if (/\b(mostre|leia|texto de|o que diz|qual diz|versiculo|o que esta escrito)\b/.test(q)) return "bible_lookup";
+    return "ask_bible";
+  }
   if (isHarpaStudyIntent(message, history)) return "harpa_study";
   if (isMinistryRelationIntent(message)) return "ministry_relation";
   if (isCanticosIntent(message)) return "canticos_info";
@@ -449,8 +485,14 @@ async function enrichBibleReferences(
     if (!block) continue;
     const linkMatch = block.match(/https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+/i);
     const linkLine = linkMatch ? `📖 Leia aqui: ${linkMatch[0]}` : null;
-    if (output.includes(canonical.text)) {
-      if (linkLine && !output.includes(linkMatch![0])) output = output.replace(canonical.text, `${canonical.text}\n\n${linkLine}`);
+    const rawCanonicalPresent = output.includes(canonical.text);
+    const normalizedCanonicalPresent = normalizedQuote(output).includes(normalizedQuote(canonical.text));
+    if (rawCanonicalPresent || normalizedCanonicalPresent) {
+      if (linkLine && !output.includes(linkMatch![0])) {
+        output = rawCanonicalPresent
+          ? output.replace(canonical.text, `${canonical.text}\n\n${linkLine}`)
+          : `${output.trimEnd()}\n\n${linkLine}`;
+      }
       continue;
     }
     output = `${output.trimEnd()}\n\n${block}`;
@@ -640,7 +682,7 @@ async function generateSpecialistAnswer(
   const body = await response.json().catch(() => null) as any;
   const text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  const guarded = guardUngroundedBibleQuotes(text, bibleContext?.text ?? null);
+  const guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
   const contextReference = bibleContext && bible ? parseBibleReference(bibleContext.label, bible) : null;
   if (route === "devotional" && bibleContext) {
     const placeholder = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
@@ -784,7 +826,7 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
       const code = firstString(result?.error) ?? "HARPA_STUDY_UNAVAILABLE";
       throw new Error(code);
     }
-    let answerText = clampText(result.answer);
+    let answerText = clampText(stripGeneratedUrls(result.answer));
     try {
       const harpaBible = await loadBible(config);
       answerText = clampText(await enrichBibleReferences(answerText, supabase, config, harpaBible, null));
@@ -832,7 +874,7 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     );
     const ministryReference = ministryBibleContext && ministryBible ? parseBibleReference(ministryBibleContext.label, ministryBible) : null;
     const ministryText = await enrichBibleReferences(
-      guardUngroundedBibleQuotes(generated, ministryBibleContext?.text ?? null),
+      guardUngroundedBibleQuotes(stripGeneratedUrls(generated), ministryBibleContext?.text ?? null),
       supabase,
       config,
       ministryBible,

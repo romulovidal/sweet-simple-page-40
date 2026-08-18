@@ -11,6 +11,7 @@ Deno.test("ATIS removes ordinary app URLs", () => {
 Deno.test("ATIS preserves only short verse share URLs", () => {
   const short = "https://biblia.atalaias.online/v/KXaUGU";
   assertEquals(sanitizeAtisLinks(`📖 Leia aqui: ${short}`), `📖 Leia aqui: ${short}`);
+  assertEquals(sanitizeAtisLinks(`Link solto ${short}`), "Link solto");
   assertEquals(sanitizeAtisLinks("Veja https://example.com e https://biblia.atalaias.online/biblia"), "Veja  e");
 });
 

@@ -1,11 +1,14 @@
 name: ATIS v46.2 Canonical Guard
 
-# Trigger validation after workflow registration.
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
-      - '.github/workflows/atis-v46-2-canonical-guard.yml'
+      - 'scripts/patch-atis-v46-2.py'
+      - 'supabase/functions/_shared/atis/canonical-bible.ts'
+      - 'supabase/functions/_shared/atis/canonical-bible_test.ts'
+      - 'supabase/functions/_shared/atis/semantic-bible.ts'
+      - 'supabase/functions/_shared/atis/semantic-bible_test.ts'
 
 permissions:
   contents: write
@@ -16,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/atis-v46-2-canonical-guard
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -45,4 +48,4 @@ jobs:
                   supabase/functions/_shared/atis/semantic-bible_test.ts \
                   scripts/patch-atis-v46-2.py
           git commit -m "fix(atis): harden canonical semantic grounding"
-          git push origin HEAD:agent/atis-v46-2-canonical-guard
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

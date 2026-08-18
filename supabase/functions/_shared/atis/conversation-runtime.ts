@@ -41,7 +41,7 @@ function defaultProfile(type: DestinationType): DestinationProfile {
     mention_only: false,
     enable_buttons: false,
     enable_audio: false,
-    continue_in_app: true,
+    continue_in_app: false,
     custom_instruction: null,
   };
 }
@@ -227,10 +227,17 @@ export function continueInAppLink(route: string, reference?: string | null) {
   return reference ? `${base}/biblia` : base;
 }
 
-export function appendContinueInApp(text: string, route: string, enabled: boolean, reference?: string | null) {
-  if (!enabled || /https?:\/\/biblia\.atalaias\.online/i.test(text)) return text;
-  const link = continueInAppLink(route, reference);
-  return `${text.trim()}\n\n📱 *Continue no app:*\n${link}`;
+export function sanitizeAtisLinks(text: string) {
+  const allowed = (url: string) => /^https:\/\/biblia\.atalaias\.online\/v\/[A-Za-z0-9_-]+$/i.test(url);
+  let output = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, (_full, label, url) => allowed(url) ? `[${label}](${url})` : String(label));
+  output = output.replace(/https?:\/\/[^\s<>"')\]]+/gi, (url) => allowed(url) ? url : "");
+  output = output.replace(/^\s*📱\s*\*?Continue no app:?\*?\s*$/gim, "");
+  output = output.replace(/\n{3,}/g, "\n\n").trim();
+  return output;
+}
+
+export function appendContinueInApp(text: string, _route: string, _enabled: boolean, _reference?: string | null) {
+  return sanitizeAtisLinks(text);
 }
 
 export function assistantButtons(route: string) {
@@ -238,18 +245,15 @@ export function assistantButtons(route: string) {
     return [
       { id: "atis:mode:study", text: "📚 Modo Estudo" },
       { id: "atis:devotional", text: "🌿 Devocional" },
-      { id: "atis:app", text: "📱 Abrir app" },
     ];
   }
   if (route === "harpa_lookup" || route === "harpa_study" || route === "canticos_info") {
     return [
-      { id: "atis:app", text: "📱 Abrir app" },
       { id: "atis:mode:study", text: "📚 Modo Estudo" },
     ];
   }
   return [
     { id: "atis:mode:study", text: "📚 Modo Estudo" },
-    { id: "atis:app", text: "📱 Abrir app" },
   ];
 }
 

@@ -666,7 +666,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       const confirmation = confirmationCommand(commandText);
 
       if (commandText === "__ATIS_OPEN_APP__") {
-        specialReply = "📱 Continue na *Bíblia do Atalaia*:\nhttps://biblia.atalaias.online";
+        specialReply = "📱 Os links gerais do app foram desativados no ATIS. Abra a *Bíblia do Atalaia* diretamente no seu dispositivo. Links enviados pelo ATIS ficam reservados aos textos bíblicos compartilháveis.";
         specialRoute = "open_app";
       } else if (mode) {
         await setConversationMode(supabase, state.id, mode.mode);

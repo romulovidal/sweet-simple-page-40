@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "jsr:@std/assert";
-import { conceptRowsToEvidence, sanitizeConceptTerms } from "./semantic-bible.ts";
+import { conceptRowsToEvidence, deterministicConceptTerms, sanitizeConceptTerms } from "./semantic-bible.ts";
 
 Deno.test("concept bridge rejects anything that looks like a Bible citation", () => {
   const terms = sanitizeConceptTerms({
@@ -65,4 +65,16 @@ Deno.test("concept bridge does not invent a reference that was not returned by t
 
   assertEquals(evidence.map((item) => item.reference), ["Hebreus 7:1-8"]);
   assertEquals(evidence.some((item) => item.reference === "Mateus 22:44"), false);
+});
+
+
+Deno.test("deterministic concept terms extract useful Números 21 concepts without AI", () => {
+  const terms = deterministicConceptTerms(
+    "Então o povo falou contra Deus e contra Moisés. O SENHOR mandou serpentes ardentes. Moisés orou pelo povo. Faze uma serpente ardente e põe-na sobre uma haste; todo mordido que olhar para ela viverá.",
+    "Quais as conexões bíblicas no Novo Testamento e profecia cumprimento?",
+  );
+  assert(terms.includes("moises"));
+  assert(terms.some((term) => term.startsWith("serpente")));
+  assertEquals(terms.includes("povo"), false);
+  assertEquals(terms.includes("senhor"), false);
 });

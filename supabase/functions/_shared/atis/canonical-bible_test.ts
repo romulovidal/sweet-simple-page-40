@@ -53,3 +53,63 @@ Deno.test("connections validator never leaves prophecy fulfillment empty", () =>
   assert(rendered.includes("Não há profecia messiânica explícita"));
   assertEquals(rendered.includes("Profecia / cumprimento\n\n"), false);
 });
+
+
+Deno.test("canonical entity extraction ignores narrative sentence starters", async () => {
+  const { extractCanonicalEntities } = await import("./canonical-bible.ts");
+  const entities = extractCanonicalEntities("Por isso o povo saiu. Pois havemos de ver. Moisés levantou a serpente. E Moisés orou.");
+  assertEquals(entities.includes("por"), false);
+  assertEquals(entities.includes("pois"), false);
+  assertEquals(entities.includes("havemos"), false);
+  assert(entities.includes("moises"));
+});
+
+Deno.test("canonical validator rejects unsupported references hidden inside explanations", () => {
+  const evidence = [{
+    reference: "Marcos 5:31-38",
+    text: "Jesus fala de fé e cura.",
+    score: 10,
+    testament: "NT" as const,
+    matchedEntities: [],
+    matchedTerms: ["fé", "cura"],
+  }];
+  const validated = validateCanonicalConnectionsPayload({
+    new_testament: [{
+      reference: "Marcos 5:31-38",
+      explanation: "Isto se cumpre diretamente em João 3:14-15.",
+    }],
+    prophecy_fulfillment: {
+      status: "typology",
+      explanation: "João 3:14-15 identifica o cumprimento.",
+      references: [],
+    },
+  }, evidence, "Números 21:4-9");
+  assertEquals(validated.new_testament[0]?.explanation.includes("João 3:14-15"), false);
+  assertEquals(validated.prophecy_fulfillment.status, "none");
+  assertEquals(validated.prophecy_fulfillment.explanation.includes("João 3:14-15"), false);
+});
+
+Deno.test("canonical validator accepts a subrange only when a recovered ARC chunk covers it", () => {
+  const evidence = [{
+    reference: "João 3:13-20",
+    text: "Como Moisés levantou a serpente no deserto, assim importa que o Filho do Homem seja levantado.",
+    score: 25,
+    testament: "NT" as const,
+    matchedEntities: [],
+    matchedTerms: ["conceptual", "serpente", "moises"],
+  }];
+  const validated = validateCanonicalConnectionsPayload({
+    new_testament: [{
+      reference: "João 3:14-15",
+      explanation: "João 3:14-15 retoma explicitamente Moisés e a serpente levantada no deserto.",
+    }],
+    prophecy_fulfillment: {
+      status: "typology",
+      explanation: "João 3:14-15 estabelece a tipologia entre a serpente levantada e o Filho do Homem levantado.",
+      references: ["João 3:14-15"],
+    },
+  }, evidence, "Números 21:4-9");
+  assertEquals(validated.new_testament[0]?.reference, "João 3:14-15");
+  assertEquals(validated.prophecy_fulfillment.status, "typology");
+  assert(validated.prophecy_fulfillment.references.includes("João 3:14-15"));
+});

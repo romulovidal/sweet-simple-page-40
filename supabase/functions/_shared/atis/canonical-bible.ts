@@ -40,6 +40,9 @@ const STOPWORDS = new Set([
 
 const GENERIC_CAPITALIZED = new Set([
   "e", "mas", "entao", "disse", "porque", "quando", "depois", "assim", "ora", "logo", "senhor", "deus", "eis", "portanto",
+  "por", "pois", "havemos", "houver", "contudo", "todavia", "entretanto", "ainda", "todos", "todas", "todo", "toda",
+  "este", "esta", "estes", "estas", "aquele", "aquela", "aqueles", "aquelas", "pelo", "pela", "pelos", "pelas",
+  "nos", "nas", "aos", "qual", "quais", "onde", "aonde", "entretanto", "tambem", "então", "porquanto", "assim",
 ]);
 
 function normalize(value: string) {
@@ -88,7 +91,7 @@ function sourceLocation(label: string, bible: CanonicalBibleBook[]) {
   return { book, chapter, verseStart, verseEnd };
 }
 
-function sourceEntities(sourceText: string) {
+export function extractCanonicalEntities(sourceText: string) {
   const found = sourceText.match(/\b[\p{Lu}À-Ý][\p{L}À-ÿ'’-]{2,}\b/gu) ?? [];
   return unique(found.map(normalize))
     .filter((token) => token.length >= 3 && !STOPWORDS.has(token) && !GENERIC_CAPITALIZED.has(token));
@@ -119,7 +122,7 @@ export function retrieveCanonicalEvidence(
 
   const location = sourceLocation(sourceLabel, bible);
   const sourceTestament = location ? testamentForBook(location.book) : "OT";
-  const entities = sourceEntities(sourceText);
+  const entities = extractCanonicalEntities(sourceText);
   const { thematic, query } = significantTerms(sourceText, message, entities);
 
   const rows: Array<{
@@ -229,6 +232,60 @@ function normalizeReference(value: string) {
   return normalize(value).replace(/\s+/g, " ");
 }
 
+
+type ReferenceSpan = { book: string; chapter: number; verseStart: number; verseEnd: number; display: string };
+
+const CANONICAL_REFERENCE_BOOKS = [
+  "Lamentações de Jeremias", "Cântico dos Cânticos", "1 Tessalonicenses", "2 Tessalonicenses", "Deuteronômio",
+  "1 Coríntios", "2 Coríntios", "1 Crônicas", "2 Crônicas", "1 Timóteo", "2 Timóteo", "Eclesiastes",
+  "Apocalipse", "Colossenses", "Filipenses", "Provérbios", "Lamentações", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis",
+  "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Gênesis", "Êxodo", "Levítico", "Números", "Josué", "Juízes",
+  "Esdras", "Neemias", "Ester", "Salmos", "Cantares", "Isaías", "Jeremias", "Ezequiel", "Daniel", "Oséias", "Joel",
+  "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias",
+  "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "Gálatas", "Efésios", "Tito", "Filemom", "Hebreus",
+  "Tiago", "Judas", "Jó", "Rute", "Cânticos",
+].sort((a, b) => b.length - a.length);
+
+function parseReferenceSpan(value: string): ReferenceSpan | null {
+  const cleaned = String(value ?? "").trim().replace(/[‑–—]/g, "-");
+  const match = /^(.+?)\s+(\d{1,3}):(\d{1,3})(?:\s*-\s*(\d{1,3}))?$/u.exec(cleaned);
+  if (!match) return null;
+  const chapter = Number(match[2]);
+  const verseStart = Number(match[3]);
+  const verseEnd = Number(match[4] ?? match[3]);
+  if (!Number.isInteger(chapter) || !Number.isInteger(verseStart) || !Number.isInteger(verseEnd) || verseEnd < verseStart) return null;
+  const book = match[1].trim();
+  return { book, chapter, verseStart, verseEnd, display: `${book} ${chapter}:${verseStart}${verseEnd !== verseStart ? `-${verseEnd}` : ""}` };
+}
+
+function resolveEvidenceReference(requested: string, evidence: CanonicalEvidence[]) {
+  const exact = evidence.find((item) => normalizeReference(item.reference) === normalizeReference(requested));
+  if (exact) return { evidence: exact, reference: exact.reference };
+
+  const requestSpan = parseReferenceSpan(requested);
+  if (!requestSpan) return null;
+  const covering = evidence.find((item) => {
+    const evidenceSpan = parseReferenceSpan(item.reference);
+    return Boolean(evidenceSpan
+      && normalize(evidenceSpan.book) === normalize(requestSpan.book)
+      && evidenceSpan.chapter === requestSpan.chapter
+      && requestSpan.verseStart >= evidenceSpan.verseStart
+      && requestSpan.verseEnd <= evidenceSpan.verseEnd);
+  });
+  return covering ? { evidence: covering, reference: requestSpan.display } : null;
+}
+
+function extractBibleReferences(value: string) {
+  const escapedBooks = CANONICAL_REFERENCE_BOOKS.map((book) => book.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const regex = new RegExp(`\\b(?:${escapedBooks})\\s+\\d{1,3}:\\d{1,3}(?:\\s*[-‑–—]\\s*\\d{1,3})?`, "giu");
+  return unique(String(value ?? "").match(regex) ?? []);
+}
+
+function explanationIsGrounded(value: string, evidence: CanonicalEvidence[]) {
+  const references = extractBibleReferences(value);
+  return references.every((reference) => Boolean(resolveEvidenceReference(reference, evidence)));
+}
+
 function fallbackExplanation(item: CanonicalEvidence) {
   if (item.matchedEntities.length) {
     const names = item.matchedEntities.map((name) => name.charAt(0).toUpperCase() + name.slice(1)).join(" e ");
@@ -243,20 +300,23 @@ function fallbackExplanation(item: CanonicalEvidence) {
   return "Apresenta um paralelo textual relevante com a passagem-base.";
 }
 
-function validateItems(raw: unknown, allowed: Map<string, CanonicalEvidence>, maxItems: number): ConnectionItem[] {
+function validateItems(raw: unknown, evidence: CanonicalEvidence[], maxItems: number): ConnectionItem[] {
   if (!Array.isArray(raw)) return [];
   const output: ConnectionItem[] = [];
   const seen = new Set<string>();
   for (const candidate of raw) {
     const requested = typeof candidate?.reference === "string" ? candidate.reference.trim() : "";
-    const evidence = allowed.get(normalizeReference(requested));
-    if (!evidence) continue;
-    const key = normalizeReference(evidence.reference);
+    const resolved = resolveEvidenceReference(requested, evidence);
+    if (!resolved) continue;
+    const key = normalizeReference(resolved.reference);
     if (seen.has(key)) continue;
-    const explanation = typeof candidate?.explanation === "string" && candidate.explanation.trim().length >= 12
+    const rawExplanation = typeof candidate?.explanation === "string"
       ? candidate.explanation.trim().replace(/\s+/g, " ")
-      : fallbackExplanation(evidence);
-    output.push({ reference: evidence.reference, explanation });
+      : "";
+    const explanation = rawExplanation.length >= 12 && explanationIsGrounded(rawExplanation, evidence)
+      ? rawExplanation
+      : fallbackExplanation(resolved.evidence);
+    output.push({ reference: resolved.reference, explanation });
     seen.add(key);
     if (output.length >= maxItems) break;
   }
@@ -264,25 +324,43 @@ function validateItems(raw: unknown, allowed: Map<string, CanonicalEvidence>, ma
 }
 
 export function validateCanonicalConnectionsPayload(raw: unknown, evidence: CanonicalEvidence[], sourceLabel: string): CanonicalConnections {
-  const allowed = new Map(evidence.map((item) => [normalizeReference(item.reference), item]));
   const body = raw && typeof raw === "object" ? raw as any : {};
-  const newTestament = validateItems(body.new_testament, allowed, 4);
-  const parallels = validateItems(body.parallels, allowed, 3);
-  const recurringThemes = validateItems(body.recurring_themes, allowed, 3);
+  const newTestament = validateItems(body.new_testament, evidence, 4);
+  const parallels = validateItems(body.parallels, evidence, 3);
+  const recurringThemes = validateItems(body.recurring_themes, evidence, 3);
 
   const prophecyRaw = body.prophecy_fulfillment && typeof body.prophecy_fulfillment === "object" ? body.prophecy_fulfillment : {};
-  const status = ["explicit", "typology", "none"].includes(prophecyRaw.status) ? prophecyRaw.status : "none";
-  const prophecyRefs = Array.isArray(prophecyRaw.references)
-    ? unique(prophecyRaw.references
-        .map((item: unknown) => typeof item === "string" ? allowed.get(normalizeReference(item))?.reference : null)
-        .filter(Boolean)) as string[]
+  let status: "explicit" | "typology" | "none" = ["explicit", "typology", "none"].includes(prophecyRaw.status)
+    ? prophecyRaw.status
+    : "none";
+
+  const requestedProphecyRefs: string[] = Array.isArray(prophecyRaw.references)
+    ? prophecyRaw.references.filter((item: unknown): item is string => typeof item === "string")
     : [];
-  let prophecyExplanation = typeof prophecyRaw.explanation === "string" ? prophecyRaw.explanation.trim().replace(/\s+/g, " ") : "";
+  const resolvedProphecyRefs = requestedProphecyRefs
+    .map((reference: string) => resolveEvidenceReference(reference, evidence)?.reference ?? null)
+    .filter(Boolean) as string[];
+
+  const rawProphecyExplanation = typeof prophecyRaw.explanation === "string"
+    ? prophecyRaw.explanation.trim().replace(/\s+/g, " ")
+    : "";
+  const explanationRefs = extractBibleReferences(rawProphecyExplanation);
+  const unsupportedExplanationRef = explanationRefs.some((reference) => !resolveEvidenceReference(reference, evidence));
+  const groundedExplanationRefs = explanationRefs
+    .map((reference: string) => resolveEvidenceReference(reference, evidence)?.reference ?? null)
+    .filter(Boolean) as string[];
+  const supportRefs = unique([...resolvedProphecyRefs, ...groundedExplanationRefs]);
+
+  if (status !== "none" && !supportRefs.length) status = "none";
+
+  let prophecyExplanation = rawProphecyExplanation && !unsupportedExplanationRef
+    ? rawProphecyExplanation
+    : "";
   if (!prophecyExplanation) {
     prophecyExplanation = status === "explicit"
-      ? "Há uma relação explícita de profecia e cumprimento sustentada pelas referências recuperadas acima."
+      ? `Há uma relação explícita de profecia e cumprimento sustentada pelas referências recuperadas${supportRefs.length ? ` (${supportRefs.join(", ")})` : ""}.`
       : status === "typology"
-      ? "A ligação não é uma profecia explícita; trata-se de um desenvolvimento tipológico ou contraste que o próprio texto bíblico posterior estabelece."
+      ? `A ligação é tipológica ou de desenvolvimento canônico, sustentada pelas referências recuperadas${supportRefs.length ? ` (${supportRefs.join(", ")})` : ""}; não deve ser apresentada como profecia explícita.`
       : `${sourceLabel} não apresenta, nas evidências recuperadas, uma profecia explícita cujo cumprimento deva ser afirmado aqui.`;
   }
 
@@ -303,7 +381,7 @@ export function validateCanonicalConnectionsPayload(raw: unknown, evidence: Cano
     prophecy_fulfillment: {
       status,
       explanation: prophecyExplanation,
-      references: prophecyRefs,
+      references: supportRefs,
     },
   };
 }

@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert";
-import { automaticBibleBlockLimit, cleanGeneratedBibleScaffolding, needsNaturalBibleAnswerRepair, stripBrokenBibleGuardLines } from "./assistant.ts";
+import { automaticBibleBlockLimit, cleanGeneratedBibleScaffolding, needsNaturalBibleAnswerRepair, normalizeCommonBibleAnswer, stripBrokenBibleGuardLines, stripDevotionalBibleEcho } from "./assistant.ts";
 
 Deno.test("ATIS removes empty Bible/share scaffolding produced by AI", () => {
   const input = `O sogro de Jacó era **Lábân**, pai de Lia e Raquel.
@@ -62,4 +62,25 @@ Deno.test("ATIS strips mutilated guard lines and orphan Bible headers", () => {
 Deno.test("ATIS accepts a natural paragraph answer without repair", () => {
   const natural = `A Bíblia registra poucos detalhes da infância de Jesus. Lucas mostra que ele crescia em sabedoria e graça, e aos doze anos já demonstrava profunda consciência das coisas de seu Pai (Lucas 2:40-52).`;
   assertEquals(needsNaturalBibleAnswerRepair(natural, "ask_bible", "normal"), false);
+});
+
+
+Deno.test("ATIS deterministically flattens a repaired common Bible mini-study", () => {
+  const structured = `Na última ceia, Jesus reuniu os discípulos.\n\n### Pontos principais\n- **Serviço** – Jesus lavou os pés dos discípulos.\n- **Memória** – A ceia aponta para sua entrega.\n\nIsso revela amor e humildade.`;
+  assertEquals(
+    normalizeCommonBibleAnswer(structured, "ask_bible", "normal"),
+    `Na última ceia, Jesus reuniu os discípulos.\n\nServiço: Jesus lavou os pés dos discípulos. Memória: A ceia aponta para sua entrega.\n\nIsso revela amor e humildade.`,
+  );
+});
+
+Deno.test("ATIS devotional removes model-owned duplicate Bible block before backend rendering", () => {
+  const context = {
+    label: "Isaías 55:6-9",
+    text: "6 Buscai o SENHOR enquanto se pode achar, invocai-o enquanto está perto. 7 Deixe o perverso o seu caminho e converta-se ao SENHOR.",
+  };
+  const generated = `📖 *Isaías 55:6-9*\n\n${context.text}\n\nDeus nos chama a buscá-lo com sinceridade.\n\n**Oração:** Senhor, guia-nos em teus caminhos. Amém.`;
+  assertEquals(
+    stripDevotionalBibleEcho(generated, context),
+    `Deus nos chama a buscá-lo com sinceridade.\n\n**Oração:** Senhor, guia-nos em teus caminhos. Amém.`,
+  );
 });

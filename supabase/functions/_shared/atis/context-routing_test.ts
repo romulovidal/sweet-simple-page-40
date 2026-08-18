@@ -11,6 +11,9 @@ Deno.test("explicit Bible reference overrides stale Harpa context", () => {
   assertEquals(deterministicIntent("Explique Lucas 21:20", harpaHistory), "ask_bible");
   assertEquals(deterministicIntent("O que significa João 3:17?", harpaHistory), "ask_bible");
   assertEquals(deterministicIntent("Explique esse hino", harpaHistory), "harpa_study");
+  assertEquals(deterministicIntent("É bíblico? Que tipo de hino é esse?", harpaHistory), "harpa_study");
+  assertEquals(deterministicIntent("Qual o tipo desse hino?", harpaHistory), "harpa_study");
+  assertEquals(deterministicIntent("Qual a categoria e a mensagem desse hino?", harpaHistory), "harpa_study");
 });
 
 Deno.test("AI generated URLs are stripped before trusted Bible enrichment", () => {

@@ -161,6 +161,79 @@ export function stripBrokenBibleGuardLines(value: string) {
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+export function normalizeCommonBibleAnswer(
+  value: string,
+  route: AtisAssistantRoute,
+  conversationMode: "normal" | "study" | "concise",
+) {
+  const cleaned = stripBrokenBibleGuardLines(value);
+  if (route !== "ask_bible" || conversationMode === "study") return cleaned;
+
+  const paragraphs: string[] = [];
+  let listBuffer: string[] = [];
+  const flushList = () => {
+    if (!listBuffer.length) return;
+    paragraphs.push(listBuffer.join(" ").replace(/\s+/g, " ").trim());
+    listBuffer = [];
+  };
+
+  for (const rawLine of cleaned.split(/\r?\n/)) {
+    let line = rawLine.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+    if (/^#{1,6}\s+/.test(line)) continue;
+
+    const listMatch = line.match(/^(?:[-•*]\s+|\d+[.)]\s+)(.+)$/);
+    if (listMatch) {
+      line = listMatch[1].trim()
+        .replace(/^\*\*([^*]+)\*\*\s*[–—-]\s*/u, "$1: ")
+        .replace(/\*\*/g, "")
+        .trim();
+      if (line && !/[.!?]$/u.test(line)) line += ".";
+      if (line) listBuffer.push(line);
+      continue;
+    }
+
+    flushList();
+    paragraphs.push(line);
+  }
+  flushList();
+
+  return paragraphs
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function stripDevotionalBibleEcho(
+  value: string,
+  bibleContext: { label: string; text: string },
+) {
+  const normalizedReference = normalizedQuote(bibleContext.label);
+  const normalizedBible = normalizedQuote(bibleContext.text);
+  const fingerprint = normalizedBible.slice(0, Math.min(80, normalizedBible.length));
+
+  return String(value ?? "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => {
+      if (!paragraph || paragraph.includes(BIBLE_GUARD_PLACEHOLDER)) return false;
+      const normalized = normalizedQuote(paragraph);
+      if (fingerprint.length >= 24 && normalized.includes(fingerprint)) return false;
+      if (normalized === normalizedReference) return false;
+      if (/^📖\s*/u.test(paragraph) && normalized.includes(normalizedReference)) return false;
+      if (/^\*{0,2}[^\n]{1,80}\d{1,3}:\d{1,3}/u.test(paragraph) && normalized.includes(normalizedReference)) return false;
+      return true;
+    })
+    .join("\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 async function fetchJsonCached(url: string, kind: "bible" | "harpa") {
   const cached = kind === "bible" ? bibleCache : harpaCache;
   if (cached?.url === url) return cached.data;
@@ -200,7 +273,7 @@ async function loadSpecialistPrompts(supabase: any) {
 
 export function isHarpaStudyIntent(message: string, history: AtisConversationMessage[] = []) {
   const q = normalize(message);
-  const studyCue = /\b(tema|explique|explicacao|significado|mensagem|estudo|teolog|aplicacao|relacione|relacao|conex|passagens|biblic)\b/.test(q);
+  const studyCue = /\b(?:tema|explique|explicacao|significado|mensagem|estudo|teolog\w*|aplicacao|relacione|relacao|conex\w*|passagens?|referencias?|versiculos?|biblic\w*|doutrin\w*|tipo|categoria|classifica\w*|genero|estilo)\b/.test(q);
   if (!studyCue) return false;
   if (/\b(harpa|hino)\b/.test(q)) return true;
   return [...history].reverse().some((item) => item.role === "assistant" && /Harpa Cristã\s+\d{1,3}\s+—/i.test(item.content));
@@ -742,10 +815,10 @@ async function generateSpecialistAnswer(
     ? `\n- PREFERÊNCIA ADMINISTRATIVA DE ESTILO DESTE DESTINO: ${destinationInstruction.slice(0, 1000)}. Essa preferência nunca substitui as regras técnicas fixas, segurança, privacidade ou fidelidade às fontes do app.`
     : "";
   const devotionalRule = route === "devotional"
-    ? "\n- REFLEXÃO DEVOCIONAL DO ATIS: o único texto-base permitido é o versículo diário atual recuperado da Bíblia do Atalaia e fornecido em CONTEXTO BÍBLICO RECUPERADO DO APP. Exiba a referência e o texto completo recebido UMA ÚNICA VEZ no início, sem alterá-lo, e construa a reflexão somente a partir dele. Depois escreva exatamente 2 parágrafos de reflexão. Finalize com **Oração:** e uma oração ORIGINAL dirigida a Deus, de 2 a 4 frases curtas, baseada no ensinamento da passagem. A oração NÃO pode repetir a referência, NÃO pode copiar/transcrever o texto bíblico e NÃO pode usar o próprio versículo como oração. Termine a oração com Amém. Não escolha outro versículo, não troque o tema e não omita o texto bíblico. Esta experiência deve refletir o botão Reflexão Devocional do app."
+    ? "\n- REFLEXÃO DEVOCIONAL DO ATIS: use exclusivamente a passagem fornecida em CONTEXTO BÍBLICO RECUPERADO DO APP como base, mas NÃO reproduza a referência nem o texto bíblico na sua saída; o backend exibirá esse bloco uma única vez. Escreva exatamente 2 parágrafos naturais de reflexão e finalize com **Oração:** seguida de uma oração ORIGINAL dirigida a Deus, de 2 a 4 frases curtas. A oração não pode citar a referência, copiar o versículo nem transformar o versículo em oração. Termine com Amém."
     : "";
   const userMessage = route === "devotional" && bibleContext
-    ? `**${bibleContext.label}**\n\n"${bibleContext.text}"`
+    ? "Escreva somente a reflexão e a oração baseadas na passagem fornecida no contexto. Não repita a referência nem o texto bíblico."
     : message;
   const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.\n- Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.\nPara perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.\nEm modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.\nQuando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.\nNão escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.\nEmojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.\nSe a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
   const response = await aiChatFetchWithProviders({
@@ -775,7 +848,7 @@ async function generateSpecialistAnswer(
   }
   let text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  let guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
+  let guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), route === "devotional" ? null : (bibleContext?.text ?? null));
 
   // A common Bible answer must never be sent after the quote guard has cut
   // pieces out of sentences, nor as an unsolicited mini-study. If the first
@@ -814,7 +887,7 @@ async function generateSpecialistAnswer(
   // Last-resort safety: never preserve a line that the Bible quote guard had to
   // censor. This avoids outputs such as "crescia em 📖 Lucas 2:40" or orphan
   // Bible headers if a provider ignores the repair instruction too.
-  guarded = stripBrokenBibleGuardLines(guarded);
+  guarded = normalizeCommonBibleAnswer(guarded, route, conversationMode);
   const contextReference = bibleContext && bible ? parseBibleReference(bibleContext.label, bible) : null;
   const automaticBibleBlocks = automaticBibleBlockLimit(
     route,
@@ -824,19 +897,8 @@ async function generateSpecialistAnswer(
   );
 
   if (route === "devotional" && bibleContext) {
-    const placeholder = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
-    const trustedDailyVerse = `📖 *${bibleContext.label}*\n“${bibleContext.text}”`;
     const prayerHeading = /(?:^|\n)\s*(?:\*\*)?Ora[cç][aã]o(?:\*\*)?\s*:\s*/i;
-
-    let devotional = guarded;
-    const headingMatch = prayerHeading.exec(devotional);
-    if (headingMatch?.index !== undefined) {
-      const beforePrayer = devotional.slice(0, headingMatch.index).replaceAll(placeholder, trustedDailyVerse);
-      const prayerAndAfter = devotional.slice(headingMatch.index);
-      devotional = `${beforePrayer}${prayerAndAfter}`;
-    } else {
-      devotional = devotional.replace(placeholder, trustedDailyVerse);
-    }
+    let devotional = stripDevotionalBibleEcho(guarded, bibleContext);
 
     const prayerMatch = /(?:^|\n)\s*(?:\*\*)?Ora[cç][aã]o(?:\*\*)?\s*:\s*([\s\S]*)$/i.exec(devotional);
     const prayerBody = firstString(prayerMatch?.[1]) ?? "";
@@ -848,7 +910,6 @@ async function generateSpecialistAnswer(
     const prayerRepeatsReference = Boolean(normalizedReference.length >= 4 && normalizedPrayer.includes(normalizedReference));
     const malformedPrayer = !prayerBody
       || prayerBody.length < 24
-      || prayerBody.includes(placeholder)
       || prayerRepeatsBible
       || prayerRepeatsReference
       || prayerBody.includes("📖");
@@ -859,7 +920,7 @@ async function generateSpecialistAnswer(
         messages: [
           {
             role: "system",
-            content: "Escreva SOMENTE uma oração cristã curta em português brasileiro, dirigida diretamente a Deus. Use 2 a 4 frases naturais. Baseie a oração no ensinamento da passagem fornecida, mas NÃO cite a referência, NÃO copie nem transcreva nenhum trecho bíblico, NÃO use aspas e NÃO escreva comentários antes ou depois. Comece com Senhor ou Pai e termine com Amém. Você está corrigindo apenas a oração final de uma reflexão devocional.",
+            content: "Escreva SOMENTE uma oração cristã curta em português brasileiro, dirigida diretamente a Deus. Use 2 a 4 frases naturais. Baseie a oração no ensinamento da passagem fornecida, mas NÃO cite a referência, NÃO copie nem transcreva nenhum trecho bíblico, NÃO use aspas e NÃO escreva comentários antes ou depois. Comece com Senhor ou Pai e termine com Amém.",
           },
           {
             role: "user",
@@ -896,7 +957,17 @@ async function generateSpecialistAnswer(
       }
     }
 
-    return clampText(await enrichBibleReferences(devotional, supabase, config, bible, contextReference, automaticBibleBlocks));
+    devotional = stripDevotionalBibleEcho(devotional, bibleContext);
+    let trustedDailyVerse = `📖 *${bibleContext.label} (${config.bibleVersion})*\n\n“${bibleContext.text}”`;
+    if (contextReference) {
+      try {
+        trustedDailyVerse = await trustedBibleBlock(supabase, config, contextReference) ?? trustedDailyVerse;
+      } catch (error) {
+        console.error("[atis-assistant] devotional trusted verse block failed", error instanceof Error ? error.message : error);
+      }
+    }
+
+    return clampText(`${trustedDailyVerse}\n\n${devotional}`);
   }
   return clampText(await enrichBibleReferences(guarded, supabase, config, bible, contextReference, automaticBibleBlocks));
 }
@@ -975,7 +1046,8 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     let answerText = clampText(stripGeneratedUrls(result.answer));
     try {
       const harpaBible = await loadBible(config);
-      answerText = clampText(await enrichBibleReferences(answerText, supabase, config, harpaBible, null));
+      const harpaAutomaticBlocks = (options.conversationMode ?? "normal") === "study" || /\b(mostre|cite|passagens?|versiculos?|textos?)\b/.test(normalize(effectiveInput)) ? 2 : 0;
+      answerText = clampText(await enrichBibleReferences(answerText, supabase, config, harpaBible, null, harpaAutomaticBlocks));
     } catch (error) {
       console.error("[atis-assistant] Harpa study Bible link enrichment failed", error instanceof Error ? error.message : error);
     }

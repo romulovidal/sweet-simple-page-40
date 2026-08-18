@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert";
-import { automaticBibleBlockLimit, cleanGeneratedBibleScaffolding } from "./assistant.ts";
+import { automaticBibleBlockLimit, cleanGeneratedBibleScaffolding, needsNaturalBibleAnswerRepair, stripBrokenBibleGuardLines } from "./assistant.ts";
 
 Deno.test("ATIS removes empty Bible/share scaffolding produced by AI", () => {
   const input = `O sogro de Jacó era **Lábân**, pai de Lia e Raquel.
@@ -37,4 +37,29 @@ Deno.test("ATIS adds one trusted Bible block when the user actually asks for the
 
 Deno.test("ATIS study routes may keep limited multi-reference depth", () => {
   assertEquals(automaticBibleBlockLimit("exegetai", "study", false, "Faça um estudo"), 2);
+});
+
+
+Deno.test("ATIS repairs common answers when quote guard would mutilate prose", () => {
+  const broken = `Jesus crescia em 📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)* (Lucas 2:40).`;
+  assertEquals(needsNaturalBibleAnswerRepair(broken, "ask_bible", "normal"), true);
+});
+
+Deno.test("ATIS repairs unsolicited mini-study formatting in normal Bible chat", () => {
+  const structured = `### Como entender\n- Primeiro ponto\n- Segundo ponto`;
+  assertEquals(needsNaturalBibleAnswerRepair(structured, "ask_bible", "normal"), true);
+  assertEquals(needsNaturalBibleAnswerRepair(structured, "ask_bible", "study"), false);
+});
+
+Deno.test("ATIS strips mutilated guard lines and orphan Bible headers", () => {
+  const broken = `Jesus foi um menino obediente e cheio de sabedoria.\n\n- Crescia em 📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*.\n\n📖 *Lucas 2:40 (ARC)*\n\nA Bíblia registra poucos detalhes da infância de Jesus.`;
+  assertEquals(
+    stripBrokenBibleGuardLines(broken),
+    `Jesus foi um menino obediente e cheio de sabedoria.\n\nA Bíblia registra poucos detalhes da infância de Jesus.`,
+  );
+});
+
+Deno.test("ATIS accepts a natural paragraph answer without repair", () => {
+  const natural = `A Bíblia registra poucos detalhes da infância de Jesus. Lucas mostra que ele crescia em sabedoria e graça, e aos doze anos já demonstrava profunda consciência das coisas de seu Pai (Lucas 2:40-52).`;
+  assertEquals(needsNaturalBibleAnswerRepair(natural, "ask_bible", "normal"), false);
 });

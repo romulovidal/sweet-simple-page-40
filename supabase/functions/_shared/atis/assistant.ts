@@ -123,17 +123,42 @@ function normalizedQuote(value: string) {
   return normalize(value).replace(/\s+/g, " ");
 }
 
+const BIBLE_GUARD_PLACEHOLDER = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
+
 function guardUngroundedBibleQuotes(value: string, bibleContext: string | null) {
   const source = bibleContext ? normalizedQuote(bibleContext) : "";
-  const replacement = "📖 *(texto bíblico: consulte a referência indicada; o ATIS só transcreve versículos recuperados do app)*";
   const protect = (full: string, quoted: string) => {
     if (quoted.trim().length < 24) return full;
     if (source && source.includes(normalizedQuote(quoted))) return full;
-    return replacement;
+    return BIBLE_GUARD_PLACEHOLDER;
   };
   return value
     .replace(/“([^”\n]{24,})”/g, protect)
     .replace(/"([^"\n]{24,})"/g, protect);
+}
+
+export function needsNaturalBibleAnswerRepair(
+  value: string,
+  route: AtisAssistantRoute,
+  conversationMode: "normal" | "study" | "concise",
+) {
+  if (route !== "ask_bible" || conversationMode === "study") return false;
+  if (value.includes(BIBLE_GUARD_PLACEHOLDER)) return true;
+  const lines = String(value ?? "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.some((line) => /^#{1,6}\s+/.test(line))) return true;
+  const listItems = lines.filter((line) => /^(?:[-•*]\s+|\d+[.)]\s+)/.test(line)).length;
+  return listItems >= 2;
+}
+
+export function stripBrokenBibleGuardLines(value: string) {
+  const lines = String(value ?? "").split(/\r?\n/).filter((line) => {
+    if (line.includes(BIBLE_GUARD_PLACEHOLDER)) return false;
+    // A bare canonical-looking header emitted by the model is not useful by
+    // itself. The backend owns real ARC blocks and their verified share links.
+    if (/^\s*📖\s*\*[^*\n]+\([^)]{2,12}\)\*\s*$/u.test(line)) return false;
+    return true;
+  });
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 async function fetchJsonCached(url: string, kind: "bible" | "harpa") {
@@ -748,9 +773,48 @@ async function generateSpecialistAnswer(
   if (finishReason === "length" || finishReason === "max_tokens") {
     throw new Error(`AI_PROVIDER_UNAVAILABLE|finish_reason=${finishReason}`);
   }
-  const text = firstString(body?.choices?.[0]?.message?.content);
+  let text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
-  const guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
+  let guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
+
+  // A common Bible answer must never be sent after the quote guard has cut
+  // pieces out of sentences, nor as an unsolicited mini-study. If the first
+  // generation violates either rule, regenerate once from the original user
+  // request with a stricter conversational contract. We intentionally do not
+  // feed the malformed draft back to the model.
+  if (needsNaturalBibleAnswerRepair(guarded, route, conversationMode)) {
+    console.warn("[atis-assistant] repairing common Bible answer presentation");
+    const repairResponse = await aiChatFetchWithProviders({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: `${system}\n\nREPARO OBRIGATÓRIO PARA ESTA RESPOSTA\n- Responda novamente do zero à pergunta do usuário.\n- Use apenas 1 a 3 parágrafos corridos e naturais.\n- Não use títulos, subtítulos, listas, enumerações ou tabela.\n- Não transcreva nenhum versículo literalmente e não use aspas para texto bíblico; cite apenas referências entre parênteses quando ajudarem.\n- Não deixe frases dependentes de um texto bíblico que não será mostrado.\n- Entregue uma resposta completa, fluida e terminada em ponto final.`,
+        },
+        ...history,
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.45,
+      reasoning_effort: "low",
+      reasoning_format: "hidden",
+      max_tokens: conversationMode === "concise" ? 500 : 900,
+    }, ["groq", "gemini"]);
+
+    if (repairResponse.ok) {
+      const repairBody = await repairResponse.json().catch(() => null) as any;
+      const repairFinish = firstString(repairBody?.choices?.[0]?.finish_reason)?.toLowerCase() ?? "";
+      const repairText = firstString(repairBody?.choices?.[0]?.message?.content);
+      if (repairText && repairFinish !== "length" && repairFinish !== "max_tokens") {
+        text = repairText;
+        guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);
+      }
+    }
+  }
+
+  // Last-resort safety: never preserve a line that the Bible quote guard had to
+  // censor. This avoids outputs such as "crescia em 📖 Lucas 2:40" or orphan
+  // Bible headers if a provider ignores the repair instruction too.
+  guarded = stripBrokenBibleGuardLines(guarded);
   const contextReference = bibleContext && bible ? parseBibleReference(bibleContext.label, bible) : null;
   const automaticBibleBlocks = automaticBibleBlockLimit(
     route,

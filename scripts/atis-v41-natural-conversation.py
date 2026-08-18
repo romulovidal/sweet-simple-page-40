@@ -6,13 +6,37 @@ TEST = Path('supabase/functions/_shared/atis/response-style_test.ts')
 
 assistant = ASSISTANT.read_text()
 
-old = '''- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.\n- Em modo normal ou conciso, perguntas abertas devem ser respondidas diretamente em no máximo 2 parágrafos curtos, com no máximo 2 referências bíblicas de apoio. Não use tabelas, listas longas ou vários subtítulos salvo pedido explícito.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.'''
-new = '''- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.\n- Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.\n- Para perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.\n- Em modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.\n- Quando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.\n- Não escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.\n- Emojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.\n- Se a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.'''
-if assistant.count(old) != 1:
-    raise SystemExit(f'natural style anchor count={assistant.count(old)}')
-assistant = assistant.replace(old, new, 1)
+concise = '- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.'
+if assistant.count(concise) != 1:
+    raise SystemExit(f'concise style anchor count={assistant.count(concise)}')
+assistant = assistant.replace(
+    concise,
+    '- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.',
+    1,
+)
 
-anchor = '''async function enrichBibleReferences(\n  value: string,\n  supabase: any,\n  config: any,\n  bible: BibleBook[] | null,\n  contextReference: BibleReference | null = null,\n) {\n'''
+structured = 'Em modo normal ou conciso, perguntas abertas devem ser respondidas diretamente em no máximo 2 parágrafos curtos, com no máximo 2 referências bíblicas de apoio. Não use tabelas, listas longas ou vários subtítulos salvo pedido explícito.'
+if assistant.count(structured) != 1:
+    raise SystemExit(f'structured style anchor count={assistant.count(structured)}')
+natural_rules = '\\n'.join([
+    'Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.',
+    'Para perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.',
+    'Em modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.',
+    'Quando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.',
+    'Não escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.',
+    'Emojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.',
+    'Se a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.',
+])
+assistant = assistant.replace(structured, natural_rules, 1)
+
+anchor = '''async function enrichBibleReferences(
+  value: string,
+  supabase: any,
+  config: any,
+  bible: BibleBook[] | null,
+  contextReference: BibleReference | null = null,
+) {
+'''
 helper = r'''export function cleanGeneratedBibleScaffolding(value: string) {
   const lines = String(value ?? "").split(/\r?\n/);
   const cleaned = lines.filter((line) => {
@@ -40,8 +64,15 @@ if assistant.count(anchor) != 1:
     raise SystemExit(f'enrich anchor count={assistant.count(anchor)}')
 assistant = assistant.replace(anchor, helper + anchor, 1)
 
-old = '''  let output = cleanBibleGuardPlaceholders(value, bible, contextReference);\n  const candidates = extractBibleReferences(output, bible);\n  if (contextReference?.verseStart) candidates.unshift(contextReference);'''
-new = '''  let output = cleanBibleGuardPlaceholders(value, bible, contextReference);\n  // Extract references before removing presentation artifacts, so the backend\n  // can still resolve the real verse even if the model emitted an empty header.\n  const candidates = extractBibleReferences(output, bible);\n  output = cleanGeneratedBibleScaffolding(output);\n  if (contextReference?.verseStart) candidates.unshift(contextReference);'''
+old = '''  let output = cleanBibleGuardPlaceholders(value, bible, contextReference);
+  const candidates = extractBibleReferences(output, bible);
+  if (contextReference?.verseStart) candidates.unshift(contextReference);'''
+new = '''  let output = cleanBibleGuardPlaceholders(value, bible, contextReference);
+  // Extract references before removing presentation artifacts, so the backend
+  // can still resolve the real verse even if the model emitted an empty header.
+  const candidates = extractBibleReferences(output, bible);
+  output = cleanGeneratedBibleScaffolding(output);
+  if (contextReference?.verseStart) candidates.unshift(contextReference);'''
 if assistant.count(old) != 1:
     raise SystemExit(f'cleanup insertion anchor count={assistant.count(old)}')
 assistant = assistant.replace(old, new, 1)

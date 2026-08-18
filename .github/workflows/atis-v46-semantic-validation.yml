@@ -2,10 +2,11 @@ name: ATIS v46 Semantic Validation
 
 # Temporary validation bootstrap for the v46 semantic branch.
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
-      - '.github/workflows/atis-v46-semantic-validation.yml'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
   workflow_dispatch:
 
 permissions:

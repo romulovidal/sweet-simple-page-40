@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/atis-v45-canonical-bible-engine
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -14,7 +17,7 @@ concurrency:
 
 jobs:
   validate-deploy:
-    if: github.event.head_commit.message != 'fix(atis): build canonical Bible evidence and harden delivery'
+    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'fix(atis): build canonical Bible evidence and harden delivery'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -48,6 +51,7 @@ jobs:
         run: git diff --check
 
       - name: Commit validated functional changes
+        if: github.event_name == 'push'
         run: |
           git config user.name 'romulovidal'
           git config user.email 'romulo_vidal@live.com'
@@ -62,11 +66,13 @@ jobs:
           fi
 
       - name: Setup Supabase CLI
+        if: github.event_name == 'push'
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Deploy ATIS v45 backend
+        if: github.event_name == 'push'
         run: |
           supabase functions deploy atis-ai --project-ref "$SUPABASE_PROJECT_ID"
           supabase functions deploy atis-webhook --project-ref "$SUPABASE_PROJECT_ID"

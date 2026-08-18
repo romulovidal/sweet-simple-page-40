@@ -28,6 +28,8 @@ jobs:
           sed -i 's/validate_pattern.subn(validate_replacement, canonical)/validate_pattern.subn(lambda _match: validate_replacement, canonical)/' scripts/patch-atis-v46-2.py
           python3 scripts/patch-atis-v46-2.py
           sed -i '/assert(terms.includes("haste"));/d' supabase/functions/_shared/atis/semantic-bible_test.ts
+          sed -i 's/const requestedProphecyRefs = Array.isArray/const requestedProphecyRefs: string[] = Array.isArray/' supabase/functions/_shared/atis/canonical-bible.ts
+          sed -i 's/\.map((reference) => resolveEvidenceReference/\.map((reference: string) => resolveEvidenceReference/' supabase/functions/_shared/atis/canonical-bible.ts
       - name: Run regressions
         run: |
           deno test supabase/functions/_shared/atis/semantic-bible_test.ts

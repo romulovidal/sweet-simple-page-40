@@ -1,70 +1,13 @@
-name: Validate ATIS v37 AI Provider Resilience
+name: ATIS v37 Validation (retired)
 
 on:
-  push:
-    branches:
-      - agent/atis-backend-hardening-context
-    paths:
-      - '.github/workflows/atis-v37-ai-provider-resilience.yml'
-      - 'scripts/atis-v37-ai-provider-resilience.py'
+  workflow_dispatch:
 
 permissions:
-  contents: write
-
-env:
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+  contents: read
 
 jobs:
-  patch-test-deploy:
-    runs-on: ubuntu-24.04
+  retired:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/atis-backend-hardening-context
-          fetch-depth: 0
-
-      - name: Apply v37 provider resilience fix
-        run: python scripts/atis-v37-ai-provider-resilience.py
-
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Type-check ATIS functions
-        run: |
-          deno check supabase/functions/atis-ai/index.ts
-          deno check supabase/functions/atis-webhook/index.ts
-
-      - name: Run ATIS regression tests
-        run: |
-          deno test supabase/functions/_shared/atis/context-routing_test.ts
-          deno test supabase/functions/_shared/atis/link-policy_test.ts
-
-      - name: Commit validated v37
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "romulovidal"
-          git config user.email "romulo_vidal@live.com"
-          git add supabase/functions/_shared/ai-fetch.ts
-          git diff --cached --check
-          git commit -m "fix(atis): retry transient AI failures and preserve Groq model"
-          git push origin HEAD:agent/atis-backend-hardening-context
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Validate production target
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${SUPABASE_ACCESS_TOKEN:-}"
-          test -n "${SUPABASE_PROJECT_ID:-}"
-          test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
-
-      - name: Deploy ATIS functions
-        run: |
-          supabase functions deploy atis-ai --project-ref "$SUPABASE_PROJECT_ID"
-          supabase functions deploy atis-webhook --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+      - run: echo "ATIS v37 validation workflow retired after successful production deploy."

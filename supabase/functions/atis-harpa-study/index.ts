@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: `Você é Atis, assistente ministerial da Bíblia do Atalaia. Analise SOMENTE a letra da Harpa fornecida como fonte primária. Não invente autoria, data, origem histórica, intenção do compositor ou fatos externos. Não transcreva texto bíblico. Sugira apenas referências bíblicas específicas (livro capítulo:versículo) que sejam claramente coerentes com o conteúdo do hino; essas referências serão verificadas pelo backend antes de aparecer ao usuário. Responda SOMENTE JSON válido no formato {"theme":"...","explanation":"...","application":"...","references":["João 3:16"]}. Use português brasileiro. ${conversationMode === "study" ? "A explicação pode ser mais aprofundada." : conversationMode === "concise" ? "Seja muito conciso." : "Seja claro e pastoral."}`,
+          content: `Você é Atis, assistente ministerial da Bíblia do Atalaia. Analise SOMENTE a letra da Harpa fornecida como fonte primária. Não invente autoria, data, origem histórica, intenção do compositor ou fatos externos. Não copie nem cite literalmente a letra; explique por paráfrase. Não transcreva texto bíblico. Sugira apenas referências bíblicas específicas (livro capítulo:versículo) claramente coerentes com o conteúdo do hino; o backend verificará cada uma. Responda SOMENTE JSON válido no formato {"theme":"frase curta","explanation":"explicação natural","application":"aplicação opcional","hymn_type":"classificação curta do tipo de hino","biblical_assessment":"avaliação direta e equilibrada sobre a coerência bíblica da mensagem","references":["João 3:16"]}. Os campos devem ser texto corrido, sem markdown, listas, aspas de letra ou placeholders. Use português brasileiro. ${conversationMode === "study" ? "A explicação pode ser mais aprofundada." : conversationMode === "concise" ? "Seja muito conciso." : "Seja claro, pastoral e conversacional."}`,
         },
         {
           role: "user",
@@ -219,6 +219,8 @@ Deno.serve(async (req) => {
     const rawTheme = compactField(analysis.theme, "Tema central não identificado com segurança.", 320);
     const rawExplanation = compactField(analysis.explanation, "A letra aponta para uma mensagem cristã que deve ser lida à luz das Escrituras.", conversationMode === "study" ? 1500 : 900);
     const rawApplication = compactField(analysis.application, "Use a mensagem do hino como convite à reflexão e à prática da fé cristã.", 700);
+    const rawHymnType = compactField(analysis.hymn_type, "hino cristocêntrico de fé e confiança", 240);
+    const rawBiblicalAssessment = compactField(analysis.biblical_assessment, "A mensagem deve ser avaliada pelas afirmações da própria letra e pelas conexões bíblicas verificadas.", 500);
 
     const rawReferences = Array.isArray(analysis.references) ? analysis.references.filter((item: unknown) => typeof item === "string").slice(0, 6) : [];
     let bible: BibleBook[] = [];
@@ -245,25 +247,63 @@ Deno.serve(async (req) => {
     const verifiedKeys = new Set(verified.map((item) => normalize(item.label)));
     const sanitizeNarrative = (value: string) => {
       const withoutLongQuotes = value
-        .replace(/“([^”\n]{24,})”/g, "(trecho literal omitido; consulte as conexões verificadas abaixo)")
-        .replace(/"([^"\n]{24,})"/g, "(trecho literal omitido; consulte as conexões verificadas abaixo)");
-      return withoutLongQuotes.replace(/\b(?:[1-3]\s+)?[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,3}\s+\d{1,3}:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?/gu, (candidate) => {
-        const reference = resolveBibleReference(candidate, bible);
-        if (!reference) return candidate;
-        const canonical = bibleExcerpt(reference).label;
-        return verifiedKeys.has(normalize(canonical)) ? canonical : "uma passagem bíblica relacionada";
-      });
+        .replace(/“[^”\n]{24,}”/g, "")
+        .replace(/"[^"\n]{24,}"/g, "");
+      return withoutLongQuotes
+        .replace(/\b(?:[1-3]\s+)?[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,3}\s+\d{1,3}:\s*\d{1,3}(?:\s*[-–]\s*\d{1,3})?/gu, (candidate) => {
+          const reference = resolveBibleReference(candidate, bible);
+          if (!reference) return "";
+          const canonical = bibleExcerpt(reference).label;
+          return verifiedKeys.has(normalize(canonical)) ? canonical : "";
+        })
+        .replace(/\(\s*\)/g, "")
+        .replace(/\s+([,.;:!?])/g, "$1")
+        .replace(/\s{2,}/g, " ")
+        .trim();
     };
 
     const theme = sanitizeNarrative(rawTheme);
     const explanation = sanitizeNarrative(rawExplanation);
     const application = sanitizeNarrative(rawApplication);
+    const hymnType = sanitizeNarrative(rawHymnType);
+    const biblicalAssessment = sanitizeNarrative(rawBiblicalAssessment);
+    const q = normalize(message);
+    const asksType = /\b(?:tipo|categoria|classifica\w*|genero|estilo)\b/.test(q);
+    const asksBiblical = /\b(?:biblic\w*|doutrin\w*|teolog\w*)\b/.test(q);
+    const asksApplication = /\b(?:aplica\w*|pratica|como viver|como aplicar)\b/.test(q);
+    const asksConnections = /\b(?:conex\w*|passagens?|referencias?|versiculos?|textos?)\b/.test(q);
+    const wantsLiteralConnections = conversationMode === "study" || /\b(?:mostre|mostrar|cite|citar|passagens?|versiculos?|textos?)\b/.test(q);
+    const referencesInline = verified.length
+      ? `As conexões bíblicas mais diretas são ${verified.map((item) => item.label).join(", ")}.`
+      : "";
 
-    const bibleBlock = verified.length
-      ? `\n\n*Conexões bíblicas verificadas na Bíblia do Atalaia (${config.bibleVersion}):*\n${verified.map((item) => `📖 *${item.label}*\n${item.text}`).join("\n\n")}`
-      : "\n\n📖 Não incluí conexões bíblicas textuais porque nenhuma referência sugerida passou pela validação do acervo do app nesta resposta.";
+    let answer = "";
+    if (conversationMode === "study") {
+      const studyConnections = verified.length
+        ? `\n\n*Conexões bíblicas:* ${verified.map((item) => item.label).join(", ")}.`
+        : "";
+      answer = `🎵 *Harpa Cristã ${hymn.numero} — ${title}*\n\n*Tema:* ${theme}\n\n${explanation}\n\n*Aplicação:* ${application}${studyConnections}`;
+    } else {
+      const paragraphs: string[] = [];
+      if (asksBiblical && biblicalAssessment) paragraphs.push(biblicalAssessment);
+      if (asksType && hymnType) paragraphs.push(`Quanto ao tipo, este é ${hymnType.replace(/[.!?]+$/u, "")}.`);
+      if (!asksBiblical && !asksType) paragraphs.push(`O hino ${hymn.numero}, “${title}”, tem como tema ${theme.replace(/[.!?]+$/u, "")}.`);
+      if (explanation) paragraphs.push(explanation);
+      if (asksApplication && application) paragraphs.push(application);
+      if ((asksBiblical || asksConnections) && referencesInline) paragraphs.push(referencesInline);
+      answer = paragraphs.filter(Boolean).join("\n\n");
+    }
 
-    const answer = clampText(`🎵 *Estudo da Harpa Cristã ${hymn.numero} — ${title}*\n\n*Tema:* ${theme}\n\n*Leitura do hino:* ${explanation}\n\n*Aplicação:* ${application}${bibleBlock}`);
+    if (wantsLiteralConnections && verified.length) {
+      const literalBlocks = verified.slice(0, 2).map((item) => `📖 *${item.label}*\n${item.text}`).join("\n\n");
+      answer = `${answer.trimEnd()}\n\n${literalBlocks}`;
+    }
+
+    answer = clampText(answer
+      .replace(/trecho literal omitido[^)]*\)?/gi, "")
+      .replace(/uma passagem bíblica relacionada(?:-\d+)?/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim());
 
     return json({
       ok: true,

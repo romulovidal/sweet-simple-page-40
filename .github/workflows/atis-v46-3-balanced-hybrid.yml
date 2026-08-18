@@ -1,0 +1,49 @@
+name: ATIS v46.3 Balanced Hybrid
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/patch-atis-v46-3.py'
+      - 'supabase/functions/_shared/atis/canonical-bible.ts'
+      - 'supabase/functions/_shared/atis/canonical-bible_test.ts'
+      - 'supabase/migrations/*atis_bible_concept_distinctive_ranking.sql'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Apply v46.3 patch
+        run: python3 scripts/patch-atis-v46-3.py
+      - name: Run regressions
+        run: |
+          deno test supabase/functions/_shared/atis/semantic-bible_test.ts
+          deno test supabase/functions/_shared/atis/canonical-bible_test.ts
+          deno test supabase/functions/_shared/atis/context-routing_test.ts
+          deno test supabase/functions/_shared/atis/link-policy_test.ts
+      - name: Type-check production runtimes
+        run: |
+          deno check supabase/functions/atis-ai/index.ts
+          deno check supabase/functions/atis-webhook/index.ts
+      - name: Commit functional changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/patch-atis-v46-3.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/functions/_shared/atis/canonical-bible.ts \
+                  supabase/functions/_shared/atis/canonical-bible_test.ts \
+                  supabase/migrations/20260818183254_atis_bible_concept_distinctive_ranking.sql \
+                  scripts/patch-atis-v46-3.py
+          git commit -m "fix(atis): balance lexical and semantic evidence"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

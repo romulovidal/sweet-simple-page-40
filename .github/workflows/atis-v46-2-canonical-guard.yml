@@ -24,7 +24,9 @@ jobs:
         with:
           deno-version: v2.x
       - name: Apply v46.2 patch
-        run: python3 scripts/patch-atis-v46-2.py
+        run: |
+          sed -i 's/validate_pattern.subn(validate_replacement, canonical)/validate_pattern.subn(lambda _match: validate_replacement, canonical)/' scripts/patch-atis-v46-2.py
+          python3 scripts/patch-atis-v46-2.py
       - name: Run regressions
         run: |
           deno test supabase/functions/_shared/atis/semantic-bible_test.ts

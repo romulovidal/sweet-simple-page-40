@@ -413,6 +413,44 @@ export function renderCanonicalConnections(connections: CanonicalConnections) {
   return sections.filter(Boolean).join("\n\n").trim();
 }
 
+export function mergeHybridCanonicalEvidence(
+  lexicalEvidence: CanonicalEvidence[],
+  semanticEvidence: CanonicalEvidence[],
+  lexicalSlots = 8,
+  semanticSlots = 10,
+) {
+  const lexical = [...lexicalEvidence]
+    .sort((a, b) => b.score - a.score || (a.testament === "NT" ? -1 : 1) || a.reference.localeCompare(b.reference, "pt-BR"))
+    .slice(0, Math.max(0, lexicalSlots));
+  const semantic = [...semanticEvidence]
+    .sort((a, b) => b.score - a.score || (a.testament === "NT" ? -1 : 1) || a.reference.localeCompare(b.reference, "pt-BR"))
+    .slice(0, Math.max(0, semanticSlots));
+
+  const merged = new Map<string, CanonicalEvidence>();
+  // Reserve candidates from each retriever BEFORE global scoring. This prevents
+  // strong lexical scores from starving concept/vector evidence entirely.
+  for (const item of [...lexical, ...semantic]) {
+    const key = normalizeReference(item.reference);
+    if (!key) continue;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, item);
+      continue;
+    }
+    merged.set(key, {
+      ...existing,
+      score: Math.max(existing.score, item.score) + 2,
+      text: existing.text.length >= item.text.length ? existing.text : item.text,
+      matchedEntities: unique([...existing.matchedEntities, ...item.matchedEntities]),
+      matchedTerms: unique([...existing.matchedTerms, ...item.matchedTerms]),
+    });
+  }
+
+  return [...merged.values()]
+    .sort((a, b) => b.score - a.score || (a.testament === "NT" ? -1 : 1) || a.reference.localeCompare(b.reference, "pt-BR"))
+    .slice(0, Math.max(1, lexicalSlots + semanticSlots));
+}
+
 export async function generateCanonicalConnectionsAnswer(args: {
   systemPrompt: string;
   sourceLabel: string;
@@ -430,27 +468,7 @@ export async function generateCanonicalConnectionsAnswer(args: {
     minSimilarity: 0.46,
   });
 
-  const merged = new Map<string, CanonicalEvidence>();
-  for (const item of [...args.evidence, ...semanticEvidence]) {
-    const key = normalizeReference(item.reference);
-    if (!key) continue;
-    const existing = merged.get(key);
-    if (!existing) {
-      merged.set(key, item);
-      continue;
-    }
-    merged.set(key, {
-      ...existing,
-      score: Math.max(existing.score, item.score) + 2,
-      text: existing.text.length >= item.text.length ? existing.text : item.text,
-      matchedEntities: unique([...existing.matchedEntities, ...item.matchedEntities]),
-      matchedTerms: unique([...existing.matchedTerms, ...item.matchedTerms]),
-    });
-  }
-
-  const evidence = [...merged.values()]
-    .sort((a, b) => b.score - a.score || (a.testament === "NT" ? -1 : 1) || a.reference.localeCompare(b.reference, "pt-BR"))
-    .slice(0, 14);
+  const evidence = mergeHybridCanonicalEvidence(args.evidence, semanticEvidence, 8, 10);
 
   if (!evidence.length) {
     return `Não encontrei referências cruzadas fortes o suficiente no acervo bíblico para afirmar conexões de ${args.sourceLabel} com segurança. Prefiro não inventar relações.`;

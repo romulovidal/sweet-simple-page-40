@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "jsr:@std/assert";
-import { retrieveCanonicalEvidence, renderCanonicalConnections, validateCanonicalConnectionsPayload } from "./canonical-bible.ts";
+import { mergeHybridCanonicalEvidence, retrieveCanonicalEvidence, renderCanonicalConnections, validateCanonicalConnectionsPayload } from "./canonical-bible.ts";
 
 const bible = [
   {
@@ -112,4 +112,39 @@ Deno.test("canonical validator accepts a subrange only when a recovered ARC chun
   assertEquals(validated.new_testament[0]?.reference, "João 3:14-15");
   assertEquals(validated.prophecy_fulfillment.status, "typology");
   assert(validated.prophecy_fulfillment.references.includes("João 3:14-15"));
+});
+
+
+Deno.test("hybrid fusion reserves semantic evidence even when lexical scores dominate", () => {
+  const lexical = Array.from({ length: 20 }, (_, index) => ({
+    reference: `Livro Lexical ${index + 1}:1`,
+    text: `Candidato lexical ${index + 1}`,
+    score: 100 - index,
+    testament: "OT" as const,
+    matchedEntities: [`entidade-${index}`],
+    matchedTerms: [],
+  }));
+  const semantic = [
+    {
+      reference: "João 3:13-20",
+      text: "Como Moisés levantou a serpente no deserto, assim importa que o Filho do Homem seja levantado.",
+      score: 8,
+      testament: "NT" as const,
+      matchedEntities: [],
+      matchedTerms: ["conceptual", "moises", "serpente"],
+    },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      reference: `Livro Semântico ${index + 1}:1`,
+      text: `Candidato semântico ${index + 1}`,
+      score: 7 - index / 10,
+      testament: "NT" as const,
+      matchedEntities: [],
+      matchedTerms: ["conceptual"],
+    })),
+  ];
+
+  const merged = mergeHybridCanonicalEvidence(lexical, semantic, 8, 10);
+  assert(merged.some((item) => item.reference === "João 3:13-20"));
+  assertEquals(merged.filter((item) => item.reference.startsWith("Livro Lexical")).length, 8);
+  assertEquals(merged.filter((item) => item.reference.startsWith("Livro Semântico") || item.reference === "João 3:13-20").length, 10);
 });

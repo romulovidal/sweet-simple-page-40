@@ -1,0 +1,31 @@
+name: ATIS v46.1 Concept Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atis-v46-1-concept-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atis-v46-1-concept-bridge
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Semantic bridge tests
+        run: |
+          deno test supabase/functions/_shared/atis/semantic-bible_test.ts
+          deno test supabase/functions/_shared/atis/canonical-bible_test.ts
+          deno test supabase/functions/_shared/atis/context-routing_test.ts
+          deno test supabase/functions/_shared/atis/link-policy_test.ts
+      - name: Type-check production functions
+        run: |
+          deno check supabase/functions/atis-ai/index.ts
+          deno check supabase/functions/atis-webhook/index.ts

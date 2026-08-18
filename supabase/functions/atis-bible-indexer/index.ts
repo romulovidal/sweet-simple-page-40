@@ -6,7 +6,7 @@ const EMBEDDING_DIMENSIONS = 768;
 const CHUNK_SIZE = 8;
 const CHUNK_STRIDE = 6;
 const EMBEDDING_BATCH_SIZE = 48;
-const BATCHES_PER_RUN = 3;
+const BATCHES_PER_RUN = 2;
 const DEFAULT_BASE_URL = "https://biblia.atalaias.online";
 const CANONICAL_BOOKS = [
   "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios", "Eclesiastes", "Cantares", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oséias", "Joel", "Amós", "Obadias", "Jonas", "Miquéias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias", "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse",
@@ -200,6 +200,7 @@ Deno.serve(async (req: Request) => {
     const config = await loadAssistantConfig(supabase);
     const seed = await seedIfNeeded(supabase, config);
     let embeddedThisRun = 0;
+    let rateLimited = false;
 
     for (let batchNo = 0; batchNo < BATCHES_PER_RUN; batchNo++) {
       const { data: pending, error } = await supabase
@@ -212,7 +213,19 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
       if (!pending?.length) break;
 
-      const vectors = await batchEmbed(pending, geminiKey);
+      let vectors: number[][];
+      try {
+        vectors = await batchEmbed(pending, geminiKey);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/quota|rate.?limit|resource_exhausted|429/i.test(message)) {
+          rateLimited = true;
+          console.warn("[atis-bible-indexer] embedding quota reached; continuing on next scheduled run", message.slice(0, 220));
+          break;
+        }
+        throw error;
+      }
+
       const payload = pending.map((row: any, index: number) => ({
         id: row.id,
         embedding: vectors[index],
@@ -232,6 +245,7 @@ Deno.serve(async (req: Request) => {
       embedding_model: EMBEDDING_MODEL,
       seeded: seed.seeded,
       embedded_this_run: embeddedThisRun,
+      rate_limited: rateLimited,
       progress: state ?? null,
     });
   } catch (error) {

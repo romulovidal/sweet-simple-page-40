@@ -6,8 +6,10 @@ const harpaHistory = [
 ];
 
 Deno.test("explicit Bible reference overrides stale Harpa context", () => {
-  assertEquals(deterministicIntent("Explique Lucas 21:20", harpaHistory), "ask_bible");
+  assertEquals(deterministicIntent("João 3:17", harpaHistory), "bible_lookup");
   assertEquals(deterministicIntent("Mostre Mateus 26:1-6", harpaHistory), "bible_lookup");
+  assertEquals(deterministicIntent("Explique Lucas 21:20", harpaHistory), "ask_bible");
+  assertEquals(deterministicIntent("O que significa João 3:17?", harpaHistory), "ask_bible");
   assertEquals(deterministicIntent("Explique esse hino", harpaHistory), "harpa_study");
 });
 

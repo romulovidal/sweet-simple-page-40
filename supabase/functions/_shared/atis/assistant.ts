@@ -191,8 +191,10 @@ export function deterministicIntent(message: string, history: AtisConversationMe
     if (/\b(resumo|resuma|sintese|sintetize|pontos[- ]?chave)\b/.test(q)) return "chapter_summary";
     if (/\b(exegese|exeget|estudo aprofundado|analise teologica|teologia profunda)\b/.test(q)) return "exegetai";
     if (/\b(devocional|reflexao devocional)\b/.test(q)) return "devotional";
-    if (/\b(mostre|leia|texto de|o que diz|qual diz|versiculo|o que esta escrito)\b/.test(q)) return "bible_lookup";
-    return "ask_bible";
+    // A bare/explicit Bible reference is a direct app lookup and must not depend on AI.
+    // Only explanatory language promotes it to the conversational Bible route.
+    if (/\b(explique|explicacao|significa|significado|comente|comentario|entenda|interprete|interpretacao|ensina|quer dizer|por que|porque)\b|\bfale sobre\b/.test(q)) return "ask_bible";
+    return "bible_lookup";
   }
   if (isHarpaStudyIntent(message, history)) return "harpa_study";
   if (isMinistryRelationIntent(message)) return "ministry_relation";

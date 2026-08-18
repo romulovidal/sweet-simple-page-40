@@ -32,13 +32,14 @@ function toGroqModel(model: string): string {
   const m = String(model || "").toLowerCase();
   if (m.startsWith("groq/")) return m.slice("groq/".length);
 
-  // Preserve model IDs that Groq currently documents as production models.
-  // Do not silently rewrite a valid caller choice to a different model family.
-  if (m === "llama-3.3-70b-versatile" || m === "llama-3.1-8b-instant") return m;
+  // Groq shut down Llama 3.1/3.3 for Free/Developer on 2026-08-16.
+  // Use their documented production replacements so ATIS does not depend on
+  // an enterprise-only compatibility path.
+  if (m === "llama-3.3-70b-versatile") return "openai/gpt-oss-120b";
+  if (m === "llama-3.1-8b-instant") return "openai/gpt-oss-20b";
   if (m.startsWith("openai/gpt-oss-") || m.startsWith("qwen/qwen3.6-")) return m;
   if (m.startsWith("mixtral-") || m.startsWith("gemma") || m.startsWith("deepseek-") || m.startsWith("qwen/")) return m;
-
-  return "llama-3.3-70b-versatile";
+  return "openai/gpt-oss-120b";
 }
 
 function toGrokModel(model: string): string {
@@ -53,18 +54,17 @@ function toGrokModel(model: string): string {
 }
 
 function toGeminiModel(model: string): string {
-  if (model.startsWith("google/")) {
-    const name = model.slice("google/".length);
-    if (name.includes("preview") || name.includes("3-flash") || name.includes("3.1") || name.includes("3.5") || name.includes("3.6")) {
-      return "gemini-2.5-flash";
-    }
-    return name;
-  }
-  return "gemini-2.5-flash";
+  const raw = String(model || "").toLowerCase();
+  const m = raw.startsWith("google/") ? raw.slice("google/".length) : raw;
+  if (m.startsWith("gemini-3.6-flash") || m.startsWith("gemini-3.5-flash") || m.startsWith("gemini-3.5-flash-lite")) return m;
+  return "gemini-3.6-flash";
 }
 
 async function tryGemini(body: Record<string, unknown>, key: string): Promise<Response> {
-  const geminiBody = { ...body, model: toGeminiModel(String(body.model ?? "google/gemini-2.5-flash")) };
+  // Gemini 3.x deprecates sampling parameters used by older chat callers.
+  // Strip them only for the Gemini fallback; Groq keeps the caller payload.
+  const { temperature: _temperature, top_p: _topP, top_k: _topK, ...rest } = body as Record<string, unknown>;
+  const geminiBody = { ...rest, model: toGeminiModel(String(body.model ?? "gemini-3.6-flash")) };
   return await fetch(GEMINI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -183,7 +183,7 @@ export async function aiGenerateText(opts: {
   messages.push({ role: "user", content: opts.user });
   try {
     const res = await aiChatFetch({
-      model: opts.model ?? "llama-3.3-70b-versatile",
+      model: opts.model ?? "openai/gpt-oss-120b",
       messages,
       temperature: opts.temperature ?? 0.9,
       max_tokens: opts.maxTokens ?? 2048,

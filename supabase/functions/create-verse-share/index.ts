@@ -57,16 +57,27 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Deduplicação: procura link recente idêntico (últimas 24h)
+    // Deduplicação: mesma referência + mesma versão nas últimas 24h.
+    // contains + containedBy equivalem à igualdade do conjunto em integer[].
     const sortedVerses = [...new Set(verses)].sort((a, b) => a - b);
-    const { data: existing } = await supabase
+    let existingQuery = supabase
       .from("verse_shares")
       .select("slug")
       .eq("book_abbrev", book_abbrev)
       .eq("chapter", chapter)
-      .eq("verses", sortedVerses)
-      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .contains("verses", sortedVerses)
+      .containedBy("verses", sortedVerses)
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    existingQuery = version
+      ? existingQuery.eq("version", version)
+      : existingQuery.is("version", null);
+
+    const { data: existing, error: existingError } = await existingQuery
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
+    if (existingError) throw existingError;
 
     if (existing?.slug) {
       return new Response(JSON.stringify({ slug: existing.slug }), {

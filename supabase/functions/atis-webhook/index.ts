@@ -711,13 +711,17 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
       const conversationHistory = structuredContext.messages.length
         ? [...history, ...structuredContext.messages]
         : history;
+      // Keep deterministic/structured memory available while bounding what is
+      // actually handed to AI. Four recent turns are enough for natural
+      // continuity and dramatically reduce provider TPM pressure.
+      const assistantHistory = conversationHistory.slice(-8);
       const styleInstruction = [
         profile.response_style === "concise" ? "Prefira respostas curtas." : profile.response_style === "detailed" ? "Quando útil, dê uma explicação um pouco mais detalhada." : null,
         profile.custom_instruction,
       ].filter(Boolean).join(" ");
       const answer = await runAtisAssistant(supabase, commandText, {
         allowedAiRoutes: policy.allowedAiRoutes,
-        conversationHistory,
+        conversationHistory: assistantHistory,
         conversationMode: state.conversation_mode ?? profile.conversation_mode,
         destinationInstruction: styleInstruction || null,
       });
@@ -750,7 +754,7 @@ async function processInboundMessages(supabase: any, instance: any, data: any) {
           history_interactions_used: Math.floor(history.length / 2),
           history_messages_used: history.length,
           context_messages_used: structuredContext.messages.length,
-          assistant_context_messages_used: conversationHistory.length,
+          assistant_context_messages_used: assistantHistory.length,
           context_source: structuredContext.source === "memory"
             ? (history.length ? "memory+history" : "memory")
             : (history.length ? "history" : "none"),

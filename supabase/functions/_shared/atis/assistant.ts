@@ -3,6 +3,7 @@ import { cultoLookup, isCultoIntent } from "./culto-lookup.ts";
 import { canticosLookup, isCanticosIntent } from "./assistant-extras.ts";
 import { captureCultoReference, captureSongListReference, resolveMinistryFollowup } from "./ministry-context.ts";
 import { generateMinistryRelationAnswer, isMinistryRelationIntent, loadMinistryRelationGrounding } from "./ministry-intelligence.ts";
+import { canonicalEvidenceContext, generateCanonicalConnectionsAnswer, retrieveCanonicalEvidence } from "./canonical-bible.ts";
 
 type Json = Record<string, any>;
 export type AtisAssistantRoute =
@@ -36,6 +37,7 @@ export type AtisAssistantOptions = {
   conversationHistory?: AtisConversationMessage[];
   conversationMode?: "normal" | "study" | "concise";
   destinationInstruction?: string | null;
+  memoryBibleReference?: string | null;
 };
 
 type BibleBook = { abbrev: string; name?: string; chapters: string[][] };
@@ -434,6 +436,24 @@ function parseBibleFollowupReference(message: string, bible: BibleBook[], histor
   return null;
 }
 
+function shouldUseMemoryBibleReference(
+  message: string,
+  route: AtisAssistantRoute,
+  reference: BibleReference,
+) {
+  if (["connections", "exegetai", "chapter_summary", "word_meaning", "timeline"].includes(route)) return true;
+  if (route !== "ask_bible") return false;
+
+  const q = normalize(message);
+  if (/\b(esse|essa|deste|dessa|desse|texto|passagem|trecho|capitulo|versiculo|explique|explica|significa|contexto)\b/.test(q)) return true;
+
+  const ignored = new Set(["qual", "quais", "porque", "como", "onde", "quando", "levou", "deus", "senhor", "biblia", "biblico", "texto", "passagem"]);
+  const terms = q.split(" ").filter((token) => token.length >= 4 && !ignored.has(token));
+  if (!terms.length) return false;
+  const source = ` ${normalize(bibleText(reference, !reference.verseStart).text)} `;
+  return terms.some((term) => source.includes(` ${term} `));
+}
+
 function bibleText(reference: BibleReference, wholeChapter = false) {
   const verses = reference.book.chapters[reference.chapter - 1] ?? [];
   const start = wholeChapter || !reference.verseStart ? 1 : reference.verseStart;
@@ -800,6 +820,7 @@ async function generateSpecialistAnswer(
   history: AtisConversationMessage[] = [],
   conversationMode: "normal" | "study" | "concise" = "normal",
   destinationInstruction: string | null = null,
+  canonicalGrounding: string | null = null,
 ) {
   const specialist = specialistPrompt(route, prompts) ?? "Responda fielmente à solicitação usando somente informações que você possa sustentar.";
   const context = bibleContext ? `\n\nCONTEXTO BÍBLICO RECUPERADO DO APP (${config.bibleVersion})\n${bibleContext.label}\n${bibleContext.text}` : "";
@@ -820,7 +841,7 @@ async function generateSpecialistAnswer(
   const userMessage = route === "devotional" && bibleContext
     ? "Escreva somente a reflexão e a oração baseadas na passagem fornecida no contexto. Não repita a referência nem o texto bíblico."
     : message;
-  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.\n- Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.\nPara perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.\nEm modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.\nQuando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.\nNão escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.\nEmojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.\nSe a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
+  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Responda como uma conversa natural no WhatsApp, não como relatório, apostila ou formulário.\n- Não repita a pergunta do usuário como título ou abertura. Comece diretamente pela resposta.\nPara perguntas simples ou factuais, responda primeiro em uma frase clara e só complemente quando isso realmente ajudar.\nEm modo normal ou conciso, não use tabelas, títulos, subtítulos, listas de “principais textos” ou enumerações automáticas salvo quando o usuário pedir esse formato ou quando ele for realmente necessário.\nQuando referências bíblicas ajudarem, use no máximo 2 em respostas comuns e mencione-as naturalmente no texto.\nNão escreva “📖 Leia aqui:”, não simule link, não deixe cabeçalho bíblico vazio e não termine uma referência com traço esperando conteúdo. O backend monta o bloco bíblico confiável e o link curto.\nEmojis são opcionais: use no máximo 1 ou 2 quando combinarem naturalmente com a conversa; não os use como decoração obrigatória.\nSe a pergunta contiver uma conclusão doutrinária embutida, não a confirme automaticamente. Responda com a nuance que o conjunto das Escrituras exigir e diferencie com clareza Deus Pai, Jesus Cristo/o Cordeiro e o Espírito Santo quando isso for relevante.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}${canonicalGrounding ?? ""}`;
   const response = await aiChatFetchWithProviders({
     model: route === "exegetai" || route === "timeline" ? "llama-3.3-70b-versatile" : "llama-3.3-70b-versatile",
     messages: [
@@ -1112,7 +1133,13 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     bible = await loadBible(config);
     const directReference = parseBibleReference(input, bible);
     const followupReference = directReference ? null : parseBibleFollowupReference(input, bible, history);
-    reference = directReference ?? followupReference;
+    const rememberedReference = !directReference && !followupReference && firstString(options.memoryBibleReference)
+      ? parseBibleReference(firstString(options.memoryBibleReference)!, bible)
+      : null;
+    const contextualRememberedReference = rememberedReference && shouldUseMemoryBibleReference(input, route, rememberedReference)
+      ? rememberedReference
+      : null;
+    reference = directReference ?? followupReference ?? contextualRememberedReference;
   } catch (error) {
     console.error("[atis-assistant] Bible asset lookup failed", error instanceof Error ? error.message : error);
   }
@@ -1145,6 +1172,34 @@ export async function runAtisAssistant(supabase: any, message: string, options: 
     const wholeChapter = route === "chapter_summary" || route === "exegetai" || route === "timeline";
     context = bibleText(reference, wholeChapter && !reference.verseStart);
   }
-  const text = await generateSpecialistAnswer(supabase, route, config, prompts, input, context, bible, history, options.conversationMode ?? "normal", firstString(options.destinationInstruction));
+
+  const canonicalEvidence = context && bible && ["connections", "ask_bible", "exegetai"].includes(route)
+    ? retrieveCanonicalEvidence(context.label, context.text, input, bible, route === "connections" ? 12 : 6)
+    : [];
+
+  if (route === "connections") {
+    if (!context || !bible) {
+      return {
+        text: "Para buscar conexões bíblicas com segurança, preciso saber qual passagem está em estudo. Envie a referência, por exemplo: *Gênesis 4:1-10*.",
+        route,
+        source: "app",
+      };
+    }
+    const answer = await generateCanonicalConnectionsAnswer({
+      systemPrompt: config.systemPrompt,
+      sourceLabel: context.label,
+      sourceText: context.text,
+      userMessage: input,
+      evidence: canonicalEvidence,
+      conversationMode: options.conversationMode ?? "normal",
+    });
+    return { text: clampText(answer), route, source: "ai", reference: context.label };
+  }
+
+  const grounding = canonicalEvidenceContext(canonicalEvidence, route === "exegetai" ? 8 : 6);
+  const text = await generateSpecialistAnswer(
+    supabase, route, config, prompts, input, context, bible, history,
+    options.conversationMode ?? "normal", firstString(options.destinationInstruction), grounding || null,
+  );
   return { text, route, source: "ai", reference: context?.label ?? null };
 }

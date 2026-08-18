@@ -1,5 +1,6 @@
 name: ATIS v46.2 Canonical Guard
 
+# Trigger validation after workflow registration.
 on:
   push:
     branches: [main]

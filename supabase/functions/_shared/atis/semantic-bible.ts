@@ -40,6 +40,31 @@ function compactSemanticPrompt(sourceLabel: string, sourceText: string, userMess
   ].filter(Boolean).join("\n");
 }
 
+function serverConfig() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceKey) throw new Error("SEMANTIC_BIBLE_SUPABASE_CONFIG_MISSING");
+  return { supabaseUrl, serviceKey };
+}
+
+async function semanticIndexReady() {
+  const { supabaseUrl, serviceKey } = serverConfig();
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/atis_bible_semantic_progress`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: "{}",
+  });
+  const body = await response.json().catch(() => null) as any;
+  if (!response.ok || !Array.isArray(body) || !body.length) return false;
+  const total = Number(body[0]?.total ?? 0);
+  const pending = Number(body[0]?.pending ?? total);
+  return total > 0 && pending === 0;
+}
+
 async function embedText(input: string): Promise<number[]> {
   const apiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
   if (!apiKey) throw new Error("SEMANTIC_BIBLE_GEMINI_KEY_MISSING");
@@ -67,10 +92,7 @@ async function embedText(input: string): Promise<number[]> {
 }
 
 async function semanticRpc(embedding: number[], bibleVersion: string, matchCount: number, minSimilarity: number) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-  if (!supabaseUrl || !serviceKey) throw new Error("SEMANTIC_BIBLE_SUPABASE_CONFIG_MISSING");
-
+  const { supabaseUrl, serviceKey } = serverConfig();
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/atis_bible_semantic_search`, {
     method: "POST",
     headers: {
@@ -99,8 +121,7 @@ function isSameSource(reference: string, sourceLabel: string) {
   const candidate = normalize(reference);
   if (!source || !candidate) return false;
   if (source === candidate) return true;
-  const sourceChapter = source.replace(/\s+\d+(?:\s+\d+(?:\s+\d+)?)?$/, "");
-  return candidate === source || (candidate.startsWith(`${source} `) && candidate.length <= source.length + 5) || false;
+  return candidate.startsWith(`${source} `) && candidate.length <= source.length + 5;
 }
 
 export async function retrieveSemanticBibleEvidence(args: {
@@ -115,6 +136,10 @@ export async function retrieveSemanticBibleEvidence(args: {
   if (!sourceText) return [];
 
   try {
+    // Do not let a partial corpus skew canonical answers. While the indexer is
+    // still filling the ARC, v45 lexical retrieval remains the exact fallback.
+    if (!(await semanticIndexReady())) return [];
+
     const embedding = await embedText(compactSemanticPrompt(args.sourceLabel, sourceText, args.userMessage));
     const rows = await semanticRpc(
       embedding,
@@ -137,9 +162,8 @@ export async function retrieveSemanticBibleEvidence(args: {
       output.push({
         reference,
         text,
-        // Lexical v45 scores can reach the 20s/30s. Put semantic evidence in
-        // the same practical range without allowing a mediocre vector match to
-        // outrank an explicit character/name occurrence.
+        // Explicit names/references from the lexical engine retain priority.
+        // Semantic similarity extends recall; it does not override direct text.
         score: 8 + similarity * 16,
         testament: testamentForBook(bookName),
         matchedEntities: [],

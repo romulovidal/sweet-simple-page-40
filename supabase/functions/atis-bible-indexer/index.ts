@@ -32,6 +32,19 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function jwtRole(token: string) {
+  const parts = token.split(".");
+  if (parts.length < 2) return "";
+  try {
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const payload = JSON.parse(atob(padded));
+    return String(payload?.role ?? "");
+  } catch {
+    return "";
+  }
+}
+
 function simpleHash(value: string) {
   let hash = 0x811c9dc5;
   for (let i = 0; i < value.length; i++) {
@@ -177,7 +190,7 @@ Deno.serve(async (req: Request) => {
   const geminiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
   if (!supabaseUrl || !serviceKey || !geminiKey) return json({ error: "SERVER_CONFIG_MISSING" }, 500);
-  if (!bearer || bearer !== serviceKey) return json({ error: "FORBIDDEN" }, 403);
+  if (!bearer || (bearer !== serviceKey && jwtRole(bearer) !== "service_role")) return json({ error: "FORBIDDEN" }, 403);
 
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

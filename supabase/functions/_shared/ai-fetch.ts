@@ -61,9 +61,17 @@ function toGeminiModel(model: string): string {
 }
 
 async function tryGemini(body: Record<string, unknown>, key: string): Promise<Response> {
-  // Gemini 3.x deprecates sampling parameters used by older chat callers.
-  // Strip them only for the Gemini fallback; Groq keeps the caller payload.
-  const { temperature: _temperature, top_p: _topP, top_k: _topK, ...rest } = body as Record<string, unknown>;
+  // Gemini 3.x deprecates sampling parameters used by older chat callers and
+  // does not use Groq GPT-OSS reasoning controls. Strip provider-specific
+  // fields before falling back so Groq tuning cannot break Gemini.
+  const {
+    temperature: _temperature,
+    top_p: _topP,
+    top_k: _topK,
+    reasoning_effort: _reasoningEffort,
+    reasoning_format: _reasoningFormat,
+    ...rest
+  } = body as Record<string, unknown>;
   const geminiBody = { ...rest, model: toGeminiModel(String(body.model ?? "gemini-3.6-flash")) };
   return await fetch(GEMINI_URL, {
     method: "POST",
@@ -73,7 +81,15 @@ async function tryGemini(body: Record<string, unknown>, key: string): Promise<Re
 }
 
 async function tryGroq(body: Record<string, unknown>, key: string): Promise<Response> {
-  const groqBody = { ...body, model: toGroqModel(String(body.model ?? "")) };
+  const mappedModel = toGroqModel(String(body.model ?? ""));
+  const { max_tokens: legacyMaxTokens, ...rest } = body as Record<string, unknown>;
+  const groqBody = {
+    ...rest,
+    model: mappedModel,
+    ...(legacyMaxTokens != null && rest.max_completion_tokens == null
+      ? { max_completion_tokens: legacyMaxTokens }
+      : {}),
+  };
   return await fetch(GROQ_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -150,8 +166,50 @@ export async function aiChatFetchWithProviders(
       try {
         const res = await provider.run();
         if (res.ok) {
-          console.info(`[ai-fetch] success ${provider.name}/${modelFor(provider.name)} a${attempt + 1} ${Date.now() - startedAt}ms`);
-          return res;
+          const providerModel = modelFor(provider.name);
+          let finishReason = "";
+          if (body.stream !== true) {
+            const successBody = await res.clone().json().catch(() => null) as any;
+            finishReason = String(successBody?.choices?.[0]?.finish_reason ?? "").trim().toLowerCase();
+          }
+
+          // A provider can return HTTP 200 while the model stopped because the
+          // completion budget ended. Never deliver that partial answer. Try the
+          // next configured provider instead; if every provider truncates,
+          // surface a controlled failure rather than broken WhatsApp text.
+          if (finishReason === "length" || finishReason === "max_tokens") {
+            attempts.push({
+              provider: provider.name,
+              model: providerModel,
+              attempt: attempt + 1,
+              status: 200,
+              ms: Date.now() - startedAt,
+              remaining_tokens: res.headers.get('x-ratelimit-remaining-tokens') ?? undefined,
+              reset_tokens: res.headers.get('x-ratelimit-reset-tokens') ?? undefined,
+              remaining_requests: res.headers.get('x-ratelimit-remaining-requests') ?? undefined,
+              detail: `finish_reason=${finishReason}`,
+            });
+            const headers = new Headers(res.headers);
+            headers.set('Content-Type', 'application/json');
+            headers.set('x-atis-ai-diagnostic', compactDiagnostics());
+            headers.set('x-atis-ai-provider', provider.name);
+            headers.set('x-atis-ai-model', providerModel);
+            headers.set('x-atis-ai-finish-reason', finishReason);
+            const truncatedResponse = new Response(JSON.stringify({ error: 'AI_TRUNCATED_RESPONSE' }), { status: 502, headers });
+            lastRes = truncatedResponse;
+            if (i < providers.length - 1) {
+              console.error(`[ai-fetch] ${labels[provider.name]} returned a truncated completion; trying next fallback.`);
+              break;
+            }
+            return truncatedResponse;
+          }
+
+          const headers = new Headers(res.headers);
+          headers.set('x-atis-ai-provider', provider.name);
+          headers.set('x-atis-ai-model', providerModel);
+          if (finishReason) headers.set('x-atis-ai-finish-reason', finishReason);
+          console.info(`[ai-fetch] success ${provider.name}/${providerModel} a${attempt + 1} ${Date.now() - startedAt}ms finish=${finishReason || 'unknown'}`);
+          return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
         }
         lastRes = res;
         const errText = await res.clone().text().catch(() => "");

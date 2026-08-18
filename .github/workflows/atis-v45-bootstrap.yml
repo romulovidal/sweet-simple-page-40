@@ -1,5 +1,6 @@
 name: Bootstrap validated ATIS v45
 
+# Second push intentionally triggers this already-registered workflow.
 on:
   push:
     branches: [main]

@@ -76,7 +76,6 @@ const MONTHS: Record<string, number> = {
   julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
 };
 
-const VERSE_SHARE_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 let bibleCache: { url: string; data: BibleBook[] } | null = null;
 let harpaCache: { url: string; data: any } | null = null;
 
@@ -331,46 +330,36 @@ function verseShareText(reference: BibleReference) {
   return { label, text: lines.join(" ") };
 }
 
-function randomVerseShareSlug(length = 6) {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  let slug = "";
-  for (let index = 0; index < length; index++) slug += VERSE_SHARE_ALPHABET[bytes[index] % VERSE_SHARE_ALPHABET.length];
-  return slug;
-}
-
-async function createShortVerseLink(supabase: any, config: any, reference: BibleReference, textSnippet: string) {
+async function createShortVerseLink(_supabase: any, config: any, reference: BibleReference, textSnippet: string) {
   const verses = verseNumbers(reference);
   if (!verses.length || verses.length > 50) return null;
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: existing, error: existingError } = await supabase
-    .from("verse_shares")
-    .select("slug")
-    .eq("book_abbrev", reference.book.abbrev)
-    .eq("chapter", reference.chapter)
-    .eq("verses", verses)
-    .gte("created_at", cutoff)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (existingError) throw existingError;
-  if (firstString(existing?.slug)) return `${config.baseUrl}/v/${existing.slug}`;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const slug = randomVerseShareSlug();
-    const { error } = await supabase.from("verse_shares").insert({
-      slug,
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceKey) throw new Error("VERSE_SHARE_SERVER_CONFIG_MISSING");
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/create-verse-share`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
       book_abbrev: reference.book.abbrev,
       chapter: reference.chapter,
       verses,
       text_snippet: textSnippet.slice(0, 600),
       book_name: reference.bookName,
       version: config.bibleVersion,
-    });
-    if (!error) return `${config.baseUrl}/v/${slug}`;
-    if (!String(error.message ?? "").toLowerCase().includes("duplicate key")) throw error;
+    }),
+  });
+  const body = await response.json().catch(() => null) as any;
+  const slug = firstString(body?.slug);
+  if (!response.ok || !slug) {
+    throw new Error(firstString(body?.error) ?? `VERSE_SHARE_HTTP_${response.status}`);
   }
-  return null;
+  return `${config.baseUrl}/v/${slug}`;
 }
 
 async function trustedBibleBlock(supabase: any, config: any, reference: BibleReference) {
@@ -453,7 +442,8 @@ async function enrichBibleReferences(
     references.push(reference);
   }
 
-  for (const reference of references.slice(0, 6)) {
+  const expansionTargets = contextReference?.verseStart ? [contextReference] : references.slice(0, 2);
+  for (const reference of expansionTargets) {
     const canonical = bibleText(reference, false);
     const block = await trustedBibleBlock(supabase, config, reference);
     if (!block) continue;

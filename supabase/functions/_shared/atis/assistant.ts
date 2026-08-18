@@ -681,7 +681,7 @@ async function generateSpecialistAnswer(
   const userMessage = route === "devotional" && bibleContext
     ? `**${bibleContext.label}**\n\n"${bibleContext.text}"`
     : message;
-  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
+  const system = `${config.systemPrompt}\n\nFERRAMENTA ESPECIALIZADA SELECIONADA\n${specialist}\n\nREGRAS DE SAÍDA DO ATIS\n- Sua identidade pública continua sendo Atis; não diga que você é ExegettAI ou outro motor.\n- Não mencione roteamento, provider ou ferramenta interna.\n- Não invente texto bíblico. Quando houver CONTEXTO BÍBLICO RECUPERADO DO APP, trate-o como fonte do texto citado.\n- Fora do CONTEXTO BÍBLICO RECUPERADO DO APP, cite apenas a referência bíblica, nunca o texto literal.\n- Não inclua links ou URLs. O backend acrescenta exclusivamente links curtos de versículos verificados no formato /v/.\n- Na parte explicativa, prefira citar a referência sem transcrever o versículo; o backend acrescentará o texto bíblico real recuperado do app.\n- Seja conciso para WhatsApp, salvo quando o usuário pedir estudo aprofundado.\n- Em modo normal ou conciso, perguntas abertas devem ser respondidas diretamente em no máximo 2 parágrafos curtos, com no máximo 2 referências bíblicas de apoio. Não use tabelas, listas longas ou vários subtítulos salvo pedido explícito.\n- Sempre conclua a última frase. Nunca entregue uma resposta interrompida ou um fragmento.${continuityRule}${modeRule}${destinationRule}${devotionalRule}${context}`;
   const response = await aiChatFetchWithProviders({
     model: route === "exegetai" || route === "timeline" ? "llama-3.3-70b-versatile" : "llama-3.3-70b-versatile",
     messages: [
@@ -690,10 +690,12 @@ async function generateSpecialistAnswer(
       { role: "user", content: userMessage },
     ],
     temperature: 0.55,
-    // WhatsApp output is clamped to ~3.8k characters later, so reserving
-    // 1.8k-2.8k output tokens only wastes TPM. Keep enough room for a useful
-    // answer while staying compatible with Groq's Free/Developer token budget.
-    max_tokens: conversationMode === "study" ? 1200 : conversationMode === "concise" ? 450 : route === "exegetai" ? 1400 : 900,
+    // GPT-OSS defaults to medium reasoning on Groq. Normal WhatsApp answers do
+    // not need that overhead; low reasoning leaves more of the TPM/completion
+    // budget for the visible answer while preserving a safe output ceiling.
+    reasoning_effort: "low",
+    reasoning_format: "hidden",
+    max_tokens: conversationMode === "study" ? 1800 : conversationMode === "concise" ? 650 : route === "exegetai" ? 1800 : 1400,
   }, ["groq", "gemini"]);
   if (!response.ok) {
     const diagnostic = response.headers.get("x-atis-ai-diagnostic")?.slice(0, 420) ?? "";
@@ -701,6 +703,10 @@ async function generateSpecialistAnswer(
     throw new Error(diagnostic ? `AI_PROVIDER_UNAVAILABLE|${diagnostic}` : "AI_PROVIDER_UNAVAILABLE");
   }
   const body = await response.json().catch(() => null) as any;
+  const finishReason = firstString(body?.choices?.[0]?.finish_reason)?.toLowerCase() ?? "";
+  if (finishReason === "length" || finishReason === "max_tokens") {
+    throw new Error(`AI_PROVIDER_UNAVAILABLE|finish_reason=${finishReason}`);
+  }
   const text = firstString(body?.choices?.[0]?.message?.content);
   if (!text) throw new Error("AI_EMPTY_RESPONSE");
   const guarded = guardUngroundedBibleQuotes(stripGeneratedUrls(text), bibleContext?.text ?? null);

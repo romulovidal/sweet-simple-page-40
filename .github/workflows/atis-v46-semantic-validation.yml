@@ -1,5 +1,6 @@
 name: ATIS v46 Semantic Validation
 
+# Temporary validation bootstrap for the v46 semantic branch.
 on:
   push:
     branches: [main]

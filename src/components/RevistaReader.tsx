@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, FileText, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, FileText, Pencil, Share2, ImageDown, CornerUpLeft, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -46,6 +46,15 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   const [savingRange, setSavingRange] = useState(false);
   const [rangeError, setRangeError] = useState<string | null>(null);
 
+  // Menu próprio do app (segurar a página / botão direito) — no lugar do menu do sistema
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [menuMode, setMenuMode] = useState<"main" | "goto">("main");
+  const [goToPage, setGoToPage] = useState("");
+  const longPressTimerRef = useRef<number | null>(null);
+  const pressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const menuJustOpenedRef = useRef(false);
+  const stageElRef = useRef<HTMLDivElement | null>(null);
+
   const pdfDocRef = useRef<any>(null);
   const pdfjsRef = useRef<any>(null);
   const renderingRef = useRef<Set<number>>(new Set());
@@ -65,6 +74,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
       roRef.current.disconnect();
       roRef.current = null;
     }
+    stageElRef.current = el;
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
@@ -82,6 +92,16 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
       roRef.current = null;
     };
   }, []);
+
+  // iOS Safari: bloqueia o gesto de pinça (zoom) no palco do leitor
+  useEffect(() => {
+    if (!open) return;
+    const el = stageElRef.current;
+    if (!el) return;
+    const blockPinch = (e: Event) => e.preventDefault();
+    el.addEventListener("gesturestart", blockPinch);
+    return () => el.removeEventListener("gesturestart", blockPinch);
+  }, [open]);
 
   // Fallback para o tamanho da janela caso a medição falhe: a página
   // sempre renderiza com um tamanho válido.
@@ -128,6 +148,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     setFlip(null);
     setRangeOverride(null);
     setEditingRange(false);
+    setMenu(null);
 
     (async () => {
       try {
@@ -221,24 +242,134 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menu) {
+        setMenu(null);
+        return;
+      }
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft") goPrev();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, goNext, goPrev]);
+  }, [open, goNext, goPrev, menu]);
 
-  // Swipe
+  // Menu próprio do app: segurar a página (500 ms) ou botão direito abre o menu
+  const openMenu = useCallback((clientX: number, clientY: number) => {
+    const w = typeof window !== "undefined" ? window.innerWidth : 400;
+    const h = typeof window !== "undefined" ? window.innerHeight : 700;
+    setMenu({
+      x: Math.max(8, Math.min(clientX, w - 240)),
+      y: Math.max(8, Math.min(clientY, h - 270)),
+    });
+    setMenuMode("main");
+    menuJustOpenedRef.current = true;
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+    setMenuMode("main");
+  }, []);
+
+  const cancelPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    pressStartRef.current = null;
+  }, []);
+
+  const startPress = useCallback((clientX: number, clientY: number) => {
+    menuJustOpenedRef.current = false;
+    pressStartRef.current = { x: clientX, y: clientY };
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      openMenu(clientX, clientY);
+    }, 500);
+  }, [openMenu]);
+
+  // Swipe + segurar
   const touchXRef = useRef<number | null>(null);
   const onTouchStart = (e: ReactTouchEvent) => {
     touchXRef.current = e.touches[0].clientX;
+    if (e.touches.length === 1) startPress(e.touches[0].clientX, e.touches[0].clientY);
+    else cancelPress();
+  };
+  const onTouchMove = (e: ReactTouchEvent) => {
+    const s = pressStartRef.current;
+    if (!s) return;
+    const dx = e.touches[0].clientX - s.x;
+    const dy = e.touches[0].clientY - s.y;
+    if (Math.abs(dx) > 12 || Math.abs(dy) > 12) cancelPress();
   };
   const onTouchEnd = (e: ReactTouchEvent) => {
+    cancelPress();
     if (touchXRef.current === null) return;
     const dx = e.changedTouches[0].clientX - touchXRef.current;
     touchXRef.current = null;
     if (dx < -50) goNext();
     else if (dx > 50) goPrev();
+  };
+
+  const onMouseDown = (e: ReactMouseEvent) => {
+    if (e.button !== 0) return;
+    startPress(e.clientX, e.clientY);
+  };
+  const onContextMenu = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    openMenu(e.clientX, e.clientY);
+  };
+
+  // Ações do menu
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const sharePage = async () => {
+    const page = currentPage;
+    const dataUrl = cacheRef.current[page];
+    closeMenu();
+    if (!dataUrl) return;
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `licao-pagina-${page}.jpg`, { type: "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: `${title} — página ${page}` });
+      } else {
+        await navigator.share({ title, text: `${title} — página ${page}`, url: window.location.href });
+      }
+    } catch {
+      // Compartilhamento cancelado pelo usuário — sem erro visível
+    }
+  };
+
+  const savePageImage = () => {
+    const page = currentPage;
+    const dataUrl = cacheRef.current[page];
+    closeMenu();
+    if (!dataUrl) return;
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `licao-pagina-${page}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const confirmGoTo = () => {
+    const n = Number(goToPage);
+    if (!Number.isFinite(n) || pages.length === 0) return;
+    const clamped = Math.max(pages[0], Math.min(Math.floor(n), pages[pages.length - 1]));
+    const idx = pages.indexOf(clamped);
+    setCurrentIdx(idx >= 0 ? idx : 0);
+    setFlip(null);
+    closeMenu();
+  };
+
+  // Clique na zona de toque logo após abrir o menu pelo segurar não vira a página
+  const zoneClick = (fn: () => void) => () => {
+    if (menuJustOpenedRef.current) {
+      menuJustOpenedRef.current = false;
+      return;
+    }
+    fn();
   };
 
   const currentPage = pages[currentIdx];
@@ -292,7 +423,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10">
+      <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10 select-none">
         <div className="flex items-center gap-3 pl-4 pr-12 py-3 border-b border-white/10 shrink-0">
           <DialogTitle className="flex-1 min-w-0 text-base font-bold truncate text-white">{title}</DialogTitle>
           <span className="text-xs text-zinc-400 shrink-0">
@@ -302,9 +433,15 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
 
         <div
           ref={stageRefCb}
-          className="flex-1 min-h-0 flex items-center justify-center bg-black/60 relative overflow-hidden"
+          className="flex-1 min-h-0 flex items-center justify-center bg-black/60 relative overflow-hidden [touch-action:pan-x_pan-y]"
           onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onMouseDown={onMouseDown}
+          onMouseUp={cancelPress}
+          onMouseLeave={cancelPress}
+          onContextMenu={onContextMenu}
+          onDoubleClick={(e) => e.preventDefault()}
         >
           {loadingDoc ? (
             <div className="flex flex-col items-center gap-3 text-zinc-400">
@@ -325,7 +462,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
             <div style={{ width: pageW, height: pageH, perspective: "1600px" }} className="relative shrink-0">
               {/* página de baixo */}
               {images[underPage] ? (
-                <img src={images[underPage]} alt={`Página ${underPage}`} className="absolute inset-0 w-full h-full object-cover rounded-sm shadow-2xl" draggable={false} />
+                <img src={images[underPage]} alt={`Página ${underPage}`} className="absolute inset-0 w-full h-full object-cover rounded-sm shadow-2xl [-webkit-touch-callout:none]" draggable={false} onDragStart={(e) => e.preventDefault()} />
               ) : (
                 <div className="absolute inset-0 bg-white/5 rounded-sm flex items-center justify-center">
                   <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
@@ -334,16 +471,73 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
               {/* página virando */}
               {flip && turningPage && images[turningPage] && (
                 <div className={`absolute inset-0 ${flip === "next" ? "revista-page-turn-next" : "revista-page-turn-prev"}`}>
-                  <img src={images[turningPage]} alt="" className="absolute inset-0 w-full h-full object-cover rounded-sm shadow-2xl" draggable={false} />
+                  <img src={images[turningPage]} alt="" className="absolute inset-0 w-full h-full object-cover rounded-sm shadow-2xl [-webkit-touch-callout:none]" draggable={false} onDragStart={(e) => e.preventDefault()} />
                   <div className="revista-page-shade absolute inset-0 bg-black rounded-sm pointer-events-none" />
                 </div>
               )}
               {/* zonas de toque: esquerda volta, direita avança */}
-              <button aria-label="Página anterior" onClick={goPrev} disabled={!canPrev} className="absolute left-0 top-0 bottom-0 w-[30%] z-10" />
-              <button aria-label="Próxima página" onClick={goNext} disabled={!canNext} className="absolute right-0 top-0 bottom-0 w-[30%] z-10" />
+              <button aria-label="Página anterior" onClick={zoneClick(goPrev)} disabled={!canPrev} className="absolute left-0 top-0 bottom-0 w-[30%] z-10" />
+              <button aria-label="Próxima página" onClick={zoneClick(goNext)} disabled={!canNext} className="absolute right-0 top-0 bottom-0 w-[30%] z-10" />
             </div>
           ) : null}
         </div>
+
+        {/* Menu próprio do app (segurar a página / botão direito) */}
+        {menu && (
+          <>
+            <div
+              className="fixed inset-0 z-50"
+              onClick={closeMenu}
+              onContextMenu={(e) => { e.preventDefault(); closeMenu(); }}
+            />
+            <div
+              className="fixed z-50 w-[230px] rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden"
+              style={{ left: menu.x, top: menu.y }}
+            >
+              {menuMode === "main" ? (
+                <>
+                  {canShare && (
+                    <button onClick={sharePage} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5 text-left">
+                      <Share2 className="w-4 h-4 text-amber-300 shrink-0" /> Compartilhar página
+                    </button>
+                  )}
+                  <button onClick={savePageImage} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5 text-left">
+                    <ImageDown className="w-4 h-4 text-amber-300 shrink-0" /> Salvar imagem da página
+                  </button>
+                  <button onClick={() => { setGoToPage(""); setMenuMode("goto"); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5 text-left">
+                    <CornerUpLeft className="w-4 h-4 text-amber-300 shrink-0" /> Ir para a página…
+                  </button>
+                  <div className="h-px bg-white/10" />
+                  <button onClick={() => { closeMenu(); onClose(); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-white/5 text-left">
+                    <X className="w-4 h-4 text-zinc-400 shrink-0" /> Fechar leitor
+                  </button>
+                </>
+              ) : (
+                <div className="p-3">
+                  <p className="text-xs font-semibold text-zinc-200 mb-2">
+                    Ir para a página ({pages.length > 0 ? `${pages[0]}–${pages[pages.length - 1]}` : `1–${totalPages}`})
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number" min={1} max={totalPages} value={goToPage}
+                      onChange={(e) => setGoToPage(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") confirmGoTo(); }}
+                      placeholder={String(currentPage || "")}
+                      autoFocus
+                      className="h-10 flex-1 min-w-0 rounded-lg bg-zinc-800 border border-white/15 text-white text-center text-sm outline-none focus:border-amber-400/60"
+                    />
+                    <Button onClick={confirmGoTo} className="h-10 px-4 rounded-xl bg-amber-400 text-zinc-950 font-bold hover:bg-amber-300">
+                      Ir
+                    </Button>
+                  </div>
+                  <button onClick={() => setMenuMode("main")} className="mt-2 text-[11px] font-semibold text-zinc-400 hover:text-white">
+                    Voltar
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {editingRange && (
           <div className="px-4 py-3 border-t border-white/10 bg-zinc-900 shrink-0">

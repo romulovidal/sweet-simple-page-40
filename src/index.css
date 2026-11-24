@@ -331,3 +331,19 @@
 .reading-mode .bottom-nav {
   display: none;
 }
+
+/* Tabelas das IAs no celular: cabem na tela, sem rolar para o lado. */
+@media (max-width: 640px) {
+  .scrollbar-none table {
+    min-width: 0 !important;
+    font-size: 12px;
+  }
+  .scrollbar-none th,
+  .scrollbar-none td {
+    padding: 8px 6px !important;
+    overflow-wrap: anywhere;
+  }
+  .ai-table-wrap {
+    overflow-x: hidden;
+  }
+}

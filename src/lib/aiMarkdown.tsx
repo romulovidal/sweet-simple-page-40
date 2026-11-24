@@ -65,7 +65,7 @@ export function normalizeAiMarkdown(content: string): string {
 export const aiMarkdownComponents: Components = {
   br: () => <span className="block h-3" aria-hidden="true" />,
   table: ({ node, ...props }) => (
-    <div className="overflow-x-auto -mx-1 px-1">
+    <div className="ai-table-wrap overflow-x-auto -mx-1 px-1">
       <table {...props} />
     </div>
   ),

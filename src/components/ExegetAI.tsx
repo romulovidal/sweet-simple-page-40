@@ -6,7 +6,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { aiSanitizeSchema } from "../lib/markdownSanitize";
-import { aiMarkdownComponents } from "../lib/aiMarkdown";
+import { aiMarkdownComponents, normalizeAiMarkdown } from "../lib/aiMarkdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import ShareMenu from "@/components/ShareMenu";
@@ -130,7 +130,7 @@ const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
         <SheetContent
           side="bottom"
           className="h-[90vh] rounded-t-[2rem] p-0 flex flex-col border-0 overflow-hidden [&>button.absolute]:hidden"
-          style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card) / 0.5) 100%)" }}
+          style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card)) 100%)" }}
         >
           <SheetHeader className="relative px-5 pt-5 pb-4 flex-shrink-0">
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-[hsl(var(--dark-muted)/0.3)]" />
@@ -191,8 +191,8 @@ const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
               </div>
             )}
             {content && (
-              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-3 prose-p:text-sm prose-table:w-full prose-table:text-sm prose-th:bg-amber-500/10 prose-th:text-amber-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{content}</ReactMarkdown>
+              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-4 prose-p:text-sm prose-table:w-full prose-table:min-w-[540px] prose-table:border prose-table:border-white/15 prose-tr:even:bg-white/[0.02] prose-table:text-[13px] prose-th:bg-amber-500/10 prose-th:text-amber-300 prose-th:px-3 prose-th:py-3 prose-th:border prose-th:border-white/15 prose-td:px-3 prose-td:py-3 prose-td:border prose-td:border-white/15 prose-hr:my-8 prose-hr:border-white/10 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-table:my-6 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{normalizeAiMarkdown(content)}</ReactMarkdown>
               </div>
             )}
             {loading && content && (

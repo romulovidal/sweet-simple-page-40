@@ -9,7 +9,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { aiSanitizeSchema } from "../lib/markdownSanitize";
-import { aiMarkdownComponents } from "../lib/aiMarkdown";
+import { aiMarkdownComponents, normalizeAiMarkdown } from "../lib/aiMarkdown";
 import { toast } from "sonner";
 import { useBackHandler } from "@/hooks/useBackHandler";
 
@@ -194,8 +194,8 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
                   : "bg-[hsl(var(--dark-card))]"
               }`}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1 prose-table:w-full prose-th:bg-white/5 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-headings:text-amber-300 prose-strong:text-amber-200 prose-h3:mt-4 prose-h3:mb-2 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{msg.content}</ReactMarkdown>
+                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1 prose-table:w-full prose-table:min-w-[540px] prose-table:border prose-table:border-white/15 prose-tr:even:bg-white/[0.02] prose-th:bg-white/5 prose-th:px-3 prose-th:py-3 prose-th:border prose-th:border-white/15 prose-td:px-3 prose-td:py-3 prose-td:border prose-td:border-white/15 prose-hr:my-8 prose-hr:border-white/10 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-table:my-6 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-4 prose-headings:text-amber-300 prose-strong:text-amber-200 prose-h3:mt-4 prose-h3:mb-2 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{normalizeAiMarkdown(msg.content)}</ReactMarkdown>
                     <button 
                       onClick={() => handleShare(msg.content)}
                       className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-dark-card-hover border border-white/10 shadow-lg active:scale-90 transition-all opacity-0 group-hover:opacity-100 lg:opacity-100"

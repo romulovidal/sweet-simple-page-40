@@ -7,7 +7,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { aiSanitizeSchema } from "../../lib/markdownSanitize";
-import { aiMarkdownComponents } from "../../lib/aiMarkdown";
+import { aiMarkdownComponents, normalizeAiMarkdown } from "../../lib/aiMarkdown";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
@@ -75,7 +75,7 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
         <SheetContent
           side="bottom"
           className="h-[80vh] rounded-t-[2rem] p-0 flex flex-col border-0 [&>button.absolute]:hidden"
-          style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card) / 0.5) 100%)" }}
+          style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card)) 100%)" }}
         >
           <SheetHeader className="relative px-5 pt-5 pb-4 flex-shrink-0">
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-[hsl(var(--dark-muted)/0.3)]" />
@@ -126,8 +126,8 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
               </div>
             )}
             {content && (
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-cyan-400 prose-strong:text-cyan-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-table:w-full prose-table:text-sm prose-th:bg-cyan-500/10 prose-th:text-cyan-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-cyan-500/20 prose-mark:bg-cyan-400/25 prose-mark:text-cyan-100 prose-mark:px-1 prose-mark:rounded">
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{content}</ReactMarkdown>
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-cyan-400 prose-strong:text-cyan-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-4 prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-table:w-full prose-table:min-w-[540px] prose-table:border prose-table:border-white/15 prose-tr:even:bg-white/[0.02] prose-table:text-[13px] prose-th:bg-cyan-500/10 prose-th:text-cyan-300 prose-th:px-3 prose-th:py-3 prose-th:border prose-th:border-white/15 prose-td:px-3 prose-td:py-3 prose-td:border prose-td:border-white/15 prose-hr:my-8 prose-hr:border-white/10 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-table:my-6 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-cyan-500/20 prose-mark:bg-cyan-400/25 prose-mark:text-cyan-100 prose-mark:px-1 prose-mark:rounded">
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{normalizeAiMarkdown(content)}</ReactMarkdown>
               </div>
             )}
             {loading && content && (

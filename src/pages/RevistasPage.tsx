@@ -152,6 +152,7 @@ const RevistasPage = () => {
               onClose={() => setReaderOpen(false)}
               pdfUrl={selectedRevista.pdf_url}
               title={selectedRevista.title}
+              revistaId={selectedRevista.id}
               pageStart={selectedRevista.page_start}
               pageEnd={selectedRevista.page_end}
             />

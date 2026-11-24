@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, X, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X, FileText, Pencil } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const PDFJS_VERSION = "4.2.67";
 export const PDFJS_LIB_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.mjs`;
@@ -14,13 +17,14 @@ interface RevistaReaderProps {
   onClose: () => void;
   pdfUrl: string | null;
   title: string;
+  revistaId?: string | null;
   pageStart?: number | null;
   pageEnd?: number | null;
 }
 
 type FlipDir = "next" | "prev" | null;
 
-export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart, pageEnd }: RevistaReaderProps) {
+export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId, pageStart, pageEnd }: RevistaReaderProps) {
   const [totalPages, setTotalPages] = useState(0);
   const [pages, setPages] = useState<number[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -28,6 +32,19 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flip, setFlip] = useState<FlipDir>(null);
+
+  const { isAdmin } = useIsAdmin();
+  const queryClient = useQueryClient();
+  // Intervalo editado aqui no leitor (sobrepõe as props até a próxima abertura)
+  const [rangeOverride, setRangeOverride] = useState<{ start: number | null; end: number | null } | null>(null);
+  const effStart = rangeOverride?.start ?? pageStart ?? null;
+  const effEnd = rangeOverride?.end ?? pageEnd ?? null;
+
+  const [editingRange, setEditingRange] = useState(false);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [savingRange, setSavingRange] = useState(false);
+  const [rangeError, setRangeError] = useState<string | null>(null);
 
   const pdfDocRef = useRef<any>(null);
   const pdfjsRef = useRef<any>(null);
@@ -109,6 +126,8 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
     cacheRef.current = {};
     setCurrentIdx(0);
     setFlip(null);
+    setRangeOverride(null);
+    setEditingRange(false);
 
     (async () => {
       try {
@@ -124,13 +143,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
           return;
         }
         pdfDocRef.current = doc;
-        const total = doc.numPages;
-        setTotalPages(total);
-        const start = Math.min(Math.max(pageStart ?? 1, 1), total);
-        const end = Math.min(Math.max(pageEnd ?? total, start), total);
-        const list: number[] = [];
-        for (let p = start; p <= end; p++) list.push(p);
-        setPages(list);
+        setTotalPages(doc.numPages);
         setLoadingDoc(false);
       } catch (e) {
         console.error("Erro ao abrir o PDF", e);
@@ -149,7 +162,20 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
         pdfDocRef.current = null;
       }
     };
-  }, [open, pdfUrl, pageStart, pageEnd]);
+  }, [open, pdfUrl]);
+
+  // Lista de páginas derivada do total + intervalo (props ou edição local).
+  // Separada do carregamento do documento para a edição não recarregar o PDF.
+  useEffect(() => {
+    if (totalPages <= 0) return;
+    const start = Math.min(Math.max(effStart ?? 1, 1), totalPages);
+    const end = Math.min(Math.max(effEnd ?? totalPages, start), totalPages);
+    const list: number[] = [];
+    for (let p = start; p <= end; p++) list.push(p);
+    setPages(list);
+    setCurrentIdx(0);
+    setFlip(null);
+  }, [totalPages, effStart, effEnd]);
 
   // Pré-renderiza a página atual e as vizinhas
   useEffect(() => {
@@ -220,34 +246,78 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
   const turningPage = flip === "next" ? currentPage : flip === "prev" ? pages[currentIdx - 1] : null;
   const filtered = pages.length > 0 && (pages[0] !== 1 || pages[pages.length - 1] !== totalPages);
 
+  // Edição do estudo do dia direto no leitor (só admin)
+  const openRangeEditor = () => {
+    setEditStart(effStart ? String(effStart) : "");
+    setEditEnd(effEnd ? String(effEnd) : "");
+    setRangeError(null);
+    setEditingRange(true);
+  };
+
+  const saveRange = async (start: number | null, end: number | null) => {
+    if (!revistaId) return;
+    setSavingRange(true);
+    setRangeError(null);
+    // @ts-ignore — tipos gerados ainda não conhecem page_start/page_end
+    const { error } = await supabase
+      .from("admin_revistas")
+      .update({ page_start: start, page_end: end })
+      .eq("id", revistaId);
+    setSavingRange(false);
+    if (error) {
+      console.error("Erro ao salvar páginas do dia", error);
+      setRangeError("Não consegui salvar. Tente de novo.");
+      return;
+    }
+    setRangeOverride({ start, end });
+    setEditingRange(false);
+    void queryClient.invalidateQueries({ queryKey: ["revistas-ativas"] });
+  };
+
+  const confirmRange = () => {
+    const s = editStart.trim() === "" ? null : Number(editStart);
+    const e = editEnd.trim() === "" ? null : Number(editEnd);
+    if ((s !== null && (!Number.isFinite(s) || s < 1)) || (e !== null && (!Number.isFinite(e) || e < 1))) {
+      setRangeError("Use números de página válidos.");
+      return;
+    }
+    const start = s === null ? null : Math.min(s, totalPages);
+    const end = e === null ? null : Math.min(e, totalPages);
+    if (start !== null && end !== null && start > end) {
+      setRangeError("A página inicial não pode ser maior que a final.");
+      return;
+    }
+    void saveRange(start, end);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-background border-none">
-        <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
-          <DialogTitle className="flex-1 min-w-0 text-base font-bold truncate">{title}</DialogTitle>
-          <span className="text-xs text-dark-muted shrink-0">
+      <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0">
+          <DialogTitle className="flex-1 min-w-0 text-base font-bold truncate text-white">{title}</DialogTitle>
+          <span className="text-xs text-zinc-400 shrink-0">
             {pages.length > 0 ? `Página ${currentPage} de ${totalPages}` : ""}
           </span>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 shrink-0" aria-label="Fechar leitor">
+          <button onClick={onClose} className="p-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 shrink-0" aria-label="Fechar leitor">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div
           ref={stageRefCb}
-          className="flex-1 min-h-0 flex items-center justify-center bg-black/40 relative overflow-hidden"
+          className="flex-1 min-h-0 flex items-center justify-center bg-black/60 relative overflow-hidden"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
           {loadingDoc ? (
-            <div className="flex flex-col items-center gap-3 text-dark-muted">
+            <div className="flex flex-col items-center gap-3 text-zinc-400">
               <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
               <p className="text-sm">Carregando a revista…</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 px-6 text-center">
-              <FileText className="w-10 h-10 text-dark-muted" />
-              <p className="text-sm text-dark-muted">{error}</p>
+              <FileText className="w-10 h-10 text-zinc-400" />
+              <p className="text-sm text-zinc-300">{error}</p>
               {pdfUrl && (
                 <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-amber-300 underline">
                   Abrir o PDF original
@@ -278,19 +348,58 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t shrink-0">
-          <Button variant="outline" onClick={goPrev} disabled={!canPrev || !!flip} className="h-10 px-4 rounded-xl">
+        {editingRange && (
+          <div className="px-4 py-3 border-t border-white/10 bg-zinc-900 shrink-0">
+            <p className="text-xs font-semibold text-zinc-200 mb-2">Páginas do estudo do dia</p>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-zinc-400">De</label>
+              <input
+                type="number" min={1} max={totalPages} value={editStart}
+                onChange={(e) => setEditStart(e.target.value)}
+                placeholder="1"
+                className="h-10 w-20 rounded-lg bg-zinc-800 border border-white/15 text-white text-center text-sm outline-none focus:border-amber-400/60"
+              />
+              <label className="text-xs text-zinc-400">Até</label>
+              <input
+                type="number" min={1} max={totalPages} value={editEnd}
+                onChange={(e) => setEditEnd(e.target.value)}
+                placeholder={String(totalPages || "")}
+                className="h-10 w-20 rounded-lg bg-zinc-800 border border-white/15 text-white text-center text-sm outline-none focus:border-amber-400/60"
+              />
+              <Button onClick={confirmRange} disabled={savingRange} className="h-10 px-4 rounded-xl bg-amber-400 text-zinc-950 font-bold hover:bg-amber-300 ml-auto">
+                {savingRange ? "Salvando…" : "Salvar"}
+              </Button>
+            </div>
+            <div className="flex items-center gap-4 mt-2">
+              <button onClick={() => void saveRange(null, null)} disabled={savingRange} className="text-[11px] font-semibold text-zinc-300 hover:text-white disabled:opacity-40">
+                Revista inteira
+              </button>
+              <button onClick={() => setEditingRange(false)} disabled={savingRange} className="text-[11px] font-semibold text-zinc-400 hover:text-white disabled:opacity-40">
+                Cancelar
+              </button>
+              {rangeError && <p className="text-[11px] text-red-400">{rangeError}</p>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/10 shrink-0">
+          <Button variant="ghost" onClick={goPrev} disabled={!canPrev || !!flip} className="h-10 px-4 rounded-xl border border-white/20 bg-white/5 text-zinc-100 font-semibold hover:bg-white/10 hover:text-white disabled:opacity-40">
             <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
           </Button>
           <div className="text-center">
-            <p className="text-xs text-dark-muted">
+            <p className="text-xs text-zinc-400">
               {pages.length > 0 ? `${currentIdx + 1} de ${pages.length} páginas` : ""}
             </p>
             {filtered && (
               <p className="text-[11px] text-amber-300/90">Estudo do dia: págs. {pages[0]}–{pages[pages.length - 1]}</p>
             )}
+            {isAdmin && !editingRange && (
+              <button onClick={openRangeEditor} className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300/90 hover:text-amber-200">
+                <Pencil className="w-3 h-3" /> {filtered ? "Editar páginas do dia" : "Definir estudo do dia"}
+              </button>
+            )}
           </div>
-          <Button variant="outline" onClick={goNext} disabled={!canNext || !!flip} className="h-10 px-4 rounded-xl">
+          <Button variant="ghost" onClick={goNext} disabled={!canNext || !!flip} className="h-10 px-4 rounded-xl bg-amber-400 text-zinc-950 font-bold hover:bg-amber-300 hover:text-zinc-950 disabled:opacity-40">
             Próxima <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>

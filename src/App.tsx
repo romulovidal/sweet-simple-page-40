@@ -65,6 +65,14 @@ const AppContent = () => {
     trackPageView(location.pathname);
   }, [location.pathname, isAdminSurface]);
 
+  // Cara de app nativo: o menu do sistema (botão direito no desktop)
+  // nunca aparece em lugar nenhum — os menus são os do próprio app.
+  useEffect(() => {
+    const blockMenu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", blockMenu);
+    return () => document.removeEventListener("contextmenu", blockMenu);
+  }, []);
+
   return (
     <div className={isAdminSurface || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
       <div className="app-ambient-bg" aria-hidden="true" />

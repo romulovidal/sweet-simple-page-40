@@ -113,6 +113,19 @@
     @apply bg-[hsl(var(--dark-bg))] text-[hsl(var(--dark-text))] font-sans antialiased;
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    /* Cara de app nativo: nada de seleção de texto nem menu do sistema
+       em lugar nenhum do app — os menus são os do próprio app
+       (barra de versículo na Bíblia, menu do leitor de revista).
+       A seleção de versículo é por toque (estado), não por texto,
+       então ela continua funcionando normalmente. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* Campos de digitação continuam selecionáveis (colar, corrigir texto) */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 

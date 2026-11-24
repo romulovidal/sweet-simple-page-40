@@ -17,6 +17,8 @@ interface Revista {
   pdf_url: string | null;
   is_active: boolean | null;
   sort_order: number | null;
+  page_start: number | null;
+  page_end: number | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -116,6 +118,8 @@ const AdminRevistas = () => {
       pdf_url: editingRevista.pdf_url?.trim() || null,
       is_active: editingRevista.is_active ?? true,
       sort_order: editingRevista.sort_order ?? 0,
+      page_start: editingRevista.page_start ?? null,
+      page_end: editingRevista.page_end ?? null,
     };
 
     if (editingRevista.id) {
@@ -202,6 +206,36 @@ const AdminRevistas = () => {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-2 block">
+                Página inicial (estudo do dia)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={editingRevista.page_start ?? ""}
+                onChange={(e) => setEditingRevista({ ...editingRevista, page_start: e.target.value === "" ? null : parseInt(e.target.value) })}
+                placeholder="Ex: 12"
+                className="bg-[hsl(var(--dark-bg))] border-none h-12 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-2 block">
+                Página final (estudo do dia)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={editingRevista.page_end ?? ""}
+                onChange={(e) => setEditingRevista({ ...editingRevista, page_end: e.target.value === "" ? null : parseInt(e.target.value) })}
+                placeholder="Ex: 20"
+                className="bg-[hsl(var(--dark-bg))] border-none h-12 rounded-xl"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-[hsl(var(--dark-muted))] -mt-2">O leitor mostra só esse intervalo de páginas. Deixe em branco para mostrar a revista inteira.</p>
 
           <div className="pt-4 flex gap-3">
             <Button onClick={saveRevista} className="flex-1 h-12 rounded-xl bg-primary text-primary-foreground font-bold">

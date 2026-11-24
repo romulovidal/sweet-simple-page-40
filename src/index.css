@@ -328,6 +328,34 @@
   mix-blend-mode: overlay;
 }
 
+/* Leitor de revista: virada de página 3D */
+.revista-page-turn-next {
+  animation: revista-turn-next 0.65s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+@keyframes revista-turn-next {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-180deg); }
+}
+.revista-page-turn-prev {
+  animation: revista-turn-prev 0.65s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  transform-origin: left center;
+  backface-visibility: hidden;
+}
+@keyframes revista-turn-prev {
+  from { transform: rotateY(-180deg); }
+  to { transform: rotateY(0deg); }
+}
+.revista-page-shade {
+  animation: revista-turn-shade 0.65s ease-in-out forwards;
+}
+@keyframes revista-turn-shade {
+  0% { opacity: 0; }
+  50% { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+
 /* Rolagem sem barra visível (telas de IA): o conteúdo rola pelo toque, sem barra. */
 .scrollbar-none {
   scrollbar-width: none;

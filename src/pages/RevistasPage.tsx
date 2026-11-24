@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, Library, Loader2, BookOpen, Calendar, Quote, MessageSquare, Music, FileText } from "lucide-react";
+import { ChevronRight, Library, Loader2, BookOpen, Calendar, Quote, MessageSquare, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import PageHead from "@/components/PageHead";
+import RevistaReader from "@/components/RevistaReader";
 
 const RevistasPage = () => {
   const [selectedRevista, setSelectedRevista] = useState<any>(null);
   const [selectedAula, setSelectedAula] = useState<any>(null);
+  const [readerOpen, setReaderOpen] = useState(false);
 
   const { data: revistas, isLoading } = useQuery({
     queryKey: ["revistas-ativas"],
@@ -118,16 +120,23 @@ const RevistasPage = () => {
               <h2 className="text-xl font-bold mb-2">{selectedRevista.title}</h2>
               <p className="text-sm text-dark-muted">{selectedRevista.description}</p>
               {selectedRevista.pdf_url && (
-                <a
-                  href={selectedRevista.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold text-sm hover:bg-amber-400/25 transition-colors"
+                <Button
+                  onClick={() => setReaderOpen(true)}
+                  className="mt-4 h-11 px-5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold text-sm hover:bg-amber-400/25"
                 >
-                  <FileText className="w-4 h-4" /> Ler a revista (PDF)
-                </a>
+                  <BookOpen className="w-4 h-4 mr-2" /> Abrir lição
+                </Button>
               )}
             </div>
+
+            <RevistaReader
+              open={readerOpen}
+              onClose={() => setReaderOpen(false)}
+              pdfUrl={selectedRevista.pdf_url}
+              title={selectedRevista.title}
+              pageStart={selectedRevista.page_start}
+              pageEnd={selectedRevista.page_end}
+            />
 
             {isLoadingAulas ? (
               <div className="flex justify-center py-10">

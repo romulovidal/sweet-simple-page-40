@@ -23,7 +23,7 @@ const TOOL_PROMPTS: Record<string, string> = {
   devotional:
     "Você é um pastor e escritor devocional. A partir do versículo bíblico fornecido, escreva uma REFLEXÃO DEVOCIONAL curta (2 parágrafos) que:\n" +
     "1) Conecte o texto ao cotidiano do leitor\n2) Traga uma aplicação prática e encorajadora\n" +
-    "Seja caloroso e inspirador. Use markdown e feche com uma frase curta de aplicação em negrito. Responda em português brasileiro.",
+    "Seja caloroso e inspirador. Use markdown e feche com uma frase curta de aplicação em negrito. FORMATAÇÃO: deixe uma linha em branco entre o versículo, cada parágrafo e a oração — nunca parágrafos grudados. Você pode usar HTML inline para destacar trechos: <span style=\"color:#a78bfa\">termo-chave</span> em roxo para os pontos mais importantes e <mark>para o versículo ou frase central</mark>. Use com moderação, só nos destaques. Responda em português brasileiro.",
   connections:
     "Você é um estudioso bíblico especialista em intertextualidade. A partir do texto bíblico fornecido:\n" +
     "1) Liste 4-6 referências cruzadas relevantes com a citação exata\n" +
@@ -176,7 +176,7 @@ Responda de forma:
 2) Acessível — linguagem clara e acolhedora
 3) Prática — conecte ao cotidiano do leitor
 4) Equilibrada — apresente diferentes perspectivas quando relevante
-Use markdown para formatação. Responda em português brasileiro.`;
+Use markdown para formatação. FORMATAÇÃO: escreva em parágrafos curtos, sempre com uma linha em branco entre eles — nunca parágrafos grudados. Responda em português brasileiro.`;
 
       const { data: promptSetting } = await supabase
         .from("admin_settings")

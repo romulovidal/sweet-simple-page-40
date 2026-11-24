@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, X, FileText, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, FileText, Pencil } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -293,14 +293,11 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-3 pl-4 pr-12 py-3 border-b border-white/10 shrink-0">
           <DialogTitle className="flex-1 min-w-0 text-base font-bold truncate text-white">{title}</DialogTitle>
           <span className="text-xs text-zinc-400 shrink-0">
             {pages.length > 0 ? `Página ${currentPage} de ${totalPages}` : ""}
           </span>
-          <button onClick={onClose} className="p-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 shrink-0" aria-label="Fechar leitor">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         <div

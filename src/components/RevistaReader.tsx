@@ -36,24 +36,41 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
   const cancelledRef = useRef(false);
   const flipTimerRef = useRef<number | null>(null);
 
-  const stageRef = useRef<HTMLDivElement>(null);
+  const roRef = useRef<ResizeObserver | null>(null);
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
 
-  // Mede a área do palco para dimensionar a página (retrato 385:588)
-  useEffect(() => {
-    if (!open) return;
-    const el = stageRef.current;
+  // Mede a área do palco para dimensionar a página (retrato 385:588).
+  // Callback ref + ResizeObserver: o conteúdo do Dialog monta depois da
+  // abertura (Radix Presence), então medir só no efeito de [open] falhava
+  // e a página ficava com tamanho zero (tela cinza).
+  const stageRefCb = useCallback((el: HTMLDivElement | null) => {
+    if (roRef.current) {
+      roRef.current.disconnect();
+      roRef.current = null;
+    }
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setStageSize({ w: r.width, h: r.height });
+      if (r.width > 0 && r.height > 0) setStageSize({ w: r.width, h: r.height });
     };
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [open]);
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    roRef.current = ro;
+  }, []);
 
-  const pageW = Math.min(stageSize.w, stageSize.h * (385 / 588));
+  useEffect(() => {
+    return () => {
+      roRef.current?.disconnect();
+      roRef.current = null;
+    };
+  }, []);
+
+  // Fallback para o tamanho da janela caso a medição falhe: a página
+  // sempre renderiza com um tamanho válido.
+  const availW = stageSize.w > 0 ? stageSize.w : (typeof window !== "undefined" ? window.innerWidth * 0.92 : 360);
+  const availH = stageSize.h > 0 ? stageSize.h : (typeof window !== "undefined" ? window.innerHeight * 0.72 : 520);
+  const pageW = Math.min(availW, availH * (385 / 588));
   const pageH = pageW / (385 / 588);
 
   const renderPage = useCallback(async (pageNum: number) => {
@@ -217,7 +234,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, pageStart,
         </div>
 
         <div
-          ref={stageRef}
+          ref={stageRefCb}
           className="flex-1 min-h-0 flex items-center justify-center bg-black/40 relative overflow-hidden"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}

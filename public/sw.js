@@ -5,6 +5,7 @@ var RUNTIME_CACHE = "app-runtime-" + SW_VERSION;
 var BIBLE_CACHE = "bible-offline-v5";
 var HARPA_CACHE = "harpa-offline-v2";
 var METARGUEM_CACHE = "metarguem-offline-v1";
+var REVISTA_CACHE = "revista-offline-v1";
 var OFFLINE_FALLBACK_URL = "/";
 var CORE_URLS = [
   "/",
@@ -28,9 +29,9 @@ async function precacheShell() {
 }
 
 async function cleanupCaches() {
-  // Mantém: cache atual do shell/runtime + caches offline persistentes (Bíblia, Harpa).
+  // Mantém: cache atual do shell/runtime + caches offline persistentes (Bíblia, Harpa, Revistas).
   // Remove apenas versões antigas do shell/runtime de deploys anteriores.
-  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE, HARPA_CACHE, METARGUEM_CACHE];
+  var keep = [SHELL_CACHE, RUNTIME_CACHE, BIBLE_CACHE, HARPA_CACHE, METARGUEM_CACHE, REVISTA_CACHE];
   var cacheNames = await caches.keys();
   for (var i = 0; i < cacheNames.length; i++) {
     if (keep.indexOf(cacheNames[i]) === -1) {
@@ -67,6 +68,23 @@ function isHarpaRequest(requestUrl) {
 
 function isMetarguemRequest(requestUrl) {
   return requestUrl.pathname.indexOf("/metarguem/") === 0;
+}
+
+// PDF das revistas no Storage do Supabase (bucket público "revistas").
+// Só este caminho é interceptado — as chamadas da API do Supabase seguem direto.
+function isRevistaPdfRequest(requestUrl) {
+  return (
+    requestUrl.hostname === "karyuuhxeismshhxuokg.supabase.co" &&
+    requestUrl.pathname.indexOf("/storage/v1/object/public/revistas/") === 0
+  );
+}
+
+// PDF.js (leitor) servido pelo CDN jsDelivr.
+function isPdfjsCdnRequest(requestUrl) {
+  return (
+    requestUrl.hostname === "cdn.jsdelivr.net" &&
+    requestUrl.pathname.indexOf("/npm/pdfjs-dist@") === 0
+  );
 }
 
 function isHashedAsset(requestUrl) {
@@ -109,6 +127,7 @@ self.addEventListener("message", function(event) {
       var shell = await caches.open(SHELL_CACHE);
       var bible = await caches.open(BIBLE_CACHE);
       var harpa = await caches.open(HARPA_CACHE);
+      var revista = await caches.open(REVISTA_CACHE);
       var runtime = await caches.open(RUNTIME_CACHE);
       for (var i = 0; i < data.urls.length; i++) {
         try {
@@ -125,6 +144,8 @@ self.addEventListener("message", function(event) {
             target = bible;
           } else if (reqUrl.pathname.indexOf("/harpa/") === 0) {
             target = harpa;
+          } else if (isRevistaPdfRequest(reqUrl) || isPdfjsCdnRequest(reqUrl)) {
+            target = revista;
           }
           var existing = await target.match(data.urls[i]);
           if (!existing) await addUrlToCache(target, data.urls[i]);
@@ -141,6 +162,30 @@ self.addEventListener("fetch", function(event) {
   if (request.method !== "GET") return;
 
   var url = new URL(request.url);
+
+  // Revistas (PDF no Storage) + PDF.js (CDN): cache-first no cache persistente,
+  // para o leitor funcionar offline. Só estas URLs cross-origin são interceptadas;
+  // todo o resto (API do Supabase etc.) segue direto para a rede.
+  if (isRevistaPdfRequest(url) || isPdfjsCdnRequest(url)) {
+    event.respondWith(
+      caches.open(REVISTA_CACHE).then(function(cache) {
+        // Requisição limpa (sem Range): o pdf.js pede faixas do PDF, e resposta
+        // 206 não é cacheável — com a URL pura, a resposta 200 completa é.
+        var cleanRequest = new Request(request.url);
+        return cache.match(cleanRequest).then(function(cached) {
+          if (cached) return cached;
+          return fetch(cleanRequest).then(function(response) {
+            if (response && response.ok && response.status === 200) {
+              cache.put(cleanRequest, response.clone());
+            }
+            return response;
+          }).catch(function() { return Response.error(); });
+        });
+      })
+    );
+    return;
+  }
+
   if (!isSameOrigin(url)) return;
 
   // Navegação HTML: network-first (pega deploys novos) com fallback para o shell "/" cacheado (offline).

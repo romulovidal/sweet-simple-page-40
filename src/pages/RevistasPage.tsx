@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, Library, Loader2, BookOpen, Calendar, Quote, MessageSquare, Music } from "lucide-react";
@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import PageHead from "@/components/PageHead";
-import RevistaReader from "@/components/RevistaReader";
+import RevistaReader, { PDFJS_LIB_URL, PDFJS_WORKER_URL } from "@/components/RevistaReader";
 
 const RevistasPage = () => {
   const [selectedRevista, setSelectedRevista] = useState<any>(null);
@@ -41,6 +41,24 @@ const RevistasPage = () => {
     },
     enabled: !!selectedRevista?.id,
   });
+
+  // Offline: ao abrir a página com internet, pré-baixa em segundo plano os
+  // PDFs das revistas + o leitor (PDF.js) para o cache persistente do app.
+  // Depois disso, o leitor funciona sem internet.
+  useEffect(() => {
+    if (!revistas || revistas.length === 0) return;
+    if (!("serviceWorker" in navigator)) return;
+    const urls = [
+      ...revistas.map((r: any) => r.pdf_url).filter(Boolean),
+      PDFJS_LIB_URL,
+      PDFJS_WORKER_URL,
+    ];
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        reg.active?.postMessage({ type: "PRECACHE_URLS", urls });
+      })
+      .catch(() => {});
+  }, [revistas]);
 
   if (isLoading) {
     return (

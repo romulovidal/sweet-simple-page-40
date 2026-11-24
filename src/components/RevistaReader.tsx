@@ -70,13 +70,19 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   // Callback ref + ResizeObserver: o conteúdo do Dialog monta depois da
   // abertura (Radix Presence), então medir só no efeito de [open] falhava
   // e a página ficava com tamanho zero (tela cinza).
+  const blockPinch = useCallback((e: Event) => e.preventDefault(), []);
+
   const stageRefCb = useCallback((el: HTMLDivElement | null) => {
     if (roRef.current) {
       roRef.current.disconnect();
       roRef.current = null;
     }
+    // iOS Safari: bloqueia o gesto de pinça (zoom) no palco do leitor.
+    // Anexado aqui (não num efeito de [open]) porque o palco monta depois da abertura.
+    if (stageElRef.current) stageElRef.current.removeEventListener("gesturestart", blockPinch);
     stageElRef.current = el;
     if (!el) return;
+    el.addEventListener("gesturestart", blockPinch);
     const measure = () => {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) setStageSize({ w: r.width, h: r.height });
@@ -85,7 +91,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     roRef.current = ro;
-  }, []);
+  }, [blockPinch]);
 
   useEffect(() => {
     return () => {
@@ -93,16 +99,6 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
       roRef.current = null;
     };
   }, []);
-
-  // iOS Safari: bloqueia o gesto de pinça (zoom) no palco do leitor
-  useEffect(() => {
-    if (!open) return;
-    const el = stageElRef.current;
-    if (!el) return;
-    const blockPinch = (e: Event) => e.preventDefault();
-    el.addEventListener("gesturestart", blockPinch);
-    return () => el.removeEventListener("gesturestart", blockPinch);
-  }, [open]);
 
   // Fallback para o tamanho da janela caso a medição falhe: a página
   // sempre renderiza com um tamanho válido.
@@ -426,6 +422,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent
         className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10 select-none"
+        style={{ touchAction: "none" }}
         onEscapeKeyDown={(e) => { if (menu) { e.preventDefault(); closeMenu(); } }}
       >
         <div className="flex items-center gap-3 pl-4 pr-12 py-3 border-b border-white/10 shrink-0">
@@ -437,7 +434,8 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
 
         <div
           ref={stageRefCb}
-          className="flex-1 min-h-0 flex items-center justify-center bg-black/60 relative overflow-hidden [touch-action:pan-x_pan-y]"
+          className="flex-1 min-h-0 flex items-center justify-center bg-black/60 relative overflow-hidden"
+          style={{ touchAction: "none" }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}

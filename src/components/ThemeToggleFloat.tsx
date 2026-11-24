@@ -1,18 +1,21 @@
 import { Sun, Moon, Coffee } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 
+// Alternador de tema como item da navegação inferior (mobile) — nunca flutuante,
+// para não cobrir conteúdo nem outros botões. No desktop, o tema fica na sidebar.
 const ThemeToggleFloat = () => {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-3 right-3 z-50 w-9 h-9 rounded-full bg-[hsl(var(--dark-card))] flex items-center justify-center shadow-lg transition-colors"
+      className="flex flex-col items-center gap-0.5 px-3 py-1.5 text-[hsl(var(--dark-muted))] hover:text-[hsl(var(--dark-text))] transition-colors"
       aria-label="Alternar tema"
     >
-      {theme === "dark" && <Sun className="w-4 h-4 text-[hsl(var(--streak-orange))]" />}
-      {theme === "light" && <Coffee className="w-4 h-4 text-orange-700" />}
-      {theme === "sepia" && <Moon className="w-4 h-4 text-[hsl(var(--dark-muted))]" />}
+      {theme === "dark" && <Sun className="w-5 h-5 text-[hsl(var(--streak-orange))]" />}
+      {theme === "light" && <Coffee className="w-5 h-5 text-orange-700" />}
+      {theme === "sepia" && <Moon className="w-5 h-5 text-[hsl(var(--dark-muted))]" />}
+      <span className="text-[10px] font-medium">Tema</span>
     </button>
   );
 };

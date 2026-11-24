@@ -54,7 +54,7 @@ const DesktopSidebar = () => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                 isActive
-                  ? "bg-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] shadow-sm"
+                  ? "bg-amber-400/10 text-amber-300 shadow-sm"
                   : "text-[hsl(var(--dark-muted))] hover:bg-[hsl(var(--dark-card-hover))]/60 hover:text-[hsl(var(--dark-text))]"
               }`
             }

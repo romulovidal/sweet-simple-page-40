@@ -111,6 +111,12 @@ const BiblePage = () => {
   const { isAdmin } = useIsAdmin();
   const [showPresentation, setShowPresentation] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
+
+  // Modo leitura: esconde a navegação inferior (foco total) enquanto ativo.
+  useEffect(() => {
+    document.body.classList.toggle("reading-mode", readingMode);
+    return () => document.body.classList.remove("reading-mode");
+  }, [readingMode]);
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
@@ -748,7 +754,7 @@ const BiblePage = () => {
             onClick={() => {
               window.history.back();
             }}
-            className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-dark-card border border-white/10 flex items-center justify-center"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -767,7 +773,7 @@ const BiblePage = () => {
               </span>
               <button
                 onClick={() => setSelectedVerses(new Set())}
-                className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-dark-card border border-white/10 flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -776,7 +782,7 @@ const BiblePage = () => {
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
               <button
                 onClick={() => setReadingMode(true)}
-                className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 flex items-center justify-center"
                 title="Modo leitura"
                 aria-label="Modo leitura"
               >
@@ -786,7 +792,7 @@ const BiblePage = () => {
                 <button
                   onClick={() => setShowPresentation(true)}
                   data-tour="bible-presentation"
-                  className="hidden lg:flex w-8 h-8 rounded-full bg-dark-card items-center justify-center"
+                  className="hidden lg:flex w-8 h-8 rounded-full bg-dark-card border border-white/10 items-center justify-center"
                   title="Modo Apresentação"
                 >
                   <Monitor className="w-4 h-4" />
@@ -798,7 +804,7 @@ const BiblePage = () => {
               <button
                 onClick={() => setShowVersionPicker(true)}
                 data-tour="bible-version"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card text-xs font-semibold"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dark-card border border-white/10 text-xs font-semibold"
               >
                 {currentVersion.shortName}
                 <ChevronDown className="w-3 h-3 text-dark-muted" />
@@ -811,7 +817,7 @@ const BiblePage = () => {
         {readingMode && (
           <button
             onClick={() => setReadingMode(false)}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-amber-400 text-black text-sm font-bold shadow-[0_8px_30px_-8px_rgba(251,191,36,0.6)] active:scale-95 transition animate-fade-up"
+            className="fixed bottom-24 right-5 lg:bottom-6 lg:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-amber-400 text-black text-sm font-bold shadow-[0_8px_30px_-8px_rgba(251,191,36,0.6)] active:scale-95 transition animate-fade-up"
           >
             <X className="w-4 h-4" /> Sair do modo leitura
           </button>
@@ -1235,7 +1241,7 @@ const BiblePage = () => {
             onClick={() => {
               window.history.back();
             }}
-            className="w-9 h-9 rounded-full bg-dark-card flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-dark-card border border-white/10 flex items-center justify-center"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>

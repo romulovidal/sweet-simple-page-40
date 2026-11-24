@@ -5,6 +5,8 @@ import { registerPushNotifications, isPushEnabled } from "@/lib/pushNotification
 type PromptPhase = "hidden" | "modal" | "waiting-system" | "done";
 
 const DISMISS_KEY = "push-prompt:dismissed-forever";
+const SNOOZE_KEY = "push-prompt:dismissed-at";
+const SNOOZE_DAYS = 7;
 
 function isPreviewEnv() {
   try {
@@ -24,6 +26,9 @@ const PushPermissionPrompt = () => {
   useEffect(() => {
     if (isPreviewEnv()) return;
     if (!("Notification" in window) || !("PushManager" in window)) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const check = async () => {
       // If already granted, silently ensure subscription exists
@@ -46,6 +51,10 @@ const PushPermissionPrompt = () => {
         // Respect a permanent dismissal
         if (localStorage.getItem(DISMISS_KEY) === "true") return;
 
+        // Respect a recent "Agora não" (snooze for 7 days)
+        const dismissedAt = Number(localStorage.getItem(SNOOZE_KEY) || 0);
+        if (dismissedAt && Date.now() - dismissedAt < SNOOZE_DAYS * 24 * 60 * 60 * 1000) return;
+
         // Check if browser already has permission (no need to show modal)
         if (Notification.permission === "granted" || Notification.permission === "denied") return;
 
@@ -54,13 +63,19 @@ const PushPermissionPrompt = () => {
         if (enabled) return;
 
         // Show modal after a delay if not in onboarding and push is truly missing
-        setTimeout(() => setPhase("modal"), 3000);
+        timer = setTimeout(() => {
+          if (!cancelled) setPhase("modal");
+        }, 3000);
       };
 
       checkAndShow();
     };
 
     check();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   const notifyClosed = () => {
@@ -73,7 +88,10 @@ const PushPermissionPrompt = () => {
     if (ok) {
       setPhase("done");
     } else {
-      // If they dismissed the browser prompt, hide but show again next visit
+      // If they dismissed the browser prompt, snooze instead of nagging again
+      try {
+        localStorage.setItem(SNOOZE_KEY, String(Date.now()));
+      } catch {}
       setPhase("hidden");
     }
     notifyClosed();
@@ -86,6 +104,10 @@ const PushPermissionPrompt = () => {
         localStorage.setItem(DISMISS_KEY, "true");
       } catch {}
     }
+    // "Agora não" silencia por 7 dias (não volta a cada visita)
+    try {
+      localStorage.setItem(SNOOZE_KEY, String(Date.now()));
+    } catch {}
     setPhase("hidden");
     notifyClosed();
   };

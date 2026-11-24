@@ -12,7 +12,6 @@ import DesktopSidebar from "@/components/DesktopSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import OfflineSyncBootstrap from "@/components/OfflineSyncBootstrap";
 import ScrollToTop from "@/components/ScrollToTop";
-import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 import InstallPrompt from "@/components/InstallPrompt";
 import AdminInstallPrompt from "@/components/AdminInstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
@@ -68,6 +67,7 @@ const AppContent = () => {
 
   return (
     <div className={isAdminSurface || isLanding ? "min-h-screen" : `min-h-screen ${showSidebar ? "lg:pl-64" : ""}`}>
+      <div className="app-ambient-bg" aria-hidden="true" />
       {showSidebar && <DesktopSidebar />}
       <div className={isAdminSurface || isLanding ? "" : "max-w-6xl mx-auto relative lg:px-8"}>
         <ScrollToTop />
@@ -104,7 +104,6 @@ const AppContent = () => {
           </Routes>
         </AnimatePresence>
       </div>
-      {showChrome && !showSidebar && <ThemeToggleFloat />}
       {isAdminSurface ? <AdminInstallPrompt /> : !isLanding && <InstallPrompt />}
       <UpdatePrompt />
       {!isAdminSurface && !isLanding && <PushPermissionPrompt />}

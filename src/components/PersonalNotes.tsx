@@ -149,7 +149,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
             className="bg-[hsl(var(--dark-bg))] border-none min-h-[70px] text-sm"
             maxLength={2000}
           />
-          <Button onClick={handleSave} disabled={saving || !newNote.trim()} size="sm" className="w-full">
+          <Button onClick={handleSave} disabled={saving || !newNote.trim()} size="sm" className={`w-full ${!newNote.trim() ? "opacity-40" : ""}`}>
             {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
             Adicionar Nota
           </Button>
@@ -266,7 +266,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
                 className="bg-[hsl(var(--dark-card))] border-none min-h-[80px] text-sm"
                 maxLength={2000}
               />
-              <Button onClick={handleSave} disabled={saving || !newNote.trim()} size="sm" className="w-full">
+              <Button onClick={handleSave} disabled={saving || !newNote.trim()} size="sm" className={`w-full ${!newNote.trim() ? "opacity-40" : ""}`}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
                 Adicionar Nota
               </Button>

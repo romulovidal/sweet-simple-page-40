@@ -74,7 +74,7 @@ const AITimeline = ({ reference, text, enabled, label }: Props) => {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="h-[80vh] rounded-t-[2rem] p-0 flex flex-col border-0 [&>button.absolute]:hidden"
+          className="max-h-[92dvh] rounded-t-[2rem] p-0 flex flex-col border-0 [&>button.absolute]:hidden"
           style={{ background: "linear-gradient(180deg, hsl(var(--dark-bg)) 0%, hsl(var(--dark-card)) 100%)" }}
         >
           <SheetHeader className="relative px-5 pt-5 pb-4 flex-shrink-0">
@@ -118,7 +118,7 @@ const AITimeline = ({ reference, text, enabled, label }: Props) => {
             </div>
             <div className="absolute bottom-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-[hsl(var(--dark-muted)/0.2)] to-transparent" />
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-5 py-5">
             {loading && !content && (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <BrainCircuit className="w-8 h-8 text-orange-500 animate-pulse" />

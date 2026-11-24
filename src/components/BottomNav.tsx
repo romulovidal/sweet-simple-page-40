@@ -1,5 +1,6 @@
  import { LayoutDashboard, Book, Library, Rocket, UserRound } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import ThemeToggleFloat from "@/components/ThemeToggleFloat";
 
 const tabs = [
    { to: "/", icon: LayoutDashboard, label: "Início", tour: "nav-home" },
@@ -29,7 +30,7 @@ const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[hsl(var(--dark-card))] border-t border-[hsl(var(--dark-card-hover))] safe-area-bottom">
+    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 bg-[hsl(var(--dark-card))] border-t border-[hsl(var(--dark-card-hover))] safe-area-bottom">
       <div className="flex items-center justify-around max-w-6xl mx-auto h-16 lg:px-8">
         {tabs.map(({ to, icon: Icon, label, tour }) => (
           <NavLink
@@ -40,7 +41,7 @@ const BottomNav = () => {
             onClick={(e) => handleTabClick(to, e)}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors ${
-                isActive ? "text-[hsl(var(--dark-text))]" : "text-[hsl(var(--dark-muted))]"
+                isActive ? "text-amber-400" : "text-[hsl(var(--dark-muted))]"
               }`
             }
           >
@@ -48,6 +49,7 @@ const BottomNav = () => {
             <span className="text-[10px] font-medium">{label}</span>
           </NavLink>
         ))}
+        <ThemeToggleFloat />
       </div>
     </nav>
   );

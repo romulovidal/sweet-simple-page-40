@@ -303,3 +303,31 @@
   z-index: 10000 !important;
 }
 
+
+/* ---- Padrão visual Atalaia (rodada 24/11) ---- */
+
+/* Fundo ambiente: brilho dourado sutil, a assinatura do app. */
+.app-ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 50% -10%, hsl(45 90% 55% / 0.10), transparent 70%),
+    radial-gradient(45% 35% at 95% 100%, hsl(35 90% 50% / 0.07), transparent 70%),
+    radial-gradient(40% 30% at 5% 100%, hsl(45 80% 50% / 0.05), transparent 70%);
+}
+
+/* Rolagem sem barra visível (telas de IA): o conteúdo rola pelo toque, sem barra. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Modo leitura: esconde a navegação inferior para foco total. */
+.reading-mode .bottom-nav {
+  display: none;
+}

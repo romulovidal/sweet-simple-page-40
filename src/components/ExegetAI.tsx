@@ -2,6 +2,9 @@ import { useState, useCallback } from "react";
 import { Sparkles, X, Loader2, BrainCircuit, BookOpen, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { aiSanitizeSchema } from "../lib/markdownSanitize";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import ShareMenu from "@/components/ShareMenu";
@@ -186,8 +189,8 @@ const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
               </div>
             )}
             {content && (
-              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-3 prose-p:text-sm prose-table:w-full prose-table:text-sm prose-th:bg-amber-500/10 prose-th:text-amber-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-3 prose-p:text-sm prose-table:w-full prose-table:text-sm prose-th:bg-amber-500/10 prose-th:text-amber-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]}>{content}</ReactMarkdown>
               </div>
             )}
             {loading && content && (

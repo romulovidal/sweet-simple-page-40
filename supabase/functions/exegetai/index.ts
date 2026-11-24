@@ -111,7 +111,7 @@ serve(async (req) => {
       "- Afirme autoria, data e contexto histórico somente quando o próprio texto (ex.: o cabeçalho do salmo, como \"dos filhos de Corá\") ou o consenso acadêmico os sustentarem; quando houver dúvida, diga que não é certo em vez de afirmar.\n" +
       "- Não atribua um salmo a Davi por tradição: confira o cabeçalho do salmo no texto recebido antes de falar de autoria.\n" +
       "- Cite referências cruzadas somente de passagens realmente relacionadas ao texto; nunca invente referências.\n\n" +
-      "Seja profundo mas acessível. Use markdown para formatar, preferindo listas a tabelas, com títulos (##) por seção, negrito nos termos-chave e parágrafos curtos; separe as seções com ---; feche com um parágrafo curto de aplicação intitulado 'Para levar com você'. Responda sempre em português brasileiro.";
+      "Seja profundo mas acessível. Use markdown para formatar, preferindo listas a tabelas, com títulos (##) por seção, negrito nos termos-chave e parágrafos curtos; separe as seções com ---; feche com um parágrafo curto de aplicação intitulado 'Para levar com você'. Você pode usar HTML inline para destacar trechos: <span style="color:#fbbf24">termo-chave</span> em dourado para os pontos mais importantes e <mark>para o versículo ou frase central</mark>. Use com moderação, só nos destaques. Responda sempre em português brasileiro.";
 
     const { data: setting } = await supabase
       .from("admin_settings")

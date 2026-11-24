@@ -3,6 +3,9 @@ import { Languages, Loader2, X, BrainCircuit, Share2, Copy } from "lucide-react"
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { aiSanitizeSchema } from "../../lib/markdownSanitize";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
@@ -121,8 +124,8 @@ const AIWordMeaning = ({ reference, text, enabled, label }: Props) => {
               </div>
             )}
             {content && (
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-cyan-400 prose-strong:text-cyan-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-table:w-full prose-table:text-sm prose-th:bg-cyan-500/10 prose-th:text-cyan-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-cyan-500/20">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-cyan-400 prose-strong:text-cyan-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-table:w-full prose-table:text-sm prose-th:bg-cyan-500/10 prose-th:text-cyan-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-cyan-500/20 prose-mark:bg-cyan-400/25 prose-mark:text-cyan-100 prose-mark:px-1 prose-mark:rounded">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]}>{content}</ReactMarkdown>
               </div>
             )}
             {loading && content && (

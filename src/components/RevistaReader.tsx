@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, FileText, Pencil, Share2, ImageDown, CornerUpLeft, X } from "lucide-react";
@@ -423,7 +424,10 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10 select-none">
+      <DialogContent
+        className="max-w-2xl w-[96vw] h-[92dvh] p-0 overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 border border-white/10 select-none"
+        onEscapeKeyDown={(e) => { if (menu) { e.preventDefault(); closeMenu(); } }}
+      >
         <div className="flex items-center gap-3 pl-4 pr-12 py-3 border-b border-white/10 shrink-0">
           <DialogTitle className="flex-1 min-w-0 text-base font-bold truncate text-white">{title}</DialogTitle>
           <span className="text-xs text-zinc-400 shrink-0">
@@ -482,18 +486,22 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
           ) : null}
         </div>
 
-        {/* Menu próprio do app (segurar a página / botão direito) */}
+        {/* Menu próprio do app (segurar a página / botão direito).
+            O cartão vai por portal para o body: o DialogContent tem transform
+            (centralização) + overflow-hidden, o que deslocava e cortava um
+            menu `fixed` dentro dele — existia no DOM mas não aparecia. */}
         {menu && (
           <>
             <div
-              className="fixed inset-0 z-50"
+              className="absolute inset-0 z-40"
               onClick={closeMenu}
               onContextMenu={(e) => { e.preventDefault(); closeMenu(); }}
             />
-            <div
-              className="fixed z-50 w-[230px] rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden"
-              style={{ left: menu.x, top: menu.y }}
-            >
+            {createPortal(
+              <div
+                className="fixed z-[60] w-[230px] rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden"
+                style={{ left: menu.x, top: menu.y }}
+              >
               {menuMode === "main" ? (
                 <>
                   {canShare && (
@@ -535,7 +543,9 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
                   </button>
                 </div>
               )}
-            </div>
+              </div>,
+              document.body,
+            )}
           </>
         )}
 

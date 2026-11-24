@@ -9,7 +9,11 @@ import {
 
 const CACHE_NAME = "bible-offline-v5";
 const LEGACY_CACHE_NAMES = ["bible-offline-v1", "bible-offline-v2", "bible-offline-v3", "bible-offline-v4"];
-const cacheKeyForVersion = (fileName: string) => `/offline-bibles/${fileName}.json`;
+// Mesma chave que o service worker usa ao cachear /biblias/*.json na leitura:
+// download e leitura normal compartilham UMA única cópia por versão.
+const cacheKeyForVersion = (fileName: string) => `/biblias/${fileName}.json`;
+// Chave antiga (versões baixadas antes desta unificação): lida na migração.
+const legacyCacheKeyForVersion = (fileName: string) => `/offline-bibles/${fileName}.json`;
 let cacheSetupPromise: Promise<void> | null = null;
 
 async function ensureBibleCacheReady(): Promise<void> {
@@ -47,7 +51,20 @@ function getOfflineDownloadError(version: BibleVersion, error: unknown) {
 }
 
 export async function isVersionCached(version: BibleVersion): Promise<boolean> {
-  return !!(await getCachedVersionData(version.fileName));
+  // Checagem leve: só verifica se a entrada existe no cache, SEM baixar nem
+  // processar o JSON inteiro (a versão antiga fazia isso para cada versão).
+  try {
+    if (!("caches" in globalThis)) return false;
+
+    await ensureBibleCacheReady();
+    const cache = await caches.open(CACHE_NAME);
+    const hit =
+      (await cache.match(cacheKeyForVersion(version.fileName))) ||
+      (await cache.match(legacyCacheKeyForVersion(version.fileName)));
+    return !!hit;
+  } catch {
+    return false;
+  }
 }
 
 export async function getCachedVersions(): Promise<string[]> {
@@ -65,7 +82,16 @@ export async function getCachedVersionData(fileName: string): Promise<BibleBookD
     await ensureBibleCacheReady();
     const cache = await caches.open(CACHE_NAME);
     const cacheKey = cacheKeyForVersion(fileName);
-    const response = await cache.match(cacheKey);
+    let response = await cache.match(cacheKey);
+    if (!response) {
+      // Migração: versão baixada com a chave antiga passa para a chave unificada.
+      const legacy = await cache.match(legacyCacheKeyForVersion(fileName));
+      if (legacy) {
+        await cache.put(cacheKey, legacy.clone());
+        await cache.delete(legacyCacheKeyForVersion(fileName));
+        response = legacy;
+      }
+    }
     if (!response) return null;
 
     const rawPayload = await response.text();
@@ -81,6 +107,7 @@ export async function getCachedVersionData(fileName: string): Promise<BibleBookD
     try {
       const cache = await caches.open(CACHE_NAME);
       await cache.delete(cacheKeyForVersion(fileName));
+      await cache.delete(legacyCacheKeyForVersion(fileName));
     } catch {
       // Ignore secondary cleanup failures.
     }
@@ -109,13 +136,17 @@ export async function downloadVersion(
     }
 
     onProgress?.(40);
-    const cacheableResponse = response.clone();
     const rawPayload = await response.text();
     parseBibleBookData(rawPayload, version.fileName);
 
     onProgress?.(75);
     const cache = await caches.open(CACHE_NAME);
-    await cache.put(cacheKeyForVersion(version.fileName), cacheableResponse);
+    await cache.put(
+      cacheKeyForVersion(version.fileName),
+      new Response(rawPayload, { headers: { "Content-Type": "application/json" } })
+    );
+    // Remove a cópia duplicada da chave antiga, se existir.
+    await cache.delete(legacyCacheKeyForVersion(version.fileName));
 
     onProgress?.(90);
     const cachedData = await getCachedVersionData(version.fileName);
@@ -135,6 +166,7 @@ export async function removeVersion(version: BibleVersion): Promise<void> {
   await ensureBibleCacheReady();
   const cache = await caches.open(CACHE_NAME);
   await cache.delete(cacheKeyForVersion(version.fileName));
+  await cache.delete(legacyCacheKeyForVersion(version.fileName));
 }
 
 export async function fetchWithOffline(url: string): Promise<Response> {

@@ -144,19 +144,43 @@ const HomePage = () => {
   useEffect(() => {
     let cancelled = false;
 
-    supabase
-      .from("admin_posts")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data, error }) => {
-        if (cancelled || error || !data) return;
-        setAdminPosts(data);
-        writeJsonStorage(ADMIN_POSTS_CACHE_KEY, data, false, "cache");
-      });
+    const loadPosts = async () => {
+      const { data, error } = await supabase
+        .from("admin_posts")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      if (cancelled || error || !data) return;
+      setAdminPosts(data);
+      writeJsonStorage(ADMIN_POSTS_CACHE_KEY, data, false, "cache");
+    };
+
+    loadPosts();
+
+    // Tempo real: quando o admin publica, edita ou remove um post, a home
+    // atualiza sozinha, sem precisar recarregar a página.
+    const realtimeChannel = supabase
+      .channel("admin-posts-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "admin_posts" },
+        () => loadPosts()
+      )
+      .subscribe();
+
+    // Revalida ao voltar para o app (cobre o caso do realtime indisponível).
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadPosts();
+    };
+    const onFocus = () => loadPosts();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -250,7 +274,7 @@ const HomePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-8">
                  {/* Greeting */}
-                 <div>
+                 <div className="animate-fade-up">
                    <h1 className="text-2xl font-bold">Olá {profile?.display_name || "Visitante"},</h1>
                    <p className="text-lg font-medium mt-1">Seja bem-vindo(a) à Bíblia do Atalaia 👋</p>
                    <p className="text-[hsl(var(--dark-muted))] text-sm mt-1">
@@ -262,11 +286,11 @@ const HomePage = () => {
 
                 {/* Verse of the Day */}
                 <div data-tour="home-verse-of-day">
-                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+                  <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em] mb-3">
                     Versículo do dia
                   </h2>
                   {verseLoading ? (
-                    <div className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 flex items-center justify-center h-40">
+                    <div className="bg-gradient-to-br from-[hsl(220,25%,11%)] via-[hsl(225,28%,13%)] to-[hsl(40,55%,19%)] rounded-2xl p-6 flex items-center justify-center h-40 border border-amber-400/20">
                       <Loader2 className="w-6 h-6 animate-spin text-white" />
                     </div>
                   ) : verse ? (
@@ -285,12 +309,12 @@ const HomePage = () => {
               <div className="space-y-8">
                 {/* Continue Reading */}
                 <div data-tour="home-continue">
-                  <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider mb-3">
+                  <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em] mb-3">
                     Continuar lendo
                   </h2>
                   <button
                     onClick={handleContinueReading}
-                    className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left"
+                    className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-all text-left hover:-translate-y-0.5 hover:shadow-lg animate-fade-up"
                   >
                     <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-lg">
                       📖
@@ -313,11 +337,11 @@ const HomePage = () => {
             {/* Admin Posts Feed - Full Width */}
             {adminPosts.length > 0 && (
               <div className="space-y-4 pt-4">
-                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">
                   Destaques e Avisos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {adminPosts.map((post) => {
+                {adminPosts.map((post, i) => {
                   const Icon = postIcon(post.type);
                   const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
@@ -325,7 +349,8 @@ const HomePage = () => {
                       key={post.id}
                       type="button"
                       onClick={() => setPreviewPost(post)}
-                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all"
+                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all hover:-translate-y-0.5 hover:shadow-xl animate-rise-soft"
+                      style={{ animationDelay: `${Math.min(i, 6) * 70}ms` }}
                     >
                       {post.type === "video" && videoId && (
                         <div className="relative aspect-video bg-black">
@@ -368,11 +393,11 @@ const HomePage = () => {
             {/* Destaques e Avisos (Comunidade) */}
             {adminPosts.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">
                   Destaques e Avisos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {adminPosts.map((post) => {
+                {adminPosts.map((post, i) => {
                   const Icon = postIcon(post.type);
                   const videoId = post.youtube_url ? extractYoutubeId(post.youtube_url) : null;
                   return (
@@ -380,7 +405,8 @@ const HomePage = () => {
                       key={post.id}
                       type="button"
                       onClick={() => setPreviewPost(post)}
-                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5 text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all"
+                      className="bg-[hsl(var(--dark-card))] rounded-2xl overflow-hidden border border-white/5 text-left active:scale-[0.99] hover:bg-[hsl(var(--dark-card-hover))] transition-all hover:-translate-y-0.5 hover:shadow-xl animate-rise-soft"
+                      style={{ animationDelay: `${Math.min(i, 6) * 70}ms` }}
                     >
                       {post.type === "video" && videoId && (
                         <div className="relative aspect-video bg-black">
@@ -425,11 +451,11 @@ const HomePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
-                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Escala de Cultos</h2>
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">Escala de Cultos</h2>
                 <CultoScheduleList />
               </div>
               <div className="space-y-6">
-                <h2 className="text-xs font-semibold text-[hsl(var(--dark-muted))] uppercase tracking-wider">Mural de Orações</h2>
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">Mural de Orações</h2>
                 <PrayerRequests enabled={true} />
               </div>
             </div>

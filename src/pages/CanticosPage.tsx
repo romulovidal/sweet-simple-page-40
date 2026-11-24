@@ -353,17 +353,22 @@ export default function CanticosPage() {
         </div>
       ) : (
         <ul className="p-4 space-y-2 max-w-3xl mx-auto">
-          {filtered.map((c) => (
-            <li key={c.id}>
+          {filtered.map((c, i) => (
+            <li key={c.id} className="animate-rise-soft" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
               <button
                 onClick={() => setOpenId(c.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-left hover:bg-[hsl(var(--dark-card-hover))] transition"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[hsl(var(--dark-card))] border border-[hsl(var(--dark-card-hover))] text-left hover:bg-[hsl(var(--dark-card-hover))] transition hover:-translate-y-0.5"
               >
-                <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                <div className="w-11 h-11 rounded-full bg-amber-400/10 text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
                   {c.numero}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{c.titulo}</div>
+                  {c.letra_json?.[0]?.linhas?.[0] && (
+                    <div className="text-xs text-[hsl(var(--dark-muted))] italic truncate mt-0.5">
+                      {c.letra_json[0].linhas[0]}
+                    </div>
+                  )}
                   <div className="text-xs text-[hsl(var(--dark-muted))] flex items-center gap-2 flex-wrap mt-0.5">
                     {c.categoria && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />{c.categoria}</span>}
                     {c.tom && <span>Tom {c.tom}</span>}
@@ -387,11 +392,11 @@ export default function CanticosPage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
+              <span className="w-9 h-9 rounded-lg bg-amber-400/15 text-amber-400 font-bold flex items-center justify-center text-xs">
                 {open.numero}
               </span>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-bold leading-tight truncate">{open.titulo}</h2>
+                <h2 className="font-scripture text-lg font-semibold leading-tight truncate">{open.titulo}</h2>
                 <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
                   Cântico {open.numero}{list.length ? ` de ${list.length}` : ""}
                 </p>
@@ -498,7 +503,7 @@ export default function CanticosPage() {
           </header>
 
           <article
-            className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed"
+            className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] font-scripture leading-[1.9]"
             style={{ fontSize: `${fontSize}px` }}
           >
             <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -535,7 +540,7 @@ export default function CanticosPage() {
                 }}
                 className={`${
                   b.tipo === "refrao"
-                    ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
+                    ? "pl-4 border-l-2 border-amber-400/70 rounded-r-lg bg-amber-400/5 py-3 pr-3"
                     : ""
                 } ${
                   activeBlockIdx === i
@@ -551,7 +556,7 @@ export default function CanticosPage() {
                   </span>
                 )}
                 {b.tipo === "refrao" && (
-                  <span className="block text-[11px] uppercase tracking-wider text-[hsl(var(--destructive))] font-bold mb-1">
+                  <span className="block text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-1">
                     Refrão
                   </span>
                 )}
@@ -561,7 +566,7 @@ export default function CanticosPage() {
                   </span>
                 )}
                 {b.linhas.map((l, j) => (
-                  <p key={j} className={b.tipo === "refrao" ? "text-[hsl(var(--destructive))] font-medium" : ""}>
+                  <p key={j} className={b.tipo === "refrao" ? "italic font-medium" : ""}>
                     {l}
                   </p>
                 ))}

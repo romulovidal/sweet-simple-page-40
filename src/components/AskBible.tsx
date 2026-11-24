@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useBackHandler } from "@/hooks/useBackHandler";
 
@@ -188,8 +189,8 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
                   : "bg-[hsl(var(--dark-card))]"
               }`}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1 prose-table:w-full prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     <button 
                       onClick={() => handleShare(msg.content)}
                       className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-dark-card-hover border border-white/10 shadow-lg active:scale-90 transition-all opacity-0 group-hover:opacity-100 lg:opacity-100"

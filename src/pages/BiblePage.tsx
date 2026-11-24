@@ -110,6 +110,7 @@ const BiblePage = () => {
   const { features: appFeatures } = useAppFeatures();
   const { isAdmin } = useIsAdmin();
   const [showPresentation, setShowPresentation] = useState(false);
+  const [readingMode, setReadingMode] = useState(false);
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [searchParams, setSearchParams] = useSearchParams();
   const [testament, setTestament] = useState<"VT" | "NT">("VT");
@@ -742,7 +743,7 @@ const BiblePage = () => {
             about: `${selectedBook.name} ${selectedChapter}`,
           }}
         />
-        <header className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8">
+        <header className={`px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-dark-bg/95 backdrop-blur-sm z-10 max-w-6xl mx-auto w-full border-b border-[hsl(var(--dark-card-hover))] lg:px-8 lg:pt-8 ${readingMode ? "hidden" : ""}`}>
           <button
             onClick={() => {
               window.history.back();
@@ -752,7 +753,7 @@ const BiblePage = () => {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex flex-col flex-1 min-w-0">
-            <h1 className="text-lg font-bold truncate">
+            <h1 className="font-scripture text-xl font-semibold truncate">
               {selectedBook.name} {selectedChapter}
             </h1>
             <p className="text-[10px] text-dark-muted font-medium uppercase tracking-wider">
@@ -773,6 +774,14 @@ const BiblePage = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
+              <button
+                onClick={() => setReadingMode(true)}
+                className="w-8 h-8 rounded-full bg-dark-card flex items-center justify-center"
+                title="Modo leitura"
+                aria-label="Modo leitura"
+              >
+                <BookOpen className="w-4 h-4" />
+              </button>
               {appFeatures.presentation_mode && (
                 <button
                   onClick={() => setShowPresentation(true)}
@@ -797,6 +806,16 @@ const BiblePage = () => {
             </div>
           )}
         </header>
+
+        {/* Botão flutuante para sair do modo leitura */}
+        {readingMode && (
+          <button
+            onClick={() => setReadingMode(false)}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-amber-400 text-black text-sm font-bold shadow-[0_8px_30px_-8px_rgba(251,191,36,0.6)] active:scale-95 transition animate-fade-up"
+          >
+            <X className="w-4 h-4" /> Sair do modo leitura
+          </button>
+        )}
 
         {/* Floating action bar */}
         {hasSelection && (
@@ -1024,7 +1043,18 @@ const BiblePage = () => {
           )}
 
             {!loading && !error && verses.length > 0 && (
-            <div className="space-y-0.5">
+            <>
+            {/* Número do capítulo em destaque — reanima a cada capítulo */}
+            <div key={`${selectedBook.apiAbbrev}-${selectedChapter}`} className="animate-fade-up flex items-end gap-4 pt-2 pb-5">
+              <span className="font-scripture text-7xl font-semibold leading-none text-amber-400/90 select-none">
+                {selectedChapter}
+              </span>
+              <div className="pb-1">
+                <p className="font-scripture text-xl font-semibold leading-tight">{selectedBook.name}</p>
+                <p className="text-xs text-dark-muted mt-0.5">{verses.length} versículos</p>
+              </div>
+            </div>
+            <div className="space-y-1 animate-fade-in">
               {verses.map((verse) => {
                 const verseEpigraphs = epigraphs.filter((epigraph) => epigraph.displayVerse === verse.number);
                 const isUrlHighlighted =
@@ -1066,6 +1096,7 @@ const BiblePage = () => {
                 );
               })}
             </div>
+            </>
             )}
 
             {!loading && verses.length > 0 && (
@@ -1526,9 +1557,9 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
       }
       onClick={() => onTap(verse.number)}
     >
-      <p className={`leading-relaxed ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
+      <p className={`font-scripture leading-[1.85] ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
         <span
-          className="font-bold mr-2 text-xs align-super"
+          className="font-bold mr-2 text-xs align-super text-amber-400"
           style={
             highlightColor
               ? { color: highlightColor, textShadow: `0 0 8px ${highlightColor}66` }

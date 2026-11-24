@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Heart, Loader2, Sparkles, X, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
@@ -134,8 +135,8 @@ const AIDevotional = ({ verseRef, verseText, enabled }: Props) => {
               </div>
             )}
             {content && (
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-purple-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-purple-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-purple-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-purple-500 prose-blockquote:border-l-purple-500/40 prose-blockquote:bg-purple-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-p:leading-relaxed prose-p:text-[13px]">
-                <ReactMarkdown>{content}</ReactMarkdown>
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-purple-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-purple-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-purple-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-purple-500 prose-blockquote:border-l-purple-500/40 prose-blockquote:bg-purple-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-p:leading-relaxed prose-p:text-sm prose-table:w-full prose-table:text-sm prose-th:bg-purple-500/10 prose-th:text-purple-300 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               </div>
             )}
             {loading && content && (

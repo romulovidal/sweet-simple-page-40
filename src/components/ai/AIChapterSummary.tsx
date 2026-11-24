@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { BookOpen, Loader2, ChevronDown, ChevronUp, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAIStream } from "@/hooks/useAIStream";
 import ShareMenu from "@/components/ShareMenu";
 import { useBackHandler } from "@/hooks/useBackHandler";
@@ -79,8 +80,8 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
           )}
           {content && (
             <>
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-[13px] prose-p:leading-relaxed">
-                <ReactMarkdown>{content}</ReactMarkdown>
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-sm prose-p:leading-relaxed prose-table:w-full prose-table:text-sm prose-th:bg-blue-500/10 prose-th:text-blue-300 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               </div>
               {!loading && (
                 <div className="flex justify-end gap-2 mt-3">

@@ -7,7 +7,11 @@ import {
   getRequestUserId,
   createAdminClient,
 } from "../_shared/rate-limit.ts";
-import { aiChatFetch } from "../_shared/ai-fetch.ts";
+import { aiChatFetchWithProviders } from "../_shared/ai-fetch.ts";
+
+// Gemini é a IA principal (modelo mais novo, com fallback para Groq/xAI quando
+// o limite diário do Gemini acabar, para nunca ficar sem resposta).
+const GEMINI_FIRST: ("groq" | "xai" | "gemini")[] = ["gemini", "groq", "xai"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,19 +47,22 @@ serve(async (req) => {
       throw new Error("Nenhuma chave de IA configurada");
     }
 
-    const MODEL = "google/gemini-2.5-flash";
+    const MODEL = "google/gemini-3.6-flash";
 
     if (mode === "image_prompt") {
-      const response = await aiChatFetch({
-        model: MODEL,
-        messages: [
-          {
-            role: "system",
-            content: "You are a creative assistant. Create ONE English keyword that best represents the spiritual setting of the given verse. Return ONLY the word, no other text.",
-          },
-          { role: "user", content: `Verse: ${reference} - "${text}"` },
-        ],
-      });
+      const response = await aiChatFetchWithProviders(
+        {
+          model: MODEL,
+          messages: [
+            {
+              role: "system",
+              content: "You are a creative assistant. Create ONE English keyword that best represents the spiritual setting of the given verse. Return ONLY the word, no other text.",
+            },
+            { role: "user", content: `Verse: ${reference} - "${text}"` },
+          ],
+        },
+        GEMINI_FIRST
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -100,7 +107,11 @@ serve(async (req) => {
       "3) **Gênero literário** e estrutura do texto\n" +
       "4) **Significado teológico** e aplicação prática\n" +
       "5) **Referências cruzadas** relevantes\n\n" +
-      "Seja profundo mas acessível. Use markdown para formatar. Responda sempre em português brasileiro.";
+      "Regras de exatidão (siga sempre):\n" +
+      "- Afirme autoria, data e contexto histórico somente quando o próprio texto (ex.: o cabeçalho do salmo, como \"dos filhos de Corá\") ou o consenso acadêmico os sustentarem; quando houver dúvida, diga que não é certo em vez de afirmar.\n" +
+      "- Não atribua um salmo a Davi por tradição: confira o cabeçalho do salmo no texto recebido antes de falar de autoria.\n" +
+      "- Cite referências cruzadas somente de passagens realmente relacionadas ao texto; nunca invente referências.\n\n" +
+      "Seja profundo mas acessível. Use markdown para formatar, preferindo listas a tabelas, com títulos (##) por seção, negrito nos termos-chave e parágrafos curtos; feche com um parágrafo curto de aplicação intitulado 'Para levar com você'. Responda sempre em português brasileiro.";
 
     const { data: setting } = await supabase
       .from("admin_settings")
@@ -113,17 +124,20 @@ serve(async (req) => {
       if (customPrompt.trim()) systemPrompt = customPrompt;
     }
 
-    const response = await aiChatFetch({
-      model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Faça a exegese do seguinte texto bíblico:\n\n**${reference}**\n\n"${text}"`,
-        },
-      ],
-      stream: true,
-    });
+    const response = await aiChatFetchWithProviders(
+      {
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Faça a exegese do seguinte texto bíblico:\n\n**${reference}**\n\n"${text}"`,
+          },
+        ],
+        stream: true,
+      },
+      GEMINI_FIRST
+    );
 
     if (!response.ok) {
       const t = await response.text();

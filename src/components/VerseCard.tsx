@@ -166,18 +166,22 @@ const VerseCard = ({ text, reference, version }: VerseCardProps) => {
   return (
     <>
       <div
-        className="bg-gradient-to-br from-[hsl(220,70%,50%)] to-[hsl(260,60%,45%)] rounded-2xl p-6 text-white cursor-pointer transition-all"
+        className="relative overflow-hidden bg-gradient-to-br from-[hsl(220,25%,11%)] via-[hsl(225,28%,13%)] to-[hsl(40,55%,19%)] rounded-2xl p-6 text-white cursor-pointer transition-all border border-amber-400/20 shadow-[0_10px_36px_-14px_rgba(251,191,36,0.35)] animate-fade-up"
         onClick={() => setExpanded(!expanded)}
         style={currentHighlight ? { borderLeft: `4px solid ${currentHighlight.color}` } : undefined}
       >
-        <p className="text-base leading-relaxed mb-4 font-light">"{text}"</p>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold opacity-90">{reference}</p>
+        {/* Brilho dourado suave, com respiro lento */}
+        <div className="pointer-events-none absolute -top-20 -right-16 w-56 h-56 rounded-full bg-amber-400/20 blur-3xl animate-glow-pulse" />
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-[2px] bg-[linear-gradient(90deg,transparent,rgba(251,191,36,0.7),transparent)] bg-[length:200%_100%] animate-shimmer" />
+        <span className="pointer-events-none absolute -top-2 right-4 font-scripture text-[96px] leading-none text-amber-400/10 select-none animate-float-soft">“</span>
+        <p className="relative font-scripture text-lg leading-[1.8] mb-4 font-medium">"{text}"</p>
+        <div className="relative flex items-center justify-between">
+          <p className="text-sm font-semibold text-amber-300">{reference}{version ? <span className="ml-1.5 text-xs font-medium text-amber-200/60">({version})</span> : null}</p>
           <ChevronDown className={`w-4 h-4 opacity-60 transition-transform ${expanded ? "rotate-180" : ""}`} />
         </div>
 
         {expanded && (
-          <div className="mt-4 pt-4 border-t border-white/20 space-y-1" onClick={(e) => e.stopPropagation()}>
+          <div className="relative mt-4 pt-4 border-t border-white/20 space-y-1" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setShowColors(!showColors)}
               className="w-full flex items-center gap-3 py-2.5 px-1 rounded-lg hover:bg-white/10 transition-colors text-left"

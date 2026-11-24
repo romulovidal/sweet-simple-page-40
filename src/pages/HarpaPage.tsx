@@ -758,13 +758,13 @@ const HarpaPage = () => {
           </p>
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {results.map(({ hino: h, match }) => (
-              <li key={h.number}>
+            {results.map(({ hino: h, match }, i) => (
+              <li key={h.number} className="animate-rise-soft" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                 <button
                   onClick={() => { setAutoPlayNext(false); setSelected(h); }}
-                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition"
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition hover:-translate-y-0.5"
                 >
-                  <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-sm">
+                  <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-amber-400/15 text-amber-400 font-bold flex items-center justify-center text-sm">
                     {refDisplayNumber(h.number)}
                   </span>
                   <span className="flex-1 min-w-0">
@@ -776,11 +776,15 @@ const HarpaPage = () => {
                         </span>
                       )}
                     </span>
-                    {match && (
+                    {match ? (
                       <span className="block truncate text-[11px] text-[hsl(var(--dark-muted))] italic">
                         “{match}”
                       </span>
-                    )}
+                    ) : h.strophes?.[0]?.lines?.[0] ? (
+                      <span className="block truncate text-[11px] text-[hsl(var(--dark-muted))]">
+                        {h.strophes[0].lines[0]}
+                      </span>
+                    ) : null}
                   </span>
                   {tab === "cultos" && activeCulto && cultoUrlMap.get(h.number) ? (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
@@ -810,11 +814,11 @@ const HarpaPage = () => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="w-9 h-9 shrink-0 rounded-lg bg-primary/15 text-primary font-bold flex items-center justify-center text-xs">
+              <span className="w-9 h-9 shrink-0 rounded-lg bg-amber-400/15 text-amber-400 font-bold flex items-center justify-center text-xs">
                 {refDisplayNumber(selected.number)}
               </span>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-bold leading-tight truncate">{selected.title}</h2>
+                <h2 className="font-scripture text-lg font-semibold leading-tight truncate">{selected.title}</h2>
                 <p className="text-[11px] text-[hsl(var(--dark-muted))] leading-tight">
                   {selected.kind === "cantico"
                     ? `Cântico ${refDisplayNumber(selected.number)}`
@@ -937,7 +941,7 @@ const HarpaPage = () => {
           </header>
 
           <article
-            className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] leading-relaxed"
+            className="max-w-2xl mx-auto px-5 py-6 pb-24 space-y-6 text-[hsl(var(--dark-text))] font-scripture leading-[1.9]"
             style={{ fontSize: `${fontSize}px` }}
           >
             {currentCues && (
@@ -962,7 +966,7 @@ const HarpaPage = () => {
                 }}
                 className={`${
                   s.chorus
-                    ? "pl-3 border-l-2 border-[hsl(var(--destructive))]/70 rounded-r-md bg-[hsl(var(--destructive))]/5 py-2 pr-2"
+                    ? "pl-4 border-l-2 border-amber-400/70 rounded-r-lg bg-amber-400/5 py-3 pr-3"
                     : ""
                 } ${
                   activeStropheIdx === i
@@ -978,14 +982,14 @@ const HarpaPage = () => {
                   </span>
                 )}
                 {s.chorus && (
-                  <span className="block text-[11px] uppercase tracking-wider text-[hsl(var(--destructive))] font-bold mb-1">
+                  <span className="block text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-1">
                     Coro
                   </span>
                 )}
                 {s.lines.map((line, j) => (
                   <p
                     key={j}
-                    className={s.chorus ? "text-[hsl(var(--destructive))] font-medium" : ""}
+                    className={s.chorus ? "italic font-medium" : ""}
                   >
                     {line}
                   </p>

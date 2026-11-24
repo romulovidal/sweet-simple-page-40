@@ -50,6 +50,8 @@ const ProfilePage = () => {
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  // Horário real do versículo do dia (configurado pelo admin; padrão 6h).
+  const [versePushTime, setVersePushTime] = useState("6h");
   const [isAdmin, setIsAdmin] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
@@ -98,6 +100,22 @@ const ProfilePage = () => {
 
   useEffect(() => {
     isPushEnabled().then(setPushEnabled);
+  }, []);
+
+  // Lê o horário configurado pelo admin para não divergir do envio real.
+  useEffect(() => {
+    supabase
+      .from("admin_settings")
+      .select("value")
+      .eq("key", "daily_verse_push_time")
+      .maybeSingle()
+      .then(({ data }) => {
+        const raw = typeof data?.value === "string" ? data.value : JSON.stringify(data?.value ?? "");
+        const m = raw.replace(/"/g, "").match(/^(\d{1,2}):(\d{2})/);
+        if (!m) return;
+        const h = parseInt(m[1], 10);
+        setVersePushTime(m[2] === "00" ? `${h}h` : `${h}h${m[2]}`);
+      });
   }, []);
 
   useEffect(() => {
@@ -482,7 +500,7 @@ const ProfilePage = () => {
             <div className="flex-1">
               <p className="font-semibold text-sm">Notificações</p>
               <p className="text-xs text-dark-muted mt-1">
-                {pushEnabled ? "Versículo do dia às 8h ativado" : "Receba o versículo do dia às 8h"}
+                {pushEnabled ? `Versículo do dia às ${versePushTime} ativado` : `Receba o versículo do dia às ${versePushTime}`}
               </p>
             </div>
             {pushLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (

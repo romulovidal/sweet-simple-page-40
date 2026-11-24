@@ -71,7 +71,7 @@ const PostPreviewDialog = ({ post, open, onOpenChange }: Props) => {
           <div className="w-full bg-black">
             {/* Player fills the top with no rounding underneath so it reads as one surface */}
             <div className="[&>div]:rounded-none [&>div]:rounded-t-2xl overflow-hidden">
-              <BibleAtalaiaPlayer videoId={videoId} title={post.title} autoplay />
+              <BibleAtalaiaPlayer videoId={videoId} title={post.title} />
             </div>
           </div>
         ) : (

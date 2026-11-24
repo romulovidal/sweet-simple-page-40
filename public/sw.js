@@ -100,7 +100,40 @@ self.addEventListener("message", function(event) {
     return;
   }
 
-  if (!data || data.type !== "PRECACHE_URLS") return;
+  if (!data || data.type !== "PRECACHE_URLS" || !Array.isArray(data.urls)) return;
+
+  // Pré-cacheia em segundo plano tudo que o app precisa offline (shell, Bíblias,
+  // Harpa). URLs já cacheadas são puladas, então mensagens repetidas são baratas.
+  event.waitUntil(
+    (async function() {
+      var shell = await caches.open(SHELL_CACHE);
+      var bible = await caches.open(BIBLE_CACHE);
+      var harpa = await caches.open(HARPA_CACHE);
+      var runtime = await caches.open(RUNTIME_CACHE);
+      for (var i = 0; i < data.urls.length; i++) {
+        try {
+          var reqUrl = new URL(data.urls[i], self.location.origin);
+          var target = runtime;
+          if (
+            reqUrl.pathname === "/" ||
+            reqUrl.pathname.indexOf("/assets/") === 0 ||
+            reqUrl.pathname === "/manifest.json" ||
+            reqUrl.pathname === "/logo.png"
+          ) {
+            target = shell;
+          } else if (reqUrl.pathname.indexOf("/biblias/") === 0) {
+            target = bible;
+          } else if (reqUrl.pathname.indexOf("/harpa/") === 0) {
+            target = harpa;
+          }
+          var existing = await target.match(data.urls[i]);
+          if (!existing) await addUrlToCache(target, data.urls[i]);
+        } catch (e) {
+          // Uma URL ruim não pode travar o resto do pré-cache.
+        }
+      }
+    })()
+  );
 });
 
 self.addEventListener("fetch", function(event) {

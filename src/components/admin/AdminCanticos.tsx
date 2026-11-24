@@ -106,12 +106,15 @@ export default function AdminCanticos() {
       });
       if (error) throw error;
       if (!data?.letra_json) throw new Error("Resposta inválida");
+      // A categoria escolhida manualmente prevalece; a da IA só vale quando
+      // nenhuma foi escolhida. O aviso mostra a categoria efetiva, não a da IA.
+      const categoriaFinal = editing.categoria || data.categoria;
       setEditing({
         ...editing,
         letra_json: data.letra_json,
-        categoria: editing.categoria || data.categoria,
+        categoria: categoriaFinal,
       });
-      toast.success(`IA processou: ${data.letra_json.length} blocos, categoria "${data.categoria}"`);
+      toast.success(`IA processou: ${data.letra_json.length} blocos, categoria "${categoriaFinal}"`);
     } catch (e: any) {
       toast.error(e?.message || "Falha ao processar");
     } finally {
@@ -124,8 +127,23 @@ export default function AdminCanticos() {
     if (!editing.titulo?.trim() || !editing.letra_raw?.trim()) {
       return toast.error("Título e letra são obrigatórios");
     }
-    if (!editing.letra_json || editing.letra_json.length === 0) {
-      return toast.error("Processe a letra com a IA antes de salvar");
+    // A IA é opcional: sem ela, a letra é dividida em blocos pelas linhas em
+    // branco (um verso por parágrafo), no mesmo formato que a IA produz.
+    const letraJson =
+      editing.letra_json && editing.letra_json.length > 0
+        ? editing.letra_json
+        : editing.letra_raw
+            .split(/\n\s*\n/)
+            .map((chunk) =>
+              chunk
+                .split("\n")
+                .map((l) => l.trim())
+                .filter(Boolean)
+            )
+            .filter((linhas) => linhas.length > 0)
+            .map((linhas, i) => ({ tipo: "verso" as const, numero: i + 1, linhas }));
+    if (letraJson.length === 0) {
+      return toast.error("Cole a letra do cântico antes de salvar");
     }
     setSaving(true);
     try {
@@ -133,7 +151,7 @@ export default function AdminCanticos() {
       const payload = {
         titulo: editing.titulo.trim(),
         letra_raw: editing.letra_raw,
-        letra_json: editing.letra_json,
+        letra_json: letraJson,
         categoria: editing.categoria || "Outros",
         tom: editing.tom || null,
         capotraste: editing.capotraste ?? null,

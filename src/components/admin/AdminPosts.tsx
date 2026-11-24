@@ -28,6 +28,7 @@ interface AdminPostsProps {
 const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
   const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
   const [previewPost, setPreviewPost] = useState<Post | null>(null);
+  const [sendPush, setSendPush] = useState(true);
 
   const sendPostPush = async (postData: Pick<Post, "title" | "content" | "type">) => {
     const postTypeLabel = POST_TYPES.find((t) => t.value === postData.type)?.label || "Post";
@@ -98,20 +99,21 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
 
       toast.success("Postagem criada!");
     }
-    if (isNew && data.is_active) {
-      try {
-        await sendPostPush(data);
-        toast.success("Notificação push enviada automaticamente!");
-      } catch (e) {
-        console.error("Push auto-send error:", e);
-        toast.error("Post criado, mas falha ao enviar push");
-      }
-    }
     setEditingPost(null);
     fetchData();
+    if (isNew && data.is_active && sendPush) {
+      // Push em segundo plano: o editor já fechou, não trava a tela.
+      sendPostPush(data)
+        .then(() => toast.success("Notificação push enviada automaticamente!"))
+        .catch((e) => {
+          console.error("Push auto-send error:", e);
+          toast.error("Post criado, mas falha ao enviar push");
+        });
+    }
   };
 
   const deletePost = async (id: string) => {
+    if (!window.confirm("Excluir esta postagem? Esta ação não pode ser desfeita.")) return;
     const { error } = await supabase.from("admin_posts").delete().eq("id", id);
     if (error) {
       console.error("[ADMIN POSTS] Delete error:", error);
@@ -171,35 +173,41 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
             </div>
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título</label>
-            <Input value={editingPost.title || ""} onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
+            <label htmlFor="post-title" className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Título</label>
+            <Input id="post-title" value={editingPost.title || ""} onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
               className="bg-[hsl(var(--dark-card))] border-none" maxLength={200} />
           </div>
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Conteúdo</label>
-            <Textarea value={editingPost.content || ""} onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+            <label htmlFor="post-content" className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Conteúdo</label>
+            <Textarea id="post-content" value={editingPost.content || ""} onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
               className="bg-[hsl(var(--dark-card))] border-none min-h-[120px]" maxLength={5000} />
           </div>
           {editingPost.type === "video" && (
             <div>
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">URL do YouTube</label>
-              <Input value={editingPost.youtube_url || ""} onChange={(e) => setEditingPost({ ...editingPost, youtube_url: e.target.value })}
+              <label htmlFor="post-youtube" className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">URL do YouTube</label>
+              <Input id="post-youtube" value={editingPost.youtube_url || ""} onChange={(e) => setEditingPost({ ...editingPost, youtube_url: e.target.value })}
                 placeholder="https://youtube.com/watch?v=..." className="bg-[hsl(var(--dark-card))] border-none" maxLength={500} />
             </div>
           )}
           {(editingPost.type === "versiculo" || editingPost.type === "oracao") && (
             <div>
-              <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência Bíblica</label>
-              <Input value={editingPost.bible_reference || ""} onChange={(e) => setEditingPost({ ...editingPost, bible_reference: e.target.value })}
+              <label htmlFor="post-ref" className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Referência Bíblica</label>
+              <Input id="post-ref" value={editingPost.bible_reference || ""} onChange={(e) => setEditingPost({ ...editingPost, bible_reference: e.target.value })}
                 placeholder="Ex: João 3:16" className="bg-[hsl(var(--dark-card))] border-none" maxLength={100} />
             </div>
           )}
           <div>
-            <label className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem de exibição</label>
-            <Input type="number" value={editingPost.sort_order ?? 0}
+            <label htmlFor="post-order" className="text-xs text-[hsl(var(--dark-muted))] mb-1 block">Ordem de exibição</label>
+            <Input id="post-order" type="number" value={editingPost.sort_order ?? 0}
               onChange={(e) => setEditingPost({ ...editingPost, sort_order: parseInt(e.target.value) || 0 })}
               className="bg-[hsl(var(--dark-card))] border-none w-24" />
           </div>
+          {!editingPost.id && (
+            <label className="flex items-center gap-2 text-xs text-[hsl(var(--dark-muted))] cursor-pointer pt-1">
+              <input type="checkbox" checked={sendPush} onChange={(e) => setSendPush(e.target.checked)} className="w-4 h-4 accent-[hsl(var(--primary))]" />
+              Enviar notificação push ao publicar (desmarque para posts de teste)
+            </label>
+          )}
         </div>
       </div>
     );
@@ -207,7 +215,7 @@ const AdminPosts = ({ posts, fetchData }: AdminPostsProps) => {
 
   return (
     <>
-      <Button onClick={() => setEditingPost({ type: "devocional", is_active: true, sort_order: 0 })} className="w-full mb-4">
+      <Button onClick={() => { setSendPush(true); setEditingPost({ type: "devocional", is_active: true, sort_order: 0 }); }} className="w-full mb-4">
         <Plus className="w-4 h-4 mr-2" /> Nova Postagem
       </Button>
       <div className="space-y-2">

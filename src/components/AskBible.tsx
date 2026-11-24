@@ -189,7 +189,7 @@ const AskBible = ({ enabled, showButton = true }: AskBibleProps) => {
                   : "bg-[hsl(var(--dark-card))]"
               }`}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1 prose-table:w-full prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+                  <div className="prose prose-sm prose-invert max-w-none text-sm pr-1 prose-table:w-full prose-th:bg-white/5 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-headings:text-amber-300 prose-strong:text-amber-200 prose-h3:mt-4 prose-h3:mb-2">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     <button 
                       onClick={() => handleShare(msg.content)}

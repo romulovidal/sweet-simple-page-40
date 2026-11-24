@@ -121,7 +121,7 @@ const AITimeline = ({ reference, text, enabled, label }: Props) => {
               </div>
             )}
             {content && (
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-orange-400 prose-strong:text-orange-300 prose-p:text-sm prose-p:leading-relaxed prose-li:marker:text-orange-500 prose-h2:border-b prose-h2:border-orange-500/20 prose-h2:pb-2 prose-table:w-full prose-table:text-sm prose-th:bg-orange-500/10 prose-th:text-orange-300 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-orange-400 prose-strong:text-orange-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-li:marker:text-orange-500 prose-h2:border-b prose-h2:border-orange-500/20 prose-h2:pb-2 prose-table:w-full prose-table:text-sm prose-th:bg-orange-500/10 prose-th:text-orange-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               </div>
             )}

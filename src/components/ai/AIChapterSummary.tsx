@@ -80,7 +80,7 @@ const AIChapterSummary = ({ bookName, chapter, text, enabled }: Props) => {
           )}
           {content && (
             <>
-              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-sm prose-p:leading-relaxed prose-table:w-full prose-table:text-sm prose-th:bg-blue-500/10 prose-th:text-blue-300 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-white/5">
+              <div className="prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-blue-400 prose-strong:text-blue-300 prose-p:text-sm prose-p:leading-[1.8] prose-p:my-3 prose-table:w-full prose-table:text-sm prose-th:bg-blue-500/10 prose-th:text-blue-300 prose-th:px-3 prose-th:py-2.5 prose-td:px-3 prose-td:py-2.5 prose-td:border-white/5 prose-hr:my-6 prose-hr:border-white/10 prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5 prose-table:my-4 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-blue-500/20 prose-blockquote:border-l-blue-500/40 prose-blockquote:bg-blue-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
               </div>
               {!loading && (

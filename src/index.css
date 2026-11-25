@@ -117,6 +117,28 @@ html.sepia {
   filter: none;
 }
 
+/* Nos temas claros, o conteúdo das telas de IA (prose-invert, desenhado para
+   fundo escuro) usa as cores escuras das variáveis do tema. */
+.light .prose-invert,
+.sepia .prose-invert {
+  --tw-prose-body: hsl(var(--dark-text));
+  --tw-prose-headings: hsl(28 40% 32%);
+  --tw-prose-lead: hsl(var(--dark-muted));
+  --tw-prose-links: hsl(32 85% 38%);
+  --tw-prose-bold: hsl(28 40% 32%);
+  --tw-prose-counters: hsl(var(--dark-muted));
+  --tw-prose-bullets: hsl(var(--dark-muted));
+  --tw-prose-hr: hsl(35 15% 78%);
+  --tw-prose-quotes: hsl(var(--dark-text));
+  --tw-prose-quote-borders: hsl(35 60% 50%);
+  --tw-prose-captions: hsl(var(--dark-muted));
+  --tw-prose-code: hsl(32 85% 38%);
+  --tw-prose-pre-code: hsl(var(--dark-text));
+  --tw-prose-pre-bg: hsl(var(--dark-card));
+  --tw-prose-th-borders: hsl(35 15% 78%);
+  --tw-prose-td-borders: hsl(35 15% 84%);
+}
+
 @layer components {
   /* Selected verse — adapts to theme */
   .verse-selected {

@@ -183,7 +183,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
                 ) : (
                   <>
                     {note.verse && (
-                      <p className="text-[10px] font-semibold text-yellow-400 mb-1">Versículo {note.verse}</p>
+                      <p className="text-[10px] font-semibold text-yellow-600 dark:text-yellow-400 mb-1">Versículo {note.verse}</p>
                     )}
                     <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-[hsl(var(--dark-card))]">
@@ -224,7 +224,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
             title="Anotações"
             aria-label="Anotações"
           >
-            <StickyNote className="w-[18px] h-[18px] text-yellow-400" />
+            <StickyNote className="w-[18px] h-[18px] text-yellow-600 dark:text-yellow-400" />
             {noteCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-yellow-400 text-[9px] text-black font-bold flex items-center justify-center">
                 {noteCount}
@@ -239,7 +239,7 @@ const PersonalNotes = ({ bookAbbrev, chapter, verse, enabled, label, variant = "
           className="p-1 relative"
           title="Anotações"
         >
-          <StickyNote className={`w-4 h-4 ${noteCount > 0 ? "text-yellow-400" : "text-[hsl(var(--dark-muted))]"}`} />
+          <StickyNote className={`w-4 h-4 ${noteCount > 0 ? "text-yellow-600 dark:text-yellow-400" : "text-[hsl(var(--dark-muted))]"}`} />
           {noteCount > 0 && (
             <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 text-[8px] text-black font-bold flex items-center justify-center">
               {noteCount}

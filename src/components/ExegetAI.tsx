@@ -162,7 +162,7 @@ const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
             <div className="mt-3 flex items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
                 <BookOpen className="w-3 h-3 text-amber-500" />
-                <span className="text-xs font-semibold text-amber-400">{reference}</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{reference}</span>
               </div>
             </div>
             <div className="absolute bottom-0 left-5 right-5 h-px bg-gradient-to-r from-transparent via-[hsl(var(--dark-muted)/0.2)] to-transparent" />
@@ -191,14 +191,14 @@ const ExegetAI = ({ reference, text, version }: ExegetAIProps) => {
               </div>
             )}
             {content && (
-              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-4 prose-p:text-sm prose-table:w-full prose-table:min-w-[540px] prose-table:border prose-table:border-white/15 prose-tr:even:bg-white/[0.02] prose-table:text-[13px] prose-th:bg-amber-500/10 prose-th:text-amber-300 prose-th:px-3 prose-th:py-3 prose-th:border prose-th:border-white/15 prose-td:px-3 prose-td:py-3 prose-td:border prose-td:border-white/15 prose-hr:my-8 prose-hr:border-white/10 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-table:my-6 prose-mark:bg-amber-400/25 prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
+              <div className="exegetai-content prose prose-sm prose-invert max-w-none text-[hsl(var(--dark-text))] prose-headings:text-amber-700 dark:prose-headings:text-amber-400 prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-base prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-amber-500/20 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-strong:text-amber-700 dark:prose-strong:text-amber-300 prose-strong:font-semibold prose-em:text-[hsl(var(--dark-muted))] prose-em:not-italic prose-em:text-xs prose-em:bg-[hsl(var(--dark-card))] prose-em:px-1.5 prose-em:py-0.5 prose-em:rounded prose-li:marker:text-amber-500 prose-blockquote:border-l-amber-500/40 prose-blockquote:bg-amber-500/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-code:text-amber-700 dark:prose-code:text-amber-300 prose-code:bg-[hsl(var(--dark-card))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-normal prose-a:text-amber-700 dark:prose-a:text-amber-400 prose-a:no-underline prose-a:hover:underline prose-p:leading-[1.8] prose-p:my-4 prose-p:text-sm prose-table:w-full prose-table:min-w-[540px] prose-table:border prose-table:border-black/10 dark:prose-table:border-white/15 prose-tr:even:bg-black/[0.03] dark:prose-tr:even:bg-white/[0.02] prose-table:text-[13px] prose-th:bg-amber-500/10 prose-th:text-amber-700 dark:prose-th:text-amber-300 prose-th:px-3 prose-th:py-3 prose-th:border prose-th:border-black/10 dark:prose-th:border-white/15 prose-td:px-3 prose-td:py-3 prose-td:border prose-td:border-black/10 dark:prose-td:border-white/15 prose-hr:my-8 prose-hr:border-black/10 dark:prose-hr:border-white/10 prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-table:my-6 prose-mark:bg-amber-400/25 prose-mark:text-amber-900 dark:prose-mark:text-amber-100 prose-mark:px-1 prose-mark:rounded">
                 <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeRaw, [rehypeSanitize, aiSanitizeSchema]]} components={aiMarkdownComponents}>{normalizeAiMarkdown(content)}</ReactMarkdown>
               </div>
             )}
             {loading && content && (
               <div className="flex items-center gap-2.5 mt-6 mb-2 px-3 py-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10 w-fit">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
-                <span className="text-xs font-medium text-amber-400">Escrevendo...</span>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Escrevendo...</span>
               </div>
             )}
           </div>

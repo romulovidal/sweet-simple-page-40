@@ -115,7 +115,7 @@ const RevistasPage = () => {
               <div className="relative mb-6">
                 <div className="absolute inset-0 rounded-full bg-amber-400/20 blur-2xl scale-150" />
                 <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/20 flex items-center justify-center">
-                  <Library className="w-9 h-9 text-amber-400" />
+                  <Library className="w-9 h-9 text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
               <h2 className="font-scripture text-2xl font-semibold mb-2">Nenhuma revista ainda</h2>
@@ -140,7 +140,7 @@ const RevistasPage = () => {
               {selectedRevista.pdf_url && (
                 <Button
                   onClick={() => setReaderOpen(true)}
-                  className="mt-4 h-11 px-5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 font-bold text-sm hover:bg-amber-400/25"
+                  className="mt-4 h-11 px-5 rounded-xl bg-amber-400 text-zinc-950 font-bold text-sm hover:bg-amber-300 shadow-[0_8px_24px_-10px_rgba(251,191,36,0.7)]"
                 >
                   <BookOpen className="w-4 h-4 mr-2" /> Abrir lição
                 </Button>
@@ -308,7 +308,7 @@ const RevistasPage = () => {
             ) : (
               <div className="flex flex-col items-center text-center py-12 px-6">
                 <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6 text-amber-400" />
+                  <BookOpen className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <p className="font-semibold mb-1">Nenhuma lição nesta revista ainda</p>
                 <p className="text-sm text-dark-muted">As lições aparecem aqui quando forem publicadas.</p>

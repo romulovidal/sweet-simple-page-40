@@ -764,7 +764,7 @@ const HarpaPage = () => {
                   onClick={() => { setAutoPlayNext(false); setSelected(h); }}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--dark-card))] hover:bg-[hsl(var(--dark-card-hover))] border border-transparent hover:border-primary/20 active:scale-[0.99] transition hover:-translate-y-0.5"
                 >
-                  <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-amber-400/15 text-amber-400 font-bold flex items-center justify-center text-sm">
+                  <span className="w-11 h-11 flex-shrink-0 rounded-lg bg-amber-600/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400 font-bold flex items-center justify-center text-sm">
                     {refDisplayNumber(h.number)}
                   </span>
                   <span className="flex-1 min-w-0">
@@ -791,7 +791,7 @@ const HarpaPage = () => {
                       ♪
                     </span>
                   ) : favorites.includes(h.number) ? (
-                    <Star className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" />
+                    <Star className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" fill="currentColor" />
                   ) : (
                     <Music2 className="w-4 h-4 text-[hsl(var(--dark-muted))] flex-shrink-0" />
                   )}
@@ -814,7 +814,7 @@ const HarpaPage = () => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="w-9 h-9 shrink-0 rounded-lg bg-amber-400/15 text-amber-400 font-bold flex items-center justify-center text-xs">
+              <span className="w-9 h-9 shrink-0 rounded-lg bg-amber-600/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400 font-bold flex items-center justify-center text-xs">
                 {refDisplayNumber(selected.number)}
               </span>
               <div className="flex-1 min-w-0">
@@ -832,7 +832,7 @@ const HarpaPage = () => {
                 aria-label={favorites.includes(selected.number) ? "Remover favorito" : "Adicionar favorito"}
               >
                 <Star
-                  className={`w-4 h-4 ${favorites.includes(selected.number) ? "text-yellow-400" : ""}`}
+                  className={`w-4 h-4 ${favorites.includes(selected.number) ? "text-yellow-600 dark:text-yellow-400" : ""}`}
                   fill={favorites.includes(selected.number) ? "currentColor" : "none"}
                 />
               </button>
@@ -982,7 +982,7 @@ const HarpaPage = () => {
                   </span>
                 )}
                 {s.chorus && (
-                  <span className="block text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-1">
+                  <span className="block text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-bold mb-1">
                     Coro
                   </span>
                 )}

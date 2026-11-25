@@ -782,7 +782,7 @@ const BiblePage = () => {
             <div className="flex items-center gap-2" data-tour="bible-header-tools">
               <button
                 onClick={() => setReadingMode(true)}
-                className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-amber-600/15 border border-amber-600/30 text-amber-700 dark:bg-amber-400/15 dark:border-amber-400/30 dark:text-amber-300 flex items-center justify-center"
                 title="Modo leitura"
                 aria-label="Modo leitura"
               >
@@ -1052,7 +1052,7 @@ const BiblePage = () => {
             <>
             {/* Número do capítulo em destaque — reanima a cada capítulo */}
             <div key={`${selectedBook.apiAbbrev}-${selectedChapter}`} className="animate-fade-up flex items-end gap-4 pt-2 pb-5">
-              <span className="font-scripture text-7xl font-semibold leading-none text-amber-400/90 select-none">
+              <span className="font-scripture text-7xl font-semibold leading-none text-amber-700 dark:text-amber-400/90 select-none">
                 {selectedChapter}
               </span>
               <div className="pb-1">
@@ -1565,7 +1565,7 @@ const VerseRow = ({ verse, isHighlighted, isSelected, highlightColor, isRedLette
     >
       <p className={`font-scripture leading-[1.85] ${isRedLetter ? "text-red-400" : ""}`} style={{ fontSize: `${fontSize}px` }}>
         <span
-          className="font-bold mr-2 text-xs align-super text-amber-400"
+          className="font-bold mr-2 text-xs align-super text-amber-700 dark:text-amber-400"
           style={
             highlightColor
               ? { color: highlightColor, textShadow: `0 0 8px ${highlightColor}66` }

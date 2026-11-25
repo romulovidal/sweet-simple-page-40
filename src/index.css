@@ -72,11 +72,11 @@
     --dark-card: 0 0% 100%;
     --dark-card-hover: 40 30% 94%;
     --dark-text: 30 12% 16%;
-    --dark-muted: 30 8% 42%;
+    --dark-muted: 30 10% 38%;
     --border: 35 18% 86%;
     --input: 35 18% 86%;
     --muted: 40 25% 93%;
-    --muted-foreground: 30 8% 42%;
+    --muted-foreground: 30 10% 38%;
     --secondary: 40 25% 93%;
     --secondary-foreground: 30 12% 16%;
   }
@@ -89,11 +89,11 @@
     --dark-card: 42 32% 87%;
     --dark-card-hover: 42 30% 83%;
     --dark-text: 28 22% 20%;
-    --dark-muted: 28 12% 42%;
+    --dark-muted: 28 14% 36%;
     --border: 35 25% 78%;
     --input: 35 25% 78%;
     --muted: 42 28% 86%;
-    --muted-foreground: 28 12% 42%;
+    --muted-foreground: 28 14% 36%;
     --secondary: 42 28% 86%;
     --secondary-foreground: 28 22% 20%;
     --card: 42 30% 90%;
@@ -106,6 +106,14 @@
 /* Mídia sempre nas cores reais: nenhum tema aplica filtro a foto, vídeo ou embed. */
 .sepia img, .sepia video, .sepia iframe,
 .light img, .light video, .light iframe {
+  filter: none;
+}
+
+/* Colisão de nomes: a classe do tema "sepia" no <html> é também o nome do
+   utilitário `sepia` do Tailwind, que aplica filter: sepia(100%) no
+   documento inteiro — era ISSO que tingia o vídeo (e o botão play) de
+   marrom no tema sépia. Cancela o filtro na raiz. */
+html.sepia {
   filter: none;
 }
 

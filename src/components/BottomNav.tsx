@@ -41,7 +41,7 @@ const BottomNav = () => {
             onClick={(e) => handleTabClick(to, e)}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-3 py-1.5 transition-colors ${
-                isActive ? "text-amber-400" : "text-[hsl(var(--dark-muted))]"
+                isActive ? "text-amber-600 dark:text-amber-400" : "text-[hsl(var(--dark-muted))]"
               }`
             }
           >

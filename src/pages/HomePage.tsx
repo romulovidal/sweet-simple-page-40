@@ -286,7 +286,7 @@ const HomePage = () => {
 
                 {/* Verse of the Day */}
                 <div data-tour="home-verse-of-day">
-                  <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em] mb-3">
+                  <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em] mb-3">
                     Versículo do dia
                   </h2>
                   {verseLoading ? (
@@ -309,7 +309,7 @@ const HomePage = () => {
               <div className="space-y-8">
                 {/* Continue Reading */}
                 <div data-tour="home-continue">
-                  <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em] mb-3">
+                  <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em] mb-3">
                     Continuar lendo
                   </h2>
                   <button
@@ -337,7 +337,7 @@ const HomePage = () => {
             {/* Admin Posts Feed - Full Width */}
             {adminPosts.length > 0 && (
               <div className="space-y-4 pt-4">
-                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em]">
                   Destaques e Avisos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -393,7 +393,7 @@ const HomePage = () => {
             {/* Destaques e Avisos (Comunidade) */}
             {adminPosts.length > 0 && (
               <div className="space-y-4">
-                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em]">
                   Destaques e Avisos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -451,11 +451,11 @@ const HomePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
-                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">Escala de Cultos</h2>
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em]">Escala de Cultos</h2>
                 <CultoScheduleList />
               </div>
               <div className="space-y-6">
-                <h2 className="font-scripture text-[13px] font-semibold text-amber-400/90 uppercase tracking-[0.18em]">Mural de Orações</h2>
+                <h2 className="font-scripture text-[13px] font-semibold text-amber-700 dark:text-amber-400/90 uppercase tracking-[0.18em]">Mural de Orações</h2>
                 <PrayerRequests enabled={true} />
               </div>
             </div>

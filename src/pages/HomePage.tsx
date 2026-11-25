@@ -290,8 +290,8 @@ const HomePage = () => {
                     Versículo do dia
                   </h2>
                   {verseLoading ? (
-                    <div className="bg-gradient-to-br from-[hsl(220,25%,11%)] via-[hsl(225,28%,13%)] to-[hsl(40,55%,19%)] rounded-2xl p-6 flex items-center justify-center h-40 border border-amber-400/20">
-                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                    <div className="bg-gradient-to-br from-amber-50 via-[#fdf8ec] to-amber-100/80 dark:from-[hsl(220,25%,11%)] dark:via-[hsl(225,28%,13%)] dark:to-[hsl(40,55%,19%)] rounded-2xl p-6 flex items-center justify-center h-40 border border-amber-600/25 dark:border-amber-400/20">
+                      <Loader2 className="w-6 h-6 animate-spin text-amber-700 dark:text-white" />
                     </div>
                   ) : verse ? (
                     <VerseCard 

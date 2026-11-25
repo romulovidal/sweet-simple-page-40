@@ -13,6 +13,13 @@ export const PDFJS_WORKER_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS
 
 const FLIP_MS = 650;
 
+// Zoom da página — vale SÓ dentro do leitor (transform no contêiner da
+// página). A meta viewport global continua travada (user-scalable=no),
+// então a interface fora da revista segue sem zoom nenhum.
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const DOUBLE_TAP_ZOOM = 2;
+
 interface RevistaReaderProps {
   open: boolean;
   onClose: () => void;
@@ -66,23 +73,51 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   const roRef = useRef<ResizeObserver | null>(null);
   const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
 
+  // Estado do zoom da página (escala + deslocamento). viewRef é a fonte
+  // para a matemática dos gestos; `view` espelha para a renderização.
+  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const viewRef = useRef(view);
+  const [zoomAnim, setZoomAnim] = useState(false);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+  const panAnchorRef = useRef<{ cx: number; cy: number; x: number; y: number } | null>(null);
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const pinchHappenedRef = useRef(false);
+  const mousePanRef = useRef(false);
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
+  const zoomAtPointRef = useRef<(z: number, x: number, y: number) => void>(() => {});
+
   // Mede a área do palco para dimensionar a página (retrato 385:588).
   // Callback ref + ResizeObserver: o conteúdo do Dialog monta depois da
   // abertura (Radix Presence), então medir só no efeito de [open] falhava
   // e a página ficava com tamanho zero (tela cinza).
   const blockPinch = useCallback((e: Event) => e.preventDefault(), []);
 
+  // Pinça de trackpad no desktop chega como wheel com ctrlKey.
+  const onWheelZoom = useCallback((e: WheelEvent) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const factor = Math.exp(-e.deltaY * 0.01);
+    zoomAtPointRef.current(viewRef.current.zoom * factor, e.clientX, e.clientY);
+  }, []);
+
   const stageRefCb = useCallback((el: HTMLDivElement | null) => {
     if (roRef.current) {
       roRef.current.disconnect();
       roRef.current = null;
     }
-    // iOS Safari: bloqueia o gesto de pinça (zoom) no palco do leitor.
+    // iOS Safari: bloqueia o zoom NATIVO da pinça no palco do leitor (ele
+    // ampliaria a interface inteira). O zoom da revista é manual, via
+    // eventos de toque + transform — só na página, nada vaza pra fora.
     // Anexado aqui (não num efeito de [open]) porque o palco monta depois da abertura.
-    if (stageElRef.current) stageElRef.current.removeEventListener("gesturestart", blockPinch);
+    if (stageElRef.current) {
+      stageElRef.current.removeEventListener("gesturestart", blockPinch);
+      if (wheelHandlerRef.current) stageElRef.current.removeEventListener("wheel", wheelHandlerRef.current);
+    }
     stageElRef.current = el;
     if (!el) return;
     el.addEventListener("gesturestart", blockPinch);
+    wheelHandlerRef.current = onWheelZoom;
+    el.addEventListener("wheel", onWheelZoom, { passive: false });
     const measure = () => {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) setStageSize({ w: r.width, h: r.height });
@@ -91,7 +126,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     roRef.current = ro;
-  }, [blockPinch]);
+  }, [blockPinch, onWheelZoom]);
 
   useEffect(() => {
     return () => {
@@ -106,6 +141,69 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
   const availH = stageSize.h > 0 ? stageSize.h : (typeof window !== "undefined" ? window.innerHeight * 0.72 : 520);
   const pageW = Math.min(availW, availH * (385 / 588));
   const pageH = pageW / (385 / 588);
+
+  // ---- Zoom da página (contido no leitor) ----
+  // O deslocamento é limitado às bordas: a página ampliada nunca sai do palco.
+  const clampPan = useCallback((zoom: number, x: number, y: number) => {
+    const maxX = Math.max(0, (pageW * zoom - availW) / 2);
+    const maxY = Math.max(0, (pageH * zoom - availH) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y)),
+    };
+  }, [pageW, pageH, availW, availH]);
+
+  const applyView = useCallback((zoom: number, x: number, y: number) => {
+    const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+    const p = z <= MIN_ZOOM ? { x: 0, y: 0 } : clampPan(z, x, y);
+    const next = { zoom: z, x: p.x, y: p.y };
+    viewRef.current = next;
+    setView(next);
+  }, [clampPan]);
+
+  const resetZoom = useCallback(() => {
+    pinchRef.current = null;
+    panAnchorRef.current = null;
+    mousePanRef.current = false;
+    lastTapRef.current = null;
+    if (viewRef.current.zoom !== 1 || viewRef.current.x !== 0 || viewRef.current.y !== 0) {
+      viewRef.current = { zoom: 1, x: 0, y: 0 };
+      setView(viewRef.current);
+    }
+  }, []);
+
+  // Amplia/reduz mantendo fixo na tela o ponto (px, py) — centro da pinça,
+  // do toque duplo ou do cursor.
+  const zoomAtPoint = useCallback((targetZoom: number, px: number, py: number) => {
+    const el = stageElRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const cur = viewRef.current;
+    const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom));
+    if (z <= MIN_ZOOM) {
+      applyView(1, 0, 0);
+      return;
+    }
+    const ratio = z / cur.zoom;
+    applyView(z, px - cx - (px - cx - cur.x) * ratio, py - cy - (py - cy - cur.y) * ratio);
+  }, [applyView]);
+
+  useEffect(() => {
+    zoomAtPointRef.current = zoomAtPoint;
+  }, [zoomAtPoint]);
+
+  const toggleDoubleTapZoom = useCallback((px: number, py: number) => {
+    setZoomAnim(true);
+    if (viewRef.current.zoom > 1.01) applyView(1, 0, 0);
+    else zoomAtPoint(DOUBLE_TAP_ZOOM, px, py);
+  }, [applyView, zoomAtPoint]);
+
+  // Fechar o leitor zera o zoom (reabrir começa em 1x).
+  useEffect(() => {
+    if (!open) resetZoom();
+  }, [open, resetZoom]);
 
   const renderPage = useCallback(async (pageNum: number) => {
     const doc = pdfDocRef.current;
@@ -143,6 +241,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     cacheRef.current = {};
     setCurrentIdx(0);
     setFlip(null);
+    resetZoom();
     setRangeOverride(null);
     setEditingRange(false);
     setMenu(null);
@@ -180,7 +279,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
         pdfDocRef.current = null;
       }
     };
-  }, [open, pdfUrl]);
+  }, [open, pdfUrl, resetZoom]);
 
   // Lista de páginas derivada do total + intervalo (props ou edição local).
   // Separada do carregamento do documento para a edição não recarregar o PDF.
@@ -214,12 +313,13 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
       void renderPage(target);
       return;
     }
+    resetZoom(); // virar a página volta o zoom a 1x
     setFlip("next");
     flipTimerRef.current = window.setTimeout(() => {
       setCurrentIdx((i) => i + 1);
       setFlip(null);
     }, FLIP_MS);
-  }, [flip, canNext, pages, currentIdx, renderPage]);
+  }, [flip, canNext, pages, currentIdx, renderPage, resetZoom]);
 
   const goPrev = useCallback(() => {
     if (flip || !canPrev) return;
@@ -228,12 +328,13 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
       void renderPage(target);
       return;
     }
+    resetZoom(); // virar a página volta o zoom a 1x
     setFlip("prev");
     flipTimerRef.current = window.setTimeout(() => {
       setCurrentIdx((i) => i - 1);
       setFlip(null);
     }, FLIP_MS);
-  }, [flip, canPrev, pages, currentIdx, renderPage]);
+  }, [flip, canPrev, pages, currentIdx, renderPage, resetZoom]);
 
   // Teclado
   useEffect(() => {
@@ -284,14 +385,69 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     }, 500);
   }, [openMenu]);
 
-  // Swipe + segurar
+  // Swipe + segurar + zoom (pinça / arrastar com zoom / toque duplo)
   const touchXRef = useRef<number | null>(null);
+  const touchDist = (t: ReactTouchEvent["touches"]) =>
+    Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+  // Toque duplo: sem zoom, só vale na faixa central (as laterais viram a
+  // página); com zoom, vale em qualquer ponto e volta a 1x.
+  const handleTap = (x: number, y: number, zoomed: boolean) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && now - last.t < 300 && Math.hypot(x - last.x, y - last.y) < 48) {
+      lastTapRef.current = null;
+      if (!zoomed) {
+        const el = stageElRef.current;
+        if (el) {
+          const r = el.getBoundingClientRect();
+          const rel = (x - r.left) / r.width;
+          if (rel < 0.3 || rel > 0.7) return;
+        }
+      }
+      toggleDoubleTapZoom(x, y);
+      return;
+    }
+    lastTapRef.current = { t: now, x, y };
+  };
+
   const onTouchStart = (e: ReactTouchEvent) => {
+    if (e.touches.length === 2) {
+      pinchRef.current = { dist: touchDist(e.touches), zoom: viewRef.current.zoom };
+      pinchHappenedRef.current = true;
+      panAnchorRef.current = null;
+      cancelPress();
+      return;
+    }
     touchXRef.current = e.touches[0].clientX;
+    if (viewRef.current.zoom > 1) {
+      panAnchorRef.current = {
+        cx: e.touches[0].clientX, cy: e.touches[0].clientY,
+        x: viewRef.current.x, y: viewRef.current.y,
+      };
+    }
     if (e.touches.length === 1) startPress(e.touches[0].clientX, e.touches[0].clientY);
     else cancelPress();
   };
   const onTouchMove = (e: ReactTouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const dist = touchDist(e.touches);
+      if (dist > 0 && pinchRef.current.dist > 0) {
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        zoomAtPoint(pinchRef.current.zoom * (dist / pinchRef.current.dist), mx, my);
+      }
+      return;
+    }
+    // Com zoom, arrastar com um dedo move a página (não vira a página)
+    if (e.touches.length === 1 && panAnchorRef.current && viewRef.current.zoom > 1) {
+      const a = panAnchorRef.current;
+      applyView(
+        viewRef.current.zoom,
+        a.x + (e.touches[0].clientX - a.cx),
+        a.y + (e.touches[0].clientY - a.cy),
+      );
+    }
     const s = pressStartRef.current;
     if (!s) return;
     const dx = e.touches[0].clientX - s.x;
@@ -299,17 +455,63 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     if (Math.abs(dx) > 12 || Math.abs(dy) > 12) cancelPress();
   };
   const onTouchEnd = (e: ReactTouchEvent) => {
+    const s = pressStartRef.current;
+    const t = e.changedTouches[0];
+    const dy = s ? t.clientY - s.y : 0;
     cancelPress();
+    // Fim da pinça: se sobrou um dedo, ele vira a âncora do arrastar (sem salto)
+    if (pinchRef.current) {
+      pinchRef.current = null;
+      if (e.touches.length === 1 && viewRef.current.zoom > 1) {
+        panAnchorRef.current = {
+          cx: e.touches[0].clientX, cy: e.touches[0].clientY,
+          x: viewRef.current.x, y: viewRef.current.y,
+        };
+      }
+    }
+    if (e.touches.length === 0) panAnchorRef.current = null;
     if (touchXRef.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchXRef.current;
+    const dx = t.clientX - touchXRef.current;
     touchXRef.current = null;
-    if (dx < -50) goNext();
-    else if (dx > 50) goPrev();
+    const wasPinch = pinchHappenedRef.current;
+    pinchHappenedRef.current = false;
+    if (wasPinch) return; // gesto de pinça nunca vira a página
+    if (menuJustOpenedRef.current) return; // segurar abriu o menu: não é toque
+    const isTap = Math.abs(dx) <= 12 && Math.abs(dy) <= 12;
+    if (viewRef.current.zoom > 1) {
+      // Com zoom: sem swipe de página; toque duplo volta a 1x
+      if (isTap) handleTap(t.clientX, t.clientY, true);
+      return;
+    }
+    if (dx < -50) { lastTapRef.current = null; goNext(); }
+    else if (dx > 50) { lastTapRef.current = null; goPrev(); }
+    else if (isTap) handleTap(t.clientX, t.clientY, false);
   };
 
   const onMouseDown = (e: ReactMouseEvent) => {
     if (e.button !== 0) return;
+    if (viewRef.current.zoom > 1) {
+      panAnchorRef.current = { cx: e.clientX, cy: e.clientY, x: viewRef.current.x, y: viewRef.current.y };
+      mousePanRef.current = true;
+    }
     startPress(e.clientX, e.clientY);
+  };
+  const onMouseMove = (e: ReactMouseEvent) => {
+    if (!mousePanRef.current || !panAnchorRef.current) return;
+    const a = panAnchorRef.current;
+    if (Math.hypot(e.clientX - a.cx, e.clientY - a.cy) > 4) cancelPress();
+    applyView(viewRef.current.zoom, a.x + (e.clientX - a.cx), a.y + (e.clientY - a.cy));
+  };
+  const onMouseUp = () => {
+    mousePanRef.current = false;
+    panAnchorRef.current = null;
+    cancelPress();
+  };
+  const onDoubleClick = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    // Nas zonas laterais (sem zoom) o clique duplo continua virando a página
+    if (viewRef.current.zoom <= 1 && (e.target as HTMLElement).closest("button")) return;
+    toggleDoubleTapZoom(e.clientX, e.clientY);
   };
   const onContextMenu = (e: ReactMouseEvent) => {
     e.preventDefault();
@@ -357,6 +559,7 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     const idx = pages.indexOf(clamped);
     setCurrentIdx(idx >= 0 ? idx : 0);
     setFlip(null);
+    resetZoom();
     closeMenu();
   };
 
@@ -440,10 +643,11 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onMouseDown={onMouseDown}
-          onMouseUp={cancelPress}
-          onMouseLeave={cancelPress}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
           onContextMenu={onContextMenu}
-          onDoubleClick={(e) => e.preventDefault()}
+          onDoubleClick={onDoubleClick}
         >
           {loadingDoc ? (
             <div className="flex flex-col items-center gap-3 text-zinc-400">
@@ -461,7 +665,18 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
               )}
             </div>
           ) : pages.length > 0 && pageW > 0 ? (
-            <div style={{ width: pageW, height: pageH, perspective: "1600px" }} className="relative shrink-0">
+            <div
+              style={{
+                width: pageW, height: pageH, perspective: "1600px",
+                // Zoom contido na página: escala + deslocamento só aqui dentro
+                transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`,
+                transformOrigin: "center center",
+                transition: zoomAnim ? "transform 0.22s ease-out" : "none",
+                willChange: "transform",
+              }}
+              className="relative shrink-0"
+              onTransitionEnd={() => setZoomAnim(false)}
+            >
               {/* página de baixo */}
               {images[underPage] ? (
                 <img src={images[underPage]} alt={`Página ${underPage}`} className="absolute inset-0 w-full h-full object-cover rounded-sm shadow-2xl [-webkit-touch-callout:none]" draggable={false} onDragStart={(e) => e.preventDefault()} />
@@ -477,9 +692,10 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
                   <div className="revista-page-shade absolute inset-0 bg-black rounded-sm pointer-events-none" />
                 </div>
               )}
-              {/* zonas de toque: esquerda volta, direita avança */}
-              <button aria-label="Página anterior" onClick={zoneClick(goPrev)} disabled={!canPrev} className="absolute left-0 top-0 bottom-0 w-[30%] z-10" />
-              <button aria-label="Próxima página" onClick={zoneClick(goNext)} disabled={!canNext} className="absolute right-0 top-0 bottom-0 w-[30%] z-10" />
+              {/* zonas de toque: esquerda volta, direita avança.
+                  Com zoom, desligam: arrastar move a página e toque não vira. */}
+              <button aria-label="Página anterior" onClick={zoneClick(goPrev)} disabled={!canPrev} style={{ pointerEvents: view.zoom > 1 ? "none" : "auto" }} className="absolute left-0 top-0 bottom-0 w-[30%] z-10" />
+              <button aria-label="Próxima página" onClick={zoneClick(goNext)} disabled={!canNext} style={{ pointerEvents: view.zoom > 1 ? "none" : "auto" }} className="absolute right-0 top-0 bottom-0 w-[30%] z-10" />
             </div>
           ) : null}
         </div>
@@ -606,3 +822,4 @@ export default function RevistaReader({ open, onClose, pdfUrl, title, revistaId,
     </Dialog>
   );
 }
+

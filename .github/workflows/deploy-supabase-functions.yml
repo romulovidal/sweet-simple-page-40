@@ -41,4 +41,4 @@ jobs:
           test "$SUPABASE_PROJECT_ID" = "karyuuhxeismshhxuokg"
 
       - name: Deploy Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID" --yes

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 const AdminPage = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuxiliar, setIsAuxiliar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
 
@@ -17,6 +18,7 @@ const AdminPage = () => {
 
     if (!nextSession?.user) {
       setIsAdmin(false);
+      setIsAuxiliar(false);
       setLoading(false);
       return;
     }
@@ -32,7 +34,9 @@ const AdminPage = () => {
 
       if (!error) {
         const roles = data?.map((row) => String(row.role)) ?? [];
-        setIsAdmin(roles.includes("admin") || roles.includes("super_admin"));
+        const admin = roles.includes("admin") || roles.includes("super_admin");
+        setIsAdmin(admin);
+        setIsAuxiliar(!admin && roles.includes("auxiliar"));
         setLoading(false);
         return;
       }
@@ -50,6 +54,7 @@ const AdminPage = () => {
     } catch (error) {
       console.error("Erro ao validar acesso administrativo", error);
       setIsAdmin(false);
+      setIsAuxiliar(false);
       setAccessError("Não foi possível validar seu acesso administrativo. Tente novamente.");
     } finally {
       setLoading(false);
@@ -127,7 +132,7 @@ const AdminPage = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isAuxiliar) {
     return (
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="text-center">

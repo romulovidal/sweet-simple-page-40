@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Droplets } from "lucide-react";
 import { useFontSize } from "@/hooks/useFontSize";
 import FontSizeControls from "@/components/FontSizeControls";
 import { bibleBooks } from "@/data/bible";
@@ -52,6 +54,7 @@ const PLANS_CACHE_KEY = "cached-admin-plans";
 const planReadingsCacheKey = (planId: string) => `cached-admin-plan-readings:${planId}`;
 
 const PlansPage = () => {
+  const navigate = useNavigate();
   const { fontSize, increase: incFont, decrease: decFont, canIncrease: canIncFont, canDecrease: canDecFont } = useFontSize();
   const [planProgress, setPlanProgress] = useLocalStorage<PlanProgress[]>("plan-progress", []);
   const [selectedPlan, setSelectedPlan] = useLocalStorage<string | null>("selected-plan", null);
@@ -427,6 +430,31 @@ const PlansPage = () => {
         <h1 className="text-2xl font-bold">Planos de Leitura</h1>
         <p className="text-sm text-[hsl(var(--dark-muted))] mt-1">Escolha um plano e cresça na Palavra</p>
       </header>
+
+      {/* Curso de Preparação para o Batismo */}
+      <div className="px-5 pb-4">
+        <button
+          onClick={() => navigate("/batismo")}
+          className="w-full bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-4 active:bg-[hsl(var(--dark-card-hover))] transition-colors text-left border border-amber-600/25 dark:border-amber-400/20"
+        >
+          <div className="w-14 h-14 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+            <Droplets className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">Curso de Preparação para o Batismo</p>
+            <p className="text-xs text-[hsl(var(--dark-muted))] mt-0.5 line-clamp-2">
+              6 lições, uma por dia, com exercícios e prova final. Faça sua inscrição!
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+                6 dias
+              </span>
+              <span className="text-[10px] text-[hsl(var(--dark-muted))]">Batismo</span>
+            </div>
+          </div>
+          <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
+        </button>
+      </div>
 
       {plans.length === 0 ? (
         <div className="px-5 text-center py-16">

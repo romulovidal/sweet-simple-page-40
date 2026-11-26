@@ -9,7 +9,7 @@ interface UserWithRole {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
-  role: "super_admin" | "admin" | "user";
+  role: "super_admin" | "admin" | "auxiliar" | "user";
   email?: string;
 }
 
@@ -50,9 +50,9 @@ const AdminRoles = () => {
       role: (userRolesMap.get(p.user_id) as any) || "user",
     }));
 
-    // Super Admins first, then Admins
+    // Super Admins first, then Admins, then Auxiliares
     usersWithRoles.sort((a, b) => {
-      const score = (r: string) => r === "super_admin" ? 2 : r === "admin" ? 1 : 0;
+      const score = (r: string) => r === "super_admin" ? 3 : r === "admin" ? 2 : r === "auxiliar" ? 1 : 0;
       return score(b.role) - score(a.role);
     });
 
@@ -83,6 +83,61 @@ const AdminRoles = () => {
         user_id: currentUserId,
         action: "role_promoted",
         details: { target_user_id: userId, role: "admin" },
+      });
+    }
+    setActionLoading(null);
+    loadData();
+  };
+
+  const promoteToAuxiliar = async (userId: string) => {
+    if (currentUserRole !== "super_admin") {
+      toast.error("Apenas Super Admins podem gerenciar permissões");
+      return;
+    }
+
+    setActionLoading(userId);
+    const { error } = await supabase.from("user_roles").insert({
+      user_id: userId,
+      role: "auxiliar" as any
+    });
+
+    if (error) {
+      if (error.code === "23505") toast.error("Usuário já possui privilégios");
+      else toast.error("Erro ao promover: " + error.message);
+    } else {
+      toast.success("Usuário promovido a auxiliar!");
+      await supabase.from("admin_activity_log").insert({
+        user_id: currentUserId,
+        action: "role_promoted",
+        details: { target_user_id: userId, role: "auxiliar" },
+      });
+    }
+    setActionLoading(null);
+    loadData();
+  };
+
+  const removeAuxiliar = async (userId: string) => {
+    if (currentUserRole !== "super_admin") {
+      toast.error("Apenas Super Admins podem remover privilégios");
+      return;
+    }
+
+    if (!window.confirm("Remover o cargo de auxiliar deste usuário?")) return;
+
+    setActionLoading(userId);
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "auxiliar" as any);
+
+    if (error) toast.error("Erro ao remover: " + error.message);
+    else {
+      toast.success("Cargo de auxiliar removido");
+      await supabase.from("admin_activity_log").insert({
+        user_id: currentUserId,
+        action: "role_removed",
+        details: { target_user_id: userId, role: "auxiliar" },
       });
     }
     setActionLoading(null);
@@ -133,6 +188,7 @@ const AdminRoles = () => {
   }
 
   const admins = users.filter(u => u.role === "admin" || u.role === "super_admin");
+  const auxiliares = users.filter(u => u.role === "auxiliar");
   const regularUsers = users.filter(u => u.role === "user");
 
   return (
@@ -180,6 +236,43 @@ const AdminRoles = () => {
         </div>
       </div>
 
+      {/* Auxiliares */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-sky-400" />
+          <span className="text-sm font-semibold">Auxiliares ({auxiliares.length})</span>
+          <span className="text-[10px] text-[hsl(var(--dark-muted))]">só agenda o Versículo do Dia</span>
+        </div>
+        <div className="space-y-2">
+          {auxiliares.map(u => (
+            <div key={u.id} className="bg-[hsl(var(--dark-card))] rounded-xl p-4 flex items-center gap-3">
+              {u.avatar_url ? (
+                <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-sky-500/15 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-sky-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{u.display_name || "Sem nome"}</p>
+                <p className="text-[10px] text-[hsl(var(--dark-muted))] truncate">{u.user_id}</p>
+              </div>
+              {currentUserRole === "super_admin" && (
+                <Button size="sm" variant="outline" onClick={() => removeAuxiliar(u.user_id)}
+                  disabled={actionLoading === u.user_id}
+                  className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
+                  {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldOff className="w-3 h-3 mr-1" />}
+                  Remover
+                </Button>
+              )}
+            </div>
+          ))}
+          {auxiliares.length === 0 && (
+            <p className="text-sm text-[hsl(var(--dark-muted))] text-center py-4">Nenhum auxiliar ainda</p>
+          )}
+        </div>
+      </div>
+
       {/* Regular users */}
       <div>
         <div className="flex items-center gap-2 mb-3">
@@ -201,12 +294,20 @@ const AdminRoles = () => {
                 <p className="text-[10px] text-[hsl(var(--dark-muted))] truncate">{u.user_id}</p>
               </div>
               {currentUserRole === "super_admin" && (
-                <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
-                  disabled={actionLoading === u.user_id}
-                  className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
-                  {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
-                  Promover
-                </Button>
+                <div className="flex gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => promoteToAuxiliar(u.user_id)}
+                    disabled={actionLoading === u.user_id}
+                    className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
+                    {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Users className="w-3 h-3 mr-1" />}
+                    Auxiliar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => promoteToAdmin(u.user_id)}
+                    disabled={actionLoading === u.user_id}
+                    className="text-xs bg-[hsl(var(--dark-card))] border-[hsl(var(--dark-card-hover))] text-[hsl(var(--dark-text))] hover:bg-[hsl(var(--dark-card-hover))] hover:text-[hsl(var(--dark-text))]">
+                    {actionLoading === u.user_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
+                    Promover
+                  </Button>
+                </div>
               )}
             </div>
           ))}

@@ -6,6 +6,7 @@ export function useIsAdmin() {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAuxiliar, setIsAuxiliar] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,6 +16,7 @@ export function useIsAdmin() {
     if (!user) {
       setIsAdmin(false);
       setIsSuperAdmin(false);
+      setIsAuxiliar(false);
       setRole(null);
       setLoading(false);
       return;
@@ -22,11 +24,12 @@ export function useIsAdmin() {
 
     let cancelled = false;
 
-    const commit = (admin: boolean, superAdmin: boolean) => {
+    const commit = (admin: boolean, superAdmin: boolean, auxiliar = false) => {
       if (cancelled) return;
       setIsAdmin(admin || superAdmin);
       setIsSuperAdmin(superAdmin);
-      setRole(superAdmin ? "super_admin" : admin ? "admin" : null);
+      setIsAuxiliar(auxiliar && !admin && !superAdmin);
+      setRole(superAdmin ? "super_admin" : admin ? "admin" : auxiliar ? "auxiliar" : null);
       setLoading(false);
     };
 
@@ -46,7 +49,7 @@ export function useIsAdmin() {
 
         if (!error) {
           const roles = data?.map((row) => String(row.role)) ?? [];
-          commit(roles.includes("admin"), roles.includes("super_admin"));
+          commit(roles.includes("admin"), roles.includes("super_admin"), roles.includes("auxiliar"));
           return;
         }
 
@@ -72,5 +75,5 @@ export function useIsAdmin() {
     };
   }, [user, authLoading]);
 
-  return { isAdmin, isSuperAdmin, role, loading };
+  return { isAdmin, isSuperAdmin, isAuxiliar, role, loading };
 }

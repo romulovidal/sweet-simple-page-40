@@ -40,6 +40,13 @@ import CultoShareRedirect from "@/pages/CultoShareRedirect";
 import AdminCultoSelectionsPage from "@/pages/AdminCultoSelectionsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
+import BatismoPage from "@/pages/BatismoPage";
+import BatismoInscricaoPage from "@/pages/BatismoInscricaoPage";
+import BatismoCursoPage from "@/pages/BatismoCursoPage";
+import BatismoLicaoPage from "@/pages/BatismoLicaoPage";
+import BatismoTentativaPage from "@/pages/BatismoTentativaPage";
+import BatismoCertificadoPage from "@/pages/BatismoCertificadoPage";
+import ValidarCertificadoPage from "@/pages/ValidarCertificadoPage";
 import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
 import RootRoute from "@/routes/index";
@@ -96,6 +103,14 @@ const AppContent = () => {
             <Route path="/c/:slug" element={<CultoShareRedirect />} />
             <Route path="/privacidade" element={<PageTransition><PrivacyPage /></PageTransition>} />
             <Route path="/termos" element={<PageTransition><TermsPage /></PageTransition>} />
+            <Route path="/batismo" element={<PageTransition><BatismoPage /></PageTransition>} />
+            <Route path="/batismo/inscricao" element={<PageTransition><BatismoInscricaoPage /></PageTransition>} />
+            <Route path="/batismo/curso" element={<PageTransition><BatismoCursoPage /></PageTransition>} />
+            <Route path="/batismo/licao/:ordem" element={<PageTransition><BatismoLicaoPage /></PageTransition>} />
+            <Route path="/batismo/exercicio/:ordem" element={<PageTransition><BatismoTentativaPage modo="exercicio" /></PageTransition>} />
+            <Route path="/batismo/prova-final" element={<PageTransition><BatismoTentativaPage modo="prova" /></PageTransition>} />
+            <Route path="/batismo/certificado" element={<PageTransition><BatismoCertificadoPage /></PageTransition>} />
+            <Route path="/validar-certificado" element={<PageTransition><ValidarCertificadoPage /></PageTransition>} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/atis" element={<AtisPage />} />
             <Route path="/atis/destinatarios" element={<AtisPage />} />

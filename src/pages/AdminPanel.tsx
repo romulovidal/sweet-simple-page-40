@@ -7,7 +7,7 @@ import {
   Clock, BookMarked, Home, Sparkles, BrainCircuit,
   Settings2, HandHeart, FileText, BookOpen, ChevronRight, LayoutGrid,
   ArrowLeft, MoreHorizontal, LineChart, Activity, Music2, Search, X,
-  Church, AlertTriangle, Library, MessageCircle
+  Church, AlertTriangle, Library, MessageCircle, Droplets
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,11 +31,12 @@ import AdminCultoSelections from "@/components/admin/AdminCultoSelections";
 import AdminCanticos from "@/components/admin/AdminCanticos";
 import AdminCanticosMinistros from "@/components/admin/AdminCanticosMinistros";
 import AdminRevistas from "@/components/admin/AdminRevistas";
+import AdminBatismo from "@/components/admin/AdminBatismo";
 
 type Post = Database["public"]["Tables"]["admin_posts"]["Row"];
 type Plan = Database["public"]["Tables"]["admin_plans"]["Row"];
 
-type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports";
+type ToolId = "dashboard" | "retention" | "analytics" | "posts" | "plans" | "revistas" | "verse" | "push" | "cultos" | "culto-selections" | "canticos" | "canticos-ministros" | "users" | "roles" | "log" | "ai" | "ai-prompts" | "app-features" | "prayers" | "harpa-reports" | "batismo";
 type View = { kind: "home" } | { kind: "category"; id: string } | { kind: "tool"; id: ToolId };
 
 const ADMIN_SECTIONS = [
@@ -50,6 +51,7 @@ const ADMIN_SECTIONS = [
       { id: "canticos", label: "Cânticos Avulsos", desc: "Músicas e playbacks extras", icon: Music2 },
       { id: "canticos-ministros", label: "Ministros", desc: "Gestão de louvor", icon: Users },
       { id: "harpa-reports", label: "Correções Harpa", desc: "Relatos de erros nos hinos", icon: AlertTriangle },
+      { id: "batismo", label: "Batismo", desc: "Inscrições, curso e certificados", icon: Droplets },
     ],
   },
   {
@@ -105,7 +107,16 @@ const ALL_TOOLS = ADMIN_SECTIONS.flatMap(s =>
   s.tabs.map(t => ({ ...t, sectionId: s.id, section: s.title }))
 );
 
-const getVisibleSections = (isSA: boolean) => {
+const getVisibleSections = (isSA: boolean, isAuxiliar = false) => {
+  // Auxiliar só enxerga a aba Versículo do Dia
+  if (isAuxiliar) {
+    return ADMIN_SECTIONS
+      .map(section => ({
+        ...section,
+        tabs: section.tabs.filter(tab => tab.id === 'verse'),
+      }))
+      .filter(section => section.tabs.length > 0);
+  }
   return ADMIN_SECTIONS.map(section => {
     if (section.id !== 'system') return section;
     return {
@@ -144,7 +155,7 @@ const writeAdminHistory = (view: View, mode: "push" | "replace") => {
 const AdminPanel = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { isSuperAdmin } = useIsAdmin();
+  const { isSuperAdmin, isAuxiliar } = useIsAdmin();
   const [view, setView] = useState<View>({ kind: "home" });
   const [posts, setPosts] = useState<Post[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -232,7 +243,7 @@ const AdminPanel = () => {
         <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--dark-muted))]">Categorias</p>
         <h2 className="text-xl font-bold text-[hsl(var(--dark-text))]">Escolha uma área</h2>
       </div>
-      {getVisibleSections(isSuperAdmin).map((section) => {
+      {getVisibleSections(isSuperAdmin, isAuxiliar).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <button
@@ -353,6 +364,7 @@ const AdminPanel = () => {
       case "posts": return <AdminPosts posts={posts} fetchData={fetchData} />;
       case "plans": return <AdminPlans plans={plans} fetchData={fetchData} />;
       case "revistas": return <AdminRevistas />;
+      case "batismo": return <AdminBatismo />;
       case "users": return <AdminUsers users={users} fetchData={fetchData} />;
     }
   };
@@ -360,7 +372,7 @@ const AdminPanel = () => {
   const showToolLoader = loading && view.kind === "tool" && ["posts", "plans", "users"].includes(view.id);
 
   const filteredTools = search.trim()
-    ? ALL_TOOLS.filter((t) => {
+    ? (isAuxiliar ? ALL_TOOLS.filter((t) => t.id === "verse") : ALL_TOOLS).filter((t) => {
         const q = search.toLowerCase();
         return (
           t.label.toLowerCase().includes(q) ||
@@ -395,7 +407,7 @@ const AdminPanel = () => {
         <ChevronRight className="w-5 h-5 text-[hsl(var(--dark-muted))] shrink-0" />
       </button>
 
-      {getVisibleSections(isSuperAdmin).map((section) => {
+      {getVisibleSections(isSuperAdmin, isAuxiliar).map((section) => {
         const SIcon = section.sectionIcon;
         return (
           <div key={section.id} className="space-y-2">
@@ -491,7 +503,7 @@ const AdminPanel = () => {
             )}
           </div>
         ) : (
-          getVisibleSections(isSuperAdmin).map((section) => (
+          getVisibleSections(isSuperAdmin, isAuxiliar).map((section) => (
                 <div key={section.id} className="flex flex-col gap-0.5">
                   <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-[hsl(var(--dark-muted))] flex items-center gap-1.5">
                     <section.sectionIcon className="w-3 h-3" />

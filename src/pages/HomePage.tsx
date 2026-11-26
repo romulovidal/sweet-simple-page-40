@@ -7,6 +7,7 @@ import StreakBadge from "@/components/StreakBadge";
 import VerseCard from "@/components/VerseCard";
 import CultoScheduleList from "@/components/CultoScheduleList";
 import PrayerRequests from "@/components/PrayerRequests";
+import BatismoHomeCard from "@/components/batismo/BatismoHomeCard";
 import PostPreviewDialog from "@/components/PostPreviewDialog";
 import PageHead from "@/components/PageHead";
 import harpaAtalaiaIcon from "@/assets/harpa-atalaia-icon-v2.png";
@@ -330,6 +331,9 @@ const HomePage = () => {
                     <span className="text-xs text-[hsl(var(--dark-muted))]">→</span>
                   </button>
                 </div>
+
+                {/* Batismo */}
+                <BatismoHomeCard />
 
               </div>
             </div>

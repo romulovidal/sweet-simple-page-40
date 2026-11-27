@@ -10,14 +10,13 @@ import { batismoDb } from "@/lib/batismo";
  * medidas sobre o modelo aprovado.
  */
 const POS = {
-  // Área "(Nome do Aluno)" a cobrir
-  nomeCover: { x: 103, y: 101.5, w: 91, h: 10 },
+  // Nome do aluno (modelo v2 já vem sem régua e sem placeholder)
   nome: { x: 148.5, y: 109 },
-  // Linha "Fortaleza, __ de ____ de __"
+  // Linha "Fortaleza, __ de ____ de __" (centros medidos nos blanks do modelo)
   dataY: 146.5,
-  dataDiaX: 108.5,
-  dataMesX: 155.5,
-  dataAnoX: 202.5,
+  dataDiaX: 115.94,
+  dataMesX: 156.62,
+  dataAnoX: 200.63,
   // Canto do QR de exemplo a cobrir
   qrCover: { x: 262, y: 165, w: 28, h: 27 },
   qr: { x: 266, y: 167.5, size: 20 },
@@ -71,9 +70,8 @@ export async function gerarCertificadoPdf({
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [297, 198] });
   doc.addImage(modeloDataUrl, "PNG", 0, 0, 297, 198);
 
-  // Cobre os placeholders impressos no modelo
+  // Cobre o QR de exemplo impresso no modelo
   doc.setFillColor(255, 255, 255);
-  doc.rect(POS.nomeCover.x, POS.nomeCover.y, POS.nomeCover.w, POS.nomeCover.h, "F");
   doc.rect(POS.qrCover.x, POS.qrCover.y, POS.qrCover.w, POS.qrCover.h, "F");
 
   doc.setTextColor(...COR_TEXTO);

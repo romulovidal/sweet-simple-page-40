@@ -1145,20 +1145,10 @@ const CertificadosTab = ({
 }) => {
   const [baixando, setBaixando] = useState<string | null>(null);
 
-  const baixar = async (cert: BatismoCertificado) => {
+  const baixar = (cert: BatismoCertificado) => {
     if (!cert.pdf_path) return;
-    setBaixando(cert.id);
-    try {
-      const { data, error } = await batismoDb()
-        .storage.from("certificados")
-        .createSignedUrl(cert.pdf_path, 60 * 5);
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch {
-      toast.error("Não foi possível gerar o link de download");
-    } finally {
-      setBaixando(null);
-    }
+    // Link curto no domínio próprio (redireciona para o PDF no bucket)
+    window.open(`/certificado/${cert.codigo}`, "_blank", "noopener,noreferrer");
   };
 
   const regerar = async (cert: BatismoCertificado) => {

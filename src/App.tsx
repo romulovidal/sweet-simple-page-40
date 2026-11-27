@@ -47,6 +47,7 @@ import BatismoLicaoPage from "@/pages/BatismoLicaoPage";
 import BatismoTentativaPage from "@/pages/BatismoTentativaPage";
 import BatismoCertificadoPage from "@/pages/BatismoCertificadoPage";
 import ValidarCertificadoPage from "@/pages/ValidarCertificadoPage";
+import CertificadoPdfRedirect from "@/pages/CertificadoPdfRedirect";
 import RevistasPage from "@/pages/RevistasPage";
 import NotFound from "@/pages/NotFound";
 import RootRoute from "@/routes/index";
@@ -111,6 +112,7 @@ const AppContent = () => {
             <Route path="/batismo/prova-final" element={<PageTransition><BatismoTentativaPage modo="prova" /></PageTransition>} />
             <Route path="/batismo/certificado" element={<PageTransition><BatismoCertificadoPage /></PageTransition>} />
             <Route path="/validar-certificado" element={<PageTransition><ValidarCertificadoPage /></PageTransition>} />
+            <Route path="/certificado/:codigo" element={<CertificadoPdfRedirect />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/atis" element={<AtisPage />} />
             <Route path="/atis/destinatarios" element={<AtisPage />} />

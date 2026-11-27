@@ -1,32 +1,20 @@
-import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PageHead from "@/components/PageHead";
 import { useMinhaInscricao } from "@/hooks/useBatismo";
-import { batismoDb, formatarDataBR } from "@/lib/batismo";
-import { toast } from "sonner";
+import { formatarDataBR } from "@/lib/batismo";
 import { ArrowLeft, Award, Download, Loader2 } from "lucide-react";
 
 /** Página do certificado do aluno: baixa o PDF via URL assinada. */
 const BatismoCertificadoPage = () => {
   const navigate = useNavigate();
   const { inscricao, certificado, loading } = useMinhaInscricao();
-  const [baixando, setBaixando] = useState(false);
 
-  const baixar = async () => {
+  const baixar = () => {
     if (!certificado?.pdf_path) return;
-    setBaixando(true);
-    try {
-      const { data, error } = await batismoDb()
-        .storage.from("certificados")
-        .createSignedUrl(certificado.pdf_path, 60 * 5);
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch {
-      toast.error("Não foi possível gerar o link de download. Tente novamente.");
-    } finally {
-      setBaixando(false);
-    }
+    // Link curto no domínio próprio (redireciona para o PDF no bucket)
+    window.open(`/certificado/${certificado.codigo}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -81,12 +69,8 @@ const BatismoCertificadoPage = () => {
                 Emitido em {formatarDataBR(new Date(certificado.emitido_em))}
               </p>
             </div>
-            <Button onClick={() => void baixar()} disabled={baixando} className="w-full h-12 text-base">
-              {baixando ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
+            <Button onClick={baixar} className="w-full h-12 text-base">
+              <Download className="w-4 h-4 mr-2" />
               Baixar certificado (PDF)
             </Button>
             <p className="text-[11px] text-[hsl(var(--dark-muted))]">

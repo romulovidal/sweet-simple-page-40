@@ -108,7 +108,7 @@ const writeBibleHistory = (view: BibleNavigationView, mode: "push" | "replace") 
 const BiblePage = () => {
   const { features: aiFeatures } = useAIFeatures();
   const { features: appFeatures } = useAppFeatures();
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isAuxiliar } = useIsAdmin();
   const [showPresentation, setShowPresentation] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
 
@@ -929,7 +929,7 @@ const BiblePage = () => {
                         <AIConnections reference={selRef} text={selText} enabled={aiFeatures.connections} label="Conexões" />
                         <AIWordMeaning reference={selRef} text={selText} enabled={aiFeatures.word_meaning} label="Significado" />
                         <AITimeline reference={selRef} text={selText} enabled={aiFeatures.timeline} label="Linha do Tempo" />
-                        {isAdmin && (
+                        {(isAdmin || isAuxiliar) && (
                           <ScheduleDailyVerseButton
                             reference={selRef}
                             text={selText}
